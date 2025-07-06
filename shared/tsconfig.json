@@ -2,7 +2,7 @@
   "extends": "../tsconfig.json",
   "include": ["src"],
   "compilerOptions": {
-    "composite": true, // Required for project references
+    "composite": true,  
     "outDir": "dist"
   }
 }
