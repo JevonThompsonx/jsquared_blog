@@ -2,8 +2,9 @@
   "extends": "../tsconfig.json",
   "include": ["src"],
   "compilerOptions": {
-    "composite": true, // Required for project references
+    // Only include options that are DIFFERENT from the root config
     "jsxImportSource": "hono/jsx",
-    "outDir": "dist"
+    "outDir": "dist",
+    "noEmit": false
   }
 }
