@@ -11,9 +11,9 @@
     "./shared"
   ],
   "scripts": {
-    "build:client": "cd client && bun run build",
-    "build:shared": "cd shared && bun run build",
-    "build:server": "cd server && bun run build",
+    "build:client": "bunx vite build --cwd ./client",
+    "build:shared": "bunx tsc -p ./shared/tsconfig.json",
+    "build:server": "bunx tsc -p ./server/tsconfig.json",
     "build": "bun run build:shared && bun run build:server && bun run build:client && bun run postbuild",
     "postbuild": "mkdir -p dist/functions && cp server/dist/index.js dist/functions/[[path]].js && cp -r client/dist/* dist/"
   },
