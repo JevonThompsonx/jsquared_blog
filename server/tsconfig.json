@@ -1,9 +1,13 @@
-{
+
+  {
   "extends": "../tsconfig.json",
   "include": ["src"],
   "compilerOptions": {
-    "composite": true, // Required for project references
+    "composite": true,
     "jsxImportSource": "hono/jsx",
     "outDir": "dist"
-  }
+  },
+  "references": [
+    { "path": "../shared" }
+  ]
 }
