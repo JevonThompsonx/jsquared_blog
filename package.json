@@ -16,6 +16,7 @@
     "build:server": "bunx tsc -p ./server/tsconfig.json",
     "build": "bun run build:shared && bun run build:server && bun run build:client && bun run postbuild",
     "postbuild": "mkdir -p dist/functions && cp server/dist/index.js dist/functions/[[path]].js && cp -r client/dist/* dist/"
+    "build:shared": "cd shared && bun run build",
   },
   "keywords": [
     "bun",
