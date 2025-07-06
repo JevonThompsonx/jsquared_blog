@@ -22,7 +22,8 @@
     "hono",
     "react",
     "vite",
-    "monorepo"
+    "monorepo",
+    "cloudflare"
   ],
   "devDependencies": {
     "bun-types": "latest",
