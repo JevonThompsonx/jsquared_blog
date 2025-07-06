@@ -1,17 +1,15 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import App from "./App.tsx";
+import Home from "./components/Home.tsx";
 import { BrowserRouter, Routes, Route } from "react-router";
-import { drizzle } from "drizzle-orm/libsql";
+// import { drizzle } from "drizzle-orm/libsql";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
+        <Route path="/" element={<Home />} />
       </Routes>
-      /* * ex of more nesting optinos at:
-      https://reactrouter.com/start/declarative/routing * */
     </BrowserRouter>
   </StrictMode>,
 );
