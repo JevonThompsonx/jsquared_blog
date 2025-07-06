@@ -1,5 +1,3 @@
-Of course, here is the combined information:
-
 # J²Adventures: A Full-Stack Travel Blog 🦫
 
 This project is a modern, responsive homepage for a travel blog called "J²Adventures," built on the **bhv** full-stack TypeScript monorepo starter. The frontend is a feature-rich React application, and the backend is a lightweight Hono server, all tied together with shared TypeScript types for end-to-end type safety.
