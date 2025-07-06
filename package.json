@@ -12,9 +12,9 @@
   ],
   "scripts": {
     "build:client": "bunx vite build --cwd ./client",
-    "build:shared": "tsc -b ./shared",
-    "build:server": "tsc -b ./server",
-    "build": "tsc -b && bun run build:client && bun run postbuild",
+    "build:shared": "bunx tsc -b ./shared",
+    "build:server": "bunx tsc -b ./server",
+    "build": "bunx tsc -b && bun run build:client && bun run postbuild",
     "postbuild": "mkdir -p dist/functions && cp server/dist/index.js dist/functions/[[path]].js && cp -r client/dist/* dist/"
   },
   "keywords": [
