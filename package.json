@@ -1,10 +1,10 @@
 {
-  "name": "my-bhvr-app",
+  "name": "jsquaredadventures",
   "version": "0.3.1",
-  "description": "A monorepo template built with Bun, Hono, Vite, and React",
-  "author": "Steve Simkins",
+  "description": "Princess and I ",
+  "author": "Jevon Thompson",
   "license": "MIT",
-  "homepage": "https://github.com/stevedylandev/bhvr",
+  "homepage": "https://jsquaredadventures.com",
   "workspaces": [
     "./server",
     "./client",
@@ -16,7 +16,6 @@
     "build:server": "bunx tsc -p ./server/tsconfig.json",
     "build": "bun run build:shared && bun run build:server && bun run build:client && bun run postbuild",
     "postbuild": "mkdir -p dist/functions && cp server/dist/index.js dist/functions/[[path]].js && cp -r client/dist/* dist/"
-    "build:shared": "cd shared && bun run build",
   },
   "keywords": [
     "bun",
