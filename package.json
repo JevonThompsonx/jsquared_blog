@@ -14,7 +14,7 @@
     "build:client": "bunx vite build ./client",
     "build:shared": "tsc -b ./shared",
     "build:server": "tsc -b ./server",
-    "build": "bunx tsc -b && bun run build:client && bun run postbuild",
+    "build": "bun install && bunx tsc -b && bun run build:client && bun run postbuild",
     "postbuild": "mkdir -p dist/functions && cp server/dist/index.js dist/functions/[[path]].js && cp -r client/dist/* dist/"
   },
   "keywords": [
