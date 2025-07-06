@@ -1,91 +1,82 @@
-import React, { useState, useEffect, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  FC,
+  SyntheticEvent,
+  CSSProperties,
+} from "react";
 
-// --- THEME CONFIGURATION ---
-const themes = {
-  default: {
-    "--background": "#f3f4f6", // Tailwind gray-100
-    "--text-primary": "#1f2937", // Tailwind gray-800
-    "--text-secondary": "#4b5563", // Tailwind gray-600
-    "--card-bg": "#ffffff", // Tailwind white
-    "--primary": "#6366f1", // Tailwind indigo-500
-    "--primary-light": "#a5b4fc", // Tailwind indigo-300
-    "--border": "#d1d5db", // Tailwind gray-300
-    "--spinner": "#6366f1", // Tailwind indigo-500
-  },
-  dark: {
-    "--background": "#111827", // Tailwind gray-900
-    "--text-primary": "#f9fafb", // Tailwind gray-50
-    "--text-secondary": "#9ca3af", // Tailwind gray-400
-    "--card-bg": "#1f2937", // Tailwind gray-800
-    "--primary": "#818cf8", // Tailwind indigo-400
-    "--primary-light": "#a78bfa", // Tailwind violet-400
-    "--border": "#374151", // Tailwind gray-700
-    "--spinner": "#818cf8", // Tailwind indigo-400
-  },
-  forest: {
-    "--background": "#f0fdf4", // Tailwind green-50
-    "--text-primary": "#14532d", // Tailwind green-900
-    "--text-secondary": "#16a34a", // Tailwind green-600
-    "--card-bg": "#ffffff", // Tailwind white
-    "--primary": "#22c55e", // Tailwind green-500
-    "--primary-light": "#86efac", // Tailwind green-300
-    "--border": "#bbf7d0", // Tailwind green-200
-    "--spinner": "#22c55e", // Tailwind green-500
-  },
-  ocean: {
-    "--background": "#f0f9ff", // Tailwind sky-50
-    "--text-primary": "#082f49", // Tailwind cyan-900
-    "--text-secondary": "#0ea5e9", // Tailwind sky-500
-    "--card-bg": "#ffffff", // Tailwind white
-    "--primary": "#38bdf8", // Tailwind sky-400
-    "--primary-light": "#7dd3fc", // Tailwind sky-300
-    "--border": "#bae6fd", // Tailwind sky-200
-    "--spinner": "#0ea5e9", // Tailwind sky-500
-  },
+// --- TYPE DEFINITIONS ---
+
+// Defines the structure for a single article object
+type Article = {
+  image: string;
+  category: string;
+  title: string;
+  description: string;
+  date: string;
+  type: "split-horizontal" | "split-vertical" | "hover";
+  gridClass: string;
 };
 
-// --- HELPER COMPONENTS ---
+// Defines the structure for a theme's CSS variables
+type Theme = {
+  [key: string]: string;
+};
 
-const SearchIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5 text-[var(--text-secondary)]"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-    />
-  </svg>
-);
+// Creates a union type of all available theme names
+type ThemeName = "default" | "dark" | "forest" | "ocean";
 
-const LoadingSpinner = () => (
-  <div className="flex justify-center items-center col-span-full py-8">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
-  </div>
-);
+// --- THEME CONFIGURATION ---
 
-// --- UTILITY FUNCTIONS ---
-
-const formatDateToSeasonYear = (dateString) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const month = date.getMonth();
-  const year = date.getFullYear();
-  let season = "";
-  if (month >= 2 && month <= 4) season = "Spring";
-  else if (month >= 5 && month <= 7) season = "Summer";
-  else if (month >= 8 && month <= 10) season = "Fall";
-  else season = "Winter";
-  return `${season} ${year}`;
+const themes: Record<ThemeName, Theme> = {
+  default: {
+    "--background": "#f3f4f6", // gray-100
+    "--text-primary": "#1f2937", // gray-800
+    "--text-secondary": "#4b5563", // gray-600
+    "--card-bg": "#ffffff", // white
+    "--primary": "#6366f1", // indigo-500
+    "--primary-light": "#a5b4fc", // indigo-300
+    "--border": "#d1d5db", // gray-300
+    "--spinner": "#6366f1", // indigo-500
+  },
+  dark: {
+    "--background": "#111827", // gray-900
+    "--text-primary": "#f9fafb", // gray-50
+    "--text-secondary": "#9ca3af", // gray-400
+    "--card-bg": "#1f2937", // gray-800
+    "--primary": "#818cf8", // indigo-400
+    "--primary-light": "#a78bfa", // violet-400
+    "--border": "#374151", // gray-700
+    "--spinner": "#818cf8", // indigo-400
+  },
+  forest: {
+    "--background": "#f0fdf4", // green-50
+    "--text-primary": "#14532d", // green-900
+    "--text-secondary": "#16a34a", // green-600
+    "--card-bg": "#ffffff", // white
+    "--primary": "#22c55e", // green-500
+    "--primary-light": "#86efac", // green-300
+    "--border": "#bbf7d0", // green-200
+    "--spinner": "#22c55e", // green-500
+  },
+  ocean: {
+    "--background": "#f0f9ff", // sky-50
+    "--text-primary": "#082f49", // cyan-900
+    "--text-secondary": "#0ea5e9", // sky-500
+    "--card-bg": "#ffffff", // white
+    "--primary": "#38bdf8", // sky-400
+    "--primary-light": "#7dd3fc", // sky-300
+    "--border": "#bae6fd", // sky-200
+    "--spinner": "#0ea5e9", // sky-500
+  },
 };
 
 // --- MOCK DATA ---
-const allArticles = [
+
+const allArticles: Article[] = [
   {
     image:
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
@@ -184,12 +175,72 @@ const allArticles = [
   },
 ];
 
+// --- HELPER COMPONENTS ---
+
+const SearchIcon: FC = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5 text-[var(--text-secondary)]"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+    />
+  </svg>
+);
+
+const LoadingSpinner: FC = () => (
+  <div className="flex justify-center items-center col-span-full py-8">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
+  </div>
+);
+
+const NoResults: FC = () => (
+  <div className="col-span-full bg-[var(--card-bg)] shadow-md rounded-lg p-8 text-center">
+    <h3 className="text-2xl font-bold text-[var(--text-primary)]">
+      No Articles Found
+    </h3>
+    <p className="mt-2 text-[var(--text-secondary)]">
+      Try adjusting your search term.
+    </p>
+  </div>
+);
+
+// --- UTILITY FUNCTIONS ---
+
+const formatDateToSeasonYear = (dateString: string): string => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const month = date.getMonth();
+  const year = date.getFullYear();
+
+  if (month >= 2 && month <= 4) return `Spring ${year}`;
+  if (month >= 5 && month <= 7) return `Summer ${year}`;
+  if (month >= 8 && month <= 10) return `Fall ${year}`;
+  return `Winter ${year}`;
+};
+
 // --- REACT COMPONENTS ---
 
-const ArticleCard = ({ article }) => {
+interface ArticleCardProps {
+  article: Article;
+}
+
+const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
   const { image, category, title, date, description, type, gridClass } =
     article;
   const formattedDate = formatDateToSeasonYear(date);
+
+  // Handles broken image links
+  const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.src =
+      "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
+  };
 
   if (type === "hover") {
     return (
@@ -200,10 +251,7 @@ const ArticleCard = ({ article }) => {
           className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
           src={image}
           alt={title}
-          onError={(e) => {
-            e.currentTarget.src =
-              "https://placehold.co/600x800/EEE/31343C?text=Image+Not+Found";
-          }}
+          onError={handleImageError}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
         <div className="absolute bottom-0 left-0 p-4 md:p-6">
@@ -233,10 +281,7 @@ const ArticleCard = ({ article }) => {
           className="h-56 md:h-full w-full md:w-1/2 object-cover"
           src={image}
           alt={title}
-          onError={(e) => {
-            e.currentTarget.src =
-              "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
-          }}
+          onError={handleImageError}
         />
         <div className="p-4 md:p-6 flex flex-col justify-between">
           <div>
@@ -256,6 +301,7 @@ const ArticleCard = ({ article }) => {
     );
   }
 
+  // Default: "split-vertical"
   return (
     <div
       className={`rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] flex flex-col ${gridClass}`}
@@ -264,10 +310,7 @@ const ArticleCard = ({ article }) => {
         className="h-48 w-full object-cover"
         src={image}
         alt={title}
-        onError={(e) => {
-          e.currentTarget.src =
-            "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
-        }}
+        onError={handleImageError}
       />
       <div className="p-4 md:p-6 flex-grow flex flex-col">
         <div className="tracking-wide text-sm text-[var(--primary)] font-semibold">
@@ -289,35 +332,54 @@ const ArticleCard = ({ article }) => {
   );
 };
 
+// --- MAIN PAGE COMPONENT ---
+
 export default function Home() {
   const articlesPerPage = 6;
-  const [displayedArticles, setDisplayedArticles] = useState(
-    allArticles.slice(0, articlesPerPage),
-  );
+  const [searchTerm, setSearchTerm] = useState("");
+  const [displayedArticles, setDisplayedArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [currentTheme, setCurrentTheme] = useState("default");
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>("default");
+
+  // Memoize filtered articles to avoid recalculating on every render
+  const filteredArticles = useMemo(
+    () =>
+      allArticles.filter(
+        (article) =>
+          article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          article.category.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
+    [searchTerm],
+  );
+
+  // Effect to reset articles when the search term changes
+  useEffect(() => {
+    setDisplayedArticles(filteredArticles.slice(0, articlesPerPage));
+    setHasMore(filteredArticles.length > articlesPerPage);
+  }, [filteredArticles]);
 
   const loadMoreArticles = useCallback(() => {
     if (isLoading || !hasMore) return;
+
     setIsLoading(true);
     setTimeout(() => {
       const currentLength = displayedArticles.length;
-      const nextArticles = allArticles.slice(
+      const nextArticles = filteredArticles.slice(
         currentLength,
         currentLength + articlesPerPage,
       );
-      if (nextArticles.length > 0) {
-        setDisplayedArticles((prev) => [...prev, ...nextArticles]);
-      } else {
-        setHasMore(false);
-      }
-      setIsLoading(false);
-    }, 1000);
-  }, [isLoading, hasMore, displayedArticles.length]);
 
+      setDisplayedArticles((prev) => [...prev, ...nextArticles]);
+      setHasMore(currentLength + nextArticles.length < filteredArticles.length);
+      setIsLoading(false);
+    }, 1000); // Simulate network delay
+  }, [isLoading, hasMore, displayedArticles.length, filteredArticles]);
+
+  // Effect for infinite scroll
   useEffect(() => {
     const handleScroll = () => {
+      // Load more when user is 200px from the bottom
       if (
         window.innerHeight + document.documentElement.scrollTop <
         document.documentElement.offsetHeight - 200
@@ -325,24 +387,25 @@ export default function Home() {
         return;
       loadMoreArticles();
     };
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loadMoreArticles]);
 
   return (
     <div
-      style={themes[currentTheme]}
+      style={themes[currentTheme] as CSSProperties}
       className="bg-[var(--background)] min-h-screen font-sans transition-colors duration-300"
     >
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-6 sm:gap-4">
           <h1 className="text-4xl sm:text-5xl font-bold text-[var(--text-primary)] flex items-center">
-            J<sup className="text-2xl sm:text-3xl -top-2 sm:-top-3">2</sup>
+            J<sup className="text-2xl sm:text-3xl -top-2 sm:-top-3">2</sup>{" "}
             Adventures
           </h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              {Object.keys(themes).map((name) => (
+              {(Object.keys(themes) as ThemeName[]).map((name) => (
                 <button
                   key={name}
                   onClick={() => setCurrentTheme(name)}
@@ -359,6 +422,8 @@ export default function Home() {
               <input
                 type="text"
                 placeholder="Search articles..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full sm:w-64 pl-10 pr-4 py-2 border border-[var(--border)] rounded-full text-sm bg-[var(--card-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] placeholder:text-[var(--text-secondary)]"
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -369,9 +434,13 @@ export default function Home() {
         </header>
 
         <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {displayedArticles.map((article, index) => (
-            <ArticleCard key={index} article={article} />
-          ))}
+          {displayedArticles.length > 0 ? (
+            displayedArticles.map((article) => (
+              <ArticleCard key={article.title} article={article} />
+            ))
+          ) : !isLoading ? (
+            <NoResults />
+          ) : null}
           {isLoading && <LoadingSpinner />}
         </main>
       </div>
