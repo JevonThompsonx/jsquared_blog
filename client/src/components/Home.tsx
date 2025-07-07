@@ -27,50 +27,66 @@ type Theme = {
 };
 
 // Creates a union type of all available theme names
-type ThemeName = "default" | "dark" | "forest" | "ocean";
+type ThemeName =
+  | "midnightGarden"
+  | "daylightGarden"
+  | "enchantedForest"
+  | "daylitForest";
 
 // --- THEME CONFIGURATION ---
 
 const themes: Record<ThemeName, Theme> = {
-  default: {
-    "--background": "#f3f4f6", // gray-100
-    "--text-primary": "#1f2937", // gray-800
-    "--text-secondary": "#4b5563", // gray-600
-    "--card-bg": "#ffffff", // white
-    "--primary": "#6366f1", // indigo-500
-    "--primary-light": "#a5b4fc", // indigo-300
-    "--border": "#d1d5db", // gray-300
-    "--spinner": "#6366f1", // indigo-500
+  // --- Refined Dark Modes ---
+  midnightGarden: {
+    "--background": "#2C3E34", // Deep forest green
+    "--text-primary": "#F1F1EE", // Brighter Creamy white
+    "--text-secondary": "#B0A99F", // Lighter Muted cream
+    "--card-bg": "#3A5045", // Slightly lighter dark green
+    "--primary": "#94C794", // Saturated sea green
+    "--primary-light": "#AED8AE", // Lighter sea green
+    "--border": "#4D6A5A",
+    "--spinner": "#94C794",
+    "--text-shadow": "0 1px 3px rgba(0,0,0,0.3)",
   },
-  dark: {
-    "--background": "#111827", // gray-900
-    "--text-primary": "#f9fafb", // gray-50
-    "--text-secondary": "#9ca3af", // gray-400
-    "--card-bg": "#1f2937", // gray-800
-    "--primary": "#818cf8", // indigo-400
-    "--primary-light": "#a78bfa", // violet-400
-    "--border": "#374151", // gray-700
-    "--spinner": "#818cf8", // indigo-400
+  enchantedForest: {
+    "--background": "#1B4332", // Deep, rich green
+    "--text-primary": "#ECF9EE", // Brighter Minty cream
+    "--text-secondary": "#A9C0A9", // Lighter mossy green-gray
+    "--card-bg": "#2D6A4F", // Lighter deep green
+    "--primary": "#9370DB", // Medium Purple (more mystical)
+    "--primary-light": "#B19CD9", // Light Pastel Purple
+    "--border": "#40916C",
+    "--spinner": "#9370DB",
+    "--text-shadow": "0 1px 3px rgba(0,0,0,0.4)",
   },
-  forest: {
-    "--background": "#f0fdf4", // green-50
-    "--text-primary": "#14532d", // green-900
-    "--text-secondary": "#16a34a", // green-600
-    "--card-bg": "#ffffff", // white
-    "--primary": "#22c55e", // green-500
-    "--primary-light": "#86efac", // green-300
-    "--border": "#bbf7d0", // green-200
-    "--spinner": "#22c55e", // green-500
+
+  daylightGarden: {
+    "--background": "linear-gradient(to bottom, #E0E7D9, #C8D1C3)",
+    "--text-primary": "#222B26",
+    "--text-secondary": "#4A5D54", // Kept enhanced for better contrast
+    "--text-highlight": "linear-gradient(to right, #4A5D54, #36443C)", // Kept gradient
+    "--card-bg": "#ffffff",
+    "--primary": "#6A8E23",
+    "--primary-light": "#94B74B",
+    "--border": "#d4e6d4",
+    "--spinner": "#6A8E23",
+    "--text-shadow": "none",
+    "--selection-bg": "#6A8E23",
+    "--selection-text": "#ffffff",
   },
-  ocean: {
-    "--background": "#f0f9ff", // sky-50
-    "--text-primary": "#082f49", // cyan-900
-    "--text-secondary": "#0ea5e9", // sky-500
-    "--card-bg": "#ffffff", // white
-    "--primary": "#38bdf8", // sky-400
-    "--primary-light": "#7dd3fc", // sky-300
-    "--border": "#bae6fd", // sky-200
-    "--spinner": "#0ea5e9", // sky-500
+  daylitForest: {
+    "--background": "linear-gradient(to bottom, #F5F5DC, #C1D5C0)",
+    "--text-primary": "#102A1E",
+    "--text-secondary": "#2A5240", // Kept enhanced for better contrast
+    "--text-highlight": "linear-gradient(to right, #2A5240, #1B382B)", // Kept gradient
+    "--card-bg": "#ffffff",
+    "--primary": "#52B788",
+    "--primary-light": "#95D5B2",
+    "--border": "#B7CEB7",
+    "--spinner": "#52B788",
+    "--text-shadow": "none",
+    "--selection-bg": "#52B788",
+    "--selection-text": "#ffffff",
   },
 };
 
@@ -340,7 +356,7 @@ export default function Home() {
   const [displayedArticles, setDisplayedArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [currentTheme, setCurrentTheme] = useState<ThemeName>("default");
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>("daylightGarden");
 
   // Memoize filtered articles to avoid recalculating on every render
   const filteredArticles = useMemo(
@@ -393,57 +409,84 @@ export default function Home() {
   }, [loadMoreArticles]);
 
   return (
-    <div
-      style={themes[currentTheme] as CSSProperties}
-      className="bg-[var(--background)] min-h-screen font-sans transition-colors duration-300"
-    >
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-6 sm:gap-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-[var(--text-primary)] flex items-center">
-            J<sup className="text-2xl sm:text-3xl -top-2 sm:-top-3">2</sup>{" "}
-            Adventures
-          </h1>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              {(Object.keys(themes) as ThemeName[]).map((name) => (
-                <button
-                  key={name}
-                  onClick={() => setCurrentTheme(name)}
-                  className={`w-6 h-6 rounded-full capitalize text-xs transition-all ${currentTheme === name ? "ring-2 ring-offset-2 ring-[var(--primary)]" : ""}`}
-                  style={{
-                    backgroundColor: themes[name]["--card-bg"],
-                    border: `2px solid ${themes[name]["--primary"]}`,
-                  }}
-                  title={name}
-                />
-              ))}
-            </div>
-            <div className="relative w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder="Search articles..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-64 pl-10 pr-4 py-2 border border-[var(--border)] rounded-full text-sm bg-[var(--card-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] placeholder:text-[var(--text-secondary)]"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <SearchIcon />
+    <>
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+          body {
+            font-family: 'Inter', sans-serif;
+          }
+          h1, h3.font-bold {
+            text-shadow: var(--text-shadow, none);
+          }
+        `}
+      </style>
+      <div
+        style={
+          {
+            "--background": themes[currentTheme]["--background"],
+            ...themes[currentTheme],
+          } as CSSProperties
+        }
+        className="min-h-screen transition-colors duration-300"
+      >
+        <div
+          style={{ background: "var(--background)" }}
+          className="min-h-screen"
+        >
+          <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+            <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-6 sm:gap-4">
+              <h1 className="text-4xl sm:text-5xl font-bold text-[var(--text-primary)] flex items-center">
+                J<sup className="text-2xl sm:text-3xl -top-2 sm:-top-3">2</sup>{" "}
+                Adventures
+              </h1>
+              <div className="flex items-center gap-4 flex-wrap justify-center">
+                <div className="flex items-center gap-2 flex-wrap justify-center">
+                  {(Object.keys(themes) as ThemeName[]).map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => setCurrentTheme(name)}
+                      className={`w-6 h-6 rounded-full capitalize text-xs transition-all ${
+                        currentTheme === name
+                          ? "ring-2 ring-offset-2 ring-[var(--primary)]"
+                          : ""
+                      }`}
+                      style={{
+                        background: themes[name]["--background"],
+                        border: `2px solid ${themes[name]["--primary"]}`,
+                      }}
+                      title={name.replace(/([A-Z])/g, " $1").trim()} // Add spaces for readability
+                    />
+                  ))}
+                </div>
+                <div className="relative w-full sm:w-auto">
+                  <input
+                    type="text"
+                    placeholder="Search articles..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full sm:w-64 pl-10 pr-4 py-2 border border-[var(--border)] rounded-full text-sm bg-[var(--card-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] placeholder:text-[var(--text-secondary)]"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <SearchIcon />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </header>
+            </header>
 
-        <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {displayedArticles.length > 0 ? (
-            displayedArticles.map((article) => (
-              <ArticleCard key={article.title} article={article} />
-            ))
-          ) : !isLoading ? (
-            <NoResults />
-          ) : null}
-          {isLoading && <LoadingSpinner />}
-        </main>
+            <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {displayedArticles.length > 0 ? (
+                displayedArticles.map((article) => (
+                  <ArticleCard key={article.title} article={article} />
+                ))
+              ) : !isLoading ? (
+                <NoResults />
+              ) : null}
+              {isLoading && <LoadingSpinner />}
+            </main>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

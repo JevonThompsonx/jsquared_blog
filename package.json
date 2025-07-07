@@ -11,11 +11,15 @@
     "./shared"
   ],
   "scripts": {
-    "build:client": "bunx vite build ./client",
-    "build:shared": "tsc -b ./shared",
-    "build:server": "tsc -b ./server",
-    "build": "bun install && bunx tsc -b --verbose --force && ls -R && bun run build:client && bun run postbuild",
-    "postbuild": "mkdir -p dist/functions && cp server/dist/index.js dist/functions/[[path]].js && cp -r client/dist/* dist/"
+    "dev:client": "cd client && bun run dev",
+    "dev:server": "cd server && bun run dev",
+    "dev:shared": "cd shared && bun run dev",
+    "dev": "concurrently \"bun run dev:shared\" \"bun run dev:server\" \"bun run dev:client\"",
+    "build:client": "cd client && bun run build",
+    "build:shared": "cd shared && bun run build",
+    "build:server": "cd server && bun run build",
+    "build": "bun run build:shared && bun run build:server && bun run build:client",
+    "postinstall": "bun run build:shared && bun run build:server"
   },
   "keywords": [
     "bun",
