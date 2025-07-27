@@ -7,7 +7,7 @@ import {
   SyntheticEvent,
   CSSProperties,
 } from "react";
-
+import { Navbar } from "./Navbar";
 // --- TYPE DEFINITIONS ---
 
 // Defines the structure for a single article object
@@ -434,57 +434,24 @@ export default function Home() {
           style={{ background: "var(--background)" }}
           className="min-h-screen"
         >
-          <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-            <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-6 sm:gap-4">
-              <h1 className="text-4xl sm:text-5xl font-bold text-[var(--text-primary)] flex items-center">
-                J<sup className="text-2xl sm:text-3xl -top-2 sm:-top-3">2</sup>{" "}
-                Adventures
-              </h1>
-              <div className="flex items-center gap-4 flex-wrap justify-center">
-                <div className="flex items-center gap-2 flex-wrap justify-center">
-                  {(Object.keys(themes) as ThemeName[]).map((name) => (
-                    <button
-                      key={name}
-                      onClick={() => setCurrentTheme(name)}
-                      className={`w-6 h-6 rounded-full capitalize text-xs transition-all ${
-                        currentTheme === name
-                          ? "ring-2 ring-offset-2 ring-[var(--primary)]"
-                          : ""
-                      }`}
-                      style={{
-                        background: themes[name]["--background"],
-                        border: `2px solid ${themes[name]["--primary"]}`,
-                      }}
-                      title={name.replace(/([A-Z])/g, " $1").trim()} // Add spaces for readability
-                    />
-                  ))}
-                </div>
-                <div className="relative w-full sm:w-auto">
-                  <input
-                    type="text"
-                    placeholder="Search articles..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full sm:w-64 pl-10 pr-4 py-2 border border-[var(--border)] rounded-full text-sm bg-[var(--card-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] placeholder:text-[var(--text-secondary)]"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <SearchIcon />
-                  </div>
-                </div>
-              </div>
-            </header>
+          {/* 👇 Replace the header with the new Navbar component */}
+          <Navbar
+            currentTheme={currentTheme}
+            setCurrentTheme={setCurrentTheme}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+          />
 
-            <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {displayedArticles.length > 0 ? (
-                displayedArticles.map((article) => (
-                  <ArticleCard key={article.title} article={article} />
-                ))
-              ) : !isLoading ? (
-                <NoResults />
-              ) : null}
-              {isLoading && <LoadingSpinner />}
-            </main>
-          </div>
+          <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 -mt-8">
+            {displayedArticles.length > 0 ? (
+              displayedArticles.map((article) => (
+                <ArticleCard key={article.title} article={article} />
+              ))
+            ) : !isLoading ? (
+              <NoResults />
+            ) : null}
+            {isLoading && <LoadingSpinner />}
+          </main>
         </div>
       </div>
     </>
