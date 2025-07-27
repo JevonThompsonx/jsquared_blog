@@ -5,8 +5,8 @@ import "./index.css";
 
 // Import your page components
 import Home from "./components/Home.tsx";
-import { Auth } from "./components/Auth.tsx";
-
+import Auth from "./components/Auth.tsx";
+import { AuthProvider } from "./context/AuthContext.tsx";
 // Define the application's routes
 const router = createBrowserRouter([
   {
@@ -21,6 +21,8 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </React.StrictMode>,
 );

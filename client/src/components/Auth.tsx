@@ -1,104 +1,109 @@
 // client/src/components/Auth.tsx
-import { useState, FC, FormEvent } from "react";
 
-// You will create this file in a later step
-// import { supabase } from '../supabase';
+import { useState } from "react";
+import { supabase } from "../supabase";
+import { useNavigate } from "react-router-dom";
 
-export const Auth: FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const handleAuth = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
-    setMessage("");
+    setError(null);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      setError(error.message);
+    } else {
+      navigate("/"); // Redirect to home on successful login
+    }
+    setLoading(false);
+  };
 
-    // This is where you'll add Supabase logic
-    const authMethod = isLogin
-      ? // await supabase.auth.signInWithPassword({ email, password })
-        console.log("Logging in with", email)
-      : // await supabase.auth.signUp({ email, password })
-        console.log("Signing up with", email);
-
-    // After connecting Supabase, you will handle response and error here.
-    setMessage(
-      isLogin
-        ? "Login functionality to be added."
-        : "Check your email for the confirmation link!",
-    );
-
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (error) {
+      setError(error.message);
+    } else {
+      // Supabase sends a confirmation email by default.
+      // You might want to show a message here.
+      alert(
+        "Signup successful! Please check your email to verify your account.",
+      );
+      navigate("/"); // Redirect to home
+    }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="p-8 bg-white shadow-lg rounded-lg max-w-sm w-full">
-        <h2 className="text-2xl font-bold text-center mb-6">
-          {isLogin ? "Log In" : "Sign Up"}
-        </h2>
-        <form onSubmit={handleAuth}>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="email"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="email"
-              placeholder="Your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="password"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              type="password"
-              placeholder="Your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "Processing..." : isLogin ? "Log In" : "Sign Up"}
-            </button>
-            <a
-              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsLogin(!isLogin);
-                setMessage("");
-              }}
-            >
-              {isLogin ? "Create an account" : "Have an account? Log In"}
-            </a>
-          </div>
-          {message && (
-            <p className="mt-4 text-center text-sm text-green-500">{message}</p>
-          )}
-        </form>
-      </div>
+    <div className="flex flex-col items-center justify-center p-4">
+      <h1 className="text-2xl font-bold mb-4">Login or Sign Up</h1>
+      <form className="w-full max-w-sm">
+        <div className="mb-4">
+          <label
+            className="block text-gray-700 text-sm font-bold mb-2"
+            htmlFor="email"
+          >
+            Email
+          </label>
+          <input
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="email"
+            type="email"
+            placeholder="your@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <div className="mb-6">
+          <label
+            className="block text-gray-700 text-sm font-bold mb-2"
+            htmlFor="password"
+          >
+            Password
+          </label>
+          <input
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            id="password"
+            type="password"
+            placeholder="******************"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+        <div className="flex items-center justify-between">
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="submit"
+            onClick={handleLogin}
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Log In"}
+          </button>
+          <button
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="submit"
+            onClick={handleSignup}
+            disabled={loading}
+          >
+            {loading ? "Signing up..." : "Sign Up"}
+          </button>
+        </div>
+      </form>
     </div>
   );
-};
+}

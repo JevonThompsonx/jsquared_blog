@@ -434,7 +434,6 @@ export default function Home() {
           style={{ background: "var(--background)" }}
           className="min-h-screen"
         >
-          {/* 👇 Replace the header with the new Navbar component */}
           <Navbar
             currentTheme={currentTheme}
             setCurrentTheme={setCurrentTheme}
