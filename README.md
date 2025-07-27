@@ -1,208 +1,126 @@
-# J²Adventures: A Full-Stack Travel Blog 🦫
+# **J²Adventures: A Full-Stack Travel Blog** 🦫
 
-This project is a modern, responsive homepage for a travel blog called "J²Adventures," built on the **bhv** full-stack TypeScript monorepo starter. The frontend is a feature-rich React application, and the backend is a lightweight Hono server, all tied together with shared TypeScript types for end-to-end type safety.
+This project is a full-stack monorepo for a travel blog, featuring a React frontend and a Hono backend powered by Bun.
 
----
+-----
 
-## **Key Features**
+## **Tech Stack & Structure**
 
-- **Full-Stack TypeScript**: Ensures type safety between the client and server.
-- **Monorepo Structure**: Organized as a workspace-based monorepo for clean, manageable code.
-- **Modern Tech Stack**:
-  - **Bun**: JavaScript runtime
-  - **Hono**: Backend framework
-  - **Vite**: Frontend bundling
-  - **React**: Frontend UI
-  - **Tailwind CSS**: Styling
-- **Responsive Grid Layout**: A dynamic masonry-style grid that adapts to all screen sizes.
-- **Multiple Card Styles**: Includes split-view and hover-reveal cards for visual interest.
-- **Infinite Scrolling**: Automatically loads new articles as the user scrolls.
-- **Dynamic Theming**: Allows users to switch between multiple color schemes.
+  * **Core:** Bun, Hono, Vite, React, TypeScript
+  * **Database:** Supabase (PostgreSQL)
+  * **Styling:** Tailwind CSS
+  * **Structure:** Monorepo with `client`, `server`, and `shared` workspaces.
 
----
+-----
 
-## **Project Structure**
+## **Getting Started**
 
-The project is organized into a monorepo with three main packages: `client`, `server`, and `shared`.
+### **1. Environment Setup**
 
-```
-.
-├── client/          # J²Adventures React frontend
-├── server/          # Hono backend
-└── shared/          # Shared TypeScript types
+Bun loads environment variables automatically. Create a `.env` file inside the `/server` directory.
+
+**File: `server/.env`**
+
+```env
+SUPABASE_URL="https://your-project-ref.supabase.co"
+SUPABASE_ANON_KEY="your-anon-key"
 ```
 
-### **Frontend: J²Adventures Homepage**
+> **Note:** Bun has native support for `.env` files. Packages like `dotenv` are not needed and should be removed to avoid conflicts.
 
-The client is a React and TypeScript application styled with Tailwind CSS. It features a responsive design with multiple card styles, infinite scrolling, and dynamic theming. The article content is easily customizable through a mock data array.
+### **2. Installation & Development**
 
-### **Backend: Hono Server**
+```bash
+# Install all dependencies
+bun install
 
-The server uses Hono, a simple and fast backend framework. It's set up to serve API routes, and you can easily add a database like Supabase, Drizzle, or Prisma.
+# Run client, server, and shared packages concurrently
+bun run dev
+```
+
+If you encounter a port-in-use error (`EADDRINUSE`), stop the server and run `lsof -i :3000` (macOS/Linux) to find the Process ID (PID) of the old process, then stop it with `kill -9 <PID>`.
+
+-----
+
+## **Backend API Development**
+
+The Hono server connects to Supabase and exposes API endpoints.
+
+**File: `server/src/index.ts`**
 
 ```typescript
-// Example of a simple API route in server/src/index.ts
 import { Hono } from "hono";
-import type { ApiResponse } from "shared/dist";
+import { createClient } from "@supabase/supabase-js";
 
 const app = new Hono();
 
-app.get("/hello", async (c) => {
-  const data: ApiResponse = {
-    message: "Hello from the J²Adventures API!",
-    success: true,
-  };
-  return c.json(data, { status: 200 });
+// Initialize Supabase client (reads from server/.env)
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!,
+);
+
+// Get all posts
+app.get("/api/posts", async (c) => {
+  const { data, error } = await supabase.from("posts").select("*");
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data);
+});
+
+// Create a new post
+app.post("/api/posts", async (c) => {
+  const postData = await c.req.json();
+  const { data, error } = await supabase.from("posts").insert(postData).select();
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data, 201);
 });
 
 export default app;
 ```
 
-### **Shared Types**
+### **API Testing**
 
-The `shared` package allows you to define types that can be used in both the client and server, ensuring that the data flowing between them is always consistent.
-
----
-
-## **Getting Started**
-
-### **Quick Start**
-
-You can create a new project using the `create-bhvr` CLI:
+Test endpoints directly using a tool like `curl` before connecting the frontend.
 
 ```bash
-bun create bhvr
+# Example: Create a new post
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"title": "My Test Post", "type": "standard"}' \
+  http://localhost:3000/api/posts
 ```
-
-### **Installation**
-
-Install dependencies for all workspaces:
-
-```bash
-bun install
-```
-
-### **Development**
-
-Run the entire stack concurrently:
-
-```bash
-bun run dev
-```
-
-### **Deployment**
-
-The client and server can be deployed independently to various platforms.
-
-- **Client (React App)**: Netlify, Vercel, GitHub Pages, Cloudflare Pages
-- **Server (Hono)**: Cloudflare Workers, or any environment that supports Bun.
-
-### Supabase database
-
-#### SQL Schema Breakdown
-
-This document breaks down the SQL script used to set up the database schema for our application. It includes tables for posts and user profiles, a trigger for automating profile creation, and the activation of Row Level Security.
 
 -----
 
-##### 1\. The `posts` Table 📝
+## **Supabase Database**
 
-This table stores all the information related to individual posts.
+### **Schema**
 
-```sql
-CREATE TABLE public.posts (
-  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT,
-  image_url TEXT,
-  category TEXT,
-  type TEXT NOT NULL,
-  grid_class TEXT,
-  author_id UUID REFERENCES auth.users(id) ON DELETE SET NULL
-);
-```
+The database includes `posts` and `profiles` tables. The `posts` table stores blog content, and the `profiles` table extends Supabase's `auth.users` with public data. A trigger automatically creates a new user profile upon signup.
 
-##### Column Breakdown
+### **Row Level Security (RLS)**
 
-  * **`id`**: The **primary key** for the table. It's a unique, auto-incrementing number for each post.
-  * **`created_at`**: A timestamp that automatically records when the post was created. `TIMESTAMPTZ` stores the time with the time zone.
-  * **`title`**: The title of the post. It cannot be empty (`NOT NULL`).
-  * **`description`, `image_url`, `category`**: Standard text fields to store post details.
-  * **`type`**, **`grid_class`**: Fields used by the frontend to determine how to display the post (e.g., layout type, CSS grid class).
-  * **`author_id`**: A **foreign key** that links to the `id` in the `auth.users` table. This identifies who created the post.
-      * `ON DELETE SET NULL`: If the author's user account is deleted, the `author_id` for their posts will be set to `NULL` instead of deleting the posts.
+RLS is enabled by default to secure your data. This means all access is blocked until you create specific permission policies.
 
------
+#### **Development Policy (Insecure)**
 
-#### 2\. The `profiles` Table 👤
-
-This table extends the authentication user data (`auth.users`) with public-facing information like a username and app-specific roles.
+To get unblocked during early development, allow anyone to insert posts. Run this in the Supabase SQL Editor:
 
 ```sql
-CREATE TABLE public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  username TEXT UNIQUE,
-  role TEXT DEFAULT 'viewer' NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Allows anyone to create posts. DEV USE ONLY.
+CREATE POLICY "Allow anyone to create posts (DEV ONLY)"
+ON public.posts FOR INSERT WITH CHECK (true);
 ```
 
-### Column Breakdown
+#### **Production Policy (Secure)**
 
-  * **`id`**: The **primary key** for this table. It's also a **foreign key** that links directly to the `id` from `auth.users`.
-      * `ON DELETE CASCADE`: If a user is deleted from `auth.users`, their corresponding profile in this table will be automatically deleted. This keeps the data clean.
-  * **`username`**: A unique username for the user.
-  * **`role`**: An application-specific role for the user. It defaults to `'viewer'` and cannot be empty.
-  * **`updated_at`**: A timestamp that records when the profile was last modified.
-
------
-
-#### 3\. Automation: New User Trigger 🤖
-
-This section automatically creates a new entry in the `profiles` table whenever a new user signs up and is added to the `auth.users` table. This is achieved with a function and a trigger.
-
-#### The Function: `handle_new_user()`
-
-This function defines the action to be taken: insert a new row into `public.profiles`.
+When you're ready for user authentication, replace the dev policy with a secure one.
 
 ```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, username)
-  VALUES (new.id, new.email);
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- 1. Remove the insecure policy
+DROP POLICY "Allow anyone to create posts (DEV ONLY)" ON public.posts;
+
+-- 2. Add the secure policy for logged-in users
+CREATE POLICY "Allow authenticated users to create posts"
+ON public.posts FOR INSERT TO authenticated WITH CHECK (true);
 ```
-
-  * It takes the `id` and `email` from the **`new`** user record in `auth.users`.
-  * It inserts these values into the `id` and `username` columns of the `profiles` table.
-  * **`SECURITY DEFINER`**: This allows the function to run with the permissions of the user who defined it (the owner), not the user who invokes it. This is necessary to write to the `public.profiles` table.
-
-#### The Trigger: `on_auth_user_created`
-
-This trigger "activates" the function above.
-
-```sql
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-```
-
-  * **`AFTER INSERT ON auth.users`**: It runs immediately after a new row is added to the `auth.users` table (i.e., after a new user signs up).
-  * **`FOR EACH ROW`**: The function runs once for every user that is added.
-
------
-
-#### 4\. Security: Row Level Security (RLS) 🔒
-
-These commands enable Row Level Security on the `posts` and `profiles` tables. RLS is a powerful PostgreSQL feature that controls which **rows** a user is allowed to access or modify.
-
-```sql
-ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-```
-
-  * **Important**: Enabling RLS is the first step. By default, it blocks all access. You must create security **`POLICY`** rules to grant specific permissions (e.g., "users can only see their own profile" or "users can only edit their own posts"). This script only turns the feature on.
