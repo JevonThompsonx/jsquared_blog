@@ -2,9 +2,9 @@
 
 // server/src/index.ts
 
-import { Hono } from "hono/cloudflare"; // Changed import for Cloudflare Workers
+import { Hono } from "hono";
 import { logger } from "hono/logger";
-import { createClient, User } from "@supabase/supabase-js";
+import { createClient, User, SupabaseClient } from "@supabase/supabase-js";
 import type { ApiResponse } from "shared/dist";
 import { authMiddleware } from "./middleware/auth"; // Import the new middleware
 
@@ -14,13 +14,19 @@ interface Bindings {
   SUPABASE_ANON_KEY: string;
 }
 
-const app = new Hono<{
-  Bindings: Bindings; // Add Bindings for environment variables
-  Variables: {
-    supabase: ReturnType<typeof createClient>;
-    user: User;
-  };
-}>();
+// Define the Variables expected by the Worker
+interface Variables {
+  supabase: SupabaseClient<any, 'public', any>; // Explicitly type SupabaseClient
+  user: User;
+}
+
+// Define the Hono environment type
+interface HonoEnv {
+  Bindings: Bindings;
+  Variables: Variables;
+}
+
+const app = new Hono<HonoEnv>(); // Use the explicit HonoEnv
 
 // --- MIDDLEWARE ---
 app.use("*", logger());

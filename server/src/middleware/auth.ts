@@ -1,9 +1,27 @@
 // server/src/middleware/auth.ts
 
 import { createMiddleware } from "hono/factory";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, User, SupabaseClient } from "@supabase/supabase-js";
 
-export const authMiddleware = createMiddleware(async (c, next) => {
+// Define the environment variables (Bindings) expected by the Worker
+interface Bindings {
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
+}
+
+// Define the Variables expected by the Worker
+interface Variables {
+  supabase: SupabaseClient<any, 'public', any>; // Explicitly type SupabaseClient
+  user: User;
+}
+
+// Define the Hono environment type for middleware
+interface HonoEnv {
+  Bindings: Bindings;
+  Variables: Variables;
+}
+
+export const authMiddleware = createMiddleware<HonoEnv>(async (c, next) => {
   // 1. Get the Authorization header
   const authHeader = c.req.header("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {

@@ -5,7 +5,11 @@
     "composite": true,
     "jsxImportSource": "hono/jsx",
     "outDir": "dist",
-    "noEmit": false
+    "noEmit": false,
+    "baseUrl": ".", // Explicitly set baseUrl for server
+    "paths": {
+      "hono/cloudflare": ["./node_modules/hono/dist/cloudflare/index.d.ts"]
+    }
   },
   "references": [
     { "path": "../shared" }
