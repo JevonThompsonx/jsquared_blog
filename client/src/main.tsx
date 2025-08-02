@@ -7,6 +7,7 @@ import "./index.css";
 import Home from "./components/Home.tsx";
 import Auth from "./components/Auth.tsx";
 import Admin from "./components/Admin.tsx";
+import PostDetail from "./components/PostDetail.tsx"; // Import PostDetail
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 
 // Define a PrivateRoute component
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
   {
     path: "/admin",
     element: <PrivateRoute><Admin /></PrivateRoute>,
+  },
+  {
+    path: "/posts/:id", // New route for individual posts
+    element: <PostDetail />,
   },
 ]);
 

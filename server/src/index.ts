@@ -64,6 +64,29 @@ app.get("/api/posts", async (c) => {
   return c.json(data);
 });
 
+app.get("/api/posts/:id", async (c) => {
+  const { id } = c.req.param();
+  const supabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_ANON_KEY,
+  );
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  if (!data) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  return c.json(data);
+});
+
 // --- PROTECTED ROUTES (Auth Required) ---
 app.post("/api/posts", authMiddleware, async (c) => {
   // Get the user-specific Supabase client and user object from the middleware
@@ -94,6 +117,7 @@ app.post("/api/posts", authMiddleware, async (c) => {
     .select();
 
   if (error) {
+    console.error("Supabase insert error:", error);
     return c.json({ error: error.message }, 500);
   }
 

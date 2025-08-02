@@ -21,6 +21,7 @@ interface AuthContextType {
   user: CustomUser | null;
   logout: () => Promise<void>;
   loading: boolean; // Add loading state
+  token: string | null; // Add token to AuthContextType
 }
 
 // Create the context with a default undefined value
@@ -48,9 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (error) {
           console.error("Error fetching profile:", error);
-          setUser(session.user); // Set user without role if profile fetch fails
+          setUser({ ...session.user, token: session.access_token }); // Set user without role if profile fetch fails
         } else {
-          setUser({ ...session.user, role: profile?.role });
+          setUser({ ...session.user, role: profile?.role, token: session.access_token });
         }
       } else {
         setUser(null);
@@ -73,9 +74,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (error) {
             console.error("Error fetching profile on auth change:", error);
-            setUser(session.user);
+            setUser({ ...session.user, token: session.access_token });
           } else {
-            setUser({ ...session.user, role: profile?.role });
+            setUser({ ...session.user, role: profile?.role, token: session.access_token });
           }
         } else {
           setUser(null);
@@ -93,6 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Logout function
   const logout = async () => {
     await supabase.auth.signOut();
+    setSession(null);
     setUser(null); // Clear user on logout
   };
 
@@ -101,6 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     logout,
     loading,
+    token: session?.access_token || null, // Provide the token in the context value
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

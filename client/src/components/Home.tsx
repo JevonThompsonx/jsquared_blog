@@ -8,6 +8,7 @@ import {
   SyntheticEvent,
   CSSProperties,
 } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import { useAuth } from "../context/AuthContext"; // <-- IMPORT AUTH HOOK
 
@@ -30,6 +31,7 @@ type Post = {
 
 // This type can remain for your display components
 type Article = {
+  id: number; // Add id to Article type
   image: string;
   category: string;
   title: string;
