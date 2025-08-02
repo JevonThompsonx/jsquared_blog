@@ -46,6 +46,8 @@ app.get("/hello", async (c) => {
 
 app.get("/api/posts", async (c) => {
   // Create a temporary, public client for this route using c.env
+  console.log("SUPABASE_URL:", c.env.SUPABASE_URL);
+  console.log("SUPABASE_ANON_KEY:", c.env.SUPABASE_ANON_KEY);
   const supabase = createClient(
     c.env.SUPABASE_URL,
     c.env.SUPABASE_ANON_KEY,

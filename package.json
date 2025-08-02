@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "dev:client": "cd client && bun run dev",
-    "dev:server": "cd server && bun run dev",
+    "dev:server": "bunx wrangler dev --config server/wrangler.toml",
     "dev:shared": "cd shared && bun run dev",
     "dev": "concurrently \"bun run dev:shared\" \"bun run dev:server\" \"bun run dev:client\"",
     "build:client": "cd client && bun run build",
@@ -41,6 +41,7 @@
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.2",
     "hono": "^4.7.11",
-    "react-router": "^7.6.2"
+    "react-router": "^7.6.2",
+    "wrangler": "^4.27.0"
   }
 }
