@@ -130,7 +130,7 @@ interface ArticleCardProps {
   article: Article;
 }
 const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
-  const { image, category, title, date, description, type, gridClass } =
+  const { id, image, category, title, date, description, type, gridClass } =
     article;
   const formattedDate = formatDateToSeasonYear(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
@@ -139,88 +139,94 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
   };
   if (type === "hover") {
     return (
-      <div
-        className={`group relative rounded-lg overflow-hidden shadow-lg h-full ${gridClass}`}
-      >
-        <img
-          className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
-          src={image}
-          alt={title}
-          onError={handleImageError}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
-        <div className="absolute bottom-0 left-0 p-4 md:p-6">
-          <div className="tracking-wide text-sm text-[var(--primary-light)] font-semibold">
-            {category}
+      <Link to={`/posts/${id}`}>
+        <div
+          className={`group relative rounded-lg overflow-hidden shadow-lg h-full ${gridClass}`}
+        >
+          <img
+            className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+            src={image}
+            alt={title}
+            onError={handleImageError}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+          <div className="absolute bottom-0 left-0 p-4 md:p-6">
+            <div className="tracking-wide text-sm text-[var(--primary-light)] font-semibold">
+              {category}
+            </div>
+            <h3 className="mt-1 text-xl md:text-2xl font-bold leading-tight text-white">
+              {title}
+            </h3>
+            <div className="text-gray-300 text-xs md:text-sm mt-2">
+              {formattedDate}
+            </div>
+            <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
+              {description}
+            </p>
           </div>
-          <h3 className="mt-1 text-xl md:text-2xl font-bold leading-tight text-white">
-            {title}
-          </h3>
-          <div className="text-gray-300 text-xs md:text-sm mt-2">
-            {formattedDate}
-          </div>
-          <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
-            {description}
-          </p>
         </div>
-      </div>
+      </Link>
     );
   }
   if (type === "split-horizontal") {
     return (
+      <Link to={`/posts/${id}`}>
+        <div
+          className={`rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] flex flex-col md:flex-row ${gridClass}`}
+        >
+          <img
+            className="h-56 md:h-full w-full md:w-1/2 object-cover"
+            src={image}
+            alt={title}
+            onError={handleImageError}
+          />
+          <div className="p-4 md:p-6 flex flex-col justify-between">
+            <div>
+              <div className="tracking-wide text-sm text-[var(--primary)] font-semibold">
+                {category}
+              </div>
+              <h3 className="mt-1 text-xl md:text-2xl font-bold leading-tight text-[var(--text-primary)]">
+                {title}
+              </h3>
+              <p className="mt-2 text-[var(--text-secondary)]">{description}</p>
+            </div>
+            <div className="mt-4 text-sm text-[var(--text-secondary)]">
+              {formattedDate}
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+  return (
+    <Link to={`/posts/${id}`}>
       <div
-        className={`rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] flex flex-col md:flex-row ${gridClass}`}
+        className={`rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] flex flex-col ${gridClass}`}
       >
         <img
-          className="h-56 md:h-full w-full md:w-1/2 object-cover"
+          className="h-48 w-full object-cover"
           src={image}
           alt={title}
           onError={handleImageError}
         />
-        <div className="p-4 md:p-6 flex flex-col justify-between">
-          <div>
-            <div className="tracking-wide text-sm text-[var(--primary)] font-semibold">
-              {category}
-            </div>
-            <h3 className="mt-1 text-xl md:text-2xl font-bold leading-tight text-[var(--text-primary)]">
-              {title}
-            </h3>
-            <p className="mt-2 text-[var(--text-secondary)]">{description}</p>
+        <div className="p-4 md:p-6 flex-grow flex flex-col">
+          <div className="tracking-wide text-sm text-[var(--primary)] font-semibold">
+            {category}
           </div>
-          <div className="mt-4 text-sm text-[var(--text-secondary)]">
-            {formattedDate}
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div
-      className={`rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] flex flex-col ${gridClass}`}
-    >
-      <img
-        className="h-48 w-full object-cover"
-        src={image}
-        alt={title}
-        onError={handleImageError}
-      />
-      <div className="p-4 md:p-6 flex-grow flex flex-col">
-        <div className="tracking-wide text-sm text-[var(--primary)] font-semibold">
-          {category}
-        </div>
-        <h3 className="mt-1 font-bold text-xl leading-tight text-[var(--text-primary)]">
-          {title}
-        </h3>
-        <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
-          {description}
-        </p>
-        {date && (
-          <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
-            {formattedDate}
+          <h3 className="mt-1 font-bold text-xl leading-tight text-[var(--text-primary)]">
+            {title}
+          </h3>
+          <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
+            {description}
           </p>
-        )}
+          {date && (
+            <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
+              {formattedDate}
+            </p>
+          )}
+        </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
@@ -264,6 +270,7 @@ export default function Home() {
 
     // Map the filtered API data to the Article format your components expect
     return filtered.map((post) => ({
+      id: post.id, // Pass the post id
       image:
         post.image_url ||
         "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found",
@@ -311,7 +318,7 @@ export default function Home() {
               <LoadingSpinner />
             ) : displayedArticles.length > 0 ? (
               displayedArticles.map((article) => (
-                <ArticleCard key={article.title} article={article} />
+                <ArticleCard key={article.id} article={article} />
               ))
             ) : (
               <NoResults />

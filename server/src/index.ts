@@ -124,6 +124,49 @@ app.post("/api/posts", authMiddleware, async (c) => {
   return c.json(data, 201);
 });
 
+app.put("/api/posts/:id", authMiddleware, async (c) => {
+  const { id } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+  const postData = await c.req.json();
+
+  // Ensure the user is authorized to edit this post (e.g., is the author or an admin)
+  // You might want to fetch the existing post first to check author_id
+  const { data: existingPost, error: fetchError } = await supabase
+    .from("posts")
+    .select("author_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existingPost) {
+    return c.json({ error: "Post not found or unauthorized" }, 404);
+  }
+
+  if (existingPost.author_id !== user.id && user.role !== 'admin') {
+    return c.json({ error: "Unauthorized to edit this post" }, 403);
+  }
+
+  const { data, error } = await supabase
+    .from("posts")
+    .update({
+      title: postData.title,
+      description: postData.description,
+      image_url: postData.image_url,
+      category: postData.category,
+      type: postData.type,
+      grid_class: postData.grid_class,
+    })
+    .eq("id", id)
+    .select();
+
+  if (error) {
+    console.error("Supabase update error:", error);
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data, 200);
+});
+
 // --- SERVER SETUP ---
 // No need for Node.js 'serve' in Cloudflare Workers
 export default app;

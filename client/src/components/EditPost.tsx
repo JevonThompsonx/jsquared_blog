@@ -1,8 +1,8 @@
-// client/src/components/Admin.tsx
+// client/src/components/EditPost.tsx
 
-import { useState, FC } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 // This type should match what your API returns from the 'posts' table
 type Post = {
@@ -17,66 +17,84 @@ type Post = {
   author_id: string;
 };
 
-const Admin: FC = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate(); // Initialize useNavigate
-  const [post, setPost] = useState<Omit<Post, "id" | "created_at" | "author_id">>({
-    title: "",
-    description: "",
-    image_url: "",
-    category: "",
-    type: "split-vertical",
-    grid_class: "",
-  });
+const EditPost = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user, token } = useAuth();
+  const [post, setPost] = useState<Omit<Post, "created_at" | "author_id"> | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPost = async () => {
+      if (!id) {
+        setError("Post ID is missing.");
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/posts/${id}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: Post = await response.json();
+        setPost(data);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setPost((prev) => ({ ...prev, [name]: value }));
+    setPost((prev) => (prev ? { ...prev, [name]: value } : null));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !token || !post) return;
 
     try {
-      const response = await fetch("/api/posts", {
-        method: "POST",
+      const response = await fetch(`/api/posts/${id}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ...post, author_id: user.id }),
+        body: JSON.stringify(post),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create post");
+        throw new Error("Failed to update post");
       }
 
-      const newPost: Post[] = await response.json(); // Assuming the API returns the created post(s)
-
-      // Clear the form
-      setPost({
-        title: "",
-        description: "",
-        image_url: "",
-        category: "",
-        type: "split-vertical",
-        grid_class: "",
-      });
-
-      alert("Post created successfully!");
-      if (newPost && newPost.length > 0) {
-        navigate(`/posts/${newPost[0].id}`); // Redirect to the new post's detail page
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Error creating post");
+      alert("Post updated successfully!");
+      navigate(`/posts/${id}`); // Redirect back to the post detail page
+    } catch (err: any) {
+      console.error(err);
+      alert("Error updating post");
     }
   };
 
+  if (loading) {
+    return <div className="container mx-auto p-4 text-center text-gray-700">Loading post for editing...</div>;
+  }
+
+  if (error) {
+    return <div className="container mx-auto p-4 text-center text-red-500">Error: {error}</div>;
+  }
+
+  if (!post) {
+    return <div className="container mx-auto p-4 text-center text-gray-700">Post not found for editing.</div>;
+  }
+
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Create Post</h1>
+      <h1 className="text-2xl font-bold mb-4">Edit Post</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="title" className="block text-sm font-medium">Title</label>
@@ -148,11 +166,11 @@ const Admin: FC = () => {
           />
         </div>
         <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-          Create Post
+          Update Post
         </button>
       </form>
     </div>
   );
 };
 
-export default Admin;
+export default EditPost;
