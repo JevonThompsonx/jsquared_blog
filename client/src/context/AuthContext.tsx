@@ -10,11 +10,17 @@ import {
 import { supabase } from "../supabase";
 import { Session, User } from "@supabase/supabase-js";
 
+// Extend the User type to include a role
+interface CustomUser extends User {
+  role?: string; // Assuming your 'profiles' table has a 'role' column
+}
+
 // Define the shape of the context's value
 interface AuthContextType {
   session: Session | null;
-  user: User | null;
+  user: CustomUser | null;
   logout: () => Promise<void>;
+  loading: boolean; // Add loading state
 }
 
 // Create the context with a default undefined value
@@ -23,20 +29,58 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Create the AuthProvider component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<CustomUser | null>(null);
+  const [loading, setLoading] = useState(true); // Initial loading state
 
   useEffect(() => {
-    // Check for an initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const fetchUserAndProfile = async () => {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-      setUser(session?.user ?? null);
-    });
+
+      if (session) {
+        // Fetch user profile from the 'profiles' table
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+          setUser(session.user); // Set user without role if profile fetch fails
+        } else {
+          setUser({ ...session.user, role: profile?.role });
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    };
+
+    fetchUserAndProfile();
 
     // Listen for changes in authentication state (login, logout, etc.)
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        if (session) {
+          const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching profile on auth change:", error);
+            setUser(session.user);
+          } else {
+            setUser({ ...session.user, role: profile?.role });
+          }
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
       },
     );
 
@@ -49,12 +93,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Logout function
   const logout = async () => {
     await supabase.auth.signOut();
+    setUser(null); // Clear user on logout
   };
 
   const value = {
     session,
     user,
     logout,
+    loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

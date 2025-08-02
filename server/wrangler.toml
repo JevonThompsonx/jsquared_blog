@@ -1,0 +1,8 @@
+name = "jsquared-blog-api"
+main = "./dist/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+# These will be populated by Cloudflare Secrets or environment variables
+# SUPABASE_URL = "your_supabase_url"
+# SUPABASE_ANON_KEY = "your_supabase_anon_key"

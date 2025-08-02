@@ -1,4 +1,5 @@
-export type ApiResponse = {
-  message: string;
-  success: true;
-}
+export type ThemeName =
+  | "midnightGarden"
+  | "daylightGarden"
+  | "enchantedForest"
+  | "daylitForest";

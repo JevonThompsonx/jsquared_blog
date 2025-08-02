@@ -1,202 +1,136 @@
-# **J²Adventures: A Full-Stack Travel Blog** 🦫
+# J²Adventures Blog
 
-This project is a full-stack monorepo for a travel blog, featuring a React frontend and a Hono backend powered by Bun.
+This is a monorepo for the J²Adventures blog, consisting of a React frontend, a Hono backend, and a shared types package.
 
------
+## Project Structure
 
-## **Tech Stack & Structure**
+-   `client/`: React frontend application (Vite)
+-   `server/`: Hono backend API
+-   `shared/`: Shared types and utilities
+-   `dist/`: Compiled output for the entire monorepo (from root build)
 
-  * **Core:** Bun, Hono, Vite, React, TypeScript
-  * **Database:** Supabase (PostgreSQL)
-  * **Styling:** Tailwind CSS
-  * **Structure:** Monorepo with `client`, `server`, and `shared` workspaces.
+## Local Development
 
------
+To run the project locally, ensure you have [Bun](https://bun.sh/docs/installation) installed.
 
-## **Getting Started**
+1.  **Install Dependencies:**
+    ```bash
+    bun install
+    ```
+2.  **Set up Environment Variables:**
+    Create a `.env` file in the `client/` directory with your Supabase credentials:
+    ```
+    # client/.env
+    VITE_SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
+    VITE_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+    ```
+    Create a `.env` file in the `server/` directory with your Supabase credentials (for local development of the server):
+    ```
+    # server/.env
+    SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
+    SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+    ```
+3.  **Start Development Servers:**
+    From the project root:
+    ```bash
+    bun run dev
+    ```
+    This command uses `concurrently` to start the development servers for `shared`, `server`, and `client`. The frontend will be accessible at `http://localhost:5173` (or another port if 5173 is in use).
 
-### **1. Environment Setup**
+## Cloudflare Deployment
 
-Bun loads environment variables automatically. Create a `.env` file inside the `/server` directory.
+This project is configured for deployment to Cloudflare Pages (frontend) and Cloudflare Workers (backend API).
 
-**File: `server/.env`**
+### Prerequisites
 
-```env
-SUPABASE_URL="https://your-project-ref.supabase.co"
-SUPABASE_ANON_KEY="your-anon-key"
-```
+-   A Cloudflare account.
+-   The `wrangler` CLI installed and configured (`bunx wrangler login`).
 
-> **Note:** Bun has native support for `.env` files. Packages like `dotenv` are not needed and should be removed to avoid conflicts.
+### 1. Build the Project
 
-### **2. Installation & Development**
-
-```bash
-# Install all dependencies
-bun install
-
-# Run client, server, and shared packages concurrently
-bun run dev
-```
-
-If you encounter a port-in-use error (`EADDRINUSE`), stop the server and run `lsof -i :3000` (macOS/Linux) to find the Process ID (PID) of the old process, then stop it with `kill -9 <PID>`.
-
------
-
-## **Backend API Development**
-
-The Hono server connects to Supabase and exposes API endpoints.
-
-**File: `server/src/index.ts`**
-
-```typescript
-import { Hono } from "hono";
-import { createClient } from "@supabase/supabase-js";
-
-const app = new Hono();
-
-// Initialize Supabase client (reads from server/.env)
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!,
-);
-
-// Get all posts
-app.get("/api/posts", async (c) => {
-  const { data, error } = await supabase.from("posts").select("*");
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data);
-});
-
-// Create a new post
-app.post("/api/posts", async (c) => {
-  const postData = await c.req.json();
-  const { data, error } = await supabase.from("posts").insert(postData).select();
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data, 201);
-});
-
-export default app;
-```
-
-### **API Testing**
-
-Test endpoints directly using a tool like `curl` before connecting the frontend.
+From the project root, run the unified build command:
 
 ```bash
-# Example: Create a new post
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"title": "My Test Post", "type": "standard"}' \
-  http://localhost:3000/api/posts
+bun run build
 ```
 
------
+This will compile all workspaces (`shared`, `server`, `client`) and place their outputs in their respective `dist/` directories.
 
-## **Supabase Database**
+### 2. Deploy the Backend (Cloudflare Worker)
 
-### **Schema**
+Your Hono backend (`server/`) is configured as a Cloudflare Worker.
 
-The database includes `posts` and `profiles` tables. The `posts` table stores blog content, and the `profiles` table extends Supabase's `auth.users` with public data. A trigger automatically creates a new user profile upon signup.
+1.  **Navigate to the server directory:**
+    ```bash
+    cd server
+    ```
+2.  **Deploy the Worker:**
+    ```bash
+    bunx wrangler deploy
+    ```
+    Wrangler will deploy your Worker and provide a URL (e.g., `your-worker-name.your-account.workers.dev`). Make a note of this URL.
 
-### **Row Level Security (RLS)**
+3.  **Set Environment Variables (Secrets) in Cloudflare:**
+    Go to your Cloudflare dashboard:
+    -   Navigate to **Workers & Pages** -> **Overview** -> Your Worker (`jsquared-blog-api` by default).
+    -   Go to **Settings** -> **Variables**.
+    -   Add the following **Environment Variables (Secrets)**:
+        -   `SUPABASE_URL` (your Supabase project URL)
+        -   `SUPABASE_ANON_KEY` (your Supabase project Anon Key)
 
-RLS is enabled by default to secure your data. This means all access is blocked until you create specific permission policies.
+### 3. Deploy the Frontend (Cloudflare Pages)
 
-#### **Development Policy (Insecure)**
+Your React frontend (`client/`) will be deployed to Cloudflare Pages.
 
-To get unblocked during early development, allow anyone to insert posts. Run this in the Supabase SQL Editor:
+1.  **Create a New Pages Project:**
+    -   Go to your Cloudflare dashboard: **Workers & Pages** -> **Overview** -> **Create application** -> **Pages** -> **Connect to Git**.
+    -   Select your Git repository.
 
-```sql
--- Allows anyone to create posts. DEV USE ONLY.
-CREATE POLICY "Allow anyone to create posts (DEV ONLY)"
-ON public.posts FOR INSERT WITH CHECK (true);
-```
+2.  **Configure Build Settings:**
+    -   **Framework preset:** `React` (or `Vite`)
+    -   **Build command:** `bun run build` (This command, run from the root, builds the entire monorepo.)
+    -   **Build directory:** `client/dist` (This tells Pages where to find the static assets for your frontend.)
 
-#### **Production Policy (Secure)**
+3.  **Set Environment Variables for Pages:**
+    -   In the Pages project settings, go to **Environment variables**.
+    -   Add the following variables (these are used during the frontend build process):
+        -   `VITE_SUPABASE_URL` (your Supabase project URL)
+        -   `VITE_SUPABASE_ANON_KEY` (your Supabase project Anon Key)
 
-When you're ready for user authentication, replace the dev policy with a secure one.
+### 4. Connecting Frontend to Backend with a Custom Domain
 
-```sql
--- 1. Remove the insecure policy
-DROP POLICY "Allow anyone to create posts (DEV ONLY)" ON public.posts;
+To ensure your frontend can communicate with your backend Worker using a clean custom domain (e.g., `api.yourdomain.com`), follow these steps:
 
--- 2. Add the secure policy for logged-in users
-CREATE POLICY "Allow authenticated users to create posts"
-ON public.posts FOR INSERT TO authenticated WITH CHECK (true);
-```
-## Directory tree: 
+1.  **Add a Custom Domain to Cloudflare Pages:**
+    -   In your Cloudflare Pages project settings, go to **Custom domains**.
+    -   Follow the instructions to add your desired custom domain (e.g., `yourdomain.com`). Cloudflare will guide you through setting up the necessary DNS records.
 
-client
-├── dist
-│   ├── assets
-│   │   ├── index-D9db4s3f.css
-│   │   └── index-gHj7llrS.js
-│   ├── index.html
-│   └── vite.svg
-├── eslint.config.js
-├── index.html
-├── package.json
-├── public
-│   └── vite.svg
-├── README.md
-├── src
-│   ├── assets
-│   │   └── beaver.svg
-│   ├── components
-│   │   ├── About.tsx
-│   │   ├── Contact.tsx
-│   │   └── Home.tsx
-│   ├── index.css
-│   ├── main.tsx
-│   └── vite-env.d.ts
-├── tsconfig.app.json
-├── tsconfig.json
-├── tsconfig.node.json
-├── vite.config.ts
-└── wrangler.json
-server
-├── bun.lock
-├── dist
-│   ├── client.d.ts
-│   ├── client.js
-│   ├── index.d.ts
-│   ├── index.js
-│   ├── src
-│   │   ├── client.d.ts
-│   │   ├── client.js
-│   │   ├── index.d.ts
-│   │   └── index.js
-│   └── tsconfig.tsbuildinfo
-├── package.json
-├── README.md
-├── src
-│   ├── client.ts
-│   └── index.ts
-├── tsconfCop2.json
-├── tsconfCop.json
-├── tsconfig.json
-└── wrangler.jso
-shared
-├── dist
-│   ├── index.d.ts
-│   ├── index.js
-│   ├── src
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   └── types
-│   │       ├── index.d.ts
-│   │       └── index.js
-│   ├── tsconfig.tsbuildinfo
-│   └── types
-│       ├── index.d.ts
-│       └── index.js
-├── packaCop.json
-├── package.json
-├── src
-│   ├── index.ts
-│   └── types
-│       └── index.ts
-├── tsconfCop2.json
-└── tsconfig.json
+2.  **Create a CNAME Record for your API Subdomain:**
+    -   Once your custom domain is active on Pages, go to your Cloudflare DNS settings for `yourdomain.com`.
+    -   Add a new `CNAME` record:
+        -   **Type:** `CNAME`
+        -   **Name:** `api` (or whatever subdomain you prefer for your API)
+        -   **Target:** The URL of your deployed Cloudflare Worker (e.g., `your-worker-name.your-account.workers.dev`).
+        -   **Proxy status:** `Proxied` (orange cloud)
 
-35 directories, 183 files
+    This will make your Worker accessible at `https://api.yourdomain.com`.
+
+3.  **Update Frontend API Calls:**
+    Currently, your frontend uses relative paths like `/api/posts`. For production deployment with a custom domain, you'll need to tell your frontend where your API lives.
+
+    **Recommendation:** Use an environment variable in your frontend to define the API base URL.
+
+    -   **In `client/.env` (for local development):**
+        ```
+        VITE_API_BASE_URL="http://localhost:3000"
+        ```
+    -   **In Cloudflare Pages Environment Variables (for production):**
+        Add a new environment variable:
+        ```
+        VITE_API_BASE_URL="https://api.yourdomain.com"
+        ```
+    -   **Modify your frontend code (e.g., `client/src/components/Home.tsx` and `client/src/components/Admin.tsx`):**
+        Change `fetch("/api/posts")` to `fetch(`${import.meta.env.VITE_API_BASE_URL}/api/posts")`.
+        You'll need to apply this change wherever your frontend makes API calls to your backend.
+
+---
