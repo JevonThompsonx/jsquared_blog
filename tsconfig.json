@@ -2,7 +2,8 @@
   "files": [],
   "references": [
     { "path": "./shared" },
-    { "path": "./server" }
+    { "path": "./server" },
+    { "path": "./client" }
   ],
   "compilerOptions": {
     // This is the BASE configuration that others will extend.

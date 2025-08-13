@@ -37,6 +37,43 @@ To run the project locally, ensure you have [Bun](https://bun.sh/docs/installati
     ```
     This command uses `concurrently` to start the development servers for `shared`, `server`, and `client`. The frontend will be accessible at `http://localhost:5173` (or another port if 5173 is in use).
 
+## Cloudflare Images Setup for Optimized Image Delivery
+
+This project leverages Cloudflare Images to provide optimized and fast image delivery, while using Supabase Storage as the primary storage for your original images. Cloudflare Images acts as a transformation and caching layer.
+
+### Prerequisites
+
+-   A Cloudflare account with Cloudflare Images enabled.
+
+### Setup Steps
+
+1.  **Ensure Supabase Storage Bucket is Public:**
+    -   Go to your Supabase Dashboard.
+    -   Navigate to **Storage** -> **Buckets**.
+    -   Select your `post-images` bucket.
+    -   Go to **Settings** and ensure "Public bucket" is **enabled**. Cloudflare Images needs public read access to fetch your original images.
+
+2.  **Create a Cloudflare Images Variant with Custom Storage:**
+    -   Go to your Cloudflare Dashboard.
+    -   Navigate to **Images** -> **Variants**.
+    -   Click **Add variant**.
+    -   **Variant Name:** Choose a descriptive name (e.g., `supabase-original`, `webp-optimized`, `thumbnail`). This name will be part of your image URLs.
+    -   **Source URL:** This is the base URL where Cloudflare Images will find your original images in Supabase Storage. It should look like this:
+        `https://<YOUR_SUPABASE_PROJECT_REF>.supabase.co/storage/v1/object/public/post-images/`
+        -   Replace `<YOUR_SUPABASE_PROJECT_REF>` with your actual Supabase project reference (found in Supabase Dashboard -> **Project Settings** -> **General** -> **Project API keys**).
+    -   **Delivery URL:** This is the URL Cloudflare Images will use to serve your images. It will look like:
+        `https://imagedelivery.net/<YOUR_ACCOUNT_HASH>/<IMAGE_PATH_FROM_SUPABASE>/<VARIANT_NAME>`
+        -   Your **Account Hash** is: `87WtOE5oSHkx54q2OsGN8w` (This is hardcoded in the client-side code for image delivery).
+        -   `<IMAGE_PATH_FROM_SUPABASE>` is the filename/path you store in your Supabase `posts` table (e.g., `my-image.jpg`).
+        -   `<VARIANT_NAME>` is the name of the variant you defined (e.g., `public`, `webp-optimized`).
+    -   **Transformations:** Configure desired transformations (e.g., `Format: WebP`, `Quality: 80`, `Fit: cover`, `Width`, `Height`). These will be applied on the fly.
+
+### How it Works in This Project
+
+-   When you upload an image on the "Create Post" page, the original image file is stored in your Supabase `post-images` bucket.
+-   The `image_url` field in your Supabase `posts` table now stores only the **path/filename** of the image within the bucket (e.g., `a1b2c3d4-e5f6-7890-1234-567890abcdef.jpg`), not the full Supabase public URL.
+-   On the homepage, the frontend constructs the image `src` attribute using the Cloudflare Images delivery URL format, combining your Account Hash, the stored image path, and a chosen variant name (e.g., `/public` for the original size, or a custom variant for optimized versions). This allows Cloudflare Images to fetch, transform, and serve the image efficiently.
+
 ## Cloudflare Deployment
 
 This project is configured for deployment to Cloudflare Pages (frontend) and Cloudflare Workers (backend API).

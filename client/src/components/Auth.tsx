@@ -1,4 +1,4 @@
-// client/src/components/Auth.tsx
+
 
 import { useState } from "react";
 import { supabase } from "../supabase";
@@ -22,7 +22,7 @@ export default function Auth() {
     if (error) {
       setError(error.message);
     } else {
-      navigate("/"); // Redirect to home on successful login
+      navigate("/");
     }
     setLoading(false);
   };
@@ -38,12 +38,10 @@ export default function Auth() {
     if (error) {
       setError(error.message);
     } else {
-      // Supabase sends a confirmation email by default.
-      // You might want to show a message here.
       alert(
         "Signup successful! Please check your email to verify your account.",
       );
-      navigate("/"); // Redirect to home
+      navigate("/");
     }
     setLoading(false);
   };
@@ -87,7 +85,7 @@ export default function Auth() {
         {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
         <div className="flex items-center justify-between">
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="bg-[var(--text-secondary)] hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             type="submit"
             onClick={handleLogin}
             disabled={loading}
@@ -95,7 +93,7 @@ export default function Auth() {
             {loading ? "Logging in..." : "Log In"}
           </button>
           <button
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             type="submit"
             onClick={handleSignup}
             disabled={loading}

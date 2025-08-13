@@ -1,6 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "include": ["src"],
+  "files": ["src/index.ts"],
   "compilerOptions": {
     "composite": true,  
     "outDir": "dist"

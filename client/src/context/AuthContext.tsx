@@ -1,4 +1,4 @@
-// client/src/context/AuthContext.tsx
+
 
 import {
   createContext,
@@ -12,7 +12,8 @@ import { Session, User } from "@supabase/supabase-js";
 
 // Extend the User type to include a role
 interface CustomUser extends User {
-  role?: string; // Assuming your 'profiles' table has a 'role' column
+  role?: string;
+  token?: string;
 }
 
 // Define the shape of the context's value
@@ -20,18 +21,16 @@ interface AuthContextType {
   session: Session | null;
   user: CustomUser | null;
   logout: () => Promise<void>;
-  loading: boolean; // Add loading state
-  token: string | null; // Add token to AuthContextType
+  loading: boolean;
+  token: string | null;
 }
 
-// Create the context with a default undefined value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Create the AuthProvider component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<CustomUser | null>(null);
-  const [loading, setLoading] = useState(true); // Initial loading state
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -40,7 +39,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
 
       if (session) {
-        // Fetch user profile from the 'profiles' table
         const { data: profile, error } = await supabase
           .from("profiles")
           .select("role")
@@ -49,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (error) {
           console.error("Error fetching profile:", error);
-          setUser({ ...session.user, token: session.access_token }); // Set user without role if profile fetch fails
+          setUser({ ...session.user, token: session.access_token });
         } else {
           setUser({ ...session.user, role: profile?.role, token: session.access_token });
         }
@@ -61,7 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     fetchUserAndProfile();
 
-    // Listen for changes in authentication state (login, logout, etc.)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
@@ -85,17 +82,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       },
     );
 
-    // Cleanup the listener when the component unmounts
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, []);
 
-  // Logout function
   const logout = async () => {
     await supabase.auth.signOut();
     setSession(null);
-    setUser(null); // Clear user on logout
+    setUser(null);
   };
 
   const value = {
@@ -103,13 +98,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     logout,
     loading,
-    token: session?.access_token || null, // Provide the token in the context value
+    token: session?.access_token || null,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Create a custom hook for easy access to the context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
