@@ -72,14 +72,7 @@ interface ArticleCardProps {
   isAnimating?: boolean;
 }
 const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
-  console.log(
-    "Article ID:",
-    article.id,
-    "Dynamic View Type:",
-    article.dynamicViewType,
-    "Grid Class:",
-    article.gridClass,
-  );
+  
   const { id, image, category, title, date, description, gridClass } = article;
   const formattedDate = formatDateToSeasonYear(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {

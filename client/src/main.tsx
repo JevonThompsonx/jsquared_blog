@@ -96,9 +96,9 @@ const AppLayout = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      console.log('Keydown event:', event.key, 'ctrl:', event.ctrlKey);
+      
       if (event.ctrlKey && event.key === 'k') {
-        console.log('Ctrl+k pressed, focusing search input');
+        
         event.preventDefault();
         searchInputRef.current?.focus();
       }

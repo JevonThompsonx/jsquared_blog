@@ -35,7 +35,6 @@ const EditPost: FC = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data: Post = await response.json();
-        console.log("Fetched post data:", data);
         setPost(data);
         if (data.image_url) {
           setUploadMethod('url');
@@ -80,7 +79,6 @@ const EditPost: FC = () => {
         return;
       }
       const formData = new FormData();
-      console.log("Client-side post.title:", post.title);
       formData.append('title', post.title);
       formData.append('description', post.description || '');
       formData.append('category', post.category || '');
