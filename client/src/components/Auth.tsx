@@ -31,16 +31,37 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
+
+    // First, try to log in the user
+    const { error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) {
-      setError(error.message);
+
+    if (loginError) {
+      // If login fails, check if it's because the user doesn't exist
+      // Supabase error message for user not found is typically 'Invalid login credentials'
+      if (loginError.message.includes("Invalid login credentials")) {
+        // User does not exist, proceed with signup
+        const { error: signupError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (signupError) {
+          setError(signupError.message);
+        } else {
+          alert(
+            "Signup successful! Please check your email to verify your account.",
+          );
+          navigate("/");
+        }
+      } else {
+        // Other login errors (e.g., incorrect password for existing user)
+        setError(loginError.message);
+      }
     } else {
-      alert(
-        "Signup successful! Please check your email to verify your account.",
-      );
+      // Login successful, navigate to home
       navigate("/");
     }
     setLoading(false);
