@@ -1,17 +1,9 @@
 
 
-import { useEffect, useMemo, FC, SyntheticEvent, useState } from "react";
+import { useEffect, useMemo, FC, SyntheticEvent, useState, useRef } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ThemeName, Post, Article } from "../../../shared/src/types";
-
-
-
-
-
-
-
-
 
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
@@ -189,6 +181,8 @@ export default function Home() {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnimating, setIsAnimating] = useState(true);
+  const [showContent, setShowContent] = useState(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const { searchTerm } = useOutletContext<HomeProps>();
 
@@ -212,6 +206,20 @@ export default function Home() {
     fetchPosts();
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (mainContentRef.current) {
+        const { top } = mainContentRef.current.getBoundingClientRect();
+        if (top <= window.innerHeight * 0.5) {
+          setShowContent(true);
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const displayedArticles = useMemo<Article[]>(() => {
     const layoutedAndFiltered = assignLayoutAndGridClass(allPosts).filter(
       (article) => {
@@ -232,27 +240,51 @@ export default function Home() {
 
   return (
     <>
-      {user && (
-        <div className="container mx-auto p-4 text-center text-[var(--text-secondary)]">
-          Welcome back, {user.email}!<br />
+      <div
+        className="landing-page"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1682686578842-00ba49b0a71a?q=80&w=1075&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`,
+        }}
+      >
+        <div className="welcome-text">
+          <h1 className="landing-title">Welcome to Our Blog</h1>
+          <p className="landing-subtitle">
+            A collection of our adventures and stories.
+          </p>
         </div>
-      )}
+        <div className="scroll-indicator">
+          <div className="arrow-down"></div>
+        </div>
+      </div>
 
-      <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(250px,auto)]">
-        {isLoading ? (
-          <LoadingSpinner />
-        ) : displayedArticles.length > 0 ? (
-          displayedArticles.map((article) => (
-            <ArticleCard
-              key={article.id}
-              article={article}
-              isAnimating={isAnimating}
-            />
-          ))
-        ) : (
-          <NoResults />
+      <div
+        ref={mainContentRef}
+        className={`main-content ${
+          showContent ? "main-content-visible" : "main-content-hidden"
+        }`}
+      >
+        {user && (
+          <div className="container mx-auto p-4 text-center text-[var(--text-secondary)]">
+            Welcome back, {user.email}!<br />
+          </div>
         )}
-      </main>
+
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(250px,auto)]">
+          {isLoading ? (
+            <LoadingSpinner />
+          ) : displayedArticles.length > 0 ? (
+            displayedArticles.map((article) => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                isAnimating={isAnimating}
+              />
+            ))
+          ) : (
+            <NoResults />
+          )}
+        </main>
+      </div>
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState, type Dispatch, type SetStateAction, type FC } from "react";
+import { useState, useEffect, type Dispatch, type SetStateAction, type FC } from "react";
 
 import { ThemeName } from "../../../shared/src/types";
 
@@ -76,6 +76,40 @@ export default function Navbar({
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      if (scrollTop > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === 'k') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [searchInputRef]);
+
 
   const toggleTheme = () => {
     const newTheme = currentTheme.startsWith("day")
@@ -87,10 +121,14 @@ export default function Navbar({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     navigate('/');
+    window.scrollTo({
+      top: window.innerHeight,
+      behavior: "smooth",
+    });
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[var(--background)]/80 backdrop-blur-sm shadow-md transition-colors duration-300">
+    <header className={`navbar-landing ${isScrolled ? 'navbar-solid' : 'navbar-transparent'}`}>
       <div className="container mx-auto flex justify-between items-center p-4">
         <Link to="/" className="text-2xl font-bold text-[var(--text-primary)]">
           J²Adventures
@@ -99,7 +137,7 @@ export default function Navbar({
           <div className="relative">
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search... (Ctrl+K)"
               value={searchTerm}
               onChange={handleSearchChange}
               ref={searchInputRef}
@@ -168,7 +206,7 @@ export default function Navbar({
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search... (Ctrl+K)"
                 value={searchTerm}
                 onChange={handleSearchChange}
                 ref={searchInputRef}
