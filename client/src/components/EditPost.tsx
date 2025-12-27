@@ -114,36 +114,36 @@ const EditPost: FC = () => {
   };
 
   return (
-    <>
-      
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-2xl">
-          <h1 className="text-2xl font-bold mb-4">Edit Post</h1>
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
+      <div className="container mx-auto max-w-2xl">
+        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-8">Edit Post</h1>
+        <div className="bg-[var(--card-bg)] shadow-xl rounded-lg border border-[var(--border)] p-6 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium">Title</label>
+              <label htmlFor="title" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Title</label>
               <input
                 type="text"
                 id="title"
                 name="title"
                 value={post?.title || ""}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
                 required
               />
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm font-medium">Description</label>
+              <label htmlFor="description" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Description</label>
               <textarea
                 id="description"
                 name="description"
                 value={post?.description || ""}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                rows={6}
+                className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Image Source</label>
+              <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Image Source</label>
               <div className="flex items-center space-x-4">
                 <label className="inline-flex items-center">
                   <input
@@ -154,7 +154,7 @@ const EditPost: FC = () => {
                     checked={uploadMethod === 'url'}
                     onChange={() => setUploadMethod('url')}
                   />
-                  <span className="ml-2 text-sm">Image URL</span>
+                  <span className="ml-2 text-sm text-[var(--text-primary)]">Image URL</span>
                 </label>
                 <label className="inline-flex items-center">
                   <input
@@ -165,55 +165,55 @@ const EditPost: FC = () => {
                     checked={uploadMethod === 'file'}
                     onChange={() => setUploadMethod('file')}
                   />
-                  <span className="ml-2 text-sm">Upload File</span>
+                  <span className="ml-2 text-sm text-[var(--text-primary)]">Upload File</span>
                 </label>
               </div>
             </div>
 
             {uploadMethod === 'url' ? (
               <div>
-                <label htmlFor="image_url" className="block text-sm font-medium">Image URL</label>
+                <label htmlFor="image_url" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Image URL</label>
                 <input
                   type="text"
                   id="image_url"
                   name="image_url"
                   value={post?.image_url || ""}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
                 />
               </div>
             ) : (
               <div>
-                <label htmlFor="image_file" className="block text-sm font-medium">Upload Image</label>
+                <label htmlFor="image_file" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Upload Image</label>
                 <input
                   type="file"
                   id="image_file"
                   name="image_file"
                   accept="image/*"
-                  onChange={handleFileChange} // New handler
-                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  onChange={handleFileChange}
+                  className="mt-1 block w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--primary)] file:text-white hover:file:bg-[var(--primary-light)] cursor-pointer"
                 />
               </div>
             )}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium">Category</label>
+              <label htmlFor="category" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Category</label>
               <input
                 type="text"
                 id="category"
                 name="category"
                 value={post?.category || ""}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
               />
             </div>
-            
-            <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+
+            <button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">
               Update Post
             </button>
           </form>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

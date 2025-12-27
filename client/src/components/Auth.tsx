@@ -68,61 +68,69 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-4">
-      <h1 className="text-2xl font-bold mb-4">Login or Sign Up</h1>
-      <form className="w-full max-w-sm">
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 text-sm font-bold mb-2"
-            htmlFor="email"
-          >
-            Email
-          </label>
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            id="email"
-            type="email"
-            placeholder="your@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="mb-6">
-          <label
-            className="block text-gray-700 text-sm font-bold mb-2"
-            htmlFor="password"
-          >
-            Password
-          </label>
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            id="password"
-            type="password"
-            placeholder="******************"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-        <div className="flex items-center justify-between">
-          <button
-            className="bg-[var(--text-secondary)] hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="submit"
-            onClick={handleLogin}
-            disabled={loading}
-          >
-            {loading ? "Logging in..." : "Log In"}
-          </button>
-          <button
-            className="bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="submit"
-            onClick={handleSignup}
-            disabled={loading}
-          >
-            {loading ? "Signing up..." : "Sign Up"}
-          </button>
-        </div>
-      </form>
+    <div className="min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
+      <div className="max-w-md w-full bg-[var(--card-bg)] shadow-xl rounded-2xl border border-[var(--border)] p-8">
+        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2 text-center">Welcome</h1>
+        <p className="text-[var(--text-secondary)] text-center mb-8">Login or create an account</p>
+
+        <form className="space-y-6">
+          <div>
+            <label
+              className="block text-sm font-semibold text-[var(--text-primary)] mb-2"
+              htmlFor="email"
+            >
+              Email
+            </label>
+            <input
+              className="shadow-sm border border-[var(--border)] rounded-lg w-full py-2.5 px-4 bg-[var(--background)] text-[var(--text-primary)] leading-tight focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <label
+              className="block text-sm font-semibold text-[var(--text-primary)] mb-2"
+              htmlFor="password"
+            >
+              Password
+            </label>
+            <input
+              className="shadow-sm border border-[var(--border)] rounded-lg w-full py-2.5 px-4 bg-[var(--background)] text-[var(--text-primary)] leading-tight focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+              id="password"
+              type="password"
+              placeholder="******************"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              className="flex-1 bg-[var(--text-secondary)] hover:bg-opacity-80 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--text-secondary)] transition-all disabled:opacity-50"
+              type="submit"
+              onClick={handleLogin}
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Log In"}
+            </button>
+            <button
+              className="flex-1 bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] transition-all disabled:opacity-50"
+              type="submit"
+              onClick={handleSignup}
+              disabled={loading}
+            >
+              {loading ? "Signing up..." : "Sign Up"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
