@@ -76,24 +76,6 @@ export default function Navbar({
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      if (scrollTop > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -128,7 +110,7 @@ export default function Navbar({
   };
 
   return (
-    <header className={`navbar-landing ${isScrolled ? 'navbar-solid' : 'navbar-transparent'}`}>
+    <header className="navbar-landing">
       <div className="container mx-auto flex justify-between items-center p-4">
         <Link to="/" className="text-2xl font-bold text-[var(--text-primary)]">
           J²Adventures
@@ -201,7 +183,7 @@ export default function Navbar({
         </div>
       </div>
       {isMenuOpen && (
-        <div className="md:hidden">
+        <div className="md:hidden mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <div className="relative">
               <input

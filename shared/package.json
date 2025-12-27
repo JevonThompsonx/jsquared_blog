@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bunx tsc",
-    "dev": "bunx tsc --watch"
+    "build": "~/.bun/bin/bun x tsc",
+    "dev": "~/.bun/bin/bun x tsc --watch"
   }
 }

@@ -1,9 +1,10 @@
 
 
-import { useEffect, useMemo, FC, SyntheticEvent, useState, useRef } from "react";
+import { useEffect, useMemo, FC, SyntheticEvent, useState, useRef, useCallback } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ThemeName, Post, Article } from "../../../shared/src/types";
+import { Post, Article } from "../../../shared/src/types";
+import { useDebounce } from "../hooks/useDebounce";
 
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
@@ -176,36 +177,102 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
   );
 };
 
+interface HomeProps {
+  searchTerm: string;
+}
+
 export default function Home() {
   const { user } = useAuth();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isAnimating, setIsAnimating] = useState(true);
   const [showContent, setShowContent] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const mainContentRef = useRef<HTMLDivElement>(null);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   const { searchTerm } = useOutletContext<HomeProps>();
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
-  useEffect(() => {
-    const fetchPosts = async () => {
+  const POSTS_PER_PAGE = 20;
+
+  const fetchPosts = useCallback(async (currentOffset: number, search: string, isInitial: boolean = false) => {
+    if (isInitial) {
       setIsLoading(true);
-      try {
-        const response = await fetch("/api/posts");
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const data: Post[] = await response.json();
-        setAllPosts(data);
-      } catch (error) {
-        console.error("Failed to fetch posts:", error);
-      }
-      setIsLoading(false);
-      setIsAnimating(false);
-    };
+    } else {
+      setIsLoadingMore(true);
+    }
 
-    fetchPosts();
+    try {
+      const params = new URLSearchParams({
+        limit: POSTS_PER_PAGE.toString(),
+        offset: currentOffset.toString(),
+      });
+
+      if (search) {
+        params.append("search", search);
+      }
+
+      const response = await fetch(`/api/posts?${params}`);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+
+      if (isInitial) {
+        setAllPosts(data.posts || []);
+      } else {
+        setAllPosts(prev => [...prev, ...(data.posts || [])]);
+      }
+
+      setHasMore(data.hasMore || false);
+    } catch (error) {
+      console.error("Failed to fetch posts:", error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+      if (isInitial) {
+        setIsAnimating(false);
+      }
+    }
   }, []);
 
+  // Initial load and search changes
+  useEffect(() => {
+    setOffset(0);
+    setAllPosts([]);
+    fetchPosts(0, debouncedSearchTerm, true);
+  }, [debouncedSearchTerm, fetchPosts]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+          const newOffset = offset + POSTS_PER_PAGE;
+          setOffset(newOffset);
+          fetchPosts(newOffset, debouncedSearchTerm, false);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, isLoading, isLoadingMore, offset, debouncedSearchTerm, fetchPosts]);
+
+  // Show content on scroll
   useEffect(() => {
     const handleScroll = () => {
       if (mainContentRef.current) {
@@ -221,22 +288,8 @@ export default function Home() {
   }, []);
 
   const displayedArticles = useMemo<Article[]>(() => {
-    const layoutedAndFiltered = assignLayoutAndGridClass(allPosts).filter(
-      (article) => {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        const seasonYear = formatDateToSeasonYear(article.date).toLowerCase();
-
-        return (
-          article.title.toLowerCase().includes(lowerCaseSearchTerm) ||
-          (article.category &&
-            article.category.toLowerCase().includes(lowerCaseSearchTerm)) ||
-          seasonYear.includes(lowerCaseSearchTerm)
-        );
-      },
-    );
-
-    return layoutedAndFiltered;
-  }, [allPosts, searchTerm]);
+    return assignLayoutAndGridClass(allPosts);
+  }, [allPosts]);
 
   return (
     <>
@@ -273,13 +326,25 @@ export default function Home() {
           {isLoading ? (
             <LoadingSpinner />
           ) : displayedArticles.length > 0 ? (
-            displayedArticles.map((article) => (
-              <ArticleCard
-                key={article.id}
-                article={article}
-                isAnimating={isAnimating}
-              />
-            ))
+            <>
+              {displayedArticles.map((article) => (
+                <ArticleCard
+                  key={article.id}
+                  article={article}
+                  isAnimating={isAnimating}
+                />
+              ))}
+              {/* Infinite scroll trigger */}
+              <div ref={observerTarget} className="col-span-full h-10" />
+              {/* Loading more indicator */}
+              {isLoadingMore && <LoadingSpinner />}
+              {/* End of results message */}
+              {!hasMore && !isLoadingMore && displayedArticles.length > 0 && (
+                <div className="col-span-full text-center py-8 text-[var(--text-secondary)]">
+                  You've reached the end of the adventures!
+                </div>
+              )}
+            </>
           ) : (
             <NoResults />
           )}

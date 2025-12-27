@@ -163,18 +163,42 @@ app.get("/api/posts", async (c) => {
     c.env.SUPABASE_URL,
     c.env.SUPABASE_ANON_KEY,
   );
-  const { data, error } = await supabase
+
+  // Get pagination parameters from query string
+  const limit = parseInt(c.req.query("limit") || "20", 10);
+  const offset = parseInt(c.req.query("offset") || "0", 10);
+  const search = c.req.query("search") || "";
+
+  // Validate limit (max 100 posts per request)
+  const validLimit = Math.min(Math.max(limit, 1), 100);
+
+  // Build query with pagination
+  let query = supabase
     .from("posts")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(offset, offset + validLimit - 1);
+
+  // Add search filter if provided
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json(data, {
+  return c.json({
+    posts: data,
+    total: count,
+    limit: validLimit,
+    offset: offset,
+    hasMore: count ? offset + validLimit < count : false,
+  }, {
     headers: {
-      "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+      "Cache-Control": "public, max-age=300", // Cache for 5 minutes (reduced for paginated content)
     },
   });
 });

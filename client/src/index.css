@@ -95,7 +95,8 @@ body {
 }
 
 .mobile-menu {
-  background-color: var(--background);
+  background: var(--card-bg);
+  opacity: 1;
 }
 
 .mobile-nav-link {
@@ -164,18 +165,7 @@ body {
 .main-content {
   padding-top: 4rem;
 }
-.navbar-transparent {
-  background-color: transparent;
-  box-shadow: none;
-}
-.navbar-solid {
-  background-color: var(--background);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
 
-[data-theme="dark"] .navbar-solid {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
 .main-content-hidden {
   opacity: 0;
   transform: translateY(20px);
@@ -254,22 +244,16 @@ body {
   left: 0;
   right: 0;
   z-index: 10;
-  transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-}
-
-.navbar-transparent {
-  background-color: transparent;
-  box-shadow: none;
-}
-
-.navbar-solid {
-  background-color: var(--background);
+  background: var(--card-bg);
+  opacity: 1;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
 
-[data-theme="dark"] .navbar-solid {
+[data-theme="dark"] .navbar-landing {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
+
 .content-container {
   padding-top: 6rem; /* Adjust this value based on your navbar height */
 }
