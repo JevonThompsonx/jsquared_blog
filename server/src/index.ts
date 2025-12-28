@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { createClient, User, SupabaseClient } from "@supabase/supabase-js";
+import { encode as encodeWebP } from "@jsquash/webp";
+import { decode as decodeJPEG } from "@jsquash/jpeg";
+import { decode as decodePNG } from "@jsquash/png";
 
 import { authMiddleware } from "./middleware/auth"; // Import the new middleware
 
@@ -8,9 +11,6 @@ import { authMiddleware } from "./middleware/auth"; // Import the new middleware
 interface Bindings {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
-  CLOUDFLARE_ACCOUNT_ID: string; // New
-  CLOUDFLARE_API_TOKEN: string;  // New
-  CLOUDFLARE_IMAGES_ACCOUNT_HASH: string; // New
 }
 
 // Define custom user type with role
@@ -48,53 +48,86 @@ interface ApiResponse {
   success: boolean;
 }
 
-// Helper to interact with Cloudflare Images API
-async function uploadImageToCloudflareImages(
+// Helper to convert images to WebP format
+async function convertToWebP(
   imageBuffer: ArrayBuffer,
-  imageName: string,
-  contentType: string,
-  env: Bindings
-): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', new Blob([imageBuffer], { type: contentType }), imageName);
+  contentType: string
+): Promise<ArrayBuffer> {
+  try {
+    let imageData;
 
-  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/images/v1`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-    },
-    body: formData,
-  });
+    // Decode based on original format
+    if (contentType === 'image/jpeg' || contentType === 'image/jpg') {
+      imageData = await decodeJPEG(imageBuffer);
+    } else if (contentType === 'image/png') {
+      imageData = await decodePNG(imageBuffer);
+    } else if (contentType === 'image/webp') {
+      // Already WebP, return as-is
+      return imageBuffer;
+    } else {
+      throw new Error(`Unsupported image format: ${contentType}`);
+    }
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('Cloudflare Images upload error (full response):', JSON.stringify(errorData, null, 2)); // Log full error data
-    throw new Error(`Cloudflare Images upload failed: ${errorData.errors?.[0]?.message || response.statusText}`);
+    // Encode to WebP with quality setting
+    const webpBuffer = await encodeWebP(imageData, { quality: 85 });
+    return webpBuffer;
+  } catch (error) {
+    console.error('WebP conversion error:', error);
+    throw new Error(`Failed to convert image to WebP: ${error}`);
   }
-
-  const result = await response.json();
-  return result.result.id; // Return the Cloudflare Image ID
 }
 
-async function deleteImageFromCloudflareImages(
-  imageId: string,
-  env: Bindings,
-) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/images/v1/${imageId}`;
-  const response = await fetch(url, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-  });
+// Helper to upload image to Supabase Storage
+async function uploadImageToSupabase(
+  supabase: SupabaseClient,
+  imageBuffer: ArrayBuffer,
+  fileName: string
+): Promise<string> {
+  const bucket = 'jsquared_blog';
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('Cloudflare Images delete error (full response):', JSON.stringify(errorData, null, 2));
-    throw new Error(`Cloudflare Images deletion failed: ${errorData.errors?.[0]?.message || response.statusText}`);
+  // Generate unique filename with timestamp
+  const timestamp = Date.now();
+  const uniqueFileName = `${timestamp}-${fileName.replace(/\.[^/.]+$/, '')}.webp`;
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(uniqueFileName, imageBuffer, {
+      contentType: 'image/webp',
+      upsert: false,
+    });
+
+  if (error) {
+    console.error('Supabase Storage upload error:', error);
+    throw new Error(`Failed to upload image: ${error.message}`);
   }
-  return response.json();
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(uniqueFileName);
+
+  return urlData.publicUrl;
+}
+
+// Helper to delete image from Supabase Storage
+async function deleteImageFromSupabase(
+  supabase: SupabaseClient,
+  imageUrl: string
+): Promise<void> {
+  const bucket = 'jsquared_blog';
+
+  // Extract filename from URL
+  const urlParts = imageUrl.split('/');
+  const fileName = urlParts[urlParts.length - 1];
+
+  const { error } = await supabase.storage
+    .from(bucket)
+    .remove([fileName]);
+
+  if (error) {
+    console.error('Supabase Storage delete error:', error);
+    throw new Error(`Failed to delete image: ${error.message}`);
+  }
 }
 
 // Seeded random number generator for consistent but varied layouts
@@ -283,28 +316,25 @@ app.post("/api/posts", authMiddleware, async (c) => {
 
   let finalImageUrl: string | null = null;
 
-  const envBindings: Bindings = c.env; // Explicitly type c.env
-
   if (imageFile) {
-    // --- Image Upload Handling with Cloudflare Images Optimization ---
+    // --- Image Upload Handling with WebP Conversion and Supabase Storage ---
     try {
       const arrayBuffer = await imageFile.arrayBuffer();
       const contentType = imageFile.type;
       const originalFileName = imageFile.name;
 
-      // Directly upload to Cloudflare Images
-      const imageId = await uploadImageToCloudflareImages(
-        arrayBuffer,
-        originalFileName,
-        contentType,
-        envBindings
-      );
+      // Convert to WebP format
+      const webpBuffer = await convertToWebP(arrayBuffer, contentType);
 
-      // Construct final URL using Cloudflare Images delivery
-      finalImageUrl = `https://imagedelivery.net/${c.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH}/${imageId}/webp`;
+      // Upload to Supabase Storage
+      finalImageUrl = await uploadImageToSupabase(
+        supabase,
+        webpBuffer,
+        originalFileName
+      );
     } catch (error: any) {
-      console.error("Image optimization/upload process failed:", error);
-      return c.json({ error: `Image optimization/upload failed: ${error.message}` }, 500);
+      console.error("Image upload/conversion process failed:", error);
+      return c.json({ error: `Image upload failed: ${error.message}` }, 500);
     }
   } else if (imageUrl) {
     // --- Image URL Handling ---
@@ -414,41 +444,41 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   let finalImageUrl: string | null = existingPost.image_url; // Start with existing image URL
 
   if (imageFile) {
-    // --- Image Upload Handling with Cloudflare Images Optimization (for updates) ---
+    // --- Image Upload Handling with WebP Conversion and Supabase Storage (for updates) ---
     try {
-      // If there was an old image, delete it from Cloudflare Images
-      if (existingPost.image_url && existingPost.image_url.includes('imagedelivery.net')) {
-        const oldImageId = existingPost.image_url.split('/')[4]; // Extract imageId from URL
-        if (oldImageId) {
-          await deleteImageFromCloudflareImages(oldImageId, c.env);
+      // If there was an old image stored in Supabase, delete it
+      if (existingPost.image_url && existingPost.image_url.includes('supabase')) {
+        try {
+          await deleteImageFromSupabase(supabase, existingPost.image_url);
+        } catch (deleteError) {
+          console.warn("Failed to delete old image, continuing with upload:", deleteError);
         }
       }
 
       const arrayBuffer = await imageFile.arrayBuffer();
-      const contentType = imageFile.type; // Need contentType for uploadImageToCloudflareImages
+      const contentType = imageFile.type;
       const originalFileName = imageFile.name;
 
-      // Upload new image to Cloudflare Images
-      const imageId = await uploadImageToCloudflareImages(
-        arrayBuffer,
-        originalFileName,
-        contentType, // Pass contentType
-        c.env,
-      );
-      
+      // Convert to WebP format
+      const webpBuffer = await convertToWebP(arrayBuffer, contentType);
 
-      // Construct final URL using Cloudflare Images delivery
-      finalImageUrl = `https://imagedelivery.net/${c.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH}/${imageId}/webp`;
+      // Upload new image to Supabase Storage
+      finalImageUrl = await uploadImageToSupabase(
+        supabase,
+        webpBuffer,
+        originalFileName
+      );
     } catch (error: any) {
-      console.error("Image optimization/upload process failed (PUT):", error);
-      return c.json({ error: `Image optimization/upload failed: ${error.message}` }, 500);
+      console.error("Image upload/conversion process failed (PUT):", error);
+      return c.json({ error: `Image upload failed: ${error.message}` }, 500);
     }
   } else if (imageUrl !== undefined) { // If imageUrl is explicitly provided (can be null to clear)
-    // If an old image existed and a new URL is provided (or cleared), delete the old one from Cloudflare Images
-    if (existingPost.image_url && existingPost.image_url.includes('imagedelivery.net') && existingPost.image_url !== imageUrl) {
-      const oldImageId = existingPost.image_url.split('/')[4]; // Extract imageId from URL
-      if (oldImageId) {
-        await deleteImageFromCloudflareImages(oldImageId, c.env);
+    // If an old image existed in Supabase and a new URL is provided (or cleared), delete the old one
+    if (existingPost.image_url && existingPost.image_url.includes('supabase') && existingPost.image_url !== imageUrl) {
+      try {
+        await deleteImageFromSupabase(supabase, existingPost.image_url);
+      } catch (deleteError) {
+        console.warn("Failed to delete old image:", deleteError);
       }
     }
     finalImageUrl = imageUrl;
