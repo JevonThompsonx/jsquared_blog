@@ -19,7 +19,8 @@ const EditPost: FC = () => {
     category: "",
     type: "split-horizontal",
     created_at: new Date().toISOString(),
-    author_id: ""
+    author_id: "",
+    status: "published"
   }));
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -115,6 +116,7 @@ const EditPost: FC = () => {
       formData.append('title', post.title);
       formData.append('description', post.description || '');
       formData.append('category', post.category || '');
+      formData.append('status', post.status);
       formData.append('image', selectedFile);
       bodyContent = formData;
     } else {
@@ -252,6 +254,23 @@ const EditPost: FC = () => {
                   className="mt-2 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
                 />
               )}
+            </div>
+
+            <div>
+              <label htmlFor="status" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Status</label>
+              <select
+                id="status"
+                name="status"
+                value={post?.status || "published"}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+              >
+                <option value="published">Published (Visible to all)</option>
+                <option value="draft">Draft (Only visible to admins)</option>
+              </select>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                Drafts are only visible to admins. Published posts are visible to everyone.
+              </p>
             </div>
 
             <button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">

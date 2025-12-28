@@ -73,6 +73,14 @@
 - [x] Mixed layout types
 - [x] Run with: `cd server && bun run seed`
 
+### Rich Text Editor
+- [x] Tiptap integration with React
+- [x] Full-featured toolbar (bold, italic, headings, lists, links, code blocks, etc.)
+- [x] Auto-loads existing content when editing posts
+- [x] HTML content rendering on post detail pages
+- [x] Plain text extraction for post previews and meta descriptions
+- [x] Responsive styling for mobile and desktop
+
 ---
 
 ## 🚧 In Progress / Next Up
@@ -81,7 +89,6 @@
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Rich Text Editor | Medium | Replace textarea with Tiptap/Lexical |
 | Comments System | Medium | `comments` table already planned |
 | Draft Posts | Easy | Add `status` field (draft/published) |
 | Multiple Images | Medium | Gallery component needed |

@@ -279,6 +279,36 @@ app.get("/api/posts", async (c) => {
     c.env.SUPABASE_ANON_KEY,
   );
 
+  // Check if user is authenticated and is an admin
+  let isAdmin = false;
+  const authHeader = c.req.header("Authorization");
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const authenticatedSupabase = createClient(
+      c.env.SUPABASE_URL,
+      c.env.SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      },
+    );
+
+    const { data: { user } } = await authenticatedSupabase.auth.getUser();
+
+    if (user) {
+      // Check user role from profiles table
+      const { data: profile } = await authenticatedSupabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      isAdmin = profile?.role === "admin";
+    }
+  }
+
   // Get pagination parameters from query string
   const limit = parseInt(c.req.query("limit") || "20", 10);
   const offset = parseInt(c.req.query("offset") || "0", 10);
@@ -293,6 +323,11 @@ app.get("/api/posts", async (c) => {
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(offset, offset + validLimit - 1);
+
+  // Filter by status: only admins see drafts
+  if (!isAdmin) {
+    query = query.eq("status", "published");
+  }
 
   // Add search filter if provided
   if (search) {
@@ -357,12 +392,18 @@ app.post("/api/posts", authMiddleware, async (c) => {
   const title = body.title as string;
   const description = (body.description as string) || null;
   const category = (body.category as string) || null;
+  const status = (body.status as string) || "published"; // Default to published
   // const grid_class = (body.grid_class as string) || null; // grid_class will be determined by server
   const imageFile = body.image as File | undefined; // File from upload
   const imageUrl = body.image_url as string | undefined; // URL from input
 
   if (!title) {
     return c.json({ error: "Title is required" }, 400);
+  }
+
+  // Validate status
+  if (status !== "draft" && status !== "published") {
+    return c.json({ error: "Invalid status. Must be 'draft' or 'published'" }, 400);
   }
 
   let finalImageUrl: string | null = null;
@@ -422,6 +463,7 @@ app.post("/api/posts", authMiddleware, async (c) => {
     grid_class: string | null;
     type: "horizontal" | "vertical" | "hover"; // Explicitly use the new types
     author_id: string;
+    status: string;
   };
 
   // Insert the new post into the 'posts' table with the authenticated user's ID
@@ -436,6 +478,7 @@ app.post("/api/posts", authMiddleware, async (c) => {
         grid_class: assignedGridClass, // Use assigned grid_class
         type: assignedType, // Use assigned type
         author_id: user.id,
+        status: status, // Add status field
       } as SupabasePostInsert,
     ])
     .select();
@@ -462,9 +505,10 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   const body = await c.req.parseBody(); // Parse body as FormData or JSON
 
   const title = body.title as string;
-  
+
   const description = (body.description as string) || null;
   const category = (body.category as string) || null;
+  const status = (body.status as string) || null;
   const grid_class = (body.grid_class as string) || null;
   const postType = (body.type as PostType) || null;
   const imageFile = body.image as File | undefined; // File from upload
@@ -474,10 +518,15 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
     return c.json({ error: "Title is required" }, 400);
   }
 
+  // Validate status if provided
+  if (status && status !== "draft" && status !== "published") {
+    return c.json({ error: "Invalid status. Must be 'draft' or 'published'" }, 400);
+  }
+
   // Ensure the user is authorized to edit this post (e.g., is the author or an admin)
   const { data: existingPost, error: fetchError } = await supabase
     .from("posts")
-    .select("author_id, image_url, type, grid_class") // Also fetch existing image_url, type, and grid_class
+    .select("author_id, image_url, type, grid_class, status") // Also fetch existing image_url, type, grid_class, and status
     .eq("id", id)
     .single();
 
@@ -546,6 +595,7 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
       category: category,
       grid_class: grid_class !== null ? grid_class : existingPost.grid_class, // Use new grid_class if provided, else existing
       type: postType !== null ? postType : existingPost.type, // Use new type if provided, else existing
+      status: status !== null ? status : existingPost.status, // Use new status if provided, else existing
     })
     .eq("id", id)
     .select();

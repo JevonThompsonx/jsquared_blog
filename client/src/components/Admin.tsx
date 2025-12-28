@@ -23,6 +23,8 @@ type Post = {
   image_url: string | null;
   category: string | null;
   author_id: string;
+  type: "split-horizontal" | "split-vertical" | "hover";
+  status: "draft" | "published";
 };
 
 const Admin: FC = () => {
@@ -35,6 +37,8 @@ const Admin: FC = () => {
     description: "",
     image_url: "",
     category: "",
+    type: "split-vertical" as const,
+    status: "published" as const,
   });
 
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
@@ -154,6 +158,7 @@ const Admin: FC = () => {
       formData.append('title', post.title);
       formData.append('description', post.description || '');
       formData.append('category', post.category || '');
+      formData.append('status', post.status);
       formData.append('image', selectedFile);
       formData.append('author_id', user.id);
 
@@ -186,6 +191,8 @@ const Admin: FC = () => {
         description: "",
         image_url: "",
         category: "",
+        type: "split-vertical",
+        status: "published",
       });
       setSelectedFile(null);
 
@@ -347,6 +354,22 @@ const Admin: FC = () => {
               )}
             </div>
 
+            <div>
+              <label htmlFor="status" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Status</label>
+              <select
+                id="status"
+                name="status"
+                value={post.status}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+              >
+                <option value="published">Published (Visible to all)</option>
+                <option value="draft">Draft (Only visible to admins)</option>
+              </select>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                Drafts are only visible to admins. Published posts are visible to everyone.
+              </p>
+            </div>
 
             <button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">
               Create Post

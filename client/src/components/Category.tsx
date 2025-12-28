@@ -47,6 +47,7 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
       date: post.created_at,
       gridClass: gridClass,
       dynamicViewType: post.type,
+      status: post.status,
     };
   });
 };

@@ -54,6 +54,7 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
       date: post.created_at,
       gridClass: gridClass,
       dynamicViewType: post.type,
+      status: post.status,
     };
   });
 };
@@ -104,6 +105,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+          {article.status === "draft" && (
+            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
+              DRAFT
+            </div>
+          )}
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
             <span
               onClick={(e) => {
@@ -136,7 +142,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
         to={`/posts/${id}`}
         className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} block`}
       >
-        <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row">
+        <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row relative">
+          {article.status === "draft" && (
+            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
+              DRAFT
+            </div>
+          )}
           <div className="md:w-1/2 h-64 md:h-auto">
             <img
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -177,7 +188,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
       to={`/posts/${id}`}
       className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} block`}
     >
-      <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col">
+      <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col relative">
+        {article.status === "draft" && (
+          <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
+            DRAFT
+          </div>
+        )}
         <div className="h-56">
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
