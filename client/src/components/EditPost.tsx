@@ -16,7 +16,7 @@ const EditPost: FC = () => {
     description: "",
     image_url: "",
     category: "",
-    type: "horizontal",
+    type: "split-horizontal",
     created_at: new Date().toISOString(),
     author_id: ""
   }));

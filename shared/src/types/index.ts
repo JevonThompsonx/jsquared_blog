@@ -4,7 +4,7 @@ export type ThemeName =
   | "enchantedForest"
   | "daylitForest";
 
-export type PostType = "horizontal" | "vertical" | "hover";
+export type PostType = "split-horizontal" | "split-vertical" | "hover";
 
 export type Post = {
   id: number;

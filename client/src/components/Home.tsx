@@ -12,26 +12,34 @@ const LoadingSpinner: FC = () => (
   </div>
 );
 const NoResults: FC = () => (
-  <div className="col-span-full bg-[var(--card-bg)] shadow-md rounded-lg p-8 text-center">
-    <h3 className="text-2xl font-bold text-[var(--text-primary)]">
-      No Articles Found
+  <div className="col-span-full bg-[var(--card-bg)] shadow-xl border border-[var(--border)] rounded-2xl p-12 text-center">
+    <svg className="w-16 h-16 mx-auto mb-4 text-[var(--text-secondary)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+    <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">
+      No Adventures Found
     </h3>
-    <p className="mt-2 text-[var(--text-secondary)]">
-      Try adjusting your search term or check back later.
+    <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto">
+      Try adjusting your search term or check back later for new adventures.
     </p>
   </div>
 );
 
 const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
   return posts.map((post) => {
-    let gridClass = "col-span-1 md:col-span-1";
-    if (post.type === "horizontal") {
-      gridClass = "col-span-1 md:col-span-2";
-    }
-    if (post.type === "horizontal") {
-      gridClass += " lg:col-span-2 xl:col-span-2";
-    } else {
-      gridClass += " lg:col-span-1 xl:col-span-1";
+    // Use backend-assigned type and create grid classes based on it
+    let gridClass = "col-span-1"; // Default for mobile
+
+    // Desktop layout based on post type
+    if (post.type === "split-horizontal") {
+      // Horizontal cards take 2 columns
+      gridClass = "col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-2";
+    } else if (post.type === "split-vertical") {
+      // Vertical cards take 1 column
+      gridClass = "col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-1";
+    } else if (post.type === "hover") {
+      // Hover cards take 1 column
+      gridClass = "col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-1";
     }
 
     return {
@@ -65,22 +73,21 @@ interface ArticleCardProps {
   isAnimating?: boolean;
 }
 const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
-  
   const { id, image, category, title, date, description, gridClass } = article;
   const formattedDate = formatDateToSeasonYear(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src =
       "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
   };
+
+  // STYLE 1: HOVER - Image with overlay that reveals description on hover
   if (article.dynamicViewType === "hover") {
     return (
       <Link
         to={`/posts/${id}`}
         className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}
       >
-        <div
-          className={`group relative rounded-lg overflow-hidden shadow-lg h-full`}
-        >
+        <div className="group relative h-full rounded-lg overflow-hidden shadow-lg">
           <img
             className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
             src={image}
@@ -89,14 +96,14 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
-          <div className="absolute bottom-0 left-0 p-4 md:p-6">
-            <div className="tracking-wide text-sm text-[var(--primary-light)] font-semibold">
+          <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
+            <div className="tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase">
               {category}
             </div>
-            <h3 className="mt-1 text-xl md:text-2xl font-bold leading-tight text-white">
+            <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-white">
               {title}
             </h3>
-            <div className="text-gray-300 text-xs md:text-sm mt-2">
+            <div className="text-gray-300 text-xs mt-2">
               {formattedDate}
             </div>
             <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
@@ -107,33 +114,35 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
       </Link>
     );
   }
-  if (article.dynamicViewType === "horizontal") {
+
+  // STYLE 2: SPLIT-HORIZONTAL - Side by side layout with image and content
+  if (article.dynamicViewType === "split-horizontal") {
     return (
       <Link
         to={`/posts/${id}`}
         className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}
       >
-        <div
-          className={`rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] flex flex-col md:flex-row`}
-        >
-          <img
-            className="h-64 md:h-auto w-full md:w-1/2 object-cover"
-            src={image}
-            alt={title}
-            onError={handleImageError}
-            loading="lazy"
-          />
-          <div className="p-4 md:p-6 flex flex-col justify-between">
+        <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row">
+          <div className="md:w-1/2 h-64 md:h-auto">
+            <img
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              src={image}
+              alt={title}
+              onError={handleImageError}
+              loading="lazy"
+            />
+          </div>
+          <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
             <div>
-              <div className="tracking-wide text-sm text-[var(--primary)] font-semibold">
+              <div className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase">
                 {category}
               </div>
-              <h3 className="mt-1 text-xl md:text-2xl font-bold leading-tight text-[var(--text-primary)]">
+              <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)]">
                 {title}
               </h3>
-              <p className="mt-2 text-[var(--text-secondary)]">{description}</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
             </div>
-            <div className="mt-4 text-sm text-[var(--text-secondary)]">
+            <div className="mt-4 text-xs text-[var(--text-secondary)]">
               {formattedDate}
             </div>
           </div>
@@ -141,36 +150,36 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
       </Link>
     );
   }
+
+  // STYLE 3: SPLIT-VERTICAL - Image on top, content below
   return (
     <Link
       to={`/posts/${id}`}
       className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}
     >
-      <div
-        className={`rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] flex flex-col`}
-      >
-        <img
-          className="h-56 w-full object-cover"
-          src={image} // Directly use the image URL
-          alt={title}
-          onError={handleImageError}
-          loading="lazy"
-        />
+      <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col">
+        <div className="h-56">
+          <img
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            src={image}
+            alt={title}
+            onError={handleImageError}
+            loading="lazy"
+          />
+        </div>
         <div className="p-4 md:p-6 flex-grow flex flex-col">
-          <div className="tracking-wide text-sm text-[var(--primary)] font-semibold">
+          <div className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase">
             {category}
           </div>
-          <h3 className="mt-1 font-bold text-xl leading-tight text-[var(--text-primary)]">
+          <h3 className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)]">
             {title}
           </h3>
           <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
             {description}
           </p>
-          {date && (
-            <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
-              {formattedDate}
-            </p>
-          )}
+          <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
+            {formattedDate}
+          </p>
         </div>
       </div>
     </Link>
@@ -299,10 +308,10 @@ export default function Home() {
           backgroundImage: `url('https://images.unsplash.com/photo-1682686578842-00ba49b0a71a?q=80&w=1075&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`,
         }}
       >
-        <div className="welcome-text">
-          <h1 className="landing-title">Welcome to Our Blog</h1>
-          <p className="landing-subtitle">
-            A collection of our adventures and stories.
+        <div className="welcome-text backdrop-blur-sm">
+          <h1 className="landing-title drop-shadow-lg">J²Adventures</h1>
+          <p className="landing-subtitle drop-shadow-md">
+            Exploring the world, one adventure at a time.
           </p>
         </div>
         <div className="scroll-indicator">
@@ -317,12 +326,16 @@ export default function Home() {
         }`}
       >
         {user && (
-          <div className="container mx-auto p-4 text-center text-[var(--text-secondary)]">
-            Welcome back, {user.email}!<br />
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-4 text-center shadow-lg">
+              <p className="text-[var(--text-secondary)]">
+                <span className="font-semibold text-[var(--primary)]">Welcome back,</span> {user.email}!
+              </p>
+            </div>
           </div>
         )}
 
-        <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(250px,auto)]">
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)]">
           {isLoading ? (
             <LoadingSpinner />
           ) : displayedArticles.length > 0 ? (
@@ -340,8 +353,15 @@ export default function Home() {
               {isLoadingMore && <LoadingSpinner />}
               {/* End of results message */}
               {!hasMore && !isLoadingMore && displayedArticles.length > 0 && (
-                <div className="col-span-full text-center py-8 text-[var(--text-secondary)]">
-                  You've reached the end of the adventures!
+                <div className="col-span-full text-center py-12">
+                  <div className="inline-flex items-center gap-3 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-8 py-4 shadow-lg">
+                    <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-[var(--text-primary)] font-semibold">
+                      You've reached the end of the adventures!
+                    </span>
+                  </div>
                 </div>
               )}
             </>
