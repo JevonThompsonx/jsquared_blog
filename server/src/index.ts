@@ -221,6 +221,57 @@ app.get("/hello", async (c) => {
   return c.json(data, { status: 200 });
 });
 
+// Sitemap.xml endpoint for SEO
+app.get("/sitemap.xml", async (c) => {
+  const supabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_ANON_KEY,
+  );
+
+  // Fetch all posts
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("id, created_at")
+    .order("created_at", { ascending: false });
+
+  const baseUrl = "https://jsquaredadventures.com";
+  const currentDate = new Date().toISOString().split('T')[0];
+
+  // Build XML sitemap
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Homepage -->
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Posts -->`;
+
+  if (posts && posts.length > 0) {
+    posts.forEach(post => {
+      const postDate = new Date(post.created_at).toISOString().split('T')[0];
+      xml += `
+  <url>
+    <loc>${baseUrl}/posts/${post.id}</loc>
+    <lastmod>${postDate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    });
+  }
+
+  xml += `
+</urlset>`;
+
+  return c.text(xml, 200, {
+    "Content-Type": "application/xml",
+    "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+  });
+});
+
 app.get("/api/posts", async (c) => {
   // Create a temporary, public client for this route using c.env
   const supabase = createClient(

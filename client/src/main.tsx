@@ -10,6 +10,7 @@ import Admin from "./components/Admin.tsx";
 import PostDetail from "./components/PostDetail.tsx";
 import EditPost from "./components/EditPost.tsx";
 import Category from "./components/Category.tsx";
+import NotFound from "./components/NotFound.tsx";
 import Navbar from "./components/Navbar.tsx"; 
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 import { ThemeName } from "../../shared/src/types"; 
@@ -163,6 +164,10 @@ const router = createBrowserRouter([
       {
         path: "category/:category",
         element: <Category />,
+      },
+      {
+        path: "*",
+        element: <NotFound />,
       },
     ],
   },

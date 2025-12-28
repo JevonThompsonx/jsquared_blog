@@ -3,6 +3,7 @@
 import { useState, useEffect, FC } from "react";
 import { useParams, Link, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import SEO from "./SEO";
 
 import { ThemeName } from "../../../shared/src/types";
 
@@ -60,8 +61,47 @@ const PostDetail: FC = () => {
   }, [id]);
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
-      <div className="container mx-auto max-w-4xl">
+    <>
+      {post && (
+        <SEO
+          title={post.title}
+          description={post.description || undefined}
+          image={post.image_url || undefined}
+          type="article"
+          publishedTime={post.created_at}
+          section={post.category || undefined}
+          tags={post.category ? [post.category] : undefined}
+          structuredData={{
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": post.title,
+            "description": post.description || "",
+            "image": post.image_url || "https://jsquaredadventures.com/og-image.jpg",
+            "datePublished": post.created_at,
+            "dateModified": post.created_at,
+            "author": {
+              "@type": "Person",
+              "name": "J²Adventures"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "J²Adventures",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://jsquaredadventures.com/og-image.jpg"
+              }
+            },
+            "mainEntityOfPage": {
+              "@type": "WebPage",
+              "@id": `https://jsquaredadventures.com/posts/${post.id}`
+            },
+            "articleSection": post.category || "Travel",
+            "keywords": post.category || "travel, adventure"
+          }}
+        />
+      )}
+      <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
+        <div className="container mx-auto max-w-4xl">
         {/* Back button */}
         <Link
           to="/"
@@ -171,8 +211,9 @@ const PostDetail: FC = () => {
             </div>
           </article>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -5,6 +5,7 @@ import { Link, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Post, Article } from "../../../shared/src/types";
 import { useDebounce } from "../hooks/useDebounce";
+import SEO from "./SEO";
 
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
@@ -317,6 +318,17 @@ export default function Home() {
 
   return (
     <>
+      <SEO
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "J²Adventures",
+          "url": "https://jsquaredadventures.com",
+          "logo": "https://jsquaredadventures.com/og-image.jpg",
+          "description": "Join us on our adventures around the world! From hiking and camping to food tours and city explorations, we share our travel stories and experiences.",
+          "sameAs": []
+        }}
+      />
       <div
         className="landing-page"
         style={{

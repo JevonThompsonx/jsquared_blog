@@ -1,6 +1,7 @@
 import { useEffect, useState, FC, SyntheticEvent, useMemo, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Post, Article } from "../../../shared/src/types";
+import SEO from "./SEO";
 
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
@@ -255,7 +256,31 @@ const Category: FC = () => {
   }, [allPosts]);
 
   return (
-    <div className="min-h-screen pt-24 pb-12" style={{ background: 'var(--background)' }}>
+    <>
+      <SEO
+        title={`${category} Adventures`}
+        description={`Explore all ${category} posts from J²Adventures. Discover stories, photos, and experiences from our ${category} adventures around the world.`}
+        type="website"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://jsquaredadventures.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": `${category} Adventures`,
+              "item": `https://jsquaredadventures.com/category/${encodeURIComponent(category || '')}`
+            }
+          ]
+        }}
+      />
+      <div className="min-h-screen pt-24 pb-12" style={{ background: 'var(--background)' }}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <div className="flex items-center gap-4">
           <Link
@@ -303,7 +328,8 @@ const Category: FC = () => {
           <NoResults category={category || ""} />
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 };
 
