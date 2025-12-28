@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 import { Post, CATEGORIES } from "../../../shared/src/types";
+import RichTextEditor from "./RichTextEditor";
 
 const EditPost: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,9 @@ const EditPost: FC = () => {
 
 
   useEffect(() => {
+    // Scroll to top when edit page loads
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     const fetchPost = async () => {
       if (!id) {
         return;
@@ -72,6 +76,10 @@ const EditPost: FC = () => {
     } else {
       setPost((prev) => ({ ...prev, [name]: value } as Post));
     }
+  };
+
+  const handleDescriptionChange = (html: string) => {
+    setPost((prev) => ({ ...prev, description: html } as Post));
   };
 
   const handleCustomCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,13 +166,10 @@ const EditPost: FC = () => {
             </div>
             <div>
               <label htmlFor="description" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Description</label>
-              <textarea
-                id="description"
-                name="description"
-                value={post?.description || ""}
-                onChange={handleChange}
-                rows={6}
-                className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+              <RichTextEditor
+                content={post?.description || ""}
+                onChange={handleDescriptionChange}
+                placeholder="Edit your adventure story with rich formatting..."
               />
             </div>
             <div>

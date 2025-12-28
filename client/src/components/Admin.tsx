@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import { ThemeName, CATEGORIES } from "../../../shared/src/types";
+import RichTextEditor from "./RichTextEditor";
 
 interface AdminProps {
   currentTheme: ThemeName;
@@ -60,6 +61,10 @@ const Admin: FC = () => {
     } else {
       setPost((prev) => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleDescriptionChange = (html: string) => {
+    setPost((prev) => ({ ...prev, description: html }));
   };
 
   const handleCustomCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,13 +259,10 @@ const Admin: FC = () => {
             </div>
             <div>
               <label htmlFor="description" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Description</label>
-              <textarea
-                id="description"
-                name="description"
-                value={post.description || ""}
-                onChange={handleChange}
-                rows={6}
-                className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+              <RichTextEditor
+                content={post.description || ""}
+                onChange={handleDescriptionChange}
+                placeholder="Share your adventure story with rich formatting..."
               />
             </div>
             <div>

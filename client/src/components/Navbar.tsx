@@ -111,8 +111,8 @@ export default function Navbar({
 
   return (
     <header className="navbar-landing">
-      <div className="container mx-auto flex justify-between items-center p-4">
-        <Link to="/" className="text-2xl font-bold text-[var(--text-primary)]">
+      <div className="container mx-auto flex justify-between items-center p-4 max-w-full">
+        <Link to="/" className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
           J²Adventures
         </Link>
         <div className="hidden md:flex items-center space-x-4">
@@ -183,8 +183,8 @@ export default function Navbar({
         </div>
       </div>
       {isMenuOpen && (
-        <div className="md:hidden mobile-menu">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        <div className="md:hidden mobile-menu w-full max-w-full overflow-x-hidden">
+          <div className="px-4 pt-2 pb-3 space-y-2">
             <div className="relative">
               <input
                 type="text"
@@ -200,7 +200,7 @@ export default function Navbar({
             </div>
             <button
               onClick={toggleTheme}
-              className="w-full text-left text-[var(--text-primary)] focus:outline-none p-2"
+              className="w-full text-left text-[var(--text-primary)] focus:outline-none p-2 text-sm"
             >
               {currentTheme.startsWith("day") ? "Switch to Dark Mode" : "Switch to Light Mode"}
             </button>
@@ -209,17 +209,21 @@ export default function Navbar({
                 {user.role === 'admin' && (
                   <Link
                     to="/admin"
-                    className="block text-[var(--text-primary)] p-2"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block text-[var(--text-primary)] p-2 text-sm"
                   >
                     Admin
                   </Link>
                 )}
-                <span className="block text-sm text-[var(--text-secondary)] p-2">
+                <span className="block text-xs text-[var(--text-secondary)] p-2 truncate">
                   {user.email}
                 </span>
                 <button
-                  onClick={logout}
-                  className="w-full text-left bg-[var(--text-secondary)] hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                  onClick={() => {
+                    logout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left bg-[var(--text-secondary)] hover:bg-gray-700 text-white font-semibold py-2 px-3 rounded text-sm"
                 >
                   Logout
                 </button>
@@ -228,13 +232,15 @@ export default function Navbar({
               <>
                 <Link
                   to="/auth"
-                  className="block text-[var(--text-primary)] p-2"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block text-[var(--text-primary)] p-2 text-sm"
                 >
                   Login
                 </Link>
                 <Link
                   to="/auth"
-                  className="block bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-2 px-4 rounded"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-semibold py-2 px-3 rounded text-center text-sm"
                 >
                   Sign Up
                 </Link>

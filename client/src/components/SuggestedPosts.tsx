@@ -1,6 +1,6 @@
 import { useEffect, useState, FC, SyntheticEvent } from "react";
 import { Link } from "react-router-dom";
-import { Post, Article } from "../../../shared/src/types";
+import { Post } from "../../../shared/src/types";
 
 interface SuggestedPostsProps {
   category?: string; // Filter by category
@@ -77,6 +77,14 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
     e.currentTarget.src = "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
   };
 
+  // Strip HTML tags for card preview text
+  const stripHtml = (html: string | null): string => {
+    if (!html) return "";
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   if (loading) {
     return (
       <div className="py-12">
@@ -129,7 +137,7 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
                     </h3>
                     {post.description && (
                       <p className="text-sm text-[var(--text-secondary)] flex-grow line-clamp-2 mb-2">
-                        {post.description}
+                        {stripHtml(post.description)}
                       </p>
                     )}
                     <p className="text-xs text-[var(--text-secondary)] mt-auto">

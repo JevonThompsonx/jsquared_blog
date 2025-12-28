@@ -33,10 +33,19 @@
   --spinner: #818cf8;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   background-color: var(--background);
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .theme-switch {
@@ -177,18 +186,42 @@ body {
   transform: translateY(0);
 }
 .landing-title {
-  font-size: 4rem;
+  font-size: 2.5rem; /* 40px for mobile */
   font-weight: 900;
   text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
   letter-spacing: -0.02em;
 }
 
+@media (min-width: 640px) {
+  .landing-title {
+    font-size: 3.5rem; /* 56px for tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-title {
+    font-size: 4rem; /* 64px for desktop */
+  }
+}
+
 .landing-subtitle {
-  font-size: 1.5rem;
+  font-size: 1rem; /* 16px for mobile */
   margin-top: 1rem;
   text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.8);
   font-weight: 300;
   letter-spacing: 0.02em;
+}
+
+@media (min-width: 640px) {
+  .landing-subtitle {
+    font-size: 1.25rem; /* 20px for tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-subtitle {
+    font-size: 1.5rem; /* 24px for desktop */
+  }
 }
 .arrow-down {
   width: 0;
@@ -261,4 +294,121 @@ body {
 
 .content-container {
   padding-top: 6rem; /* Adjust this value based on your navbar height */
+}
+
+/* Tiptap Editor Styles */
+.tiptap {
+  outline: none;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: var(--text-secondary);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+}
+
+.tiptap h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.tiptap p {
+  margin-bottom: 1rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+}
+
+.tiptap li {
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.tiptap blockquote {
+  border-left: 4px solid var(--primary);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-bottom: 1rem;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.tiptap code {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.tiptap pre {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.tiptap pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-primary);
+}
+
+.tiptap a {
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap a:hover {
+  color: var(--primary-light);
+}
+
+.tiptap hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 2rem 0;
+}
+
+.tiptap strong {
+  font-weight: 700;
+}
+
+.tiptap em {
+  font-style: italic;
+}
+
+.tiptap s {
+  text-decoration: line-through;
 }

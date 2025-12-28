@@ -37,7 +37,18 @@ const PostDetail: FC = () => {
 
   useOutletContext<PostDetailProps>();
 
+  // Strip HTML tags for SEO meta description
+  const stripHtml = (html: string | null): string => {
+    if (!html) return "";
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   useEffect(() => {
+    // Scroll to top when post detail page loads
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     const fetchPost = async () => {
       if (!id) {
         setError("Post ID is missing.");
@@ -66,7 +77,7 @@ const PostDetail: FC = () => {
       {post && (
         <SEO
           title={post.title}
-          description={post.description || undefined}
+          description={stripHtml(post.description) || undefined}
           image={post.image_url || undefined}
           type="article"
           publishedTime={post.created_at}
@@ -76,7 +87,7 @@ const PostDetail: FC = () => {
             "@context": "https://schema.org",
             "@type": "BlogPosting",
             "headline": post.title,
-            "description": post.description || "",
+            "description": stripHtml(post.description) || "",
             "image": post.image_url || "https://jsquaredadventures.com/og-image.jpg",
             "datePublished": post.created_at,
             "dateModified": post.created_at,
@@ -204,11 +215,10 @@ const PostDetail: FC = () => {
               <hr className="border-[var(--border)] mb-8" />
 
               {/* Description */}
-              <div className="prose prose-lg max-w-none">
-                <p className="text-lg text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
-                  {post.description}
-                </p>
-              </div>
+              <div
+                className="prose prose-lg max-w-none text-lg text-[var(--text-primary)] leading-relaxed tiptap"
+                dangerouslySetInnerHTML={{ __html: post.description || "" }}
+              />
             </div>
           </article>
         )}

@@ -74,6 +74,16 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
       "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
   };
 
+  // Strip HTML tags for card preview text
+  const stripHtml = (html: string): string => {
+    if (!html) return "";
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  const plainDescription = stripHtml(description);
+
   if (article.dynamicViewType === "hover") {
     return (
       <Link to={`/posts/${id}`} className={`${gridClass}`}>
@@ -97,7 +107,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
               {formattedDate}
             </div>
             <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
-              {description}
+              {plainDescription}
             </p>
           </div>
         </div>
@@ -126,7 +136,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
               <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)]">
                 {title}
               </h3>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">{plainDescription}</p>
             </div>
             <div className="mt-4 text-xs text-[var(--text-secondary)]">
               {formattedDate}
@@ -157,7 +167,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
             {title}
           </h3>
           <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
-            {description}
+            {plainDescription}
           </p>
           <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
             {formattedDate}
@@ -222,6 +232,8 @@ const Category: FC = () => {
 
   useEffect(() => {
     if (category) {
+      // Scroll to top when category page loads
+      window.scrollTo({ top: 0, behavior: 'instant' });
       setOffset(0);
       setAllPosts([]);
       fetchPosts(0, category, true);
