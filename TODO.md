@@ -1,211 +1,272 @@
-# J²Adventures Blog - TODO & Progress
+# J²Adventures Blog - Project Tracker
+
+> **Last Updated**: December 28, 2025 | **Version**: 0.4.0
+
+---
+
+## 📋 Quick Reference
+
+| Component | Technology | Status |
+|-----------|------------|--------|
+| Frontend | React 19 + Vite + TailwindCSS 4 | ✅ Deployed |
+| Backend | Hono (Cloudflare Worker) | ✅ Deployed |
+| Database | Supabase PostgreSQL | ✅ Configured |
+| Auth | Supabase Auth | ✅ Working |
+| Storage | Supabase Storage (WebP) | ✅ Working |
+| Deployment | Cloudflare Pages + Workers | ✅ Live |
+
+---
 
 ## ✅ Completed Features
 
+### Core Infrastructure
+- [x] Bun workspace monorepo (client/server/shared)
+- [x] TypeScript project references for type safety
+- [x] Supabase integration (Auth, DB, Storage)
+- [x] Cloudflare deployment pipeline
+- [x] Environment variable configuration
+
+### Performance & Pagination
+- [x] Infinite scroll with Intersection Observer
+- [x] Server-side pagination (`limit`, `offset`, `hasMore`)
+- [x] Search debouncing (400ms delay)
+- [x] Server-side search (title, description, category)
+- [x] Cache-Control headers (5 min CDN caching)
+
 ### Grid Layout & Design
-- [x] Fixed grid gaps with CSS `grid-flow-dense`
-- [x] Implemented grid-aware randomization algorithm for post layouts
-- [x] Pattern-based layout distribution (every 6 posts)
+- [x] CSS `grid-flow-dense` for gap-free layouts
+- [x] Pattern-based layout randomization (6-post cycle)
 - [x] Three layout types: horizontal (2-col), vertical, hover
-- [x] Responsive grid (2, 3, 4 columns based on screen size)
-- [x] Fixed nested anchor tag warnings in Home component
+- [x] Responsive grid (2/3/4 columns by screen)
+- [x] Four theme options (dark/light variants)
 
 ### Categories System
-- [x] Created predefined travel blog categories (15 categories)
-- [x] Added category dropdown in Admin page (with custom "Other" option)
-- [x] Added category dropdown in Edit Post page (with custom "Other" option)
-- [x] Created Category page component (`/category/:categoryName`)
-- [x] Added routing for category pages
-- [x] Made category badges clickable on all post cards (Home page)
-- [x] Made category badge clickable on individual post detail page
-- [x] Implemented infinite scroll on category pages
+- [x] 15 predefined travel categories
+- [x] Custom category support ("Other" option)
+- [x] Category pages with infinite scroll (`/category/:name`)
+- [x] Clickable category badges on all post cards
 
-### Image Upload & Storage
-- [x] Set up Supabase Storage bucket (`jsquared_blog`)
-- [x] Configured RLS policies (public read, authenticated upload/delete)
-- [x] Removed Cloudflare Images dependency (switched to free Supabase)
-- [x] Implemented automatic WebP conversion for uploaded images
-- [x] Supports JPG, PNG, WebP formats (auto-converts to WebP at 85% quality)
-- [x] Added smart file naming with timestamps
-- [x] Implemented old image cleanup when replacing
-- [x] Image URL paste option still works alongside file upload
+### Image Handling
+- [x] Automatic WebP conversion (85% quality)
+- [x] Supabase Storage bucket (`jsquared_blog`)
+- [x] Smart file naming with timestamps
+- [x] Old image cleanup on replacement
+- [x] URL paste + file upload options
 
 ### Admin Features
-- [x] Admin authentication and role-based access
-- [x] Shuffle layouts button (randomizes all post layouts)
-- [x] Create new posts with image upload or URL
-- [x] Edit existing posts with image replacement
-- [x] Category management in forms
+- [x] Role-based access control (admin/viewer)
+- [x] Create/Edit/Delete posts
+- [x] Shuffle layouts button
+- [x] Image upload with category dropdown
 
-### Authentication & Security
-- [x] Fixed admin access for shuffle layouts endpoint
-- [x] Added profile role fetching in auth middleware
-- [x] RLS policies for Supabase Storage
-- [x] Admin-only routes protected
+### SEO
+- [x] robots.txt + dynamic sitemap.xml
+- [x] Open Graph + Twitter Card meta tags
+- [x] JSON-LD structured data (Organization, BlogPosting, Breadcrumbs)
+- [x] Proper heading hierarchy (h1 → h2 → h3)
+- [x] Canonical URLs
+- [x] 404 page with adventure theme
+
+### Database Seeding
+- [x] 20 starter posts with diverse categories
+- [x] High-quality Unsplash images
+- [x] Mixed layout types
+- [x] Run with: `cd server && bun run seed`
 
 ---
 
-## 🚧 Next Steps
+## 🚧 In Progress / Next Up
 
-### High Priority
-- [ ] **Performance Optimization**
-  - [ ] Add image lazy loading optimization
-  - [ ] Implement progressive image loading (blur-up)
-  - [ ] Add image size variants for responsive images
-  - [ ] Cache optimization for category pages
+### High Priority (Do These First)
 
-- [ ] **Content Features**
-  - [ ] Rich text editor for post descriptions (markdown support)
-  - [ ] Multiple image uploads per post (gallery feature)
-  - [ ] Featured posts functionality
-  - [ ] Post series/collections
-  - [ ] Tags in addition to categories
-
-- [ ] **User Experience**
-  - [ ] Search functionality improvements (filter by category + search)
-  - [ ] Post preview before publishing
-  - [ ] Draft posts functionality
-  - [ ] Bulk operations (delete multiple posts, bulk category change)
+| Feature | Effort | Notes |
+|---------|--------|-------|
+| Rich Text Editor | Medium | Replace textarea with Tiptap/Lexical |
+| Comments System | Medium | `comments` table already planned |
+| Draft Posts | Easy | Add `status` field (draft/published) |
+| Multiple Images | Medium | Gallery component needed |
 
 ### Medium Priority
-- [ ] **Analytics & Insights**
-  - [ ] Admin dashboard with stats (total posts, views, popular categories)
-  - [ ] Track most viewed posts
-  - [ ] Storage usage monitoring
 
-- [ ] **Social Features**
-  - [ ] Social sharing buttons (Twitter, Facebook, Pinterest)
-  - [ ] Open Graph meta tags for better link previews
-  - [ ] Comments system (consider Supabase Realtime or third-party)
+| Feature | Effort | Notes |
+|---------|--------|-------|
+| Related Posts | Easy | Match by category at post bottom |
+| Author Profiles | Medium | `/author/:username` pages |
+| About Page | Easy | Tell J² story |
+| Share Buttons | Easy | Twitter, Facebook, copy link |
+| Reading Time | Easy | Calculate from content length |
+| Breadcrumbs | Easy | Home → Category → Post |
 
-- [ ] **Content Management**
-  - [ ] Post scheduling (publish at specific date/time)
-  - [ ] Post archive/unarchive instead of delete
-  - [ ] Revision history for posts
-  - [ ] SEO optimization (meta descriptions, slug customization)
+### Lower Priority (Polish)
 
-### Low Priority
-- [ ] **Nice to Have**
-  - [ ] Dark mode toggle (already have themes, add UI toggle)
-  - [ ] Export posts to JSON/CSV
-  - [ ] Import posts from other platforms
-  - [ ] Newsletter integration
-  - [ ] RSS feed generation
+| Feature | Effort | Notes |
+|---------|--------|-------|
+| Map View 🗺️ | High | Unique differentiator! Add location field |
+| Likes/Reactions | Medium | `post_likes` table |
+| Post Analytics | Medium | Track view counts |
+| RSS Feed | Easy | `/feed.xml` endpoint |
+| PWA Support | Medium | Service worker + manifest |
+| Newsletter | Medium | Mailchimp/ConvertKit integration |
 
 ---
 
-## 💡 Recommendations
+## 💡 Quick Wins (< 1 hour each)
 
-### Performance
-1. **Image Optimization**
-   - Consider adding different image sizes (thumbnail, medium, full)
-   - Implement `srcset` for responsive images
-   - Add blur placeholder while images load
-
-2. **Caching Strategy**
-   - Consider implementing Redis/KV cache for post lists
-   - Add service worker for offline support
-   - Implement stale-while-revalidate pattern
-
-### Content
-1. **SEO Improvements**
-   - Add sitemap.xml generation
-   - Implement structured data (JSON-LD for BlogPosting)
-   - Add canonical URLs
-   - Create robots.txt
-
-2. **User Engagement**
-   - Add "Related Posts" section based on categories
-   - Implement reading time estimation
-   - Add breadcrumb navigation
-   - Create an about/contact page
-
-### Storage Management
-1. **Supabase Free Tier Limits**
-   - Current: 1GB storage, 2GB bandwidth/month
-   - Monitor usage in Supabase dashboard
-   - Set up alerts when approaching limits
-   - Consider image compression settings (current: 85% quality)
-
-2. **Old Image Cleanup**
-   - Current: Only deletes when replacing in posts
-   - Consider: Periodic cleanup of orphaned images
-   - Implement: Storage usage report for admin
-
-### Code Quality
-1. **Testing**
-   - Add unit tests for utility functions
-   - Add integration tests for API routes
-   - Add E2E tests for critical user flows
-
-2. **Type Safety**
-   - Already using TypeScript - great!
-   - Consider adding Zod for runtime validation
-   - Add stricter TypeScript config options
-
-3. **Error Handling**
-   - Add global error boundary in React
-   - Implement better error messages for users
-   - Add error logging/monitoring (Sentry, LogRocket, etc.)
-
-### Deployment
-1. **Production Readiness**
-   - Set up CI/CD pipeline (GitHub Actions)
-   - Add environment-specific configs
-   - Implement proper logging
-   - Add health check endpoints
-
-2. **Monitoring**
-   - Set up uptime monitoring
-   - Track API response times
-   - Monitor storage usage
-   - Error tracking and alerting
+- [ ] "Back to Top" button on long pages
+- [ ] Loading skeleton for post cards
+- [ ] Post count on category page headers
+- [ ] Confirmation dialog before deleting posts
+- [ ] Show image file size before upload
+- [ ] Date formatting options
+- [ ] Dark mode UI toggle
 
 ---
 
-## 📊 Storage Capacity Planning
+## 🏗️ Architecture Notes
 
-### Current Setup
-- **Storage**: 1GB (Supabase free tier)
-- **Bandwidth**: 2GB/month (Supabase free tier)
-- **Image Format**: WebP at 85% quality (~100-300KB per image)
+### API Endpoints
 
-### Capacity Estimate
-- **~3,300-10,000 images** (depending on original size)
-- **~1,000+ blog posts** (2-3 images per post)
-- **Monthly Views**: ~6,500-20,000 image loads
+```
+GET  /api/posts          - Paginated posts (?limit, ?offset, ?search)
+GET  /api/posts/:id      - Single post
+POST /api/posts          - Create post (admin)
+PUT  /api/posts/:id      - Update post (admin)
+DELETE /api/posts/:id    - Delete post (admin)
+GET  /sitemap.xml        - Dynamic sitemap
+```
+
+### Frontend Routes
+
+```
+/                    - Home (public)
+/auth                - Login/signup
+/admin               - Admin dashboard (admin only)
+/posts/:id           - Post detail (public)
+/posts/:id/edit      - Edit post (admin only)
+/category/:category  - Category page (public)
+/*                   - 404 page
+```
+
+### Database Schema
+
+```sql
+posts: id, created_at, title, description, image_url, category, author_id, type
+profiles: id (FK auth.users), username, role
+comments: id, created_at, content, post_id, user_id  -- planned
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `server/src/index.ts` | API routes, pagination, WebP conversion |
+| `server/src/middleware/auth.ts` | JWT verification |
+| `client/src/main.tsx` | Routing, themes |
+| `client/src/context/AuthContext.tsx` | Auth state |
+| `client/src/hooks/useDebounce.ts` | Search debouncing |
+| `client/src/components/Home.tsx` | Homepage + infinite scroll |
+| `client/src/components/SEO.tsx` | Meta tags + structured data |
+| `shared/src/types/index.ts` | Shared TypeScript types |
+
+---
+
+## 📊 Storage & Limits
+
+### Supabase Free Tier
+- **Storage**: 1GB (~3,300-10,000 images at 100-300KB each)
+- **Bandwidth**: 2GB/month (~6,500-20,000 image loads)
+- **Current Format**: WebP @ 85% quality
 
 ### When to Upgrade
 - Approaching 800MB storage usage
-- Consistently hitting bandwidth limits
-- Consider Supabase Pro ($25/month for 8GB + 50GB bandwidth)
+- Hitting bandwidth limits consistently
+- **Supabase Pro**: $25/month → 8GB storage + 50GB bandwidth
 
 ---
 
-## 🎯 Quick Wins (Easy Implementations)
+## 🛠️ Development Commands
 
-1. **Add "Back to Top" button** on long pages
-2. **Add loading skeleton** for post cards
-3. **Implement 404 page** for invalid routes
-4. **Add post count** to category page headers
-5. **Create a "Latest Posts" section** on homepage
-6. **Add date formatting options** (currently shows season/year)
-7. **Implement keyboard shortcuts** (Ctrl+K for search is done, add more)
-8. **Add breadcrumb navigation** on post detail pages
-9. **Show image file size** before upload in admin
-10. **Add confirmation dialog** before deleting posts
+```bash
+# Install dependencies
+bun install
+
+# Start full stack dev server
+bun run dev
+
+# Individual services
+cd client && bun run dev          # Frontend only
+bunx wrangler dev --config server/wrangler.toml  # Backend only
+cd shared && bun run dev          # Types watch mode
+
+# Build
+bun run build                     # Full monorepo build
+bun run build:client              # Frontend only
+bun run build:server              # Backend only
+
+# Seed database
+cd server && bun run seed
+
+# Deploy
+cd server && bunx wrangler deploy  # Backend to Workers
+# Frontend: Push to GitHub → Cloudflare Pages auto-deploys
+```
+
+### Environment Files
+
+**`client/.env`**
+```
+VITE_SUPABASE_URL=your_url
+VITE_SUPABASE_ANON_KEY=your_key
+```
+
+**`server/.dev.vars`** (local dev)
+```
+SUPABASE_URL="your_url"
+SUPABASE_ANON_KEY="your_key"
+```
+
+---
+
+## 🎯 Feature Roadmap
+
+### Phase 1: Content Creation (Current Focus)
+- Rich text editor
+- Draft/publish workflow
+- Multiple images per post
+
+### Phase 2: Engagement
+- Comments system
+- Likes/reactions
+- Share buttons
+- Related posts
+
+### Phase 3: Discovery
+- Advanced search (date range, filters)
+- Tag system (in addition to categories)
+- Map view with adventure locations
+- RSS feed
+
+### Phase 4: Polish
+- PWA offline support
+- Analytics dashboard
+- Newsletter integration
+- Author profiles + About page
 
 ---
 
 ## 📝 Notes
 
-- All images are automatically converted to WebP for optimal performance
-- Category system supports both predefined and custom categories
-- Grid layout uses pattern-based randomization for visual variety
-- Authentication is handled through Supabase Auth with role-based access
-- Image storage is completely free (within Supabase limits)
+- Images auto-convert to WebP for optimal performance
+- Grid uses 6-post pattern cycle for visual variety
+- Auth uses Supabase JWT with role checking
+- Vite proxies `/api/*` to Wrangler in dev mode
+- All posts use lazy loading for images
 
 ---
 
-**Last Updated**: December 28, 2025
-**Version**: 0.4.0
+## 🔗 Resources
+
+- [Supabase Dashboard](https://supabase.com/dashboard)
+- [Cloudflare Workers](https://dash.cloudflare.com)
+- [Hono Docs](https://hono.dev)
+- [TailwindCSS 4](https://tailwindcss.com)
