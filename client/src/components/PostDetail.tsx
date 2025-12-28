@@ -4,6 +4,7 @@ import { useState, useEffect, FC } from "react";
 import { useParams, Link, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SEO from "./SEO";
+import SuggestedPosts from "./SuggestedPosts";
 
 import { ThemeName } from "../../../shared/src/types";
 

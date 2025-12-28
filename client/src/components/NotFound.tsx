@@ -10,7 +10,7 @@ const NotFound: FC = () => {
         description="This page doesn't exist. Return to J²Adventures to continue exploring."
       />
       <div
-        className="min-h-screen flex items-center justify-center px-4"
+        className="min-h-screen flex items-center justify-center px-4 pt-24"
         style={{ background: "var(--background)" }}
       >
         <div className="text-center max-w-2xl">
