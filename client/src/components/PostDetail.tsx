@@ -213,6 +213,16 @@ const PostDetail: FC = () => {
           </article>
         )}
         </div>
+
+        {/* Suggested Posts */}
+        {post && (
+          <SuggestedPosts
+            category={post.category || undefined}
+            excludeId={post.id}
+            limit={4}
+            title={post.category ? `More ${post.category} Adventures` : "More Adventures"}
+          />
+        )}
       </div>
     </>
   );

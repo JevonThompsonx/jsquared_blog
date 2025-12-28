@@ -1,6 +1,7 @@
 import { FC } from "react";
 import { Link } from "react-router-dom";
 import SEO from "./SEO";
+import SuggestedPosts from "./SuggestedPosts";
 
 const NotFound: FC = () => {
   return (
@@ -10,9 +11,10 @@ const NotFound: FC = () => {
         description="This page doesn't exist. Return to J²Adventures to continue exploring."
       />
       <div
-        className="min-h-screen flex items-center justify-center px-4 pt-24"
+        className="min-h-screen pt-24 pb-12"
         style={{ background: "var(--background)" }}
       >
+        <div className="flex items-center justify-center px-4 py-12">
         <div className="text-center max-w-2xl">
           {/* Lost compass illustration */}
           <div className="mb-8 flex justify-center">
@@ -91,6 +93,13 @@ const NotFound: FC = () => {
             "Not all those who wander are lost... but this page definitely is."
           </p>
         </div>
+        </div>
+
+        {/* Suggested Posts to help find content */}
+        <SuggestedPosts
+          limit={4}
+          title="Start Your Adventure Here"
+        />
       </div>
     </>
   );

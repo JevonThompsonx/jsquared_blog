@@ -2,6 +2,7 @@ import { useEffect, useState, FC, SyntheticEvent, useMemo, useCallback, useRef }
 import { useParams, Link } from "react-router-dom";
 import { Post, Article } from "../../../shared/src/types";
 import SEO from "./SEO";
+import SuggestedPosts from "./SuggestedPosts";
 
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
@@ -328,6 +329,12 @@ const Category: FC = () => {
           <NoResults category={category || ""} />
         )}
       </main>
+
+      {/* Suggested Posts from other categories */}
+      <SuggestedPosts
+        limit={4}
+        title="Explore Other Adventures"
+      />
       </div>
     </>
   );
