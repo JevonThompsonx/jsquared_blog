@@ -111,9 +111,12 @@ const PostDetail: FC = () => {
             <div className="p-8 sm:p-12">
               {/* Category and Admin controls */}
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <span className="inline-block px-4 py-1.5 bg-[var(--primary)] text-white rounded-full text-sm font-semibold">
+                <Link
+                  to={`/category/${encodeURIComponent(post.category || "Uncategorized")}`}
+                  className="inline-block px-4 py-1.5 bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white rounded-full text-sm font-semibold transition-colors"
+                >
                   {post.category || "Uncategorized"}
-                </span>
+                </Link>
                 {user && user.role === "admin" && (
                   <Link
                     to={`/posts/${post.id}/edit`}

@@ -9,6 +9,7 @@ import Auth from "./components/Auth.tsx";
 import Admin from "./components/Admin.tsx";
 import PostDetail from "./components/PostDetail.tsx";
 import EditPost from "./components/EditPost.tsx";
+import Category from "./components/Category.tsx";
 import Navbar from "./components/Navbar.tsx"; 
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 import { ThemeName } from "../../shared/src/types"; 
@@ -158,6 +159,10 @@ const router = createBrowserRouter([
       {
         path: "posts/:id/edit",
         element: <PrivateRoute><EditPost /></PrivateRoute>,
+      },
+      {
+        path: "category/:category",
+        element: <Category />,
       },
     ],
   },

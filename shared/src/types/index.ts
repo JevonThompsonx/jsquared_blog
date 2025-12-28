@@ -6,6 +6,27 @@ export type ThemeName =
 
 export type PostType = "split-horizontal" | "split-vertical" | "hover";
 
+// Predefined categories for travel blog
+export const CATEGORIES = [
+  "Hiking",
+  "Camping",
+  "Food",
+  "Nature",
+  "Culture",
+  "Water Sports",
+  "Biking",
+  "Road Trip",
+  "City Adventure",
+  "Wildlife",
+  "Beach",
+  "Mountains",
+  "Photography",
+  "Winter Sports",
+  "Other"
+] as const;
+
+export type Category = typeof CATEGORIES[number];
+
 export type Post = {
   id: number;
   created_at: string;

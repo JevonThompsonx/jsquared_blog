@@ -4,7 +4,7 @@ import { useState, useEffect, FC } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-import { Post } from "../../../shared/src/types";
+import { Post, CATEGORIES } from "../../../shared/src/types";
 
 const EditPost: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +22,9 @@ const EditPost: FC = () => {
   }));
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryValue, setCustomCategoryValue] = useState("");
+
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -41,6 +43,11 @@ const EditPost: FC = () => {
         } else {
           setUploadMethod('file');
         }
+        // Check if category is custom (not in predefined list)
+        if (data.category && !CATEGORIES.includes(data.category as any)) {
+          setIsCustomCategory(true);
+          setCustomCategoryValue(data.category);
+        }
       } catch (e: any) {
         console.error("Error fetching post in EditPost.tsx:", e);
       } finally {
@@ -52,7 +59,25 @@ const EditPost: FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setPost((prev) => ({ ...prev, [name]: value } as Post));
+
+    if (name === "category") {
+      if (value === "Other") {
+        setIsCustomCategory(true);
+        setPost((prev) => ({ ...prev, category: "" } as Post));
+      } else {
+        setIsCustomCategory(false);
+        setCustomCategoryValue("");
+        setPost((prev) => ({ ...prev, [name]: value } as Post));
+      }
+    } else {
+      setPost((prev) => ({ ...prev, [name]: value } as Post));
+    }
+  };
+
+  const handleCustomCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomCategoryValue(value);
+    setPost((prev) => ({ ...prev, category: value } as Post));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,14 +222,31 @@ const EditPost: FC = () => {
             )}
             <div>
               <label htmlFor="category" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Category</label>
-              <input
-                type="text"
+              <select
                 id="category"
                 name="category"
-                value={post?.category || ""}
+                value={isCustomCategory ? "Other" : (post?.category || "")}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
-              />
+              >
+                <option value="">Select a category...</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              {isCustomCategory && (
+                <input
+                  type="text"
+                  id="custom-category"
+                  name="custom-category"
+                  value={customCategoryValue}
+                  onChange={handleCustomCategoryChange}
+                  placeholder="Enter custom category name"
+                  className="mt-2 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+                />
+              )}
             </div>
 
             <button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">

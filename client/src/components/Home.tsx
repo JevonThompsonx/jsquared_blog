@@ -83,47 +83,47 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
   // STYLE 1: HOVER - Image with overlay that reveals description on hover
   if (article.dynamicViewType === "hover") {
     return (
-      <Link
-        to={`/posts/${id}`}
-        className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}
-      >
+      <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
         <div className="group relative h-full rounded-lg overflow-hidden shadow-lg">
-          <img
-            className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
-            src={image}
-            alt={title}
-            onError={handleImageError}
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
-          <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
-            <div className="tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase">
-              {category}
+          <Link to={`/posts/${id}`} className="block h-full">
+            <img
+              className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+              src={image}
+              alt={title}
+              onError={handleImageError}
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+            <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
+              <Link
+                to={`/category/${encodeURIComponent(category)}`}
+                className="inline-block tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {category}
+              </Link>
+              <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-white">
+                {title}
+              </h3>
+              <div className="text-gray-300 text-xs mt-2">
+                {formattedDate}
+              </div>
+              <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
+                {description}
+              </p>
             </div>
-            <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-white">
-              {title}
-            </h3>
-            <div className="text-gray-300 text-xs mt-2">
-              {formattedDate}
-            </div>
-            <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
-              {description}
-            </p>
-          </div>
+          </Link>
         </div>
-      </Link>
+      </div>
     );
   }
 
   // STYLE 2: SPLIT-HORIZONTAL - Side by side layout with image and content
   if (article.dynamicViewType === "split-horizontal") {
     return (
-      <Link
-        to={`/posts/${id}`}
-        className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}
-      >
+      <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
         <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row">
-          <div className="md:w-1/2 h-64 md:h-auto">
+          <Link to={`/posts/${id}`} className="md:w-1/2 h-64 md:h-auto">
             <img
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               src={image}
@@ -131,34 +131,36 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
               onError={handleImageError}
               loading="lazy"
             />
-          </div>
+          </Link>
           <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
             <div>
-              <div className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase">
+              <Link
+                to={`/category/${encodeURIComponent(category)}`}
+                className="inline-block tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
+              >
                 {category}
-              </div>
-              <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)]">
-                {title}
-              </h3>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
+              </Link>
+              <Link to={`/posts/${id}`}>
+                <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors">
+                  {title}
+                </h3>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
+              </Link>
             </div>
             <div className="mt-4 text-xs text-[var(--text-secondary)]">
               {formattedDate}
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     );
   }
 
   // STYLE 3: SPLIT-VERTICAL - Image on top, content below
   return (
-    <Link
-      to={`/posts/${id}`}
-      className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}
-    >
+    <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
       <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col">
-        <div className="h-56">
+        <Link to={`/posts/${id}`} className="h-56">
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             src={image}
@@ -166,23 +168,28 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             onError={handleImageError}
             loading="lazy"
           />
-        </div>
+        </Link>
         <div className="p-4 md:p-6 flex-grow flex flex-col">
-          <div className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase">
+          <Link
+            to={`/category/${encodeURIComponent(category)}`}
+            className="inline-block tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
+          >
             {category}
-          </div>
-          <h3 className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)]">
-            {title}
-          </h3>
-          <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
-            {description}
-          </p>
+          </Link>
+          <Link to={`/posts/${id}`}>
+            <h3 className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors">
+              {title}
+            </h3>
+            <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
+              {description}
+            </p>
+          </Link>
           <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
             {formattedDate}
           </p>
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 
@@ -335,7 +342,7 @@ export default function Home() {
           </div>
         )}
 
-        <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)]">
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense">
           {isLoading ? (
             <LoadingSpinner />
           ) : displayedArticles.length > 0 ? (

@@ -103,18 +103,32 @@ function seededRandom(seed: number): number {
   return x - Math.floor(x);
 }
 
-// Improved layout assignment with better distribution
+// Grid-aware layout assignment that prevents gaps
 function getRandomLayout(postIndex: number, totalPosts: number): { type: PostType; grid_class: string } {
   // Use post index as seed for consistent randomization
   const random = seededRandom(postIndex * 7 + totalPosts * 3);
 
-  // Distribution: 35% horizontal, 30% vertical, 35% hover
-  if (random < 0.35) {
+  // Pattern-based assignment to work well with grid
+  // We use a repeating pattern with some randomization to ensure good distribution
+  const patternPosition = postIndex % 6;
+
+  // Base pattern for every 6 posts (works well with 2, 3, 4 column grids):
+  // [hover, horizontal, hover, vertical, hover, hover]
+  // This gives us a good mix without too many consecutive 2-column items
+
+  if (patternPosition === 1) {
+    // Position 1: horizontal (2-column)
     return { type: "split-horizontal", grid_class: "md:col-span-2 row-span-1" };
-  } else if (random < 0.65) {
+  } else if (patternPosition === 3) {
+    // Position 3: vertical
     return { type: "split-vertical", grid_class: "md:col-span-1 row-span-2" };
   } else {
-    return { type: "hover", grid_class: "md:col-span-1 row-span-1" };
+    // All other positions: mix between hover and vertical based on random
+    if (random < 0.6) {
+      return { type: "hover", grid_class: "md:col-span-1 row-span-1" };
+    } else {
+      return { type: "split-vertical", grid_class: "md:col-span-1 row-span-2" };
+    }
   }
 }
 

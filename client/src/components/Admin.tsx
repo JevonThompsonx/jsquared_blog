@@ -4,7 +4,7 @@ import { useState, FC } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import { ThemeName } from "../../../shared/src/types";
+import { ThemeName, CATEGORIES } from "../../../shared/src/types";
 
 interface AdminProps {
   currentTheme: ThemeName;
@@ -40,12 +40,32 @@ const Admin: FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isShuffling, setIsShuffling] = useState(false);
   const [shuffleMessage, setShuffleMessage] = useState<string | null>(null);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryValue, setCustomCategoryValue] = useState("");
 
   useOutletContext<AdminProps>();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setPost((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "category") {
+      if (value === "Other") {
+        setIsCustomCategory(true);
+        setPost((prev) => ({ ...prev, category: "" }));
+      } else {
+        setIsCustomCategory(false);
+        setCustomCategoryValue("");
+        setPost((prev) => ({ ...prev, [name]: value }));
+      }
+    } else {
+      setPost((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleCustomCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomCategoryValue(value);
+    setPost((prev) => ({ ...prev, category: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,14 +318,31 @@ const Admin: FC = () => {
             )}
             <div>
               <label htmlFor="category" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Category</label>
-              <input
-                type="text"
+              <select
                 id="category"
                 name="category"
-                value={post.category || ""}
+                value={isCustomCategory ? "Other" : (post.category || "")}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
-              />
+              >
+                <option value="">Select a category...</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              {isCustomCategory && (
+                <input
+                  type="text"
+                  id="custom-category"
+                  name="custom-category"
+                  value={customCategoryValue}
+                  onChange={handleCustomCategoryChange}
+                  placeholder="Enter custom category name"
+                  className="mt-2 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+                />
+              )}
             </div>
 
 
