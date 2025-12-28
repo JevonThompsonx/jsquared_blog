@@ -34,6 +34,7 @@ console.log('\n⛅️  Starting local Hono dev server...\n');
 
 Bun.serve({
   port: 8787,
+  idleTimeout: 30, // Increase timeout to 30 seconds for database queries
   fetch(req) {
     // Mock Cloudflare context
     return app.fetch(req, mockEnv, {

@@ -13,10 +13,15 @@ interface Bindings {
   CLOUDFLARE_IMAGES_ACCOUNT_HASH: string; // New
 }
 
+// Define custom user type with role
+interface UserWithRole extends User {
+  role?: string;
+}
+
 // Define the Variables expected by the Worker
 interface Variables {
   supabase: SupabaseClient<any, 'public', any>; // Explicitly type SupabaseClient
-  user: User;
+  user: UserWithRole;
 }
 
 // Define the Hono environment type
@@ -92,14 +97,35 @@ async function deleteImageFromCloudflareImages(
   return response.json();
 }
 
+// Seeded random number generator for consistent but varied layouts
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
+
+// Improved layout assignment with better distribution
+function getRandomLayout(postIndex: number, totalPosts: number): { type: PostType; grid_class: string } {
+  // Use post index as seed for consistent randomization
+  const random = seededRandom(postIndex * 7 + totalPosts * 3);
+
+  // Distribution: 35% horizontal, 30% vertical, 35% hover
+  if (random < 0.35) {
+    return { type: "split-horizontal", grid_class: "md:col-span-2 row-span-1" };
+  } else if (random < 0.65) {
+    return { type: "split-vertical", grid_class: "md:col-span-1 row-span-2" };
+  } else {
+    return { type: "hover", grid_class: "md:col-span-1 row-span-1" };
+  }
+}
+
 async function reassignAllPostLayouts(
   supabase: SupabaseClient<any, 'public', any>,
-  layoutPatterns: { type: PostType; grid_class: string }[]
+  _layoutPatterns: { type: PostType; grid_class: string }[]
 ) {
   const { data: allPosts, error: fetchAllError } = await supabase
     .from("posts")
     .select("*")
-    .order("created_at", { ascending: false }); // Order by creation date to ensure consistent pattern application
+    .order("created_at", { ascending: false });
 
   if (fetchAllError) {
     console.error("Error fetching all posts for re-assignment:", fetchAllError);
@@ -107,32 +133,23 @@ async function reassignAllPostLayouts(
   }
 
   if (!allPosts || allPosts.length === 0) {
-    
     return;
   }
 
   const updates = allPosts.map((post, index) => {
-    const patternIndex = index % layoutPatterns.length;
-    const selectedPattern = layoutPatterns[patternIndex];
-
-    let assignedType: PostType = selectedPattern.type;
-    // Randomly assign 'hover' to vertical types with 70% probability
-    if (assignedType === "split-vertical" && Math.random() < 0.7) {
-      assignedType = "hover";
-    }
-    const assignedGridClass = selectedPattern.grid_class;
+    const layout = getRandomLayout(index, allPosts.length);
 
     return {
-      ...post, // Include all existing properties of the post
-      type: assignedType,
-      grid_class: assignedGridClass,
+      ...post,
+      type: layout.type,
+      grid_class: layout.grid_class,
     };
   });
 
   // Perform batch updates
   const { error: updateError } = await supabase
     .from("posts")
-    .upsert(updates, { onConflict: "id" }); // Use upsert with onConflict to update existing records
+    .upsert(updates, { onConflict: "id" });
 
   if (updateError) {
     console.error("Error updating all posts with new layouts:", updateError);
@@ -280,7 +297,7 @@ app.post("/api/posts", authMiddleware, async (c) => {
     finalImageUrl = imageUrl;
   }
 
-  // --- Dynamic Layout Assignment ---
+  // --- Dynamic Layout Assignment with Improved Randomization ---
   const { count: totalPosts, error: countError } = await supabase
     .from("posts")
     .select("*", { count: "exact", head: true });
@@ -290,47 +307,13 @@ app.post("/api/posts", authMiddleware, async (c) => {
     return c.json({ error: "Failed to determine post layout" }, 500);
   }
 
-  let assignedType: "split-horizontal" | "split-vertical" | "hover";
-  let assignedGridClass: string;
+  // Use the improved random layout function
+  const layout = getRandomLayout(totalPosts || 0, (totalPosts || 0) + 1);
+  const assignedType = layout.type;
+  const assignedGridClass = layout.grid_class;
 
-  // Define a sequence of layout patterns to cycle through
-  // This provides a mix of vertical, horizontal, and hover styles
-  // and aims to create a visually dense layout without awkward gaps.
-  // The `row-span` values are crucial for how items are placed in the CSS Grid.
-  const layoutPatterns: { type: PostType; grid_class: string }[] = [
-    // Pattern 1: Horizontal (2/3 width, 1/3 height)
-    { type: "split-horizontal", grid_class: "md:col-span-2 row-span-1" },
-    // Pattern 2: Vertical (1/3 width, 2/3 height) - will often become hover
-    { type: "split-vertical", grid_class: "md:col-span-1 row-span-2" },
-    // Pattern 3: Directly Hover
-    { type: "hover", grid_class: "md:col-span-1 row-span-1" },
-    // Pattern 4: Another Horizontal
-    { type: "split-horizontal", grid_class: "md:col-span-2 row-span-1" },
-    // Pattern 5: Directly Hover (more frequent)
-    { type: "hover", grid_class: "md:col-span-1 row-span-1" },
-    // Pattern 6: Vertical (will often become hover)
-    { type: "split-vertical", grid_class: "md:col-span-1 row-span-2" },
-    // Pattern 7: Directly Hover (even more frequent)
-    { type: "hover", grid_class: "md:col-span-1 row-span-1" },
-    // Pattern 8: Horizontal again
-    { type: "split-horizontal", grid_class: "md:col-span-2 row-span-1" },
-    // Pattern 9: Vertical (will often become hover)
-    { type: "split-vertical", grid_class: "md:col-span-1 row-span-2" },
-    // Pattern 10: Directly Hover
-    { type: "hover", grid_class: "md:col-span-1 row-span-1" },
-  ];
-
-  // Determine the index for the layout pattern based on the total number of posts
-  // This ensures a cycling and dynamic assignment for each new post.
-  const patternIndex = (totalPosts || 0) % layoutPatterns.length;
-  const selectedPattern = layoutPatterns[patternIndex];
-
-  assignedType = selectedPattern.type;
-  // Randomly assign 'hover' to vertical types with 70% probability
-  if (assignedType === "split-vertical" && Math.random() < 0.7) {
-    assignedType = "hover";
-  }
-  assignedGridClass = selectedPattern.grid_class;
+  // Keep layoutPatterns for the reassignAllPostLayouts function (though it's not used anymore)
+  const layoutPatterns: { type: PostType; grid_class: string }[] = [];
 
   
   
@@ -478,6 +461,95 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   }
 
   return c.json(data, 200);
+});
+
+// --- ADMIN ROUTES ---
+// Endpoint to manually trigger layout reassignment for all posts
+app.post("/api/admin/reassign-layouts", authMiddleware, async (c) => {
+  const user = c.get("user");
+  const supabase = c.get("supabase");
+
+  // Create a fresh client without JWT to fetch profile (avoids RLS issues)
+  const adminCheckClient = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_ANON_KEY
+  );
+
+  // Fetch user's role from profiles table
+  const { data: profile, error: profileError } = await adminCheckClient
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Error fetching user profile:", profileError);
+    return c.json({ error: "Failed to fetch user profile" }, 500);
+  }
+
+  // Only allow admins
+  if (profile?.role !== 'admin') {
+    return c.json({ error: "Unauthorized. Admin access required." }, 403);
+  }
+
+  // Fetch all posts
+  const { data: allPosts, error: fetchError } = await supabase
+    .from("posts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (fetchError || !allPosts) {
+    return c.json({ error: "Failed to fetch posts" }, 500);
+  }
+
+  // Count distribution
+  const distribution = { horizontal: 0, vertical: 0, hover: 0 };
+
+  // Reassign layouts
+  const updates = allPosts.map((post, index) => {
+    const layout = getRandomLayout(index, allPosts.length);
+
+    // Count for statistics
+    if (layout.type === "split-horizontal") distribution.horizontal++;
+    else if (layout.type === "split-vertical") distribution.vertical++;
+    else distribution.hover++;
+
+    return {
+      id: post.id,
+      type: layout.type,
+      grid_class: layout.grid_class,
+    };
+  });
+
+  // Update each post individually to bypass RLS
+  const updatePromises = updates.map(update =>
+    supabase
+      .from("posts")
+      .update({ type: update.type, grid_class: update.grid_class })
+      .eq("id", update.id)
+  );
+
+  const results = await Promise.all(updatePromises);
+  const errors = results.filter(r => r.error);
+
+  if (errors.length > 0) {
+    console.error("Some updates failed:", errors);
+    return c.json({
+      error: "Some updates failed",
+      details: errors,
+      distribution
+    }, 500);
+  }
+
+  return c.json({
+    message: "Successfully reassigned all layouts",
+    total: allPosts.length,
+    distribution: {
+      horizontal: `${distribution.horizontal} (${((distribution.horizontal / allPosts.length) * 100).toFixed(1)}%)`,
+      vertical: `${distribution.vertical} (${((distribution.vertical / allPosts.length) * 100).toFixed(1)}%)`,
+      hover: `${distribution.hover} (${((distribution.hover / allPosts.length) * 100).toFixed(1)}%)`
+    }
+  }, 200);
 });
 
 // --- SERVER SETUP ---

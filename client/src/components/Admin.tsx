@@ -27,7 +27,7 @@ type Post = {
 const Admin: FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
 
   const [post, setPost] = useState<Omit<Post, "id" | "created_at" | "author_id">>({
     title: "",
@@ -38,6 +38,8 @@ const Admin: FC = () => {
 
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [shuffleMessage, setShuffleMessage] = useState<string | null>(null);
 
   useOutletContext<AdminProps>();
 
@@ -51,6 +53,61 @@ const Admin: FC = () => {
       setSelectedFile(e.target.files[0]);
     } else {
       setSelectedFile(null);
+    }
+  };
+
+  const handleShuffleLayouts = async () => {
+    if (!user || !user.token) return;
+
+    setIsShuffling(true);
+    setShuffleMessage(null);
+
+    try {
+      const response = await fetch("/api/admin/reassign-layouts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Log response details for debugging
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      if (!response.ok) {
+        // Try to parse as JSON, otherwise use the text
+        let errorMessage = "Failed to shuffle layouts";
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = responseText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Parse the response
+      const result = JSON.parse(responseText);
+      setShuffleMessage(
+        `✅ Successfully shuffled ${result.total} posts!\n` +
+        `Horizontal: ${result.distribution.horizontal}\n` +
+        `Vertical: ${result.distribution.vertical}\n` +
+        `Hover: ${result.distribution.hover}`
+      );
+
+      // Refresh the page after a short delay to show the new layouts
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+    } catch (error: any) {
+      console.error("Shuffle error:", error);
+      setShuffleMessage(`❌ Error: ${error.message}`);
+    } finally {
+      setIsShuffling(false);
     }
   };
 
@@ -119,9 +176,49 @@ const Admin: FC = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
-      <div className="container mx-auto max-w-2xl">
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-8">Create New Post</h1>
+      <div className="container mx-auto max-w-4xl">
+        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-8">Admin Dashboard</h1>
+
+        {/* Shuffle Layouts Section */}
+        <div className="mb-8 bg-[var(--card-bg)] shadow-xl rounded-lg border border-[var(--border)] p-6 sm:p-8">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">Layout Manager</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Randomize the layout types for all posts. This will redistribute posts among horizontal (2-column), vertical, and hover layouts for a fresh look.
+              </p>
+            </div>
+          </div>
+
+          {shuffleMessage && (
+            <div className={`mb-4 p-4 rounded-lg ${shuffleMessage.includes('✅') ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <p className={`text-sm font-mono whitespace-pre-line ${shuffleMessage.includes('✅') ? 'text-green-700' : 'text-red-700'}`}>
+                {shuffleMessage}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={handleShuffleLayouts}
+            disabled={isShuffling}
+            className="inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-5 w-5 ${isShuffling ? 'animate-spin' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {isShuffling ? "Shuffling..." : "Shuffle All Post Layouts"}
+          </button>
+        </div>
+
+        {/* Create New Post Section */}
         <div className="bg-[var(--card-bg)] shadow-xl rounded-lg border border-[var(--border)] p-6 sm:p-8">
+          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Create New Post</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Title</label>

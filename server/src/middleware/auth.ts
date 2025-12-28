@@ -9,10 +9,15 @@ interface Bindings {
   SUPABASE_ANON_KEY: string;
 }
 
+// Define custom user type with role
+interface UserWithRole extends User {
+  role?: string;
+}
+
 // Define the Variables expected by the Worker
 interface Variables {
   supabase: SupabaseClient<any, 'public', any>; // Explicitly type SupabaseClient
-  user: User;
+  user: UserWithRole;
 }
 
 // Define the Hono environment type for middleware
@@ -24,13 +29,13 @@ interface HonoEnv {
 export const authMiddleware = createMiddleware<HonoEnv>(async (c, next) => {
   // 1. Get the Authorization header
   const authHeader = c.req.header("Authorization");
-  
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return c.json({ error: "Unauthorized: Missing or invalid token" }, 401);
   }
 
   const token = authHeader.split(" ")[1];
-  
+
 
   // 2. Create a temporary Supabase client with the user's token
   // This client can only perform actions the user is allowed to.
@@ -48,15 +53,16 @@ export const authMiddleware = createMiddleware<HonoEnv>(async (c, next) => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  
+
 
   if (!user) {
     return c.json({ error: "Unauthorized: Invalid user token" }, 401);
   }
 
   // 4. Make the user-specific client and user object available to the route handler
+  // Note: role will be fetched in routes that need it
   c.set("supabase", supabase);
-  c.set("user", user);
+  c.set("user", user as UserWithRole);
 
   await next();
 });
