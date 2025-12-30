@@ -242,6 +242,8 @@ const RichTextEditor = ({ content, onChange, placeholder = 'Start writing your a
         heading: {
           levels: [2, 3],
         },
+        // Disable Link in StarterKit since we're configuring it separately
+        link: false,
       }),
       Link.configure({
         openOnClick: false,

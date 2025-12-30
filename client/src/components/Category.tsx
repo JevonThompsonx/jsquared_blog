@@ -24,6 +24,14 @@ const NoResults: FC<{ category: string }> = ({ category }) => (
   </div>
 );
 
+// Strip HTML tags - done once during data transformation, not on every render
+const stripHtml = (html: string): string => {
+  if (!html) return "";
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
 const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
   return posts.map((post) => {
     let gridClass = "col-span-1";
@@ -43,7 +51,7 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
         "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found",
       category: post.category || "General",
       title: post.title,
-      description: post.description || "",
+      description: stripHtml(post.description || ""), // Strip HTML once here
       date: post.created_at,
       gridClass: gridClass,
       dynamicViewType: post.type,
@@ -75,16 +83,6 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
       "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
   };
 
-  // Strip HTML tags for card preview text
-  const stripHtml = (html: string): string => {
-    if (!html) return "";
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
-
-  const plainDescription = stripHtml(description);
-
   if (article.dynamicViewType === "hover") {
     return (
       <Link to={`/posts/${id}`} className={`${gridClass}`}>
@@ -97,6 +95,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+          {article.status === "draft" && (
+            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
+              DRAFT
+            </div>
+          )}
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
             <div className="tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase">
               {category}
@@ -108,7 +111,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
               {formattedDate}
             </div>
             <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
-              {plainDescription}
+              {description}
             </p>
           </div>
         </div>
@@ -119,7 +122,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
   if (article.dynamicViewType === "split-horizontal") {
     return (
       <Link to={`/posts/${id}`} className={`${gridClass}`}>
-        <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row">
+        <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row relative">
+          {article.status === "draft" && (
+            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
+              DRAFT
+            </div>
+          )}
           <div className="md:w-1/2 h-64 md:h-auto">
             <img
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -137,7 +145,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
               <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)]">
                 {title}
               </h3>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">{plainDescription}</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
             </div>
             <div className="mt-4 text-xs text-[var(--text-secondary)]">
               {formattedDate}
@@ -150,7 +158,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
 
   return (
     <Link to={`/posts/${id}`} className={`${gridClass}`}>
-      <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col">
+      <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col relative">
+        {article.status === "draft" && (
+          <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
+            DRAFT
+          </div>
+        )}
         <div className="h-56">
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -168,7 +181,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
             {title}
           </h3>
           <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
-            {plainDescription}
+            {description}
           </p>
           <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
             {formattedDate}
@@ -182,6 +195,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
 const Category: FC = () => {
   const { category } = useParams<{ category: string }>();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -218,8 +232,13 @@ const Category: FC = () => {
 
       if (isInitial) {
         setAllPosts(categoryPosts);
+        setTotalCount(categoryPosts.length);
       } else {
-        setAllPosts(prev => [...prev, ...categoryPosts]);
+        setAllPosts(prev => {
+          const newPosts = [...prev, ...categoryPosts];
+          setTotalCount(newPosts.length);
+          return newPosts;
+        });
       }
 
       setHasMore(data.hasMore || false);
@@ -311,7 +330,15 @@ const Category: FC = () => {
           {category} Adventures
         </h1>
         <p className="text-[var(--text-secondary)] mt-2">
-          Explore all posts in the {category} category
+          {totalCount > 0 && (
+            <span className="inline-flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <strong>{totalCount}{hasMore && '+'}</strong> {totalCount === 1 ? 'adventure' : 'adventures'} in {category}
+            </span>
+          )}
+          {totalCount === 0 && !isLoading && `No adventures found in ${category}`}
         </p>
       </div>
 

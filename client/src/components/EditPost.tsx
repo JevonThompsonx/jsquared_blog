@@ -98,6 +98,37 @@ const EditPost: FC = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!user || !token || !id) return;
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this post? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/posts/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete post");
+      }
+
+      alert("Post deleted successfully!");
+      navigate("/");
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error deleting post: ${err.message}`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !token || !post) return;
@@ -107,9 +138,12 @@ const EditPost: FC = () => {
       Authorization: `Bearer ${token}`,
     };
 
+    // Image is required for published posts, optional for drafts
+    const imageRequired = post.status === "published";
+
     if (uploadMethod === 'file') {
-      if (!selectedFile) {
-        alert("Please select an image file to upload.");
+      if (imageRequired && !selectedFile && !post.image_url) {
+        alert("Please select an image file to upload for published posts.");
         return;
       }
       const formData = new FormData();
@@ -117,11 +151,13 @@ const EditPost: FC = () => {
       formData.append('description', post.description || '');
       formData.append('category', post.category || '');
       formData.append('status', post.status);
-      formData.append('image', selectedFile);
+      if (selectedFile) {
+        formData.append('image', selectedFile);
+      }
       bodyContent = formData;
     } else {
-      if (!post.image_url) {
-        alert("Please enter an image URL or select a file.");
+      if (imageRequired && !post.image_url) {
+        alert("Please enter an image URL for published posts.");
         return;
       }
       bodyContent = JSON.stringify(post);
@@ -155,7 +191,9 @@ const EditPost: FC = () => {
         <div className="bg-[var(--card-bg)] shadow-xl rounded-lg border border-[var(--border)] p-6 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="title" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Title</label>
+              <label htmlFor="title" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                Title {post?.status === "published" && <span className="text-red-500">*</span>}
+              </label>
               <input
                 type="text"
                 id="title"
@@ -163,8 +201,14 @@ const EditPost: FC = () => {
                 value={post?.title || ""}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
-                required
+                required={post?.status === "published"}
+                placeholder={post?.status === "draft" ? "Untitled Draft (optional)" : "Enter post title"}
               />
+              {post?.status === "draft" && (
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  Title is optional for drafts. It will default to "Untitled Draft" if left empty.
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="description" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Description</label>
@@ -277,6 +321,23 @@ const EditPost: FC = () => {
               Update Post
             </button>
           </form>
+
+          {/* Delete Button (outside form) */}
+          <button
+            onClick={handleDelete}
+            className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete Post
+          </button>
         </div>
       </div>
     </div>

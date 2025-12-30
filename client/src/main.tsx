@@ -1,19 +1,21 @@
-import React, { useState, CSSProperties, useRef, useEffect } from "react";
+import React, { useState, CSSProperties, useRef, useEffect, lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
 import "./index.css";
 
-
+// Eager load critical components for initial render (Home is the main route)
+import Navbar from "./components/Navbar.tsx";
 import Home from "./components/Home.tsx";
-import Auth from "./components/Auth.tsx";
-import Admin from "./components/Admin.tsx";
-import PostDetail from "./components/PostDetail.tsx";
-import EditPost from "./components/EditPost.tsx";
-import Category from "./components/Category.tsx";
-import NotFound from "./components/NotFound.tsx";
-import Navbar from "./components/Navbar.tsx"; 
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
-import { ThemeName } from "../../shared/src/types"; 
+import { ThemeName } from "../../shared/src/types";
+
+// Lazy load secondary route components for code splitting
+const Auth = lazy(() => import("./components/Auth.tsx"));
+const Admin = lazy(() => import("./components/Admin.tsx"));
+const PostDetail = lazy(() => import("./components/PostDetail.tsx"));
+const EditPost = lazy(() => import("./components/EditPost.tsx"));
+const Category = lazy(() => import("./components/Category.tsx"));
+const NotFound = lazy(() => import("./components/NotFound.tsx")); 
 
 
 type Theme = { [key: string]: string };
@@ -91,6 +93,13 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="flex justify-center items-center h-[50vh]">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
+  </div>
+);
+
 const AppLayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTheme, setCurrentTheme] = useState<ThemeName>("daylightGarden");
@@ -98,9 +107,9 @@ const AppLayout = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      
+
       if (event.ctrlKey && event.key === 'k') {
-        
+
         event.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -115,22 +124,22 @@ const AppLayout = () => {
 
   return (
     <div
-      style={themes[currentTheme] as CSSProperties}
-      className="min-h-screen transition-colors duration-300"
+      style={{
+        ...themes[currentTheme] as CSSProperties,
+        background: `var(--background)`,
+      }}
+      className="transition-colors duration-300"
     >
-      <div
-        style={{ background: `var(--background)` }}
-        className="min-h-screen"
-      >
-        <Navbar
-          currentTheme={currentTheme}
-          setCurrentTheme={setCurrentTheme}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          searchInputRef={searchInputRef}
-        />
+      <Navbar
+        currentTheme={currentTheme}
+        setCurrentTheme={setCurrentTheme}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        searchInputRef={searchInputRef}
+      />
+      <Suspense fallback={<LoadingFallback />}>
         <Outlet context={{ currentTheme, setCurrentTheme, searchTerm, setSearchTerm }} />
-      </div>
+      </Suspense>
     </div>
   );
 };

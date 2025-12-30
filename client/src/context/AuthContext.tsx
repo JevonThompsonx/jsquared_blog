@@ -35,26 +35,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchUserAndProfile = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
 
-      if (session) {
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching profile:", error);
+        if (session) {
+          // Set user immediately with token, then fetch profile
           setUser({ ...session.user, token: session.access_token });
+          setLoading(false); // Allow app to render while profile loads
+
+          // Fetch profile asynchronously without blocking
+          const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching profile:", error);
+          } else if (profile?.role) {
+            // Update user with role once fetched
+            setUser({ ...session.user, role: profile.role, token: session.access_token });
+          }
         } else {
-          setUser({ ...session.user, role: profile?.role, token: session.access_token });
+          setUser(null);
+          setLoading(false);
         }
-      } else {
-        setUser(null);
+      } catch (error) {
+        console.error("Error during auth initialization:", error);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchUserAndProfile();
@@ -88,9 +98,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
+    try {
+      // Clear state first for immediate UI feedback
+      setSession(null);
+      setUser(null);
+
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+      }
+
+      // Force reload to clear any cached data and ensure clean state
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Force reload even on error
+      window.location.href = "/";
+    }
   };
 
   const value = {

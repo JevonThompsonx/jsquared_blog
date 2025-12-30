@@ -313,6 +313,7 @@ app.get("/api/posts", async (c) => {
   const limit = parseInt(c.req.query("limit") || "20", 10);
   const offset = parseInt(c.req.query("offset") || "0", 10);
   const search = c.req.query("search") || "";
+  const statusFilter = c.req.query("status") || ""; // Optional status filter for admins
 
   // Validate limit (max 100 posts per request)
   const validLimit = Math.min(Math.max(limit, 1), 100);
@@ -324,10 +325,15 @@ app.get("/api/posts", async (c) => {
     .order("created_at", { ascending: false })
     .range(offset, offset + validLimit - 1);
 
-  // Filter by status: only admins see drafts
+  // Filter by status
   if (!isAdmin) {
+    // Non-admins can only see published posts
     query = query.eq("status", "published");
+  } else if (statusFilter === "draft") {
+    // Admin requesting drafts only
+    query = query.eq("status", "draft");
   }
+  // If admin and no status filter, show all posts (drafts + published)
 
   // Add search filter if provided
   if (search) {
@@ -340,6 +346,11 @@ app.get("/api/posts", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+  // Use private cache for authenticated users (may contain drafts), public for anonymous
+  const cacheControl = isAdmin
+    ? "private, no-cache, no-store, must-revalidate"
+    : "public, max-age=300";
+
   return c.json({
     posts: data,
     total: count,
@@ -348,7 +359,7 @@ app.get("/api/posts", async (c) => {
     hasMore: count ? offset + validLimit < count : false,
   }, {
     headers: {
-      "Cache-Control": "public, max-age=300", // Cache for 5 minutes (reduced for paginated content)
+      "Cache-Control": cacheControl,
     },
   });
 });
@@ -370,15 +381,17 @@ app.get("/api/posts/:id", async (c) => {
   }
 
   if (!data) {
-    
     return c.json({ error: "Post not found" }, 404);
   }
 
-  
+  // Don't cache drafts, only cache published posts
+  const cacheControl = data.status === "draft"
+    ? "private, no-cache, no-store, must-revalidate"
+    : "public, max-age=60"; // Reduced to 1 minute for faster updates
 
   return c.json(data, {
     headers: {
-      "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+      "Cache-Control": cacheControl,
     },
   });
 });
@@ -387,9 +400,20 @@ app.get("/api/posts/:id", async (c) => {
 app.post("/api/posts", authMiddleware, async (c) => {
   const supabase = c.get("supabase");
   const user = c.get("user");
-  const body = await c.req.parseBody(); // Parse body as FormData or JSON
 
-  const title = body.title as string;
+  // Detect content type and parse accordingly
+  const contentType = c.req.header("Content-Type") || "";
+  let body: Record<string, any>;
+
+  if (contentType.includes("application/json")) {
+    // Parse JSON body
+    body = await c.req.json();
+  } else {
+    // Parse FormData body
+    body = await c.req.parseBody();
+  }
+
+  let title = body.title as string;
   const description = (body.description as string) || null;
   const category = (body.category as string) || null;
   const status = (body.status as string) || "published"; // Default to published
@@ -397,13 +421,17 @@ app.post("/api/posts", authMiddleware, async (c) => {
   const imageFile = body.image as File | undefined; // File from upload
   const imageUrl = body.image_url as string | undefined; // URL from input
 
-  if (!title) {
-    return c.json({ error: "Title is required" }, 400);
-  }
-
   // Validate status
   if (status !== "draft" && status !== "published") {
     return c.json({ error: "Invalid status. Must be 'draft' or 'published'" }, 400);
+  }
+
+  // For drafts, allow empty title (use default). For published posts, title is required.
+  if (!title || title.trim() === "") {
+    if (status === "published") {
+      return c.json({ error: "Title is required for published posts" }, 400);
+    }
+    title = "Untitled Draft"; // Default title for drafts
   }
 
   let finalImageUrl: string | null = null;
@@ -502,9 +530,20 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   const { id } = c.req.param();
   const supabase = c.get("supabase");
   const user = c.get("user");
-  const body = await c.req.parseBody(); // Parse body as FormData or JSON
 
-  const title = body.title as string;
+  // Detect content type and parse accordingly
+  const contentType = c.req.header("Content-Type") || "";
+  let body: Record<string, any>;
+
+  if (contentType.includes("application/json")) {
+    // Parse JSON body
+    body = await c.req.json();
+  } else {
+    // Parse FormData body
+    body = await c.req.parseBody();
+  }
+
+  let title = body.title as string;
 
   const description = (body.description as string) || null;
   const category = (body.category as string) || null;
@@ -514,13 +553,18 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   const imageFile = body.image as File | undefined; // File from upload
   const imageUrl = body.image_url as string | undefined; // URL from input
 
-  if (!title) {
-    return c.json({ error: "Title is required" }, 400);
-  }
-
   // Validate status if provided
   if (status && status !== "draft" && status !== "published") {
     return c.json({ error: "Invalid status. Must be 'draft' or 'published'" }, 400);
+  }
+
+  // For drafts, allow empty title (use default). For published posts, title is required.
+  if (!title || title.trim() === "") {
+    if (status === "published") {
+      return c.json({ error: "Title is required for published posts" }, 400);
+    }
+    // If no title and it's a draft (or status not specified but will remain draft), use default
+    title = "Untitled Draft";
   }
 
   // Ensure the user is authorized to edit this post (e.g., is the author or an admin)
@@ -606,6 +650,54 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   }
 
   return c.json(data, 200);
+});
+
+// DELETE /api/posts/:id - Delete a post (admin only)
+app.delete("/api/posts/:id", authMiddleware, async (c) => {
+  const { id } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Fetch the post to check authorization and get image URL
+  const { data: existingPost, error: fetchError } = await supabase
+    .from("posts")
+    .select("author_id, image_url")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existingPost) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  // Check authorization (author or admin)
+  if (
+    (existingPost.author_id !== user.id && existingPost.author_id !== null) &&
+    user.role !== 'admin'
+  ) {
+    return c.json({ error: "Unauthorized to delete this post" }, 403);
+  }
+
+  // Delete associated image from Supabase Storage if it exists
+  if (existingPost.image_url && existingPost.image_url.includes('supabase')) {
+    try {
+      await deleteImageFromSupabase(supabase, existingPost.image_url);
+    } catch (deleteError) {
+      console.warn("Failed to delete image, continuing with post deletion:", deleteError);
+    }
+  }
+
+  // Delete the post
+  const { error: deleteError } = await supabase
+    .from("posts")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError) {
+    console.error("Supabase delete error:", deleteError);
+    return c.json({ error: deleteError.message }, 500);
+  }
+
+  return c.json({ message: "Post deleted successfully" }, 200);
 });
 
 // --- ADMIN ROUTES ---
@@ -695,6 +787,208 @@ app.post("/api/admin/reassign-layouts", authMiddleware, async (c) => {
       hover: `${distribution.hover} (${((distribution.hover / allPosts.length) * 100).toFixed(1)}%)`
     }
   }, 200);
+});
+
+// --- COMMENTS ROUTES ---
+// GET comments for a post with like counts and sorting
+app.get("/api/posts/:postId/comments", async (c) => {
+  const { postId } = c.req.param();
+  const sortBy = c.req.query("sort") || "likes"; // Default sort by likes
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+
+  // Check if user is authenticated to determine if they've liked comments
+  let currentUserId: string | null = null;
+  const authHeader = c.req.header("Authorization");
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const authenticatedSupabase = createClient(
+      c.env.SUPABASE_URL,
+      c.env.SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+    const { data: { user } } = await authenticatedSupabase.auth.getUser();
+    if (user) currentUserId = user.id;
+  }
+
+  // Fetch comments with user email from profiles
+  const { data: comments, error: commentsError } = await supabase
+    .from("comments")
+    .select(`
+      id,
+      created_at,
+      updated_at,
+      content,
+      post_id,
+      user_id
+    `)
+    .eq("post_id", postId)
+    .order("created_at", { ascending: false });
+
+  if (commentsError) {
+    return c.json({ error: commentsError.message }, 500);
+  }
+
+  if (!comments || comments.length === 0) {
+    return c.json({ comments: [] }, 200);
+  }
+
+  // Get user emails for all commenters
+  const userIds = [...new Set(comments.map(c => c.user_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .in("id", userIds);
+
+  const userMap = new Map(profiles?.map(p => [p.id, p.username]) || []);
+
+  // Get like counts for all comments
+  const commentIds = comments.map(c => c.id);
+  const { data: likeCounts } = await supabase
+    .from("comment_likes")
+    .select("comment_id")
+    .in("comment_id", commentIds);
+
+  const likeCountMap = new Map<number, number>();
+  likeCounts?.forEach(like => {
+    likeCountMap.set(like.comment_id, (likeCountMap.get(like.comment_id) || 0) + 1);
+  });
+
+  // Get current user's likes if authenticated
+  let userLikesSet = new Set<number>();
+  if (currentUserId) {
+    const { data: userLikes } = await supabase
+      .from("comment_likes")
+      .select("comment_id")
+      .eq("user_id", currentUserId)
+      .in("comment_id", commentIds);
+    userLikesSet = new Set(userLikes?.map(l => l.comment_id) || []);
+  }
+
+  // Combine data
+  let enrichedComments = comments.map(comment => ({
+    ...comment,
+    user_email: userMap.get(comment.user_id) || "Unknown User",
+    like_count: likeCountMap.get(comment.id) || 0,
+    user_has_liked: userLikesSet.has(comment.id)
+  }));
+
+  // Sort comments
+  if (sortBy === "likes") {
+    enrichedComments.sort((a, b) => b.like_count - a.like_count);
+  } else if (sortBy === "newest") {
+    enrichedComments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  } else if (sortBy === "oldest") {
+    enrichedComments.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }
+
+  return c.json({ comments: enrichedComments }, 200);
+});
+
+// POST a new comment (auth required)
+app.post("/api/posts/:postId/comments", authMiddleware, async (c) => {
+  const { postId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  const body = await c.req.json();
+  const { content } = body;
+
+  if (!content || content.trim().length === 0) {
+    return c.json({ error: "Comment content is required" }, 400);
+  }
+
+  const { data, error } = await supabase
+    .from("comments")
+    .insert([{
+      content: content.trim(),
+      post_id: parseInt(postId),
+      user_id: user.id
+    }])
+    .select();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data[0], 201);
+});
+
+// DELETE a comment (auth required, own comment only)
+app.delete("/api/comments/:commentId", authMiddleware, async (c) => {
+  const { commentId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check if comment exists and belongs to user
+  const { data: comment, error: fetchError } = await supabase
+    .from("comments")
+    .select("user_id")
+    .eq("id", commentId)
+    .single();
+
+  if (fetchError || !comment) {
+    return c.json({ error: "Comment not found" }, 404);
+  }
+
+  if (comment.user_id !== user.id) {
+    return c.json({ error: "Unauthorized to delete this comment" }, 403);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("comments")
+    .delete()
+    .eq("id", commentId);
+
+  if (deleteError) {
+    return c.json({ error: deleteError.message }, 500);
+  }
+
+  return c.json({ message: "Comment deleted successfully" }, 200);
+});
+
+// POST/DELETE comment like (toggle)
+app.post("/api/comments/:commentId/like", authMiddleware, async (c) => {
+  const { commentId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check if user already liked this comment
+  const { data: existingLike } = await supabase
+    .from("comment_likes")
+    .select("id")
+    .eq("comment_id", commentId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (existingLike) {
+    // Unlike (remove like)
+    const { error } = await supabase
+      .from("comment_likes")
+      .delete()
+      .eq("comment_id", commentId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return c.json({ error: error.message }, 500);
+    }
+
+    return c.json({ liked: false, message: "Comment unliked" }, 200);
+  } else {
+    // Like
+    const { error } = await supabase
+      .from("comment_likes")
+      .insert([{
+        comment_id: parseInt(commentId),
+        user_id: user.id
+      }]);
+
+    if (error) {
+      return c.json({ error: error.message }, 500);
+    }
+
+    return c.json({ liked: true, message: "Comment liked" }, 201);
+  }
 });
 
 // --- SERVER SETUP ---

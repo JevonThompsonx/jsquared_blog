@@ -1,4 +1,4 @@
-import { FC, useEffect } from "react";
+import { FC, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 
 interface SEOProps {
@@ -34,10 +34,18 @@ const SEO: FC<SEOProps> = ({
   const defaultDescription = "Join us on our adventures around the world! From hiking and camping to food tours and city explorations, we share our travel stories and experiences.";
   const defaultImage = `${baseUrl}/og-image.jpg`; // You'll need to create this
 
-  const finalTitle = title ? `${title} | J²Adventures` : defaultTitle;
-  const finalDescription = description || defaultDescription;
-  const finalImage = image || defaultImage;
-  const canonicalUrl = `${baseUrl}${location.pathname}`;
+  // Memoize computed values to prevent unnecessary recalculations
+  const finalTitle = useMemo(() => title ? `${title} | J²Adventures` : defaultTitle, [title]);
+  const finalDescription = useMemo(() => description || defaultDescription, [description]);
+  const finalImage = useMemo(() => image || defaultImage, [image]);
+  const canonicalUrl = useMemo(() => `${baseUrl}${location.pathname}`, [location.pathname]);
+
+  // Memoize structured data JSON strings to prevent unnecessary updates
+  const structuredDataJSON = useMemo(() => {
+    if (!structuredData) return null;
+    const dataArray = Array.isArray(structuredData) ? structuredData : [structuredData];
+    return dataArray.map(data => JSON.stringify(data));
+  }, [structuredData]);
 
   useEffect(() => {
     // Update document title
@@ -111,21 +119,20 @@ const SEO: FC<SEOProps> = ({
     }
     canonicalLink.href = canonicalUrl;
 
-    // Add JSON-LD structured data
+    // Add JSON-LD structured data (only update if changed)
     const existingScripts = document.querySelectorAll('script[type="application/ld+json"]');
     existingScripts.forEach(script => script.remove());
 
-    if (structuredData) {
-      const dataArray = Array.isArray(structuredData) ? structuredData : [structuredData];
-      dataArray.forEach(data => {
+    if (structuredDataJSON) {
+      structuredDataJSON.forEach(jsonString => {
         const script = document.createElement("script");
         script.type = "application/ld+json";
-        script.text = JSON.stringify(data);
+        script.text = jsonString;
         document.head.appendChild(script);
       });
     }
 
-  }, [finalTitle, finalDescription, finalImage, canonicalUrl, type, author, publishedTime, modifiedTime, section, tags, structuredData]);
+  }, [finalTitle, finalDescription, finalImage, canonicalUrl, type, author, publishedTime, modifiedTime, section, tags, structuredDataJSON]);
 
   return null; // This component doesn't render anything
 };

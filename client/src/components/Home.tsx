@@ -26,6 +26,14 @@ const NoResults: FC = () => (
   </div>
 );
 
+// Strip HTML tags - done once during data transformation, not on every render
+const stripHtml = (html: string): string => {
+  if (!html) return "";
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
 const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
   return posts.map((post) => {
     // Use backend-assigned type and create grid classes based on it
@@ -50,7 +58,7 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
         "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found",
       category: post.category || "General",
       title: post.title,
-      description: post.description || "",
+      description: stripHtml(post.description || ""), // Strip HTML once here
       date: post.created_at,
       gridClass: gridClass,
       dynamicViewType: post.type,
@@ -81,16 +89,6 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
     e.currentTarget.src =
       "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
   };
-
-  // Strip HTML tags for card preview text
-  const stripHtml = (html: string): string => {
-    if (!html) return "";
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
-
-  const plainDescription = stripHtml(description);
 
   // STYLE 1: HOVER - Image with overlay that reveals description on hover
   if (article.dynamicViewType === "hover") {
@@ -127,7 +125,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
               {formattedDate}
             </div>
             <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
-              {plainDescription}
+              {description}
             </p>
           </div>
         </Link>
@@ -171,7 +169,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
               <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors">
                 {title}
               </h3>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">{plainDescription}</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
             </div>
             <div className="mt-4 text-xs text-[var(--text-secondary)]">
               {formattedDate}
@@ -217,7 +215,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             {title}
           </h3>
           <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
-            {plainDescription}
+            {description}
           </p>
           <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
             {formattedDate}
@@ -233,14 +231,15 @@ interface HomeProps {
 }
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(true);
-  const [showContent, setShowContent] = useState(false);
+  const [isAnimating] = useState(false); // Start false for faster perceived load
+  const [showContent, setShowContent] = useState(true); // Start visible to prevent scroll issues
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [showDraftsOnly, setShowDraftsOnly] = useState(false); // Draft filter toggle
   const mainContentRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -249,7 +248,16 @@ export default function Home() {
 
   const POSTS_PER_PAGE = 20;
 
-  const fetchPosts = useCallback(async (currentOffset: number, search: string, isInitial: boolean = false) => {
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
+
+  const fetchPosts = useCallback(async (
+    currentOffset: number,
+    search: string,
+    isInitial: boolean = false,
+    authToken?: string | null,
+    draftsOnly: boolean = false
+  ) => {
     if (isInitial) {
       setIsLoading(true);
     } else {
@@ -266,7 +274,22 @@ export default function Home() {
         params.append("search", search);
       }
 
-      const response = await fetch(`/api/posts?${params}`);
+      // Add status filter for drafts only view
+      if (draftsOnly) {
+        params.append("status", "draft");
+      }
+
+      // Include auth token if user is logged in (for admin draft visibility)
+      const headers: HeadersInit = {};
+      const fetchOptions: RequestInit = { headers };
+
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+        // Bypass browser cache for authenticated requests to get fresh data
+        fetchOptions.cache = "no-store";
+      }
+
+      const response = await fetch(`/api/posts?${params}`, fetchOptions);
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -285,18 +308,30 @@ export default function Home() {
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
-      if (isInitial) {
-        setIsAnimating(false);
-      }
     }
   }, []);
 
-  // Initial load and search changes
+  // Track previous values to detect actual filter changes (not just token updates)
+  const prevSearchRef = useRef(debouncedSearchTerm);
+  const prevDraftsRef = useRef(showDraftsOnly);
+
+  // Initial load and search changes (also re-fetch when token/filter changes)
   useEffect(() => {
+    const searchChanged = prevSearchRef.current !== debouncedSearchTerm;
+    const filterChanged = prevDraftsRef.current !== showDraftsOnly;
+
+    // Update refs
+    prevSearchRef.current = debouncedSearchTerm;
+    prevDraftsRef.current = showDraftsOnly;
+
     setOffset(0);
-    setAllPosts([]);
-    fetchPosts(0, debouncedSearchTerm, true);
-  }, [debouncedSearchTerm, fetchPosts]);
+    // Only clear posts when search or filter actually changes, not when token changes
+    // This prevents the flash where posts disappear and reappear on initial auth
+    if (searchChanged || filterChanged) {
+      setAllPosts([]);
+    }
+    fetchPosts(0, debouncedSearchTerm, true, token, showDraftsOnly);
+  }, [debouncedSearchTerm, fetchPosts, token, showDraftsOnly]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -305,7 +340,7 @@ export default function Home() {
         if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
           const newOffset = offset + POSTS_PER_PAGE;
           setOffset(newOffset);
-          fetchPosts(newOffset, debouncedSearchTerm, false);
+          fetchPosts(newOffset, debouncedSearchTerm, false, token, showDraftsOnly);
         }
       },
       { threshold: 0.1 }
@@ -321,9 +356,9 @@ export default function Home() {
         observer.unobserve(currentTarget);
       }
     };
-  }, [hasMore, isLoading, isLoadingMore, offset, debouncedSearchTerm, fetchPosts]);
+  }, [hasMore, isLoading, isLoadingMore, offset, debouncedSearchTerm, fetchPosts, token, showDraftsOnly]);
 
-  // Show content on scroll
+  // Show content on scroll or immediately if already scrolled past landing
   useEffect(() => {
     const handleScroll = () => {
       if (mainContentRef.current) {
@@ -334,9 +369,28 @@ export default function Home() {
       }
     };
 
+    // Check immediately on mount - if user refreshed while scrolled down
+    handleScroll();
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Also show content immediately once posts are loaded (for faster perceived load)
+  useEffect(() => {
+    if (!isLoading && allPosts.length > 0 && !showContent) {
+      // Small delay to allow browser to render, then trigger visibility check
+      requestAnimationFrame(() => {
+        if (mainContentRef.current) {
+          const { top } = mainContentRef.current.getBoundingClientRect();
+          // Show if content is at all visible in viewport
+          if (top < window.innerHeight) {
+            setShowContent(true);
+          }
+        }
+      });
+    }
+  }, [isLoading, allPosts.length, showContent]);
 
   const displayedArticles = useMemo<Article[]>(() => {
     return assignLayoutAndGridClass(allPosts);
@@ -358,7 +412,7 @@ export default function Home() {
       <div
         className="landing-page"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1682686578842-00ba49b0a71a?q=80&w=1075&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`,
+          backgroundImage: `url('https://images.unsplash.com/photo-1682686578842-00ba49b0a71a?q=60&w=1075&fm=webp&fit=crop&ixlib=rb-4.1.0')`,
         }}
       >
         <div className="welcome-text backdrop-blur-sm">
@@ -380,10 +434,42 @@ export default function Home() {
       >
         {user && (
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-4 text-center shadow-lg">
-              <p className="text-[var(--text-secondary)]">
-                <span className="font-semibold text-[var(--primary)]">Welcome back,</span> {user.email}!
-              </p>
+            <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-4 shadow-lg">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-[var(--text-secondary)]">
+                  <span className="font-semibold text-[var(--primary)]">Welcome back,</span> {user.email}!
+                </p>
+                {isAdmin && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-[var(--text-secondary)]">View:</span>
+                    <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden">
+                      <button
+                        onClick={() => setShowDraftsOnly(false)}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                          !showDraftsOnly
+                            ? 'bg-[var(--primary)] text-white'
+                            : 'bg-[var(--background)] text-[var(--text-secondary)] hover:bg-[var(--border)]'
+                        }`}
+                      >
+                        All Posts
+                      </button>
+                      <button
+                        onClick={() => setShowDraftsOnly(true)}
+                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                          showDraftsOnly
+                            ? 'bg-yellow-500 text-black'
+                            : 'bg-[var(--background)] text-[var(--text-secondary)] hover:bg-[var(--border)]'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Drafts Only
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

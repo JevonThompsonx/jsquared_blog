@@ -149,9 +149,12 @@ const Admin: FC = () => {
       Authorization: `Bearer ${user.token}`,
     };
 
+    // Image is required for published posts, optional for drafts
+    const imageRequired = post.status === "published";
+
     if (uploadMethod === 'file') {
-      if (!selectedFile) {
-        alert("Please select an image file to upload.");
+      if (imageRequired && !selectedFile) {
+        alert("Please select an image file to upload for published posts.");
         return;
       }
       const formData = new FormData();
@@ -159,13 +162,15 @@ const Admin: FC = () => {
       formData.append('description', post.description || '');
       formData.append('category', post.category || '');
       formData.append('status', post.status);
-      formData.append('image', selectedFile);
+      if (selectedFile) {
+        formData.append('image', selectedFile);
+      }
       formData.append('author_id', user.id);
 
       bodyContent = formData;
     } else {
-      if (!post.image_url) {
-        alert("Please enter an image URL.");
+      if (imageRequired && !post.image_url) {
+        alert("Please enter an image URL for published posts.");
         return;
       }
       bodyContent = JSON.stringify({ ...post, author_id: user.id });
@@ -253,7 +258,9 @@ const Admin: FC = () => {
           <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Create New Post</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="title" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Title</label>
+              <label htmlFor="title" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                Title {post.status === "published" && <span className="text-red-500">*</span>}
+              </label>
               <input
                 type="text"
                 id="title"
@@ -261,8 +268,14 @@ const Admin: FC = () => {
                 value={post.title}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
-                required
+                required={post.status === "published"}
+                placeholder={post.status === "draft" ? "Untitled Draft (optional)" : "Enter post title"}
               />
+              {post.status === "draft" && (
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  Title is optional for drafts. It will default to "Untitled Draft" if left empty.
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="description" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Description</label>

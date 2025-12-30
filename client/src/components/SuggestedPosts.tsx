@@ -1,6 +1,7 @@
 import { useEffect, useState, FC, SyntheticEvent } from "react";
 import { Link } from "react-router-dom";
 import { Post } from "../../../shared/src/types";
+import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
 
 interface SuggestedPostsProps {
   category?: string; // Filter by category
@@ -18,6 +19,14 @@ const formatDateToSeasonYear = (dateString: string): string => {
   if (month >= 5 && month <= 7) return `Summer ${year}`;
   if (month >= 8 && month <= 10) return `Fall ${year}`;
   return `Winter ${year}`;
+};
+
+// Strip HTML tags - done once during data transformation
+const stripHtml = (html: string | null): string => {
+  if (!html) return "";
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
 };
 
 const SuggestedPosts: FC<SuggestedPostsProps> = ({
@@ -61,8 +70,12 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
           filteredPosts = filteredPosts.filter((post: Post) => post.id !== excludeId);
         }
 
-        // Limit to requested number
-        setPosts(filteredPosts.slice(0, limit));
+        // Strip HTML and limit to requested number
+        const postsWithStrippedHtml = filteredPosts.slice(0, limit).map((post: Post) => ({
+          ...post,
+          description: stripHtml(post.description)
+        }));
+        setPosts(postsWithStrippedHtml);
       } catch (error) {
         console.error("Error fetching suggested posts:", error);
       } finally {
@@ -75,14 +88,6 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
 
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src = "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
-  };
-
-  // Strip HTML tags for card preview text
-  const stripHtml = (html: string | null): string => {
-    if (!html) return "";
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
   };
 
   if (loading) {
@@ -137,12 +142,18 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
                     </h3>
                     {post.description && (
                       <p className="text-sm text-[var(--text-secondary)] flex-grow line-clamp-2 mb-2">
-                        {stripHtml(post.description)}
+                        {post.description}
                       </p>
                     )}
-                    <p className="text-xs text-[var(--text-secondary)] mt-auto">
-                      {formattedDate}
-                    </p>
+                    <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mt-auto">
+                      <span>{formattedDate}</span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {formatReadingTime(calculateReadingTime(post.description))}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </Link>
