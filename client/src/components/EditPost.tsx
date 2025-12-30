@@ -269,6 +269,20 @@ const EditPost: FC = () => {
                   onChange={handleFileChange}
                   className="mt-1 block w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--primary)] file:text-white hover:file:bg-[var(--primary-light)] cursor-pointer"
                 />
+                {selectedFile && (
+                  <p className="mt-2 text-sm text-[var(--text-secondary)] flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="font-medium">{selectedFile.name}</span>
+                    <span className="text-[var(--primary)]">
+                      ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                    {selectedFile.size > 5 * 1024 * 1024 && (
+                      <span className="text-red-500 font-medium">- File too large (max 5MB)</span>
+                    )}
+                  </p>
+                )}
               </div>
             )}
             <div>

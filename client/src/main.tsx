@@ -6,6 +6,7 @@ import "./index.css";
 // Eager load critical components for initial render (Home is the main route)
 import Navbar from "./components/Navbar.tsx";
 import Home from "./components/Home.tsx";
+import BackToTop from "./components/BackToTop.tsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 import { ThemeName } from "../../shared/src/types";
 
@@ -140,6 +141,7 @@ const AppLayout = () => {
       <Suspense fallback={<LoadingFallback />}>
         <Outlet context={{ currentTheme, setCurrentTheme, searchTerm, setSearchTerm }} />
       </Suspense>
+      <BackToTop />
     </div>
   );
 };

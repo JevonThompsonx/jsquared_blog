@@ -3,7 +3,10 @@ import { useParams, Link } from "react-router-dom";
 import { Post, Article } from "../../../shared/src/types";
 import SEO from "./SEO";
 import SuggestedPosts from "./SuggestedPosts";
+import Breadcrumbs from "./Breadcrumbs";
+import { SkeletonGrid } from "./SkeletonCard";
 
+// Small spinner for "loading more" at bottom
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
@@ -315,18 +318,13 @@ const Category: FC = () => {
       />
       <div className="min-h-screen pt-24 pb-12" style={{ background: 'var(--background)' }}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </Link>
-        </div>
-        <h1 className="text-4xl font-bold text-[var(--text-primary)] mt-6">
+        <Breadcrumbs
+          items={[
+            { label: "Home", href: "/" },
+            { label: category || "Category" },
+          ]}
+        />
+        <h1 className="text-4xl font-bold text-[var(--text-primary)]">
           {category} Adventures
         </h1>
         <p className="text-[var(--text-secondary)] mt-2">
@@ -344,7 +342,7 @@ const Category: FC = () => {
 
       <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense">
         {isLoading ? (
-          <LoadingSpinner />
+          <SkeletonGrid count={6} />
         ) : displayedArticles.length > 0 ? (
           <>
             {displayedArticles.map((article) => (

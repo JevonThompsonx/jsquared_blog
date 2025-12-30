@@ -7,6 +7,7 @@ import SEO from "./SEO";
 import SuggestedPosts from "./SuggestedPosts";
 import Comments from "./Comments";
 import ShareButtons from "./ShareButtons";
+import Breadcrumbs from "./Breadcrumbs";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
 
 import { ThemeName, Post } from "../../../shared/src/types";
@@ -104,22 +105,20 @@ const PostDetail: FC = () => {
       )}
       <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
         <div className="container mx-auto max-w-4xl">
-        {/* Back button */}
-        <Link
-          to="/"
-          className="inline-flex items-center text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors mb-6 group"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2 transform group-hover:-translate-x-1 transition-transform"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back to all posts
-        </Link>
+        {/* Breadcrumbs */}
+        {post ? (
+          <Breadcrumbs
+            items={[
+              { label: "Home", href: "/" },
+              ...(post.category
+                ? [{ label: post.category, href: `/category/${encodeURIComponent(post.category)}` }]
+                : []),
+              { label: post.title || "Post" },
+            ]}
+          />
+        ) : (
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Post" }]} />
+        )}
 
         {loading ? (
           <div className="flex justify-center items-center py-20">

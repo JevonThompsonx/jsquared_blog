@@ -272,6 +272,84 @@ app.get("/sitemap.xml", async (c) => {
   });
 });
 
+// RSS Feed endpoint
+app.get("/feed.xml", async (c) => {
+  const supabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_ANON_KEY,
+  );
+
+  // Fetch published posts with full details
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("id, created_at, title, description, category, image_url")
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const baseUrl = "https://jsquaredadventures.com";
+  const buildDate = new Date().toUTCString();
+
+  // Helper to strip HTML tags for RSS description
+  const stripHtml = (html: string | null): string => {
+    if (!html) return "";
+    return html.replace(/<[^>]*>/g, "").substring(0, 300);
+  };
+
+  // Helper to escape XML special characters
+  const escapeXml = (str: string): string => {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  };
+
+  let rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>J²Adventures</title>
+    <link>${baseUrl}</link>
+    <description>Join us on our adventures around the world! From hiking and camping to food tours and city explorations, we share our travel stories and experiences.</description>
+    <language>en-us</language>
+    <lastBuildDate>${buildDate}</lastBuildDate>
+    <atom:link href="${baseUrl}/feed.xml" rel="self" type="application/rss+xml"/>
+    <image>
+      <url>${baseUrl}/og-image.jpg</url>
+      <title>J²Adventures</title>
+      <link>${baseUrl}</link>
+    </image>`;
+
+  if (posts && posts.length > 0) {
+    posts.forEach(post => {
+      const pubDate = new Date(post.created_at).toUTCString();
+      const description = escapeXml(stripHtml(post.description));
+      const title = escapeXml(post.title || "Untitled");
+
+      rss += `
+    <item>
+      <title>${title}</title>
+      <link>${baseUrl}/posts/${post.id}</link>
+      <guid isPermaLink="true">${baseUrl}/posts/${post.id}</guid>
+      <pubDate>${pubDate}</pubDate>
+      <description>${description}${description.length >= 300 ? '...' : ''}</description>${post.category ? `
+      <category>${escapeXml(post.category)}</category>` : ''}${post.image_url ? `
+      <enclosure url="${escapeXml(post.image_url)}" type="image/webp"/>` : ''}
+    </item>`;
+    });
+  }
+
+  rss += `
+  </channel>
+</rss>`;
+
+  return c.text(rss, 200, {
+    "Content-Type": "application/rss+xml; charset=utf-8",
+    "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+  });
+});
+
 app.get("/api/posts", async (c) => {
   // Create a temporary, public client for this route using c.env
   const supabase = createClient(
@@ -392,6 +470,51 @@ app.get("/api/posts/:id", async (c) => {
   return c.json(data, {
     headers: {
       "Cache-Control": cacheControl,
+    },
+  });
+});
+
+// Get author profile by username
+app.get("/api/authors/:username", async (c) => {
+  const { username } = c.req.param();
+  const supabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_ANON_KEY,
+  );
+
+  // Fetch profile by username
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, username, role")
+    .eq("username", username)
+    .single();
+
+  if (profileError || !profile) {
+    return c.json({ error: "Author not found" }, 404);
+  }
+
+  // Fetch author's published posts
+  const { data: posts, error: postsError } = await supabase
+    .from("posts")
+    .select("id, created_at, title, description, image_url, category, type")
+    .eq("author_id", profile.id)
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+
+  if (postsError) {
+    return c.json({ error: postsError.message }, 500);
+  }
+
+  return c.json({
+    author: {
+      username: profile.username,
+      role: profile.role,
+    },
+    posts: posts || [],
+    postCount: posts?.length || 0,
+  }, {
+    headers: {
+      "Cache-Control": "public, max-age=300", // Cache for 5 minutes
     },
   });
 });

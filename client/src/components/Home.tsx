@@ -6,7 +6,9 @@ import { useAuth } from "../context/AuthContext";
 import { Post, Article } from "../../../shared/src/types";
 import { useDebounce } from "../hooks/useDebounce";
 import SEO from "./SEO";
+import { SkeletonGrid } from "./SkeletonCard";
 
+// Small spinner for "loading more" at bottom
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
@@ -476,7 +478,7 @@ export default function Home() {
 
         <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense">
           {isLoading ? (
-            <LoadingSpinner />
+            <SkeletonGrid count={6} />
           ) : displayedArticles.length > 0 ? (
             <>
               {displayedArticles.map((article) => (
