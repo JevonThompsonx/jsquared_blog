@@ -840,16 +840,37 @@ app.delete("/api/posts/:id", authMiddleware, async (c) => {
     return c.json({ error: "Unauthorized to delete this post" }, 403);
   }
 
-  // Delete associated image from Supabase Storage if it exists
-  if (existingPost.image_url && existingPost.image_url.includes('supabase')) {
-    try {
-      await deleteImageFromSupabase(supabase, existingPost.image_url);
-    } catch (deleteError) {
-      console.warn("Failed to delete image, continuing with post deletion:", deleteError);
+  // Delete all gallery images from storage
+  const { data: galleryImages } = await supabase
+    .from("post_images")
+    .select("image_url")
+    .eq("post_id", id);
+
+  if (galleryImages && galleryImages.length > 0) {
+    for (const img of galleryImages) {
+      if (img.image_url?.includes('supabase')) {
+        try {
+          await deleteImageFromSupabase(supabase, img.image_url);
+        } catch (deleteError) {
+          console.warn("Failed to delete gallery image:", deleteError);
+        }
+      }
     }
   }
 
-  // Delete the post
+  // Also delete legacy cover image if different from gallery images
+  if (existingPost.image_url && existingPost.image_url.includes('supabase')) {
+    const isInGallery = galleryImages?.some(img => img.image_url === existingPost.image_url);
+    if (!isInGallery) {
+      try {
+        await deleteImageFromSupabase(supabase, existingPost.image_url);
+      } catch (deleteError) {
+        console.warn("Failed to delete cover image:", deleteError);
+      }
+    }
+  }
+
+  // Delete the post (cascade will remove post_images records)
   const { error: deleteError } = await supabase
     .from("posts")
     .delete()
