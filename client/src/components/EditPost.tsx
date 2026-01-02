@@ -4,14 +4,16 @@ import { useState, useEffect, FC } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-import { Post, CATEGORIES } from "../../../shared/src/types";
+import { PostWithImages, PostImage, CATEGORIES } from "../../../shared/src/types";
 import RichTextEditor from "./RichTextEditor";
+import ImageUploader, { PendingFile } from "./ImageUploader";
+import { uploadImageToStorage, addImageRecord, updateImageFocalPoint } from "../utils/imageUpload";
 
 const EditPost: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const [post, setPost] = useState<Post>(() => ({
+  const [post, setPost] = useState<PostWithImages>(() => ({
     id: parseInt(id || "0"),
     title: "",
     description: "",
@@ -20,10 +22,16 @@ const EditPost: FC = () => {
     type: "split-horizontal",
     created_at: new Date().toISOString(),
     author_id: "",
-    status: "published"
+    status: "published",
+    images: []
   }));
-  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'gallery'>('gallery');
+  const [existingImages, setExistingImages] = useState<PostImage[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
+  const [focalPointUpdates, setFocalPointUpdates] = useState<Map<number, string>>(new Map());
+  const [reorderedImages, setReorderedImages] = useState<PostImage[] | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryValue, setCustomCategoryValue] = useState("");
 
@@ -41,13 +49,19 @@ const EditPost: FC = () => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data: Post = await response.json();
+        const data: PostWithImages = await response.json();
         setPost(data);
-        if (data.image_url) {
+
+        // Set existing images from the post
+        if (data.images && data.images.length > 0) {
+          setExistingImages(data.images);
+          setUploadMethod('gallery');
+        } else if (data.image_url) {
           setUploadMethod('url');
         } else {
-          setUploadMethod('file');
+          setUploadMethod('gallery');
         }
+
         // Check if category is custom (not in predefined list)
         if (data.category && !CATEGORIES.includes(data.category as any)) {
           setIsCustomCategory(true);
@@ -55,7 +69,6 @@ const EditPost: FC = () => {
         }
       } catch (e: any) {
         console.error("Error fetching post in EditPost.tsx:", e);
-      } finally {
       }
     };
 
@@ -68,34 +81,61 @@ const EditPost: FC = () => {
     if (name === "category") {
       if (value === "Other") {
         setIsCustomCategory(true);
-        setPost((prev) => ({ ...prev, category: "" } as Post));
+        setPost((prev) => ({ ...prev, category: "" } as PostWithImages));
       } else {
         setIsCustomCategory(false);
         setCustomCategoryValue("");
-        setPost((prev) => ({ ...prev, [name]: value } as Post));
+        setPost((prev) => ({ ...prev, [name]: value } as PostWithImages));
       }
     } else {
-      setPost((prev) => ({ ...prev, [name]: value } as Post));
+      setPost((prev) => ({ ...prev, [name]: value } as PostWithImages));
     }
   };
 
   const handleDescriptionChange = (html: string) => {
-    setPost((prev) => ({ ...prev, description: html } as Post));
+    setPost((prev) => ({ ...prev, description: html } as PostWithImages));
   };
 
   const handleCustomCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomCategoryValue(value);
-    setPost((prev) => ({ ...prev, category: value } as Post));
+    setPost((prev) => ({ ...prev, category: value } as PostWithImages));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      setPost((prev) => ({ ...prev, image_url: null } as Post));
-    } else {
-      setSelectedFile(null);
-    }
+  // Gallery image handlers
+  const handleGalleryFilesSelected = (files: PendingFile[]) => {
+    setPendingFiles((prev) => [...prev, ...files]);
+  };
+
+  const handleRemovePendingFile = (index: number) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(pendingFiles[index].previewUrl);
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdatePendingFocalPoint = (index: number, focalPoint: string) => {
+    setPendingFiles((prev) =>
+      prev.map((pf, i) => (i === index ? { ...pf, focalPoint } : pf))
+    );
+  };
+
+  const handleUpdateExistingFocalPoint = (imageId: number, focalPoint: string) => {
+    // Update local state for preview
+    setExistingImages((prev) =>
+      prev.map((img) => (img.id === imageId ? { ...img, focal_point: focalPoint } : img))
+    );
+    // Track the update to save on submit
+    setFocalPointUpdates((prev) => new Map(prev).set(imageId, focalPoint));
+  };
+
+  const handleRemoveExistingImage = (imageId: number) => {
+    setImagesToDelete((prev) => [...prev, imageId]);
+    setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  const handleReorderImages = (reordered: PostImage[]) => {
+    setExistingImages(reordered);
+    setReorderedImages(reordered);
   };
 
   const handleDelete = async () => {
@@ -131,40 +171,34 @@ const EditPost: FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !token || !post) return;
-
-    let bodyContent;
-    let headers: HeadersInit = {
-      Authorization: `Bearer ${token}`,
-    };
+    if (!user || !token || !post || !id) return;
 
     // Image is required for published posts, optional for drafts
     const imageRequired = post.status === "published";
+    const hasImages = existingImages.length > 0 || pendingFiles.length > 0;
 
-    if (uploadMethod === 'file') {
-      if (imageRequired && !selectedFile && !post.image_url) {
-        alert("Please select an image file to upload for published posts.");
+    if (uploadMethod === 'gallery') {
+      if (imageRequired && !hasImages) {
+        alert("Please add at least one image for published posts.");
         return;
       }
-      const formData = new FormData();
-      formData.append('title', post.title);
-      formData.append('description', post.description || '');
-      formData.append('category', post.category || '');
-      formData.append('status', post.status);
-      if (selectedFile) {
-        formData.append('image', selectedFile);
-      }
-      bodyContent = formData;
     } else {
       if (imageRequired && !post.image_url) {
         alert("Please enter an image URL for published posts.");
         return;
       }
-      bodyContent = JSON.stringify(post);
-      headers['Content-Type'] = 'application/json';
     }
 
+    setIsSubmitting(true);
+
     try {
+      // Step 1: Update the post
+      const bodyContent = JSON.stringify(post);
+      const headers: HeadersInit = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+
       const response = await fetch(`/api/posts/${id}`, {
         method: "PUT",
         headers: headers,
@@ -176,11 +210,79 @@ const EditPost: FC = () => {
         throw new Error(errorData.error || "Failed to update post");
       }
 
+      // Step 2: Delete images marked for deletion
+      for (const imageId of imagesToDelete) {
+        try {
+          await fetch(`/api/posts/${id}/images/${imageId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch (err) {
+          console.error("Failed to delete image:", imageId, err);
+        }
+      }
+
+      // Step 3: Reorder images if changed
+      if (reorderedImages && reorderedImages.length > 0) {
+        const order = reorderedImages.map((img, idx) => ({
+          id: img.id,
+          sort_order: idx,
+        }));
+
+        await fetch(`/api/posts/${id}/images/reorder`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ order }),
+        });
+      }
+
+      // Step 3.5: Update focal points for existing images
+      if (focalPointUpdates.size > 0) {
+        for (const [imageId, focalPoint] of focalPointUpdates) {
+          try {
+            await updateImageFocalPoint(parseInt(id), imageId, focalPoint, token);
+            console.log(`Updated focal point for image ${imageId}`);
+          } catch (err) {
+            console.error(`Failed to update focal point for image ${imageId}:`, err);
+          }
+        }
+      }
+
+      // Step 4: Upload new images directly to Supabase Storage (bypasses Worker limits)
+      if (pendingFiles.length > 0) {
+        const uploadErrors: string[] = [];
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const pendingFile = pendingFiles[i];
+          try {
+            // Upload directly to Supabase Storage
+            console.log(`Uploading ${pendingFile.file.name} to Supabase Storage...`);
+            const imageUrl = await uploadImageToStorage(pendingFile.file);
+            console.log(`Storage upload successful: ${imageUrl}`);
+
+            // Add database record via lightweight API endpoint (with focal point)
+            console.log(`Adding database record for ${pendingFile.file.name}...`);
+            await addImageRecord(parseInt(id), imageUrl, token, undefined, pendingFile.focalPoint);
+            console.log(`Database record added for ${pendingFile.file.name}`);
+          } catch (uploadErr: any) {
+            console.error("Error uploading image:", pendingFile.file.name, uploadErr);
+            uploadErrors.push(`${pendingFile.file.name}: ${uploadErr.message}`);
+          }
+        }
+        if (uploadErrors.length > 0) {
+          alert(`Some images failed to upload:\n${uploadErrors.join('\n')}`);
+        }
+      }
+
       alert("Post updated successfully!");
       navigate(`/posts/${id}`);
     } catch (err: any) {
       console.error(err);
       alert(`Error updating post: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -226,29 +328,48 @@ const EditPost: FC = () => {
                     type="radio"
                     className="form-radio"
                     name="uploadMethod"
-                    value="url"
-                    checked={uploadMethod === 'url'}
-                    onChange={() => setUploadMethod('url')}
+                    value="gallery"
+                    checked={uploadMethod === 'gallery'}
+                    onChange={() => setUploadMethod('gallery')}
                   />
-                  <span className="ml-2 text-sm text-[var(--text-primary)]">Image URL</span>
+                  <span className="ml-2 text-sm text-[var(--text-primary)]">Image Gallery</span>
                 </label>
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
                     className="form-radio"
                     name="uploadMethod"
-                    value="file"
-                    checked={uploadMethod === 'file'}
-                    onChange={() => setUploadMethod('file')}
+                    value="url"
+                    checked={uploadMethod === 'url'}
+                    onChange={() => setUploadMethod('url')}
                   />
-                  <span className="ml-2 text-sm text-[var(--text-primary)]">Upload File</span>
+                  <span className="ml-2 text-sm text-[var(--text-primary)]">Image URL</span>
                 </label>
               </div>
             </div>
 
-            {uploadMethod === 'url' ? (
+            {uploadMethod === 'gallery' ? (
               <div>
-                <label htmlFor="image_url" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Image URL</label>
+                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                  Gallery Images {post?.status === "published" && <span className="text-red-500">*</span>}
+                </label>
+                <ImageUploader
+                  existingImages={existingImages}
+                  pendingFiles={pendingFiles}
+                  onFilesSelected={handleGalleryFilesSelected}
+                  onRemovePendingFile={handleRemovePendingFile}
+                  onRemoveExistingImage={handleRemoveExistingImage}
+                  onReorderImages={handleReorderImages}
+                  onUpdatePendingFocalPoint={handleUpdatePendingFocalPoint}
+                  onUpdateExistingFocalPoint={handleUpdateExistingFocalPoint}
+                  disabled={isSubmitting}
+                />
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="image_url" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                  Image URL {post?.status === "published" && <span className="text-red-500">*</span>}
+                </label>
                 <input
                   type="text"
                   id="image_url"
@@ -256,33 +377,8 @@ const EditPost: FC = () => {
                   value={post?.image_url || ""}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+                  placeholder="https://example.com/image.jpg"
                 />
-              </div>
-            ) : (
-              <div>
-                <label htmlFor="image_file" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Upload Image</label>
-                <input
-                  type="file"
-                  id="image_file"
-                  name="image_file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="mt-1 block w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--primary)] file:text-white hover:file:bg-[var(--primary-light)] cursor-pointer"
-                />
-                {selectedFile && (
-                  <p className="mt-2 text-sm text-[var(--text-secondary)] flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium">{selectedFile.name}</span>
-                    <span className="text-[var(--primary)]">
-                      ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                    {selectedFile.size > 5 * 1024 * 1024 && (
-                      <span className="text-red-500 font-medium">- File too large (max 5MB)</span>
-                    )}
-                  </p>
-                )}
               </div>
             )}
             <div>
@@ -331,15 +427,30 @@ const EditPost: FC = () => {
               </p>
             </div>
 
-            <button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">
-              Update Post
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Updating Post...
+                </>
+              ) : (
+                "Update Post"
+              )}
             </button>
           </form>
 
           {/* Delete Button (outside form) */}
           <button
             onClick={handleDelete}
-            className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className="w-full mt-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

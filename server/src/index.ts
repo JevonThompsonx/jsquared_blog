@@ -48,11 +48,28 @@ interface ApiResponse {
   success: boolean;
 }
 
-// Helper to convert images to WebP format
+// Max file size for image uploads (5MB)
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+// Set to false to disable WebP conversion (more reliable in dev, less CPU intensive)
+const ENABLE_WEBP_CONVERSION = false;
+
+// Helper to convert images to WebP format (or skip conversion if disabled)
 async function convertToWebP(
   imageBuffer: ArrayBuffer,
   contentType: string
-): Promise<ArrayBuffer> {
+): Promise<{ buffer: ArrayBuffer; converted: boolean; extension: string }> {
+  // Get the original extension
+  const originalExt = contentType === 'image/jpeg' || contentType === 'image/jpg' ? 'jpg' :
+                      contentType === 'image/png' ? 'png' :
+                      contentType === 'image/webp' ? 'webp' :
+                      contentType.split('/')[1] || 'bin';
+
+  // If conversion is disabled or already WebP, return as-is
+  if (!ENABLE_WEBP_CONVERSION || contentType === 'image/webp') {
+    return { buffer: imageBuffer, converted: false, extension: originalExt };
+  }
+
   try {
     let imageData;
 
@@ -61,19 +78,19 @@ async function convertToWebP(
       imageData = await decodeJPEG(imageBuffer);
     } else if (contentType === 'image/png') {
       imageData = await decodePNG(imageBuffer);
-    } else if (contentType === 'image/webp') {
-      // Already WebP, return as-is
-      return imageBuffer;
     } else {
-      throw new Error(`Unsupported image format: ${contentType}`);
+      // Unsupported format - return original with original extension
+      console.warn(`Unsupported format ${contentType}, keeping original`);
+      return { buffer: imageBuffer, converted: false, extension: originalExt };
     }
 
     // Encode to WebP with quality setting
     const webpBuffer = await encodeWebP(imageData, { quality: 85 });
-    return webpBuffer;
+    return { buffer: webpBuffer, converted: true, extension: 'webp' };
   } catch (error) {
-    console.error('WebP conversion error:', error);
-    throw new Error(`Failed to convert image to WebP: ${error}`);
+    // If conversion fails, return original buffer - don't crash
+    console.error('WebP conversion error (using original):', error);
+    return { buffer: imageBuffer, converted: false, extension: originalExt };
   }
 }
 
@@ -81,18 +98,22 @@ async function convertToWebP(
 async function uploadImageToSupabase(
   supabase: SupabaseClient,
   imageBuffer: ArrayBuffer,
-  fileName: string
+  fileName: string,
+  extension: string = 'webp'
 ): Promise<string> {
   const bucket = 'jsquared_blog';
 
   // Generate unique filename with timestamp
   const timestamp = Date.now();
-  const uniqueFileName = `${timestamp}-${fileName.replace(/\.[^/.]+$/, '')}.webp`;
+  const uniqueFileName = `${timestamp}-${fileName.replace(/\.[^/.]+$/, '')}.${extension}`;
+  const contentType = extension === 'webp' ? 'image/webp' :
+                      extension === 'jpg' ? 'image/jpeg' :
+                      extension === 'png' ? 'image/png' : 'application/octet-stream';
 
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(uniqueFileName, imageBuffer, {
-      contentType: 'image/webp',
+      contentType,
       upsert: false,
     });
 
@@ -462,12 +483,19 @@ app.get("/api/posts/:id", async (c) => {
     return c.json({ error: "Post not found" }, 404);
   }
 
+  // Fetch images for this post
+  const { data: images } = await supabase
+    .from("post_images")
+    .select("*")
+    .eq("post_id", id)
+    .order("sort_order", { ascending: true });
+
   // Don't cache drafts, only cache published posts
   const cacheControl = data.status === "draft"
     ? "private, no-cache, no-store, must-revalidate"
     : "public, max-age=60"; // Reduced to 1 minute for faster updates
 
-  return c.json(data, {
+  return c.json({ ...data, images: images || [] }, {
     headers: {
       "Cache-Control": cacheControl,
     },
@@ -561,19 +589,25 @@ app.post("/api/posts", authMiddleware, async (c) => {
 
   if (imageFile) {
     // --- Image Upload Handling with WebP Conversion and Supabase Storage ---
+    // Check file size
+    if (imageFile.size > MAX_IMAGE_SIZE) {
+      return c.json({ error: `Image too large (max 3MB, got ${(imageFile.size / 1024 / 1024).toFixed(2)}MB)` }, 400);
+    }
+
     try {
       const arrayBuffer = await imageFile.arrayBuffer();
       const contentType = imageFile.type;
       const originalFileName = imageFile.name;
 
-      // Convert to WebP format
-      const webpBuffer = await convertToWebP(arrayBuffer, contentType);
+      // Convert to WebP format (or keep original if conversion fails)
+      const { buffer, extension } = await convertToWebP(arrayBuffer, contentType);
 
       // Upload to Supabase Storage
       finalImageUrl = await uploadImageToSupabase(
         supabase,
-        webpBuffer,
-        originalFileName
+        buffer,
+        originalFileName,
+        extension
       );
     } catch (error: any) {
       console.error("Image upload/conversion process failed:", error);
@@ -712,6 +746,11 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
 
   if (imageFile) {
     // --- Image Upload Handling with WebP Conversion and Supabase Storage (for updates) ---
+    // Check file size
+    if (imageFile.size > MAX_IMAGE_SIZE) {
+      return c.json({ error: `Image too large (max 3MB, got ${(imageFile.size / 1024 / 1024).toFixed(2)}MB)` }, 400);
+    }
+
     try {
       // If there was an old image stored in Supabase, delete it
       if (existingPost.image_url && existingPost.image_url.includes('supabase')) {
@@ -726,14 +765,15 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
       const contentType = imageFile.type;
       const originalFileName = imageFile.name;
 
-      // Convert to WebP format
-      const webpBuffer = await convertToWebP(arrayBuffer, contentType);
+      // Convert to WebP format (or keep original if conversion fails)
+      const { buffer, extension } = await convertToWebP(arrayBuffer, contentType);
 
       // Upload new image to Supabase Storage
       finalImageUrl = await uploadImageToSupabase(
         supabase,
-        webpBuffer,
-        originalFileName
+        buffer,
+        originalFileName,
+        extension
       );
     } catch (error: any) {
       console.error("Image upload/conversion process failed (PUT):", error);
@@ -1112,6 +1152,422 @@ app.post("/api/comments/:commentId/like", authMiddleware, async (c) => {
 
     return c.json({ liked: true, message: "Comment liked" }, 201);
   }
+});
+
+// --- POST IMAGES ROUTES ---
+// GET images for a post (public)
+app.get("/api/posts/:postId/images", async (c) => {
+  const { postId } = c.req.param();
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+
+  const { data: images, error } = await supabase
+    .from("post_images")
+    .select("*")
+    .eq("post_id", postId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ images: images || [] }, {
+    headers: { "Cache-Control": "public, max-age=300" },
+  });
+});
+
+// POST upload multiple images (admin only)
+app.post("/api/posts/:postId/images", authMiddleware, async (c) => {
+  const { postId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check admin role
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  // Verify post exists
+  const { data: post, error: postError } = await supabase
+    .from("posts")
+    .select("id, image_url")
+    .eq("id", postId)
+    .single();
+
+  if (postError || !post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  const contentType = c.req.header("Content-Type") || "";
+  if (!contentType.includes("multipart/form-data")) {
+    return c.json({ error: "Must use multipart/form-data" }, 400);
+  }
+
+  const body = await c.req.parseBody();
+
+  // Get current max sort_order for this post
+  const { data: existingImages } = await supabase
+    .from("post_images")
+    .select("sort_order")
+    .eq("post_id", postId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  let currentSortOrder = existingImages?.[0]?.sort_order ?? -1;
+
+  const uploadedImages = [];
+
+  // Handle both single file and multiple files
+  // parseBody returns either a single File or an array
+  const imageEntries = Object.entries(body).filter(([key]) => key.startsWith("images"));
+
+  const skippedFiles: string[] = [];
+
+  for (const [, value] of imageEntries) {
+    const files = Array.isArray(value) ? value : [value];
+
+    for (const file of files) {
+      if (!(file instanceof File)) continue;
+
+      // Check file size before processing
+      if (file.size > MAX_IMAGE_SIZE) {
+        console.warn(`File ${file.name} too large (${(file.size / 1024 / 1024).toFixed(2)}MB), skipping`);
+        skippedFiles.push(file.name);
+        continue;
+      }
+
+      try {
+        // Convert to WebP (or keep original if conversion fails)
+        const arrayBuffer = await file.arrayBuffer();
+        const { buffer, extension } = await convertToWebP(arrayBuffer, file.type);
+
+        // Upload to Supabase Storage
+        const imageUrl = await uploadImageToSupabase(supabase, buffer, file.name, extension);
+
+        currentSortOrder++;
+
+        // Insert record
+        const { data, error } = await supabase
+          .from("post_images")
+          .insert({
+            post_id: parseInt(postId),
+            image_url: imageUrl,
+            sort_order: currentSortOrder,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Failed to insert image record:", error);
+          continue;
+        }
+
+        uploadedImages.push(data);
+      } catch (error) {
+        console.error("Failed to process image:", file.name, error);
+      }
+    }
+  }
+
+  // Update post's cover image if this is the first image and post has no cover
+  if (uploadedImages.length > 0 && !post.image_url) {
+    // Get the first image by sort_order
+    const { data: firstImage } = await supabase
+      .from("post_images")
+      .select("image_url")
+      .eq("post_id", postId)
+      .order("sort_order", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (firstImage) {
+      await supabase
+        .from("posts")
+        .update({ image_url: firstImage.image_url })
+        .eq("id", postId);
+    }
+  }
+
+  return c.json({
+    images: uploadedImages,
+    skipped: skippedFiles.length > 0 ? skippedFiles : undefined,
+    message: skippedFiles.length > 0 ? `${skippedFiles.length} file(s) skipped (too large, max 3MB)` : undefined
+  }, 201);
+});
+
+// POST add image record only (client uploads directly to Supabase Storage)
+// This lightweight endpoint just creates the database record
+app.post("/api/posts/:postId/images/record", authMiddleware, async (c) => {
+  const { postId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check admin role
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  // Verify post exists
+  const { data: post, error: postError } = await supabase
+    .from("posts")
+    .select("id, image_url")
+    .eq("id", postId)
+    .single();
+
+  if (postError || !post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  const body = await c.req.json();
+  const { image_url, sort_order, focal_point } = body;
+
+  if (!image_url) {
+    return c.json({ error: "image_url is required" }, 400);
+  }
+
+  // If sort_order not provided, get the next one
+  let finalSortOrder = sort_order;
+  if (finalSortOrder === undefined) {
+    const { data: existingImages } = await supabase
+      .from("post_images")
+      .select("sort_order")
+      .eq("post_id", postId)
+      .order("sort_order", { ascending: false })
+      .limit(1);
+
+    finalSortOrder = (existingImages?.[0]?.sort_order ?? -1) + 1;
+  }
+
+  // Build insert data with optional focal_point
+  const insertData: Record<string, any> = {
+    post_id: parseInt(postId),
+    image_url,
+    sort_order: finalSortOrder,
+  };
+  if (focal_point) {
+    insertData.focal_point = focal_point;
+  }
+
+  // Insert record
+  const { data, error } = await supabase
+    .from("post_images")
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to insert image record:", error);
+    return c.json({ error: "Failed to add image record" }, 500);
+  }
+
+  // Update post's cover image if this is the first image and post has no cover
+  if (!post.image_url) {
+    const { data: firstImage } = await supabase
+      .from("post_images")
+      .select("image_url")
+      .eq("post_id", postId)
+      .order("sort_order", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (firstImage) {
+      await supabase
+        .from("posts")
+        .update({ image_url: firstImage.image_url })
+        .eq("id", postId);
+    }
+  }
+
+  return c.json(data, 201);
+});
+
+// DELETE a single image (admin only)
+app.delete("/api/posts/:postId/images/:imageId", authMiddleware, async (c) => {
+  const { postId, imageId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check admin role
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  // Get image to delete
+  const { data: image, error: fetchError } = await supabase
+    .from("post_images")
+    .select("*")
+    .eq("id", imageId)
+    .eq("post_id", postId)
+    .single();
+
+  if (fetchError || !image) {
+    return c.json({ error: "Image not found" }, 404);
+  }
+
+  // Delete from storage
+  if (image.image_url && image.image_url.includes("supabase")) {
+    try {
+      await deleteImageFromSupabase(supabase, image.image_url);
+    } catch (deleteError) {
+      console.warn("Failed to delete image from storage:", deleteError);
+    }
+  }
+
+  // Delete record
+  const { error: deleteError } = await supabase
+    .from("post_images")
+    .delete()
+    .eq("id", imageId);
+
+  if (deleteError) {
+    return c.json({ error: deleteError.message }, 500);
+  }
+
+  // Reorder remaining images
+  const { data: remainingImages } = await supabase
+    .from("post_images")
+    .select("id, sort_order")
+    .eq("post_id", postId)
+    .order("sort_order", { ascending: true });
+
+  if (remainingImages && remainingImages.length > 0) {
+    for (let i = 0; i < remainingImages.length; i++) {
+      if (remainingImages[i].sort_order !== i) {
+        await supabase
+          .from("post_images")
+          .update({ sort_order: i })
+          .eq("id", remainingImages[i].id);
+      }
+    }
+
+    // Update cover image to first remaining image
+    const { data: firstImage } = await supabase
+      .from("post_images")
+      .select("image_url")
+      .eq("post_id", postId)
+      .order("sort_order", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (firstImage) {
+      await supabase
+        .from("posts")
+        .update({ image_url: firstImage.image_url })
+        .eq("id", postId);
+    }
+  } else {
+    // No images left, clear cover image only if it was from the gallery
+    const { data: post } = await supabase
+      .from("posts")
+      .select("image_url")
+      .eq("id", postId)
+      .single();
+
+    if (post?.image_url === image.image_url) {
+      await supabase
+        .from("posts")
+        .update({ image_url: null })
+        .eq("id", postId);
+    }
+  }
+
+  return c.json({ message: "Image deleted successfully" }, 200);
+});
+
+// PUT update focal point for an image (admin only)
+app.put("/api/posts/:postId/images/:imageId/focal-point", authMiddleware, async (c) => {
+  const { postId, imageId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check admin role
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { focal_point } = body;
+
+  if (!focal_point) {
+    return c.json({ error: "focal_point is required" }, 400);
+  }
+
+  // Verify image exists and belongs to post
+  const { data: image, error: fetchError } = await supabase
+    .from("post_images")
+    .select("id")
+    .eq("id", imageId)
+    .eq("post_id", postId)
+    .single();
+
+  if (fetchError || !image) {
+    return c.json({ error: "Image not found" }, 404);
+  }
+
+  // Update focal point
+  const { data, error } = await supabase
+    .from("post_images")
+    .update({ focal_point })
+    .eq("id", imageId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to update focal point:", error);
+    return c.json({ error: "Failed to update focal point" }, 500);
+  }
+
+  return c.json(data, 200);
+});
+
+// PUT reorder images (admin only)
+app.put("/api/posts/:postId/images/reorder", authMiddleware, async (c) => {
+  const { postId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check admin role
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { order } = body;
+
+  if (!Array.isArray(order)) {
+    return c.json({ error: "Invalid order format. Expected array of { id, sort_order }" }, 400);
+  }
+
+  // Update each image's sort_order
+  for (const item of order) {
+    const { error } = await supabase
+      .from("post_images")
+      .update({ sort_order: item.sort_order })
+      .eq("id", item.id)
+      .eq("post_id", postId);
+
+    if (error) {
+      console.error("Failed to update sort_order for image:", item.id, error);
+    }
+  }
+
+  // Update cover image to first in order (sort_order = 0)
+  const firstItem = order.find(item => item.sort_order === 0);
+  if (firstItem) {
+    const { data: imageData } = await supabase
+      .from("post_images")
+      .select("image_url")
+      .eq("id", firstItem.id)
+      .single();
+
+    if (imageData) {
+      await supabase
+        .from("posts")
+        .update({ image_url: imageData.image_url })
+        .eq("id", postId);
+    }
+  }
+
+  return c.json({ message: "Images reordered successfully" }, 200);
 });
 
 // --- SERVER SETUP ---

@@ -73,6 +73,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (_event, session) => {
         setSession(session);
         if (session) {
+          // Set user immediately with token for instant UI update
+          setUser({ ...session.user, token: session.access_token });
+          setLoading(false);
+
+          // Then fetch profile asynchronously and update with role
           const { data: profile, error } = await supabase
             .from("profiles")
             .select("role")
@@ -81,14 +86,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (error) {
             console.error("Error fetching profile on auth change:", error);
-            setUser({ ...session.user, token: session.access_token });
-          } else {
-            setUser({ ...session.user, role: profile?.role, token: session.access_token });
+          } else if (profile?.role) {
+            setUser({ ...session.user, role: profile.role, token: session.access_token });
           }
         } else {
           setUser(null);
+          setLoading(false);
         }
-        setLoading(false);
       },
     );
 

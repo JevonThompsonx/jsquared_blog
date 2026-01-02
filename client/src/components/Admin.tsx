@@ -6,6 +6,8 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 
 import { ThemeName, CATEGORIES } from "../../../shared/src/types";
 import RichTextEditor from "./RichTextEditor";
+import ImageUploader, { PendingFile } from "./ImageUploader";
+import { uploadImageToStorage, addImageRecord } from "../utils/imageUpload";
 
 interface AdminProps {
   currentTheme: ThemeName;
@@ -41,8 +43,9 @@ const Admin: FC = () => {
     status: "published" as const,
   });
 
-  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'gallery'>('gallery');
+  const [galleryFiles, setGalleryFiles] = useState<PendingFile[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [shuffleMessage, setShuffleMessage] = useState<string | null>(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
@@ -77,12 +80,20 @@ const Admin: FC = () => {
     setPost((prev) => ({ ...prev, category: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    } else {
-      setSelectedFile(null);
-    }
+  const handleGalleryFilesSelected = (files: PendingFile[]) => {
+    setGalleryFiles((prev) => [...prev, ...files]);
+  };
+
+  const handleRemovePendingFile = (index: number) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(galleryFiles[index].previewUrl);
+    setGalleryFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdatePendingFocalPoint = (index: number, focalPoint: string) => {
+    setGalleryFiles((prev) =>
+      prev.map((pf, i) => (i === index ? { ...pf, focalPoint } : pf))
+    );
   };
 
   const handleShuffleLayouts = async () => {
@@ -144,40 +155,31 @@ const Admin: FC = () => {
     e.preventDefault();
     if (!user || !user.token) return;
 
-    let bodyContent;
-    let headers: HeadersInit = {
-      Authorization: `Bearer ${user.token}`,
-    };
-
     // Image is required for published posts, optional for drafts
     const imageRequired = post.status === "published";
 
-    if (uploadMethod === 'file') {
-      if (imageRequired && !selectedFile) {
-        alert("Please select an image file to upload for published posts.");
+    if (uploadMethod === 'gallery') {
+      if (imageRequired && galleryFiles.length === 0) {
+        alert("Please add at least one image for published posts.");
         return;
       }
-      const formData = new FormData();
-      formData.append('title', post.title);
-      formData.append('description', post.description || '');
-      formData.append('category', post.category || '');
-      formData.append('status', post.status);
-      if (selectedFile) {
-        formData.append('image', selectedFile);
-      }
-      formData.append('author_id', user.id);
-
-      bodyContent = formData;
     } else {
       if (imageRequired && !post.image_url) {
         alert("Please enter an image URL for published posts.");
         return;
       }
-      bodyContent = JSON.stringify({ ...post, author_id: user.id });
-      headers['Content-Type'] = 'application/json';
     }
 
+    setIsSubmitting(true);
+
     try {
+      // Step 1: Create the post
+      const bodyContent = JSON.stringify({ ...post, author_id: user.id });
+      const headers: HeadersInit = {
+        Authorization: `Bearer ${user.token}`,
+        'Content-Type': 'application/json',
+      };
+
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: headers,
@@ -190,7 +192,33 @@ const Admin: FC = () => {
       }
 
       const newPost: Post[] = await response.json();
+      const postId = newPost[0]?.id;
 
+      // Step 2: Upload gallery images directly to Supabase Storage (bypasses Worker limits)
+      if (postId && galleryFiles.length > 0) {
+        const uploadErrors: string[] = [];
+        for (const pendingFile of galleryFiles) {
+          try {
+            // Upload directly to Supabase Storage
+            console.log(`Uploading ${pendingFile.file.name} to Supabase Storage...`);
+            const imageUrl = await uploadImageToStorage(pendingFile.file);
+            console.log(`Storage upload successful: ${imageUrl}`);
+
+            // Add database record via lightweight API endpoint (with focal point)
+            console.log(`Adding database record for ${pendingFile.file.name}...`);
+            await addImageRecord(postId, imageUrl, user.token, undefined, pendingFile.focalPoint);
+            console.log(`Database record added for ${pendingFile.file.name}`);
+          } catch (uploadErr: any) {
+            console.error("Error uploading image:", pendingFile.file.name, uploadErr);
+            uploadErrors.push(`${pendingFile.file.name}: ${uploadErr.message}`);
+          }
+        }
+        if (uploadErrors.length > 0) {
+          alert(`Some images failed to upload:\n${uploadErrors.join('\n')}`);
+        }
+      }
+
+      // Reset form
       setPost({
         title: "",
         description: "",
@@ -199,15 +227,17 @@ const Admin: FC = () => {
         type: "split-vertical",
         status: "published",
       });
-      setSelectedFile(null);
+      setGalleryFiles([]);
 
       alert("Post created successfully!");
-      if (newPost && newPost.length > 0) {
-        navigate(`/posts/${newPost[0].id}`);
+      if (postId) {
+        navigate(`/posts/${postId}`);
       }
     } catch (error: any) {
       console.error(error);
       alert(`Error creating post: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -293,29 +323,47 @@ const Admin: FC = () => {
                     type="radio"
                     className="form-radio"
                     name="uploadMethod"
-                    value="url"
-                    checked={uploadMethod === 'url'}
-                    onChange={() => setUploadMethod('url')}
+                    value="gallery"
+                    checked={uploadMethod === 'gallery'}
+                    onChange={() => setUploadMethod('gallery')}
                   />
-                  <span className="ml-2 text-sm text-[var(--text-primary)]">Image URL</span>
+                  <span className="ml-2 text-sm text-[var(--text-primary)]">Upload Images (Gallery)</span>
                 </label>
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
                     className="form-radio"
                     name="uploadMethod"
-                    value="file"
-                    checked={uploadMethod === 'file'}
-                    onChange={() => setUploadMethod('file')}
+                    value="url"
+                    checked={uploadMethod === 'url'}
+                    onChange={() => setUploadMethod('url')}
                   />
-                  <span className="ml-2 text-sm text-[var(--text-primary)]">Upload File</span>
+                  <span className="ml-2 text-sm text-[var(--text-primary)]">Image URL</span>
                 </label>
               </div>
             </div>
 
-            {uploadMethod === 'url' ? (
+            {uploadMethod === 'gallery' ? (
               <div>
-                <label htmlFor="image_url" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Image URL</label>
+                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                  Gallery Images {post.status === "published" && <span className="text-red-500">*</span>}
+                </label>
+                <ImageUploader
+                  existingImages={[]}
+                  pendingFiles={galleryFiles}
+                  onFilesSelected={handleGalleryFilesSelected}
+                  onRemovePendingFile={handleRemovePendingFile}
+                  onRemoveExistingImage={() => {}}
+                  onReorderImages={() => {}}
+                  onUpdatePendingFocalPoint={handleUpdatePendingFocalPoint}
+                  disabled={isSubmitting}
+                />
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="image_url" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                  Image URL {post.status === "published" && <span className="text-red-500">*</span>}
+                </label>
                 <input
                   type="text"
                   id="image_url"
@@ -323,33 +371,8 @@ const Admin: FC = () => {
                   value={post.image_url || ""}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+                  placeholder="https://example.com/image.jpg"
                 />
-              </div>
-            ) : (
-              <div>
-                <label htmlFor="image_file" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Upload Image</label>
-                <input
-                  type="file"
-                  id="image_file"
-                  name="image_file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="mt-1 block w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--primary)] file:text-white hover:file:bg-[var(--primary-light)] cursor-pointer"
-                />
-                {selectedFile && (
-                  <p className="mt-2 text-sm text-[var(--text-secondary)] flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium">{selectedFile.name}</span>
-                    <span className="text-[var(--primary)]">
-                      ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                    {selectedFile.size > 5 * 1024 * 1024 && (
-                      <span className="text-red-500 font-medium">- File too large (max 5MB)</span>
-                    )}
-                  </p>
-                )}
               </div>
             )}
             <div>
@@ -398,8 +421,22 @@ const Admin: FC = () => {
               </p>
             </div>
 
-            <button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">
-              Create Post
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Creating Post...
+                </>
+              ) : (
+                "Create Post"
+              )}
             </button>
           </form>
         </div>

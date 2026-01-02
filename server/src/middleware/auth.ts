@@ -54,15 +54,29 @@ export const authMiddleware = createMiddleware<HonoEnv>(async (c, next) => {
     data: { user },
   } = await supabase.auth.getUser();
 
-
   if (!user) {
     return c.json({ error: "Unauthorized: Invalid user token" }, 401);
   }
 
-  // 4. Make the user-specific client and user object available to the route handler
-  // Note: role will be fetched in routes that need it
+  // 4. Fetch the user's role from the profiles table
+  // Use a fresh client without JWT to avoid RLS issues when reading profiles
+  const freshClient = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+
+  const { data: profile } = await freshClient
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  // Attach role to user object
+  const userWithRole: UserWithRole = {
+    ...user,
+    role: profile?.role || undefined,
+  };
+
+  // 5. Make the user-specific client and user object available to the route handler
   c.set("supabase", supabase);
-  c.set("user", user as UserWithRole);
+  c.set("user", userWithRole);
 
   await next();
 });

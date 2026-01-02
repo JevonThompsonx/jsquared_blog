@@ -41,6 +41,19 @@ export type Post = {
   status: PostStatus; // draft or published
 };
 
+export type PostImage = {
+  id: number;
+  post_id: number;
+  image_url: string;
+  sort_order: number;
+  created_at: string;
+  focal_point?: string; // CSS object-position value, e.g., "50% 30%" or "center top"
+};
+
+export type PostWithImages = Post & {
+  images?: PostImage[];
+};
+
 export type Article = {
   id: number;
   image: string;

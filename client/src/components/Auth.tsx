@@ -15,16 +15,20 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
       setError(error.message);
-    } else {
-      navigate("/");
+      setLoading(false);
+    } else if (data.session) {
+      // Small delay to allow auth state to propagate before navigation
+      setTimeout(() => {
+        navigate("/");
+        setLoading(false);
+      }, 100);
     }
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -33,7 +37,7 @@ export default function Auth() {
     setError(null);
 
     // First, try to log in the user
-    const { error: loginError } = await supabase.auth.signInWithPassword({
+    const { error: loginError, data: loginData } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -50,21 +54,26 @@ export default function Auth() {
 
         if (signupError) {
           setError(signupError.message);
+          setLoading(false);
         } else {
           alert(
             "Signup successful! Please check your email to verify your account.",
           );
           navigate("/");
+          setLoading(false);
         }
       } else {
         // Other login errors (e.g., incorrect password for existing user)
         setError(loginError.message);
+        setLoading(false);
       }
-    } else {
-      // Login successful, navigate to home
-      navigate("/");
+    } else if (loginData.session) {
+      // Login successful, small delay to allow auth state to propagate
+      setTimeout(() => {
+        navigate("/");
+        setLoading(false);
+      }, 100);
     }
-    setLoading(false);
   };
 
   return (

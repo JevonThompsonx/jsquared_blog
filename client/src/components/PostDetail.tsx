@@ -8,9 +8,10 @@ import SuggestedPosts from "./SuggestedPosts";
 import Comments from "./Comments";
 import ShareButtons from "./ShareButtons";
 import Breadcrumbs from "./Breadcrumbs";
+import ImageGallery from "./ImageGallery";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
 
-import { ThemeName, Post } from "../../../shared/src/types";
+import { ThemeName, PostWithImages } from "../../../shared/src/types";
 
 interface PostDetailProps {
   currentTheme: ThemeName;
@@ -21,7 +22,7 @@ interface PostDetailProps {
 
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<Post | null>(null);
+  const [post, setPost] = useState<PostWithImages | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
@@ -51,7 +52,7 @@ const PostDetail: FC = () => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data: Post = await response.json();
+        const data: PostWithImages = await response.json();
         setPost(data);
       } catch (e: any) {
         setError(e.message);
@@ -136,17 +137,14 @@ const PostDetail: FC = () => {
           </div>
         ) : (
           <article className="bg-[var(--card-bg)] shadow-xl rounded-2xl overflow-hidden border border-[var(--border)]">
-            {/* Image section */}
-            {post.image_url && (
-              <div className="relative h-96 overflow-hidden">
-                <img
-                  src={post.image_url}
-                  alt={post.title || "Post image"}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              </div>
-            )}
+            {/* Image Gallery section */}
+            {(post.images && post.images.length > 0) || post.image_url ? (
+              <ImageGallery
+                images={post.images || []}
+                fallbackImage={post.image_url}
+                alt={post.title || "Post image"}
+              />
+            ) : null}
 
             {/* Content section */}
             <div className="p-8 sm:p-12">

@@ -1,6 +1,6 @@
 # J²Adventures Blog - Project Tracker
 
-> **Last Updated**: December 28, 2025 | **Version**: 0.4.0
+> **Last Updated**: December 30, 2025 | **Version**: 0.8.0
 
 ---
 
@@ -81,6 +81,34 @@
 - [x] Plain text extraction for post previews and meta descriptions
 - [x] Responsive styling for mobile and desktop
 
+### Draft System
+- [x] Draft/published status field for posts
+- [x] Save posts as drafts before publishing
+- [x] Fixed draft visibility and scroll issues
+
+### Navigation & UX
+- [x] Breadcrumbs (Home → Category → Post)
+- [x] Loading skeleton for post cards
+- [x] Fixed initial load scroll behavior
+- [x] "Back to Top" button on long pages
+- [x] Post count on category page headers
+
+### Comments System
+- [x] Full comments functionality with add/delete
+- [x] Comment likes with heart icon
+- [x] Sort by likes, newest, oldest
+- [x] Login prompt for unauthenticated users
+- [x] Relative time formatting (just now, 5m ago, etc.)
+
+### Engagement Features
+- [x] Related/Suggested Posts component (by category)
+- [x] Share Buttons (copy link)
+- [x] Reading time display on posts
+
+### Admin UX
+- [x] Show image file size before upload
+- [x] Confirmation dialog before deleting posts
+
 ---
 
 ## 🚧 In Progress / Next Up
@@ -89,27 +117,22 @@
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Comments System | Medium | `comments` table already planned |
-| Draft Posts | Easy | Add `status` field (draft/published) |
 | Multiple Images | Medium | Gallery component needed |
 
 ### Medium Priority
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Related Posts | Easy | Match by category at post bottom |
 | Author Profiles | Medium | `/author/:username` pages |
 | About Page | Easy | Tell J² story |
-| Share Buttons | Easy | Twitter, Facebook, copy link |
-| Reading Time | Easy | Calculate from content length |
-| Breadcrumbs | Easy | Home → Category → Post |
+| Social Share Buttons | Easy | Add Twitter, Facebook sharing |
 
 ### Lower Priority (Polish)
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
 | Map View 🗺️ | High | Unique differentiator! Add location field |
-| Likes/Reactions | Medium | `post_likes` table |
+| Likes/Reactions on Posts | Medium | `post_likes` table |
 | Post Analytics | Medium | Track view counts |
 | RSS Feed | Easy | `/feed.xml` endpoint |
 | PWA Support | Medium | Service worker + manifest |
@@ -119,11 +142,11 @@
 
 ## 💡 Quick Wins (< 1 hour each)
 
-- [ ] "Back to Top" button on long pages
-- [ ] Loading skeleton for post cards
-- [ ] Post count on category page headers
-- [ ] Confirmation dialog before deleting posts
-- [ ] Show image file size before upload
+- [x] "Back to Top" button on long pages
+- [x] Loading skeleton for post cards
+- [x] Post count on category page headers
+- [x] Confirmation dialog before deleting posts
+- [x] Show image file size before upload
 - [ ] Date formatting options
 - [ ] Dark mode UI toggle
 
@@ -134,12 +157,16 @@
 ### API Endpoints
 
 ```
-GET  /api/posts          - Paginated posts (?limit, ?offset, ?search)
-GET  /api/posts/:id      - Single post
-POST /api/posts          - Create post (admin)
-PUT  /api/posts/:id      - Update post (admin)
-DELETE /api/posts/:id    - Delete post (admin)
-GET  /sitemap.xml        - Dynamic sitemap
+GET  /api/posts                    - Paginated posts (?limit, ?offset, ?search)
+GET  /api/posts/:id                - Single post
+POST /api/posts                    - Create post (admin)
+PUT  /api/posts/:id                - Update post (admin)
+DELETE /api/posts/:id              - Delete post (admin)
+GET  /api/posts/:id/comments       - Get comments for post (?sort=likes|newest|oldest)
+POST /api/posts/:id/comments       - Add comment (authenticated)
+POST /api/comments/:id/like        - Toggle like on comment (authenticated)
+DELETE /api/comments/:id           - Delete comment (owner only)
+GET  /sitemap.xml                  - Dynamic sitemap
 ```
 
 ### Frontend Routes
@@ -157,9 +184,10 @@ GET  /sitemap.xml        - Dynamic sitemap
 ### Database Schema
 
 ```sql
-posts: id, created_at, title, description, image_url, category, author_id, type
+posts: id, created_at, title, description, image_url, category, author_id, type, status
 profiles: id (FK auth.users), username, role
-comments: id, created_at, content, post_id, user_id  -- planned
+comments: id, created_at, content, post_id, user_id
+comment_likes: id, comment_id, user_id (unique constraint)
 ```
 
 ### Key Files
@@ -173,6 +201,12 @@ comments: id, created_at, content, post_id, user_id  -- planned
 | `client/src/hooks/useDebounce.ts` | Search debouncing |
 | `client/src/components/Home.tsx` | Homepage + infinite scroll |
 | `client/src/components/SEO.tsx` | Meta tags + structured data |
+| `client/src/components/Comments.tsx` | Comments with likes |
+| `client/src/components/SuggestedPosts.tsx` | Related posts by category |
+| `client/src/components/ShareButtons.tsx` | Copy link share button |
+| `client/src/components/BackToTop.tsx` | Scroll to top button |
+| `client/src/components/Breadcrumbs.tsx` | Navigation breadcrumbs |
+| `client/src/utils/readingTime.ts` | Reading time calculation |
 | `shared/src/types/index.ts` | Shared TypeScript types |
 
 ---
@@ -236,16 +270,17 @@ SUPABASE_ANON_KEY="your_key"
 
 ## 🎯 Feature Roadmap
 
-### Phase 1: Content Creation (Current Focus)
-- Rich text editor
-- Draft/publish workflow
+### Phase 1: Content Creation (Nearly Complete)
+- ~~Rich text editor~~ ✅
+- ~~Draft/publish workflow~~ ✅
 - Multiple images per post
 
-### Phase 2: Engagement
-- Comments system
-- Likes/reactions
-- Share buttons
-- Related posts
+### Phase 2: Engagement (Mostly Complete)
+- ~~Comments system~~ ✅
+- ~~Comment likes~~ ✅
+- Post likes/reactions (pending)
+- ~~Share buttons~~ ✅
+- ~~Related posts~~ ✅
 
 ### Phase 3: Discovery
 - Advanced search (date range, filters)
