@@ -2,15 +2,13 @@
 
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useState, useEffect, useRef, type Dispatch, type SetStateAction, type FC } from "react";
 
-import { ThemeName } from "../../../shared/src/types";
 import ProfileAvatar from "./ProfileAvatar";
 
 
 interface NavbarProps {
-  currentTheme: string;
-  setCurrentTheme: Dispatch<SetStateAction<ThemeName>>;
   searchTerm: string;
   setSearchTerm: Dispatch<SetStateAction<string>>;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
@@ -34,13 +32,12 @@ const SearchIcon: FC = () => (
 );
 
 export default function Navbar({
-  currentTheme,
-  setCurrentTheme,
   searchTerm,
   setSearchTerm,
   searchInputRef,
 }: NavbarProps) {
   const { user, logout } = useAuth();
+  const { currentTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -73,13 +70,6 @@ export default function Navbar({
     };
   }, [searchInputRef]);
 
-
-  const toggleTheme = () => {
-    const newTheme = currentTheme.startsWith("day")
-      ? "midnightGarden"
-      : "daylightGarden";
-    setCurrentTheme(newTheme);
-  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);

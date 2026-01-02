@@ -39,6 +39,9 @@
   - Change email (with verification)
   - Update password
 - [x] Profile dropdown in navbar with avatar
+- [x] Theme preference per profile (persists across sessions)
+- [x] Profile picture cropping before upload
+- [x] Profile cache for instant avatar display (no flicker)
 - [x] Admin dashboard access from profile menu
 
 ### Performance & Pagination
@@ -169,7 +172,7 @@
 - [x] Post count on category page headers
 - [x] Confirmation dialog before deleting posts
 - [x] Show image file size before upload
-- [ ] Dark mode toggle in settings (persist preference)
+- [x] Dark mode toggle in settings (persist preference)
 - [ ] Date formatting options (relative vs absolute)
 - [ ] Social share buttons (Twitter, Facebook, WhatsApp)
 - [ ] Copy post link button on post detail page
@@ -243,7 +246,7 @@ GET  /sitemap.xml                  - Dynamic sitemap
 ```sql
 posts: id, created_at, title, description, image_url, category, author_id, type, status
 post_images: id, post_id, image_url, sort_order, focal_point, created_at
-profiles: id (FK auth.users), username, avatar_url, role
+profiles: id (FK auth.users), username, avatar_url, role, theme_preference
 comments: id, created_at, content, post_id, user_id
 comment_likes: id, comment_id, user_id (unique constraint)
 ```
@@ -364,6 +367,13 @@ SUPABASE_ANON_KEY="your_key"
 ---
 
 ## 📝 Recent Changes
+
+### v0.9.1 (January 2, 2026)
+- Added theme preference per profile (persists to database)
+- Added ThemeContext for centralized theme management
+- Added profile picture cropping with react-easy-crop
+- Added profile cache to prevent avatar flicker on navigation
+- Fixed avatar not saving properly
 
 ### v0.9.0 (January 2, 2026)
 - Added user profile system (display name, avatar)

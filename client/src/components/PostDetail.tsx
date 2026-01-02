@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect, FC } from "react";
-import { useParams, Link, useOutletContext } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SEO from "./SEO";
 import SuggestedPosts from "./SuggestedPosts";
@@ -11,14 +11,7 @@ import Breadcrumbs from "./Breadcrumbs";
 import ImageGallery from "./ImageGallery";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
 
-import { ThemeName, PostWithImages } from "../../../shared/src/types";
-
-interface PostDetailProps {
-  currentTheme: ThemeName;
-  setCurrentTheme: React.Dispatch<React.SetStateAction<ThemeName>>;
-  searchTerm: string;
-  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
-}
+import { PostWithImages } from "../../../shared/src/types";
 
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,8 +19,6 @@ const PostDetail: FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { isAdmin } = useAuth();
-
-  useOutletContext<PostDetailProps>();
 
   // Strip HTML tags for SEO meta description
   const stripHtml = (html: string | null): string => {

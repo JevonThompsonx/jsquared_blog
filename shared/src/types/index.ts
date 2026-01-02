@@ -93,6 +93,7 @@ export type UserProfile = {
   username: string | null;
   avatar_url: string | null;
   role: "admin" | "viewer";
+  theme_preference?: ThemeName;
 };
 
 // Preset avatar icons (adventure-themed)

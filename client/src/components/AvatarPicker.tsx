@@ -1,6 +1,7 @@
 import { useState, useRef, FC } from "react";
 import { PRESET_AVATARS, AVATAR_COLORS, PresetAvatarId } from "../../../shared/src/types";
 import ProfileAvatar, { PresetIcons } from "./ProfileAvatar";
+import ImageCropper from "./ImageCropper";
 
 interface AvatarPickerProps {
   currentAvatar?: string | null;
@@ -57,6 +58,8 @@ const AvatarPicker: FC<AvatarPickerProps> = ({
   );
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Build the avatar URL based on current selections
@@ -108,21 +111,55 @@ const AvatarPicker: FC<AvatarPickerProps> = ({
       return;
     }
 
-    setIsProcessing(true);
+    // Create object URL for cropper
+    const imageUrl = URL.createObjectURL(file);
+    setCropImageSrc(imageUrl);
+    setShowCropper(true);
     setUploadError(null);
 
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setShowCropper(false);
+    setIsProcessing(true);
+
+    // Clean up old crop image URL
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+
+    // Show cropped preview immediately while uploading
+    const previewBlobUrl = URL.createObjectURL(croppedBlob);
+    setUploadedImageUrl(previewBlobUrl);
+    setMode("image");
+
     try {
-      const uploadedUrl = await onUpload(file);
+      const croppedFile = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
+      const uploadedUrl = await onUpload(croppedFile);
+      // Replace blob URL with actual uploaded URL
+      URL.revokeObjectURL(previewBlobUrl);
       setUploadedImageUrl(uploadedUrl);
-      setMode("image");
     } catch (err: any) {
       setUploadError(err.message || "Failed to upload image");
+      // Revert to letter mode on error
+      URL.revokeObjectURL(previewBlobUrl);
+      setUploadedImageUrl(null);
+      setMode("letter");
     } finally {
       setIsProcessing(false);
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+    }
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
     }
   };
 
@@ -142,7 +179,15 @@ const AvatarPicker: FC<AvatarPickerProps> = ({
   const previewUrl = buildAvatarUrl();
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+    <>
+      {showCropper && cropImageSrc && (
+        <ImageCropper
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
+      <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
       <div className="bg-[var(--card-bg)] rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl border border-[var(--border)]">
         {/* Header */}
         <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
@@ -327,7 +372,8 @@ const AvatarPicker: FC<AvatarPickerProps> = ({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

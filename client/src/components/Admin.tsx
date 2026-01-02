@@ -2,19 +2,12 @@
 
 import { useState, FC } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-import { ThemeName, CATEGORIES } from "../../../shared/src/types";
+import { CATEGORIES } from "../../../shared/src/types";
 import RichTextEditor from "./RichTextEditor";
 import ImageUploader, { PendingFile } from "./ImageUploader";
 import { uploadImageToStorage, addImageRecord } from "../utils/imageUpload";
-
-interface AdminProps {
-  currentTheme: ThemeName;
-  setCurrentTheme: React.Dispatch<React.SetStateAction<ThemeName>>;
-  searchTerm: string;
-  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
-}
 
 
 type Post = {
@@ -50,8 +43,6 @@ const Admin: FC = () => {
   const [shuffleMessage, setShuffleMessage] = useState<string | null>(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryValue, setCustomCategoryValue] = useState("");
-
-  useOutletContext<AdminProps>();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

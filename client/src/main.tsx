@@ -8,6 +8,7 @@ import Navbar from "./components/Navbar.tsx";
 import Home from "./components/Home.tsx";
 import BackToTop from "./components/BackToTop.tsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
+import { ThemeProvider, useTheme } from "./context/ThemeContext.tsx";
 import { ThemeName } from "../../shared/src/types";
 
 // Lazy load secondary route components for code splitting
@@ -119,7 +120,7 @@ const LoadingFallback = () => (
 
 const AppLayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentTheme, setCurrentTheme] = useState<ThemeName>("daylightGarden");
+  const { currentTheme } = useTheme();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -148,14 +149,12 @@ const AppLayout = () => {
       className="transition-colors duration-300"
     >
       <Navbar
-        currentTheme={currentTheme}
-        setCurrentTheme={setCurrentTheme}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         searchInputRef={searchInputRef}
       />
       <Suspense fallback={<LoadingFallback />}>
-        <Outlet context={{ currentTheme, setCurrentTheme, searchTerm, setSearchTerm }} />
+        <Outlet context={{ searchTerm, setSearchTerm }} />
       </Suspense>
       <BackToTop />
     </div>
@@ -207,7 +206,9 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </AuthProvider>
   </React.StrictMode>,
 );

@@ -71,8 +71,10 @@ const AccountSettings: FC = () => {
   const handleAvatarSelect = async (avatarUrl: string) => {
     setIsUpdatingAvatar(true);
     try {
-      await updateProfile({ avatar_url: avatarUrl || undefined });
-      await refreshProfile();
+      // Only update if we have a valid avatar URL
+      if (avatarUrl) {
+        await updateProfile({ avatar_url: avatarUrl });
+      }
     } catch (err: any) {
       console.error("Failed to update avatar:", err);
     } finally {
