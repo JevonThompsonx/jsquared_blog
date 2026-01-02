@@ -25,7 +25,7 @@ const PostDetail: FC = () => {
   const [post, setPost] = useState<PostWithImages | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
 
   useOutletContext<PostDetailProps>();
 
@@ -166,7 +166,7 @@ const PostDetail: FC = () => {
                     </span>
                   )}
                 </div>
-                {user && user.role === "admin" && (
+                {isAdmin && (
                   <Link
                     to={`/posts/${post.id}/edit`}
                     className="inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-semibold py-2 px-6 rounded-lg transition-colors shadow-md"

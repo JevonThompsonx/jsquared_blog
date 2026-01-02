@@ -3,11 +3,21 @@
 import { useState, useEffect, FC } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import imageCompression from "browser-image-compression";
 
 import { PostWithImages, PostImage, CATEGORIES } from "../../../shared/src/types";
 import RichTextEditor from "./RichTextEditor";
 import ImageUploader, { PendingFile } from "./ImageUploader";
 import { uploadImageToStorage, addImageRecord, updateImageFocalPoint } from "../utils/imageUpload";
+
+// Compression options for converting URL images
+const compressionOptions = {
+  maxSizeMB: 0.8,
+  maxWidthOrHeight: 1920,
+  useWebWorker: true,
+  fileType: "image/webp" as const,
+  initialQuality: 0.85,
+};
 
 const EditPost: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +42,7 @@ const EditPost: FC = () => {
   const [focalPointUpdates, setFocalPointUpdates] = useState<Map<number, string>>(new Map());
   const [reorderedImages, setReorderedImages] = useState<PostImage[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConvertingUrl, setIsConvertingUrl] = useState(false);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryValue, setCustomCategoryValue] = useState("");
 
@@ -100,6 +111,62 @@ const EditPost: FC = () => {
     const value = e.target.value;
     setCustomCategoryValue(value);
     setPost((prev) => ({ ...prev, category: value } as PostWithImages));
+  };
+
+  // Handle switching between URL and gallery modes
+  const handleUploadMethodChange = async (newMethod: 'url' | 'gallery') => {
+    // If switching from URL to gallery and there's an existing URL image
+    if (newMethod === 'gallery' && uploadMethod === 'url' && post?.image_url) {
+      const shouldConvert = window.confirm(
+        "You have an existing image URL. Would you like to convert it to a gallery image?\n\n" +
+        "Click OK to download and add it to the gallery, or Cancel to switch without converting."
+      );
+
+      if (shouldConvert) {
+        setIsConvertingUrl(true);
+        try {
+          // Fetch the image from the URL
+          const response = await fetch(post.image_url);
+          if (!response.ok) {
+            throw new Error("Failed to fetch image from URL");
+          }
+
+          const blob = await response.blob();
+
+          // Create a File from the blob
+          const urlParts = post.image_url.split('/');
+          const originalName = urlParts[urlParts.length - 1].split('?')[0] || 'image';
+          const file = new File([blob], originalName, { type: blob.type });
+
+          // Compress and convert to WebP
+          const compressedFile = await imageCompression(file, compressionOptions);
+          const newFileName = originalName.replace(/\.[^/.]+$/, "") + ".webp";
+          const finalFile = new File([compressedFile], newFileName, { type: "image/webp" });
+
+          // Create preview URL and add to pending files
+          const previewUrl = URL.createObjectURL(finalFile);
+          const pendingFile: PendingFile = {
+            file: finalFile,
+            focalPoint: "50% 50%",
+            previewUrl,
+          };
+
+          setPendingFiles((prev) => [...prev, pendingFile]);
+
+          // Clear the old URL from the post
+          setPost((prev) => ({ ...prev, image_url: "" } as PostWithImages));
+
+          console.log(`Converted URL image: ${(file.size / 1024).toFixed(0)}KB → ${(finalFile.size / 1024).toFixed(0)}KB`);
+        } catch (err: any) {
+          console.error("Failed to convert URL image:", err);
+          alert(`Failed to convert image: ${err.message}\n\nThe image URL will be kept.`);
+        } finally {
+          setIsConvertingUrl(false);
+        }
+      }
+    }
+
+    setUploadMethod(newMethod);
   };
 
   // Gallery image handlers
@@ -330,7 +397,8 @@ const EditPost: FC = () => {
                     name="uploadMethod"
                     value="gallery"
                     checked={uploadMethod === 'gallery'}
-                    onChange={() => setUploadMethod('gallery')}
+                    onChange={() => handleUploadMethodChange('gallery')}
+                    disabled={isConvertingUrl}
                   />
                   <span className="ml-2 text-sm text-[var(--text-primary)]">Image Gallery</span>
                 </label>
@@ -341,10 +409,20 @@ const EditPost: FC = () => {
                     name="uploadMethod"
                     value="url"
                     checked={uploadMethod === 'url'}
-                    onChange={() => setUploadMethod('url')}
+                    onChange={() => handleUploadMethodChange('url')}
+                    disabled={isConvertingUrl}
                   />
                   <span className="ml-2 text-sm text-[var(--text-primary)]">Image URL</span>
                 </label>
+                {isConvertingUrl && (
+                  <span className="text-sm text-[var(--primary)] flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Converting...
+                  </span>
+                )}
               </div>
             </div>
 

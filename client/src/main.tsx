@@ -16,7 +16,8 @@ const Admin = lazy(() => import("./components/Admin.tsx"));
 const PostDetail = lazy(() => import("./components/PostDetail.tsx"));
 const EditPost = lazy(() => import("./components/EditPost.tsx"));
 const Category = lazy(() => import("./components/Category.tsx"));
-const NotFound = lazy(() => import("./components/NotFound.tsx")); 
+const NotFound = lazy(() => import("./components/NotFound.tsx"));
+const AccountSettings = lazy(() => import("./components/AccountSettings.tsx")); 
 
 
 type Theme = { [key: string]: string };
@@ -74,6 +75,7 @@ const themes: Record<ThemeName, Theme> = {
 };
 
 
+// Route that requires admin role
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
 
@@ -85,9 +87,23 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" />;
   }
 
-  
   if (user.role !== 'admin') {
     return <Navigate to="/" />;
+  }
+
+  return children;
+};
+
+// Route that only requires authentication (no admin role needed)
+const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" />;
   }
 
   return children;
@@ -175,6 +191,10 @@ const router = createBrowserRouter([
       {
         path: "category/:category",
         element: <Category />,
+      },
+      {
+        path: "settings",
+        element: <AuthenticatedRoute><AccountSettings /></AuthenticatedRoute>,
       },
       {
         path: "*",

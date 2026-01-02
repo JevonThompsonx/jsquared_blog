@@ -86,3 +86,41 @@ export type CommentLike = {
 };
 
 export type CommentSortOption = "likes" | "newest" | "oldest";
+
+// User profile types
+export type UserProfile = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  role: "admin" | "viewer";
+};
+
+// Preset avatar icons (adventure-themed)
+export const PRESET_AVATARS = [
+  { id: "hiker", label: "Hiker" },
+  { id: "camper", label: "Camper" },
+  { id: "explorer", label: "Explorer" },
+  { id: "photographer", label: "Photographer" },
+  { id: "mountain", label: "Mountain" },
+  { id: "compass", label: "Compass" },
+  { id: "backpack", label: "Backpack" },
+  { id: "tent", label: "Tent" },
+] as const;
+
+export type PresetAvatarId = typeof PRESET_AVATARS[number]["id"];
+
+// Avatar color options
+export const AVATAR_COLORS = [
+  { id: "blue", hex: "#2563eb", label: "Blue" },
+  { id: "violet", hex: "#7c3aed", label: "Violet" },
+  { id: "pink", hex: "#db2777", label: "Pink" },
+  { id: "orange", hex: "#ea580c", label: "Orange" },
+  { id: "green", hex: "#16a34a", label: "Green" },
+  { id: "cyan", hex: "#0891b2", label: "Cyan" },
+  { id: "indigo", hex: "#4f46e5", label: "Indigo" },
+  { id: "red", hex: "#dc2626", label: "Red" },
+  { id: "teal", hex: "#0d9488", label: "Teal" },
+  { id: "amber", hex: "#d97706", label: "Amber" },
+] as const;
+
+export type AvatarColorHex = typeof AVATAR_COLORS[number]["hex"];

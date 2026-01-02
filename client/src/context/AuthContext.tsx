@@ -10,10 +10,12 @@ import {
 import { supabase } from "../supabase";
 import { Session, User } from "@supabase/supabase-js";
 
-// Extend the User type to include a role
+// Extend the User type to include profile data
 interface CustomUser extends User {
   role?: string;
   token?: string;
+  username?: string | null;
+  avatar_url?: string | null;
 }
 
 // Define the shape of the context's value
@@ -23,6 +25,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   token: string | null;
+  isAdmin: boolean;
+  updateProfile: (data: { username?: string; avatar_url?: string }) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,15 +52,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Fetch profile asynchronously without blocking
           const { data: profile, error } = await supabase
             .from("profiles")
-            .select("role")
+            .select("role, username, avatar_url")
             .eq("id", session.user.id)
             .single();
 
           if (error) {
             console.error("Error fetching profile:", error);
-          } else if (profile?.role) {
-            // Update user with role once fetched
-            setUser({ ...session.user, role: profile.role, token: session.access_token });
+          } else if (profile) {
+            // Update user with profile data once fetched
+            setUser({
+              ...session.user,
+              role: profile.role,
+              username: profile.username,
+              avatar_url: profile.avatar_url,
+              token: session.access_token,
+            });
           }
         } else {
           setUser(null);
@@ -77,17 +88,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser({ ...session.user, token: session.access_token });
           setLoading(false);
 
-          // Then fetch profile asynchronously and update with role
+          // Then fetch profile asynchronously and update with profile data
           const { data: profile, error } = await supabase
             .from("profiles")
-            .select("role")
+            .select("role, username, avatar_url")
             .eq("id", session.user.id)
             .single();
 
           if (error) {
             console.error("Error fetching profile on auth change:", error);
-          } else if (profile?.role) {
-            setUser({ ...session.user, role: profile.role, token: session.access_token });
+          } else if (profile) {
+            setUser({
+              ...session.user,
+              role: profile.role,
+              username: profile.username,
+              avatar_url: profile.avatar_url,
+              token: session.access_token,
+            });
           }
         } else {
           setUser(null);
@@ -122,12 +139,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Compute isAdmin from user role
+  const isAdmin = user?.role === "admin";
+
+  // Update user profile (username, avatar_url)
+  const updateProfile = async (data: { username?: string; avatar_url?: string }) => {
+    if (!user) throw new Error("Not authenticated");
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(data)
+      .eq("id", user.id);
+
+    if (error) throw error;
+
+    // Update local user state
+    setUser((prev) => (prev ? { ...prev, ...data } : null));
+  };
+
+  // Refresh profile data from database
+  const refreshProfile = async () => {
+    if (!session) return;
+
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("role, username, avatar_url")
+      .eq("id", session.user.id)
+      .single();
+
+    if (error) {
+      console.error("Error refreshing profile:", error);
+      return;
+    }
+
+    if (profile) {
+      setUser({
+        ...session.user,
+        role: profile.role,
+        username: profile.username,
+        avatar_url: profile.avatar_url,
+        token: session.access_token,
+      });
+    }
+  };
+
   const value = {
     session,
     user,
     logout,
     loading,
     token: session?.access_token || null,
+    isAdmin,
+    updateProfile,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
