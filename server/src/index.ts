@@ -13,6 +13,17 @@ interface Bindings {
   SUPABASE_ANON_KEY: string;
 }
 
+// Cloudflare Workers types for scheduled events
+interface ScheduledEvent {
+  cron: string;
+  scheduledTime: number;
+}
+
+interface ExecutionContext {
+  waitUntil(promise: Promise<any>): void;
+  passThroughOnException(): void;
+}
+
 // Define custom user type with role
 interface UserWithRole extends User {
   role?: string;
@@ -378,6 +389,30 @@ app.get("/api/posts", async (c) => {
     c.env.SUPABASE_ANON_KEY,
   );
 
+  // Auto-publish scheduled posts that are past their scheduled time
+  // This is a query-time check that runs on each request
+  const now = new Date().toISOString();
+  const { data: scheduledPosts } = await supabase
+    .from("posts")
+    .select("id")
+    .eq("status", "scheduled")
+    .lte("scheduled_for", now);
+
+  if (scheduledPosts && scheduledPosts.length > 0) {
+    // Auto-publish these posts
+    for (const post of scheduledPosts) {
+      await supabase
+        .from("posts")
+        .update({
+          status: "published",
+          published_at: now,
+          scheduled_for: null, // Clear the scheduled time
+        })
+        .eq("id", post.id);
+    }
+    console.log(`Auto-published ${scheduledPosts.length} scheduled post(s)`);
+  }
+
   // Check if user is authenticated and is an admin
   let isAdmin = false;
   const authHeader = c.req.header("Authorization");
@@ -426,13 +461,16 @@ app.get("/api/posts", async (c) => {
 
   // Filter by status
   if (!isAdmin) {
-    // Non-admins can only see published posts
+    // Non-admins can only see published posts (not drafts or scheduled)
     query = query.eq("status", "published");
   } else if (statusFilter === "draft") {
     // Admin requesting drafts only
     query = query.eq("status", "draft");
+  } else if (statusFilter === "scheduled") {
+    // Admin requesting scheduled posts only
+    query = query.eq("status", "scheduled");
   }
-  // If admin and no status filter, show all posts (drafts + published)
+  // If admin and no status filter, show all posts (drafts + published + scheduled)
 
   // Add search filter if provided
   if (search) {
@@ -445,13 +483,44 @@ app.get("/api/posts", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  // Use private cache for authenticated users (may contain drafts), public for anonymous
+  // Fetch tags for all posts
+  let postsWithTags = data || [];
+  if (data && data.length > 0) {
+    const postIds = data.map(p => p.id);
+
+    // Fetch all post_tags relationships with their tag data
+    const { data: postTagsData } = await supabase
+      .from("post_tags")
+      .select("post_id, tags(*)")
+      .in("post_id", postIds);
+
+    // Group tags by post_id
+    const tagsByPostId: Record<number, any[]> = {};
+    if (postTagsData) {
+      postTagsData.forEach((pt: any) => {
+        if (!tagsByPostId[pt.post_id]) {
+          tagsByPostId[pt.post_id] = [];
+        }
+        if (pt.tags) {
+          tagsByPostId[pt.post_id].push(pt.tags);
+        }
+      });
+    }
+
+    // Attach tags to each post
+    postsWithTags = data.map(post => ({
+      ...post,
+      tags: tagsByPostId[post.id] || [],
+    }));
+  }
+
+  // Use private cache for authenticated users (may contain drafts/scheduled), public for anonymous
   const cacheControl = isAdmin
     ? "private, no-cache, no-store, must-revalidate"
     : "public, max-age=300";
 
   return c.json({
-    posts: data,
+    posts: postsWithTags,
     total: count,
     limit: validLimit,
     offset: offset,
@@ -469,7 +538,7 @@ app.get("/api/posts/:id", async (c) => {
     c.env.SUPABASE_URL,
     c.env.SUPABASE_ANON_KEY,
   );
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("posts")
     .select("*")
     .eq("id", id)
@@ -483,6 +552,32 @@ app.get("/api/posts/:id", async (c) => {
     return c.json({ error: "Post not found" }, 404);
   }
 
+  // Auto-publish if this scheduled post is past its scheduled time
+  if (data.status === "scheduled" && data.scheduled_for) {
+    const scheduledTime = new Date(data.scheduled_for);
+    const now = new Date();
+    if (scheduledTime <= now) {
+      const publishedAt = now.toISOString();
+      await supabase
+        .from("posts")
+        .update({
+          status: "published",
+          published_at: publishedAt,
+          scheduled_for: null,
+        })
+        .eq("id", id);
+
+      // Update the data object for the response
+      data = {
+        ...data,
+        status: "published",
+        published_at: publishedAt,
+        scheduled_for: null,
+      };
+      console.log(`Auto-published scheduled post ${id}`);
+    }
+  }
+
   // Fetch images for this post
   const { data: images } = await supabase
     .from("post_images")
@@ -490,12 +585,20 @@ app.get("/api/posts/:id", async (c) => {
     .eq("post_id", id)
     .order("sort_order", { ascending: true });
 
-  // Don't cache drafts, only cache published posts
-  const cacheControl = data.status === "draft"
-    ? "private, no-cache, no-store, must-revalidate"
-    : "public, max-age=60"; // Reduced to 1 minute for faster updates
+  // Fetch tags for this post
+  const { data: postTagsData } = await supabase
+    .from("post_tags")
+    .select("tags(*)")
+    .eq("post_id", id);
 
-  return c.json({ ...data, images: images || [] }, {
+  const tags = postTagsData?.map((pt: any) => pt.tags).filter(Boolean) || [];
+
+  // Don't cache drafts or scheduled posts, only cache published posts
+  const cacheControl = data.status === "published"
+    ? "public, max-age=60" // Reduced to 1 minute for faster updates
+    : "private, no-cache, no-store, must-revalidate";
+
+  return c.json({ ...data, images: images || [], tags }, {
     headers: {
       "Cache-Control": cacheControl,
     },
@@ -568,13 +671,28 @@ app.post("/api/posts", authMiddleware, async (c) => {
   const description = (body.description as string) || null;
   const category = (body.category as string) || null;
   const status = (body.status as string) || "published"; // Default to published
+  const scheduled_for = (body.scheduled_for as string) || null; // ISO date string for scheduled posts
   // const grid_class = (body.grid_class as string) || null; // grid_class will be determined by server
   const imageFile = body.image as File | undefined; // File from upload
   const imageUrl = body.image_url as string | undefined; // URL from input
 
   // Validate status
-  if (status !== "draft" && status !== "published") {
-    return c.json({ error: "Invalid status. Must be 'draft' or 'published'" }, 400);
+  if (status !== "draft" && status !== "published" && status !== "scheduled") {
+    return c.json({ error: "Invalid status. Must be 'draft', 'published', or 'scheduled'" }, 400);
+  }
+
+  // Validate scheduled_for if status is scheduled
+  if (status === "scheduled") {
+    if (!scheduled_for) {
+      return c.json({ error: "scheduled_for is required when status is 'scheduled'" }, 400);
+    }
+    const scheduledDate = new Date(scheduled_for);
+    if (isNaN(scheduledDate.getTime())) {
+      return c.json({ error: "Invalid scheduled_for date format" }, 400);
+    }
+    if (scheduledDate <= new Date()) {
+      return c.json({ error: "scheduled_for must be in the future" }, 400);
+    }
   }
 
   // For drafts, allow empty title (use default). For published posts, title is required.
@@ -649,6 +767,8 @@ app.post("/api/posts", authMiddleware, async (c) => {
     type: "horizontal" | "vertical" | "hover"; // Explicitly use the new types
     author_id: string;
     status: string;
+    scheduled_for?: string | null;
+    published_at?: string | null;
   };
 
   // Insert the new post into the 'posts' table with the authenticated user's ID
@@ -664,6 +784,8 @@ app.post("/api/posts", authMiddleware, async (c) => {
         type: assignedType, // Use assigned type
         author_id: user.id,
         status: status, // Add status field
+        scheduled_for: status === "scheduled" ? scheduled_for : null,
+        published_at: status === "published" ? new Date().toISOString() : null,
       } as SupabasePostInsert,
     ])
     .select();
@@ -705,14 +827,29 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   const description = (body.description as string) || null;
   const category = (body.category as string) || null;
   const status = (body.status as string) || null;
+  const scheduled_for = body.scheduled_for as string | null;
   const grid_class = (body.grid_class as string) || null;
   const postType = (body.type as PostType) || null;
   const imageFile = body.image as File | undefined; // File from upload
   const imageUrl = body.image_url as string | undefined; // URL from input
 
   // Validate status if provided
-  if (status && status !== "draft" && status !== "published") {
-    return c.json({ error: "Invalid status. Must be 'draft' or 'published'" }, 400);
+  if (status && status !== "draft" && status !== "published" && status !== "scheduled") {
+    return c.json({ error: "Invalid status. Must be 'draft', 'published', or 'scheduled'" }, 400);
+  }
+
+  // Validate scheduled_for if status is scheduled
+  if (status === "scheduled") {
+    if (!scheduled_for) {
+      return c.json({ error: "scheduled_for is required when status is 'scheduled'" }, 400);
+    }
+    const scheduledDate = new Date(scheduled_for);
+    if (isNaN(scheduledDate.getTime())) {
+      return c.json({ error: "Invalid scheduled_for date format" }, 400);
+    }
+    if (scheduledDate <= new Date()) {
+      return c.json({ error: "scheduled_for must be in the future" }, 400);
+    }
   }
 
   // For drafts, allow empty title (use default). For published posts, title is required.
@@ -727,7 +864,7 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
   // Ensure the user is authorized to edit this post (e.g., is the author or an admin)
   const { data: existingPost, error: fetchError } = await supabase
     .from("posts")
-    .select("author_id, image_url, type, grid_class, status") // Also fetch existing image_url, type, grid_class, and status
+    .select("author_id, image_url, type, grid_class, status, published_at") // Also fetch existing fields for update logic
     .eq("id", id)
     .single();
 
@@ -793,17 +930,37 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
 
   
 
+  // Determine scheduling fields based on status transition
+  const finalStatus = status !== null ? status : existingPost.status;
+  let updateData: Record<string, any> = {
+    title: title,
+    description: description,
+    image_url: finalImageUrl, // Use the determined image URL
+    category: category,
+    grid_class: grid_class !== null ? grid_class : existingPost.grid_class, // Use new grid_class if provided, else existing
+    type: postType !== null ? postType : existingPost.type, // Use new type if provided, else existing
+    status: finalStatus,
+  };
+
+  // Handle scheduling fields based on status
+  if (finalStatus === "scheduled") {
+    updateData.scheduled_for = scheduled_for;
+    updateData.published_at = null; // Clear published_at for scheduled posts
+  } else if (finalStatus === "published") {
+    updateData.scheduled_for = null; // Clear scheduled_for for published posts
+    // Only set published_at if it wasn't already set (first time publishing)
+    if (!existingPost.published_at) {
+      updateData.published_at = new Date().toISOString();
+    }
+  } else {
+    // Draft status - clear both
+    updateData.scheduled_for = null;
+    updateData.published_at = null;
+  }
+
   const { data, error } = await supabase
     .from("posts")
-    .update({
-      title: title,
-      description: description,
-      image_url: finalImageUrl, // Use the determined image URL
-      category: category,
-      grid_class: grid_class !== null ? grid_class : existingPost.grid_class, // Use new grid_class if provided, else existing
-      type: postType !== null ? postType : existingPost.type, // Use new type if provided, else existing
-      status: status !== null ? status : existingPost.status, // Use new status if provided, else existing
-    })
+    .update(updateData)
     .eq("id", id)
     .select();
 
@@ -1339,7 +1496,7 @@ app.post("/api/posts/:postId/images/record", authMiddleware, async (c) => {
   }
 
   const body = await c.req.json();
-  const { image_url, sort_order, focal_point } = body;
+  const { image_url, sort_order, focal_point, alt_text } = body;
 
   if (!image_url) {
     return c.json({ error: "image_url is required" }, 400);
@@ -1358,7 +1515,7 @@ app.post("/api/posts/:postId/images/record", authMiddleware, async (c) => {
     finalSortOrder = (existingImages?.[0]?.sort_order ?? -1) + 1;
   }
 
-  // Build insert data with optional focal_point
+  // Build insert data with optional focal_point and alt_text
   const insertData: Record<string, any> = {
     post_id: parseInt(postId),
     image_url,
@@ -1366,6 +1523,9 @@ app.post("/api/posts/:postId/images/record", authMiddleware, async (c) => {
   };
   if (focal_point) {
     insertData.focal_point = focal_point;
+  }
+  if (alt_text) {
+    insertData.alt_text = alt_text;
   }
 
   // Insert record
@@ -1540,6 +1700,53 @@ app.put("/api/posts/:postId/images/:imageId/focal-point", authMiddleware, async 
   return c.json(data, 200);
 });
 
+// PUT update alt text for an image (admin only)
+app.put("/api/posts/:postId/images/:imageId/alt-text", authMiddleware, async (c) => {
+  const { postId, imageId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  // Check admin role
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { alt_text } = body;
+
+  // alt_text can be empty string to clear it, just not undefined
+  if (alt_text === undefined) {
+    return c.json({ error: "alt_text is required" }, 400);
+  }
+
+  // Verify image exists and belongs to post
+  const { data: image, error: fetchError } = await supabase
+    .from("post_images")
+    .select("id")
+    .eq("id", imageId)
+    .eq("post_id", postId)
+    .single();
+
+  if (fetchError || !image) {
+    return c.json({ error: "Image not found" }, 404);
+  }
+
+  // Update alt text
+  const { data, error } = await supabase
+    .from("post_images")
+    .update({ alt_text: alt_text || null })
+    .eq("id", imageId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to update alt text:", error);
+    return c.json({ error: "Failed to update alt text" }, 500);
+  }
+
+  return c.json(data, 200);
+});
+
 // PUT reorder images (admin only)
 app.put("/api/posts/:postId/images/reorder", authMiddleware, async (c) => {
   const { postId } = c.req.param();
@@ -1591,6 +1798,234 @@ app.put("/api/posts/:postId/images/reorder", authMiddleware, async (c) => {
   return c.json({ message: "Images reordered successfully" }, 200);
 });
 
+// --- TAGS ROUTES ---
+// GET all tags (public, for autocomplete)
+app.get("/api/tags", async (c) => {
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+
+  const { data: tags, error } = await supabase
+    .from("tags")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ tags: tags || [] }, {
+    headers: { "Cache-Control": "public, max-age=300" },
+  });
+});
+
+// POST create a new tag (admin only)
+app.post("/api/tags", authMiddleware, async (c) => {
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { name } = body;
+
+  if (!name || typeof name !== "string" || name.trim() === "") {
+    return c.json({ error: "Tag name is required" }, 400);
+  }
+
+  const trimmedName = name.trim();
+  const slug = trimmedName.toLowerCase().replace(/\s+/g, "-");
+
+  // Check if tag already exists
+  const { data: existing } = await supabase
+    .from("tags")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (existing) {
+    return c.json(existing, 200); // Return existing tag
+  }
+
+  // Create new tag
+  const { data, error } = await supabase
+    .from("tags")
+    .insert({ name: trimmedName, slug })
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data, 201);
+});
+
+// GET tags for a specific post
+app.get("/api/posts/:postId/tags", async (c) => {
+  const { postId } = c.req.param();
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+
+  const { data: postTags, error } = await supabase
+    .from("post_tags")
+    .select("tag_id, tags(*)")
+    .eq("post_id", postId);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  const tags = postTags?.map(pt => pt.tags).filter(Boolean) || [];
+  return c.json({ tags }, {
+    headers: { "Cache-Control": "public, max-age=60" },
+  });
+});
+
+// PUT update tags for a post (admin only)
+app.put("/api/posts/:postId/tags", authMiddleware, async (c) => {
+  const { postId } = c.req.param();
+  const supabase = c.get("supabase");
+  const user = c.get("user");
+
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { tags } = body; // Array of { id?, name, slug }
+
+  if (!Array.isArray(tags)) {
+    return c.json({ error: "tags must be an array" }, 400);
+  }
+
+  // Verify post exists
+  const { data: post, error: postError } = await supabase
+    .from("posts")
+    .select("id")
+    .eq("id", postId)
+    .single();
+
+  if (postError || !post) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  // First, ensure all tags exist in the tags table
+  const tagIds: number[] = [];
+  for (const tag of tags) {
+    if (tag.id && tag.id > 0) {
+      tagIds.push(tag.id);
+    } else {
+      // Create new tag
+      const { data: newTag, error: tagError } = await supabase
+        .from("tags")
+        .upsert(
+          { name: tag.name, slug: tag.slug },
+          { onConflict: "slug" }
+        )
+        .select()
+        .single();
+
+      if (tagError) {
+        console.error("Failed to create tag:", tag.name, tagError);
+        continue;
+      }
+      if (newTag) {
+        tagIds.push(newTag.id);
+      }
+    }
+  }
+
+  // Delete existing post_tags for this post
+  await supabase
+    .from("post_tags")
+    .delete()
+    .eq("post_id", postId);
+
+  // Insert new post_tags
+  if (tagIds.length > 0) {
+    const postTagsData = tagIds.map(tagId => ({
+      post_id: parseInt(postId),
+      tag_id: tagId,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("post_tags")
+      .insert(postTagsData);
+
+    if (insertError) {
+      console.error("Failed to insert post_tags:", insertError);
+      return c.json({ error: "Failed to update tags" }, 500);
+    }
+  }
+
+  // Fetch and return updated tags
+  const { data: updatedTags } = await supabase
+    .from("post_tags")
+    .select("tags(*)")
+    .eq("post_id", postId);
+
+  const resultTags = updatedTags?.map(pt => pt.tags).filter(Boolean) || [];
+
+  return c.json({ tags: resultTags }, 200);
+});
+
+// --- SCHEDULED CRON JOB ---
+// Auto-publish scheduled posts every 15 minutes
+async function autoPublishScheduledPosts(env: Bindings) {
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+  const now = new Date().toISOString();
+
+  try {
+    // Find all scheduled posts that are past their scheduled time
+    const { data: scheduledPosts, error: fetchError } = await supabase
+      .from("posts")
+      .select("id, title, scheduled_for")
+      .eq("status", "scheduled")
+      .lte("scheduled_for", now);
+
+    if (fetchError) {
+      console.error("Error fetching scheduled posts:", fetchError);
+      return;
+    }
+
+    if (!scheduledPosts || scheduledPosts.length === 0) {
+      console.log("No scheduled posts to publish");
+      return;
+    }
+
+    console.log(`Found ${scheduledPosts.length} scheduled post(s) to publish`);
+
+    // Auto-publish each post
+    for (const post of scheduledPosts) {
+      const { error: updateError } = await supabase
+        .from("posts")
+        .update({
+          status: "published",
+          published_at: now,
+          scheduled_for: null,
+        })
+        .eq("id", post.id);
+
+      if (updateError) {
+        console.error(`Failed to publish post ${post.id}:`, updateError);
+      } else {
+        console.log(`✅ Published post ${post.id}: "${post.title}"`);
+      }
+    }
+
+    console.log(`Successfully published ${scheduledPosts.length} post(s)`);
+  } catch (error) {
+    console.error("Error in autoPublishScheduledPosts:", error);
+  }
+}
+
 // --- SERVER SETUP ---
 // No need for Node.js 'serve' in Cloudflare Workers
-export default app;
+export default {
+  fetch: app.fetch,
+  // Scheduled handler for cron triggers
+  async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
+    console.log("🕐 Cron trigger fired:", new Date().toISOString());
+    ctx.waitUntil(autoPublishScheduledPosts(env));
+  },
+};

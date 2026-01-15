@@ -65,6 +65,7 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
       gridClass: gridClass,
       dynamicViewType: post.type,
       status: post.status,
+      tags: (post as any).tags || [], // Include tags from post
     };
   });
 };
@@ -85,7 +86,7 @@ interface ArticleCardProps {
   isAnimating?: boolean;
 }
 const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
-  const { id, image, category, title, date, description, gridClass } = article;
+  const { id, image, category, title, date, description, gridClass, tags } = article;
   const formattedDate = formatDateToSeasonYear(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src =
@@ -110,6 +111,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
               DRAFT
             </div>
           )}
+          {article.status === "scheduled" && (
+            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+              SCHEDULED
+            </div>
+          )}
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
             <span
               onClick={(e) => {
@@ -120,6 +126,23 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             >
               {category}
             </span>
+            {tags && tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {tags.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm"
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+                {tags.length > 3 && (
+                  <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">
+                    +{tags.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
             <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-white">
               {title}
             </h3>
@@ -129,6 +152,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
               {description}
             </p>
+            <span className="mt-2 text-[var(--primary-light)] text-sm font-medium inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Continue reading
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </span>
           </div>
         </Link>
       </div>
@@ -146,6 +175,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
           {article.status === "draft" && (
             <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
               DRAFT
+            </div>
+          )}
+          {article.status === "scheduled" && (
+            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
+              SCHEDULED
             </div>
           )}
           <div className="md:w-1/2 h-64 md:h-auto">
@@ -168,10 +202,33 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
               >
                 {category}
               </span>
+              {tags && tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20"
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                  {tags.length > 3 && (
+                    <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
+                      +{tags.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
               <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors">
                 {title}
               </h3>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
+              <span className="mt-3 text-[var(--primary)] text-sm font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
+                Continue reading
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </span>
             </div>
             <div className="mt-4 text-xs text-[var(--text-secondary)]">
               {formattedDate}
@@ -194,6 +251,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             DRAFT
           </div>
         )}
+        {article.status === "scheduled" && (
+          <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
+            SCHEDULED
+          </div>
+        )}
         <div className="h-56">
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -213,12 +275,35 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
           >
             {category}
           </span>
+          {tags && tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag.id}
+                  className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20"
+                >
+                  {tag.name}
+                </span>
+              ))}
+              {tags.length > 3 && (
+                <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
+                  +{tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
           <h3 className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors">
             {title}
           </h3>
           <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
             {description}
           </p>
+          <span className="mt-3 text-[var(--primary)] text-sm font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
+            Continue reading
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </span>
           <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
             {formattedDate}
           </p>

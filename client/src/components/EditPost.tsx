@@ -5,10 +5,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import imageCompression from "browser-image-compression";
 
-import { PostWithImages, PostImage, CATEGORIES } from "../../../shared/src/types";
+import { PostWithImages, PostImage, CATEGORIES, Tag } from "../../../shared/src/types";
 import RichTextEditor from "./RichTextEditor";
 import ImageUploader, { PendingFile } from "./ImageUploader";
-import { uploadImageToStorage, addImageRecord, updateImageFocalPoint } from "../utils/imageUpload";
+import TagInput from "./TagInput";
+import { uploadImageToStorage, addImageRecord, updateImageFocalPoint, updateImageAltText } from "../utils/imageUpload";
+import { isoToLocalDateTimeInput, localDateTimeInputToISO, getCurrentLocalDateTimeInput } from "../utils/dateTime";
 
 // Compression options for converting URL images
 const compressionOptions = {
@@ -40,11 +42,14 @@ const EditPost: FC = () => {
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
   const [focalPointUpdates, setFocalPointUpdates] = useState<Map<number, string>>(new Map());
+  const [altTextUpdates, setAltTextUpdates] = useState<Map<number, string>>(new Map());
   const [reorderedImages, setReorderedImages] = useState<PostImage[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConvertingUrl, setIsConvertingUrl] = useState(false);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryValue, setCustomCategoryValue] = useState("");
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
 
 
   useEffect(() => {
@@ -78,12 +83,33 @@ const EditPost: FC = () => {
           setIsCustomCategory(true);
           setCustomCategoryValue(data.category);
         }
+
+        // Fetch tags for this post
+        const tagsResponse = await fetch(`/api/posts/${id}/tags`);
+        if (tagsResponse.ok) {
+          const tagsData = await tagsResponse.json();
+          setSelectedTags(tagsData.tags || []);
+        }
       } catch (e: any) {
         console.error("Error fetching post in EditPost.tsx:", e);
       }
     };
 
+    // Fetch available tags for autocomplete
+    const fetchAvailableTags = async () => {
+      try {
+        const response = await fetch("/api/tags");
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableTags(data.tags || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch available tags:", error);
+      }
+    };
+
     fetchPost();
+    fetchAvailableTags();
   }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -98,6 +124,11 @@ const EditPost: FC = () => {
         setCustomCategoryValue("");
         setPost((prev) => ({ ...prev, [name]: value } as PostWithImages));
       }
+    } else if (name === "scheduled_for") {
+      // For datetime-local inputs, value is in local time format: "YYYY-MM-DDTHH:mm"
+      // Convert to ISO (UTC) for storage
+      const isoDateTime = localDateTimeInputToISO(value);
+      setPost((prev) => ({ ...prev, [name]: isoDateTime } as PostWithImages));
     } else {
       setPost((prev) => ({ ...prev, [name]: value } as PostWithImages));
     }
@@ -149,6 +180,7 @@ const EditPost: FC = () => {
             file: finalFile,
             focalPoint: "50% 50%",
             previewUrl,
+            altText: "",
           };
 
           setPendingFiles((prev) => [...prev, pendingFile]);
@@ -193,6 +225,21 @@ const EditPost: FC = () => {
     );
     // Track the update to save on submit
     setFocalPointUpdates((prev) => new Map(prev).set(imageId, focalPoint));
+  };
+
+  const handleUpdatePendingAltText = (index: number, altText: string) => {
+    setPendingFiles((prev) =>
+      prev.map((pf, i) => (i === index ? { ...pf, altText } : pf))
+    );
+  };
+
+  const handleUpdateExistingAltText = (imageId: number, altText: string) => {
+    // Update local state for preview
+    setExistingImages((prev) =>
+      prev.map((img) => (img.id === imageId ? { ...img, alt_text: altText } : img))
+    );
+    // Track the update to save on submit
+    setAltTextUpdates((prev) => new Map(prev).set(imageId, altText));
   };
 
   const handleRemoveExistingImage = (imageId: number) => {
@@ -240,18 +287,31 @@ const EditPost: FC = () => {
     e.preventDefault();
     if (!user || !token || !post || !id) return;
 
-    // Image is required for published posts, optional for drafts
-    const imageRequired = post.status === "published";
+    // Image is required for published and scheduled posts, optional for drafts
+    const imageRequired = post.status === "published" || post.status === "scheduled";
     const hasImages = existingImages.length > 0 || pendingFiles.length > 0;
 
     if (uploadMethod === 'gallery') {
       if (imageRequired && !hasImages) {
-        alert("Please add at least one image for published posts.");
+        alert("Please add at least one image for published/scheduled posts.");
         return;
       }
     } else {
       if (imageRequired && !post.image_url) {
-        alert("Please enter an image URL for published posts.");
+        alert("Please enter an image URL for published/scheduled posts.");
+        return;
+      }
+    }
+
+    // Validate scheduled_for when status is "scheduled"
+    if (post.status === "scheduled") {
+      if (!post.scheduled_for) {
+        alert("Please select a date and time for scheduled publication.");
+        return;
+      }
+      const scheduledDate = new Date(post.scheduled_for);
+      if (scheduledDate <= new Date()) {
+        alert("Scheduled time must be in the future.");
         return;
       }
     }
@@ -260,7 +320,14 @@ const EditPost: FC = () => {
 
     try {
       // Step 1: Update the post
-      const bodyContent = JSON.stringify(post);
+      // Convert scheduled_for to ISO string if set (preserves timezone info)
+      const postData = {
+        ...post,
+        scheduled_for: post.status === "scheduled" && post.scheduled_for
+          ? new Date(post.scheduled_for).toISOString()
+          : null,
+      };
+      const bodyContent = JSON.stringify(postData);
       const headers: HeadersInit = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -318,6 +385,18 @@ const EditPost: FC = () => {
         }
       }
 
+      // Step 3.6: Update alt text for existing images
+      if (altTextUpdates.size > 0) {
+        for (const [imageId, altText] of altTextUpdates) {
+          try {
+            await updateImageAltText(parseInt(id), imageId, altText, token);
+            console.log(`Updated alt text for image ${imageId}`);
+          } catch (err) {
+            console.error(`Failed to update alt text for image ${imageId}:`, err);
+          }
+        }
+      }
+
       // Step 4: Upload new images directly to Supabase Storage (bypasses Worker limits)
       if (pendingFiles.length > 0) {
         const uploadErrors: string[] = [];
@@ -329,9 +408,9 @@ const EditPost: FC = () => {
             const imageUrl = await uploadImageToStorage(pendingFile.file);
             console.log(`Storage upload successful: ${imageUrl}`);
 
-            // Add database record via lightweight API endpoint (with focal point)
+            // Add database record via lightweight API endpoint (with focal point and alt text)
             console.log(`Adding database record for ${pendingFile.file.name}...`);
-            await addImageRecord(parseInt(id), imageUrl, token, undefined, pendingFile.focalPoint);
+            await addImageRecord(parseInt(id), imageUrl, token, undefined, pendingFile.focalPoint, pendingFile.altText);
             console.log(`Database record added for ${pendingFile.file.name}`);
           } catch (uploadErr: any) {
             console.error("Error uploading image:", pendingFile.file.name, uploadErr);
@@ -341,6 +420,21 @@ const EditPost: FC = () => {
         if (uploadErrors.length > 0) {
           alert(`Some images failed to upload:\n${uploadErrors.join('\n')}`);
         }
+      }
+
+      // Step 5: Update tags
+      try {
+        await fetch(`/api/posts/${id}/tags`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ tags: selectedTags }),
+        });
+        console.log(`Tags updated for post ${id}`);
+      } catch (tagErr: any) {
+        console.error("Failed to update tags:", tagErr);
       }
 
       alert("Post updated successfully!");
@@ -440,6 +534,8 @@ const EditPost: FC = () => {
                   onReorderImages={handleReorderImages}
                   onUpdatePendingFocalPoint={handleUpdatePendingFocalPoint}
                   onUpdateExistingFocalPoint={handleUpdateExistingFocalPoint}
+                  onUpdatePendingAltText={handleUpdatePendingAltText}
+                  onUpdateExistingAltText={handleUpdateExistingAltText}
                   disabled={isSubmitting}
                 />
               </div>
@@ -489,6 +585,16 @@ const EditPost: FC = () => {
             </div>
 
             <div>
+              <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Tags</label>
+              <TagInput
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+                availableTags={availableTags}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
               <label htmlFor="status" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Status</label>
               <select
                 id="status"
@@ -499,11 +605,36 @@ const EditPost: FC = () => {
               >
                 <option value="published">Published (Visible to all)</option>
                 <option value="draft">Draft (Only visible to admins)</option>
+                <option value="scheduled">Scheduled (Publish later)</option>
               </select>
               <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                Drafts are only visible to admins. Published posts are visible to everyone.
+                {post?.status === "scheduled"
+                  ? "Choose when this post will be automatically published."
+                  : "Drafts are only visible to admins. Published posts are visible to everyone."}
               </p>
             </div>
+
+            {/* Scheduling Date/Time Picker */}
+            {post?.status === "scheduled" && (
+              <div>
+                <label htmlFor="scheduled_for" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                  Publish Date & Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  id="scheduled_for"
+                  name="scheduled_for"
+                  value={isoToLocalDateTimeInput(post.scheduled_for)}
+                  onChange={handleChange}
+                  min={getCurrentLocalDateTimeInput()}
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+                  required
+                />
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  The post will be automatically published at this time. Time is in your local timezone.
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"

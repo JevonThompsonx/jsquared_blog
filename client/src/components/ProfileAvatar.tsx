@@ -1,4 +1,4 @@
-import { FC, SyntheticEvent, ReactElement } from "react";
+import { FC, ReactElement, useState, useEffect } from "react";
 import { PresetAvatarId } from "../../../shared/src/types";
 
 interface ProfileAvatarProps {
@@ -14,7 +14,8 @@ interface ProfileAvatarProps {
 const parseAvatarUrl = (avatarUrl: string | null | undefined) => {
   if (!avatarUrl) return { type: "letter" as const, icon: null, color: null };
 
-  if (avatarUrl.startsWith("http")) {
+  // Handle image URLs (including blob URLs for previews)
+  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("blob:")) {
     return { type: "image" as const, icon: null, color: null };
   }
 
@@ -110,6 +111,8 @@ const ProfileAvatar: FC<ProfileAvatarProps> = ({
   size = "md",
   className = "",
 }) => {
+  const [imageError, setImageError] = useState(false);
+
   // Determine display name for letter avatar
   const displayName = username || email || "U";
   const firstLetter = displayName.charAt(0).toUpperCase();
@@ -121,17 +124,24 @@ const ProfileAvatar: FC<ProfileAvatarProps> = ({
   // Determine background color
   const bgColor = parsed.color || defaultColor;
 
-  const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
-    // Hide broken image, parent will show letter fallback
-    e.currentTarget.style.display = "none";
+  const handleImageError = () => {
+    setImageError(true);
   };
+
+  // Reset error state when avatar URL changes
+  useEffect(() => {
+    setImageError(false);
+  }, [avatarUrl]);
+
+  // Show letter fallback if image fails or no valid image
+  const showImage = parsed.type === "image" && !imageError;
 
   return (
     <div
       className={`rounded-full overflow-hidden flex items-center justify-center font-bold text-white ${sizeClasses[size]} ${className}`}
       style={{ backgroundColor: bgColor }}
     >
-      {parsed.type === "image" ? (
+      {showImage ? (
         <img
           src={avatarUrl!}
           alt={displayName}

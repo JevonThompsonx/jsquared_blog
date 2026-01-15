@@ -162,6 +162,7 @@
 | Newsletter | Medium | Mailchimp/ConvertKit integration |
 | Post Analytics | Medium | Track view counts, popular posts |
 | Multi-language | High | i18n support for international readers |
+| Date organization | Medium | Organize by published date for posted content and drafts|
 
 ---
 
@@ -174,8 +175,7 @@
 - [x] Show image file size before upload
 - [x] Dark mode toggle in settings (persist preference)
 - [ ] Date formatting options (relative vs absolute)
-- [ ] Social share buttons (Twitter, Facebook, WhatsApp)
-- [ ] Copy post link button on post detail page
+- [x] Copy post link button on post detail page
 - [ ] "Continue reading" indicator for long posts
 - [ ] Estimated upload time for large images
 - [ ] Keyboard navigation for image gallery (arrow keys)

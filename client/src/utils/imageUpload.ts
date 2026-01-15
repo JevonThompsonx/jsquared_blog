@@ -102,14 +102,18 @@ export async function addImageRecord(
   imageUrl: string,
   token: string,
   sortOrder?: number,
-  focalPoint?: string
+  focalPoint?: string,
+  altText?: string
 ): Promise<any> {
-  const body: { image_url: string; sort_order?: number; focal_point?: string } = { image_url: imageUrl };
+  const body: { image_url: string; sort_order?: number; focal_point?: string; alt_text?: string } = { image_url: imageUrl };
   if (sortOrder !== undefined) {
     body.sort_order = sortOrder;
   }
   if (focalPoint) {
     body.focal_point = focalPoint;
+  }
+  if (altText) {
+    body.alt_text = altText;
   }
 
   const response = await fetch(`/api/posts/${postId}/images/record`, {
@@ -150,6 +154,32 @@ export async function updateImageFocalPoint(
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || "Failed to update focal point");
+  }
+
+  return response.json();
+}
+
+/**
+ * Update the alt text of an existing image.
+ */
+export async function updateImageAltText(
+  postId: number,
+  imageId: number,
+  altText: string,
+  token: string
+): Promise<any> {
+  const response = await fetch(`/api/posts/${postId}/images/${imageId}/alt-text`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ alt_text: altText }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to update alt text");
   }
 
   return response.json();

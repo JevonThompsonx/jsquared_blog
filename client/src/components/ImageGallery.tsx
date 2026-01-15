@@ -19,15 +19,16 @@ const ImageGallery: FC<ImageGalleryProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
-  // Determine what to show - keep track of both URL and focal point
+  // Determine what to show - keep track of URL, focal point, and alt text
   const hasGallery = images && images.length > 0;
-  const displayImages: { url: string; focalPoint: string }[] = hasGallery
-    ? images.map((img) => ({
+  const displayImages: { url: string; focalPoint: string; altText: string }[] = hasGallery
+    ? images.map((img, index) => ({
         url: img.image_url,
         focalPoint: img.focal_point || "50% 50%",
+        altText: img.alt_text || `${alt} ${index + 1}`,
       }))
     : fallbackImage
-    ? [{ url: fallbackImage, focalPoint: "50% 50%" }]
+    ? [{ url: fallbackImage, focalPoint: "50% 50%", altText: alt }]
     : [];
 
   const totalImages = displayImages.length;
@@ -105,7 +106,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
         >
           <img
             src={displayImages[currentIndex].url}
-            alt={`${alt} ${currentIndex + 1}`}
+            alt={displayImages[currentIndex].altText}
             className="max-w-full max-h-full object-contain"
             onError={handleImageError}
           />
@@ -195,7 +196,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
         >
           <img
             src={displayImages[0].url}
-            alt={alt}
+            alt={displayImages[0].altText}
             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
             style={{ objectPosition: displayImages[0].focalPoint }}
             onError={handleImageError}
@@ -238,7 +239,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
             <img
               key={index}
               src={img.url}
-              alt={`${alt} ${index + 1}`}
+              alt={img.altText}
               className="w-full h-full object-cover flex-shrink-0 transition-transform duration-300"
               style={{ objectPosition: img.focalPoint }}
               onError={handleImageError}

@@ -206,15 +206,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateProfile = async (data: { username?: string; avatar_url?: string; theme_preference?: ThemeName }) => {
     if (!user) throw new Error("Not authenticated");
 
-    const { error } = await supabase
-      .from("profiles")
-      .update(data)
-      .eq("id", user.id);
+    console.log("updateProfile called with:", data);
 
-    if (error) throw error;
+    // Convert empty strings to null for database
+    const cleanData: any = {};
+    if (data.username !== undefined) {
+      cleanData.username = data.username || null;
+    }
+    if (data.avatar_url !== undefined) {
+      cleanData.avatar_url = data.avatar_url || null;
+    }
+    if (data.theme_preference !== undefined) {
+      cleanData.theme_preference = data.theme_preference;
+    }
+
+    console.log("Sending to database:", cleanData);
+
+    // Add timeout to prevent hanging forever
+    const updatePromise = supabase
+      .from("profiles")
+      .update(cleanData)
+      .eq("id", user.id)
+      .select();
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Update timed out after 10 seconds. Please check your internet connection and Supabase permissions.")), 10000)
+    );
+
+    const { error, data: result } = await Promise.race([updatePromise, timeoutPromise]) as any;
+
+    if (error) {
+      console.error("Database update error:", error);
+      throw new Error(`Failed to update profile: ${error.message || "Unknown error"}. This may be a permissions issue.`);
+    }
+
+    console.log("Database update successful:", result);
 
     // Update local user state
-    const updatedUser = { ...user, ...data };
+    const updatedUser = { ...user, ...cleanData };
     setUser(updatedUser);
 
     // Update cache
@@ -225,6 +254,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       role: updatedUser.role || "viewer",
       theme_preference: updatedUser.theme_preference,
     });
+
+    console.log("Local state and cache updated");
   };
 
   // Refresh profile data from database

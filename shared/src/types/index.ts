@@ -6,7 +6,7 @@ export type ThemeName =
 
 export type PostType = "split-horizontal" | "split-vertical" | "hover";
 
-export type PostStatus = "draft" | "published";
+export type PostStatus = "draft" | "published" | "scheduled";
 
 // Predefined categories for travel blog
 export const CATEGORIES = [
@@ -38,7 +38,9 @@ export type Post = {
   category: string | null;
   author_id: string;
   type: PostType; // Matches database column name
-  status: PostStatus; // draft or published
+  status: PostStatus; // draft, published, or scheduled
+  scheduled_for?: string | null; // ISO date string for scheduled posts
+  published_at?: string | null; // When the post was actually published
 };
 
 export type PostImage = {
@@ -48,11 +50,45 @@ export type PostImage = {
   sort_order: number;
   created_at: string;
   focal_point?: string; // CSS object-position value, e.g., "50% 30%" or "center top"
+  alt_text?: string; // Alternative text for accessibility
 };
 
 export type PostWithImages = Post & {
   images?: PostImage[];
 };
+
+// Tag types
+export type Tag = {
+  id: number;
+  name: string;
+  slug: string;
+  created_at?: string;
+};
+
+export type PostWithTags = Post & {
+  tags?: Tag[];
+};
+
+export type PostWithImagesAndTags = Post & {
+  images?: PostImage[];
+  tags?: Tag[];
+};
+
+// Predefined tags for travel blog
+export const PREDEFINED_TAGS = [
+  "Adventure",
+  "Family",
+  "Solo",
+  "Budget",
+  "Luxury",
+  "Weekend",
+  "Long Trip",
+  "Local",
+  "International",
+  "Tips",
+] as const;
+
+export type PredefinedTag = typeof PREDEFINED_TAGS[number];
 
 export type Article = {
   id: number;
@@ -64,6 +100,7 @@ export type Article = {
   gridClass: string;
   dynamicViewType: PostType; // Added this
   status: PostStatus; // draft or published
+  tags?: Tag[]; // Optional tags for the article
 };
 
 export type Comment = {

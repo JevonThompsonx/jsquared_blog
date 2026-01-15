@@ -1,13 +1,15 @@
 
 
-import { useState, FC } from "react";
+import { useState, useEffect, FC } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-import { CATEGORIES } from "../../../shared/src/types";
+import { CATEGORIES, Tag } from "../../../shared/src/types";
 import RichTextEditor from "./RichTextEditor";
 import ImageUploader, { PendingFile } from "./ImageUploader";
+import TagInput from "./TagInput";
 import { uploadImageToStorage, addImageRecord } from "../utils/imageUpload";
+import { isoToLocalDateTimeInput, localDateTimeInputToISO, getCurrentLocalDateTimeInput } from "../utils/dateTime";
 
 
 type Post = {
@@ -19,7 +21,9 @@ type Post = {
   category: string | null;
   author_id: string;
   type: "split-horizontal" | "split-vertical" | "hover";
-  status: "draft" | "published";
+  status: "draft" | "published" | "scheduled";
+  scheduled_for?: string | null;
+  published_at?: string | null;
 };
 
 const Admin: FC = () => {
@@ -43,6 +47,24 @@ const Admin: FC = () => {
   const [shuffleMessage, setShuffleMessage] = useState<string | null>(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryValue, setCustomCategoryValue] = useState("");
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+
+  // Fetch available tags on mount
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await fetch("/api/tags");
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableTags(data.tags || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch tags:", error);
+      }
+    };
+    fetchTags();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -56,6 +78,11 @@ const Admin: FC = () => {
         setCustomCategoryValue("");
         setPost((prev) => ({ ...prev, [name]: value }));
       }
+    } else if (name === "scheduled_for") {
+      // For datetime-local inputs, value is in local time format: "YYYY-MM-DDTHH:mm"
+      // Convert to ISO (UTC) for storage
+      const isoDateTime = localDateTimeInputToISO(value);
+      setPost((prev) => ({ ...prev, [name]: isoDateTime }));
     } else {
       setPost((prev) => ({ ...prev, [name]: value }));
     }
@@ -84,6 +111,12 @@ const Admin: FC = () => {
   const handleUpdatePendingFocalPoint = (index: number, focalPoint: string) => {
     setGalleryFiles((prev) =>
       prev.map((pf, i) => (i === index ? { ...pf, focalPoint } : pf))
+    );
+  };
+
+  const handleUpdatePendingAltText = (index: number, altText: string) => {
+    setGalleryFiles((prev) =>
+      prev.map((pf, i) => (i === index ? { ...pf, altText } : pf))
     );
   };
 
@@ -146,17 +179,30 @@ const Admin: FC = () => {
     e.preventDefault();
     if (!user || !user.token) return;
 
-    // Image is required for published posts, optional for drafts
-    const imageRequired = post.status === "published";
+    // Image is required for published and scheduled posts, optional for drafts
+    const imageRequired = post.status === "published" || post.status === "scheduled";
 
     if (uploadMethod === 'gallery') {
       if (imageRequired && galleryFiles.length === 0) {
-        alert("Please add at least one image for published posts.");
+        alert("Please add at least one image for published/scheduled posts.");
         return;
       }
     } else {
       if (imageRequired && !post.image_url) {
-        alert("Please enter an image URL for published posts.");
+        alert("Please enter an image URL for published/scheduled posts.");
+        return;
+      }
+    }
+
+    // Validate scheduled_for when status is "scheduled"
+    if (post.status === "scheduled") {
+      if (!post.scheduled_for) {
+        alert("Please select a date and time for scheduled publication.");
+        return;
+      }
+      const scheduledDate = new Date(post.scheduled_for);
+      if (scheduledDate <= new Date()) {
+        alert("Scheduled time must be in the future.");
         return;
       }
     }
@@ -165,7 +211,15 @@ const Admin: FC = () => {
 
     try {
       // Step 1: Create the post
-      const bodyContent = JSON.stringify({ ...post, author_id: user.id });
+      // Convert scheduled_for to ISO string if set (preserves timezone info)
+      const postData = {
+        ...post,
+        author_id: user.id,
+        scheduled_for: post.status === "scheduled" && post.scheduled_for
+          ? new Date(post.scheduled_for).toISOString()
+          : null,
+      };
+      const bodyContent = JSON.stringify(postData);
       const headers: HeadersInit = {
         Authorization: `Bearer ${user.token}`,
         'Content-Type': 'application/json',
@@ -195,9 +249,9 @@ const Admin: FC = () => {
             const imageUrl = await uploadImageToStorage(pendingFile.file);
             console.log(`Storage upload successful: ${imageUrl}`);
 
-            // Add database record via lightweight API endpoint (with focal point)
+            // Add database record via lightweight API endpoint (with focal point and alt text)
             console.log(`Adding database record for ${pendingFile.file.name}...`);
-            await addImageRecord(postId, imageUrl, user.token, undefined, pendingFile.focalPoint);
+            await addImageRecord(postId, imageUrl, user.token, undefined, pendingFile.focalPoint, pendingFile.altText);
             console.log(`Database record added for ${pendingFile.file.name}`);
           } catch (uploadErr: any) {
             console.error("Error uploading image:", pendingFile.file.name, uploadErr);
@@ -206,6 +260,23 @@ const Admin: FC = () => {
         }
         if (uploadErrors.length > 0) {
           alert(`Some images failed to upload:\n${uploadErrors.join('\n')}`);
+        }
+      }
+
+      // Step 3: Save tags for the post
+      if (postId && selectedTags.length > 0) {
+        try {
+          await fetch(`/api/posts/${postId}/tags`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${user.token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ tags: selectedTags }),
+          });
+          console.log(`Tags saved for post ${postId}`);
+        } catch (tagErr: any) {
+          console.error("Failed to save tags:", tagErr);
         }
       }
 
@@ -219,6 +290,7 @@ const Admin: FC = () => {
         status: "published",
       });
       setGalleryFiles([]);
+      setSelectedTags([]);
 
       alert("Post created successfully!");
       if (postId) {
@@ -347,6 +419,7 @@ const Admin: FC = () => {
                   onRemoveExistingImage={() => {}}
                   onReorderImages={() => {}}
                   onUpdatePendingFocalPoint={handleUpdatePendingFocalPoint}
+                  onUpdatePendingAltText={handleUpdatePendingAltText}
                   disabled={isSubmitting}
                 />
               </div>
@@ -396,6 +469,16 @@ const Admin: FC = () => {
             </div>
 
             <div>
+              <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Tags</label>
+              <TagInput
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+                availableTags={availableTags}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
               <label htmlFor="status" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Status</label>
               <select
                 id="status"
@@ -406,11 +489,36 @@ const Admin: FC = () => {
               >
                 <option value="published">Published (Visible to all)</option>
                 <option value="draft">Draft (Only visible to admins)</option>
+                <option value="scheduled">Scheduled (Publish later)</option>
               </select>
               <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                Drafts are only visible to admins. Published posts are visible to everyone.
+                {post.status === "scheduled"
+                  ? "Choose when this post will be automatically published."
+                  : "Drafts are only visible to admins. Published posts are visible to everyone."}
               </p>
             </div>
+
+            {/* Scheduling Date/Time Picker */}
+            {post.status === "scheduled" && (
+              <div>
+                <label htmlFor="scheduled_for" className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                  Publish Date & Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  id="scheduled_for"
+                  name="scheduled_for"
+                  value={isoToLocalDateTimeInput(post.scheduled_for)}
+                  onChange={handleChange}
+                  min={getCurrentLocalDateTimeInput()}
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50 px-3 py-2"
+                  required
+                />
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  The post will be automatically published at this time. Time is in your local timezone.
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"

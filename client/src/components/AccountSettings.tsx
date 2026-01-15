@@ -1,4 +1,4 @@
-import { useState, FC } from "react";
+import { useState, useEffect, FC } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../supabase";
@@ -16,6 +16,18 @@ const AccountSettings: FC = () => {
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [nameSuccess, setNameSuccess] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+
+  // Refresh profile on mount to ensure we have latest data
+  useEffect(() => {
+    refreshProfile();
+  }, []);
+
+  // Update displayName when user changes (after refresh)
+  useEffect(() => {
+    if (user?.username !== undefined) {
+      setDisplayName(user.username || "");
+    }
+  }, [user?.username]);
 
   // Avatar state
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -47,10 +59,17 @@ const AccountSettings: FC = () => {
     setNameSuccess(false);
 
     try {
-      await updateProfile({ username: displayName.trim() || undefined });
+      const trimmed = displayName.trim();
+      console.log("Updating username to:", trimmed || "(empty - will clear)");
+
+      // Pass trimmed string (even if empty) - AuthContext will convert empty to null
+      await updateProfile({ username: trimmed });
+
+      console.log("Username updated successfully");
       setNameSuccess(true);
       setTimeout(() => setNameSuccess(false), 3000);
     } catch (err: any) {
+      console.error("Error updating username:", err);
       setNameError(err.message || "Failed to update display name");
     } finally {
       setIsUpdatingName(false);

@@ -3,11 +3,12 @@ import imageCompression from "browser-image-compression";
 import { PostImage } from "../../../shared/src/types";
 import FocalPointEditor from "./FocalPointEditor";
 
-// Pending file with optional focal point
+// Pending file with optional focal point and alt text
 export interface PendingFile {
   file: File;
   focalPoint: string;
   previewUrl: string;
+  altText: string;
 }
 
 interface ImageUploaderProps {
@@ -19,6 +20,8 @@ interface ImageUploaderProps {
   onReorderImages: (reorderedImages: PostImage[]) => void;
   onUpdatePendingFocalPoint?: (index: number, focalPoint: string) => void;
   onUpdateExistingFocalPoint?: (imageId: number, focalPoint: string) => void;
+  onUpdatePendingAltText?: (index: number, altText: string) => void;
+  onUpdateExistingAltText?: (imageId: number, altText: string) => void;
   disabled?: boolean;
 }
 
@@ -40,6 +43,8 @@ const ImageUploader: FC<ImageUploaderProps> = ({
   onReorderImages,
   onUpdatePendingFocalPoint,
   onUpdateExistingFocalPoint,
+  onUpdatePendingAltText,
+  onUpdateExistingAltText,
   disabled = false,
 }) => {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -55,6 +60,14 @@ const ImageUploader: FC<ImageUploaderProps> = ({
     imageId?: number;
     imageUrl: string;
     currentFocalPoint: string;
+  } | null>(null);
+
+  // Alt text editing state
+  const [editingAltText, setEditingAltText] = useState<{
+    type: "pending" | "existing";
+    index?: number;
+    imageId?: number;
+    currentAltText: string;
   } | null>(null);
 
   // Compress a single image
@@ -94,6 +107,7 @@ const ImageUploader: FC<ImageUploaderProps> = ({
         file: compressed,
         focalPoint: "50% 50%", // Default to center
         previewUrl: URL.createObjectURL(compressed),
+        altText: "", // Default empty, user can fill in
       });
     }
 
@@ -113,6 +127,19 @@ const ImageUploader: FC<ImageUploaderProps> = ({
     }
 
     setEditingFocalPoint(null);
+  };
+
+  // Handle saving alt text
+  const handleSaveAltText = () => {
+    if (!editingAltText) return;
+
+    if (editingAltText.type === "pending" && editingAltText.index !== undefined) {
+      onUpdatePendingAltText?.(editingAltText.index, editingAltText.currentAltText);
+    } else if (editingAltText.type === "existing" && editingAltText.imageId !== undefined) {
+      onUpdateExistingAltText?.(editingAltText.imageId, editingAltText.currentAltText);
+    }
+
+    setEditingAltText(null);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,6 +219,25 @@ const ImageUploader: FC<ImageUploaderProps> = ({
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   };
 
+  // Estimate upload time based on file size
+  // Assumes ~500KB/s upload speed (conservative for most connections)
+  const estimateUploadTime = (totalBytes: number): string => {
+    const uploadSpeedKBps = 500; // KB per second
+    const seconds = Math.ceil(totalBytes / 1024 / uploadSpeedKBps);
+    if (seconds <= 1) {
+      return "~1s";
+    }
+    if (seconds < 60) {
+      return `~${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return remainingSeconds > 0 ? `~${minutes}m ${remainingSeconds}s` : `~${minutes}m`;
+  };
+
+  // Calculate total size of pending files
+  const totalPendingSize = pendingFiles.reduce((acc, pf) => acc + pf.file.size, 0);
+
   return (
     <div className="space-y-4">
       {/* Focal Point Editor Modal */}
@@ -202,6 +248,43 @@ const ImageUploader: FC<ImageUploaderProps> = ({
           onSave={handleSaveFocalPoint}
           onCancel={() => setEditingFocalPoint(null)}
         />
+      )}
+
+      {/* Alt Text Editor Modal */}
+      {editingAltText && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-[var(--card-bg)] rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+              Edit Alt Text
+            </h3>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">
+              Describe this image for screen readers and SEO. Be concise but descriptive.
+            </p>
+            <textarea
+              value={editingAltText.currentAltText}
+              onChange={(e) => setEditingAltText({ ...editingAltText, currentAltText: e.target.value })}
+              placeholder="e.g., Sunset over mountain peaks with orange and purple sky"
+              className="w-full h-24 px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text-primary)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              autoFocus
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => setEditingAltText(null)}
+                className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAltText}
+                className="px-4 py-2 text-sm bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-dark)] transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Drop Zone */}
@@ -334,6 +417,25 @@ const ImageUploader: FC<ImageUploaderProps> = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                       </svg>
                     </button>
+                    {/* Edit alt text */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setEditingAltText({
+                          type: "existing",
+                          imageId: image.id,
+                          currentAltText: image.alt_text || "",
+                        });
+                      }}
+                      className={`${image.alt_text ? "bg-green-500 hover:bg-green-600" : "bg-yellow-500 hover:bg-yellow-600"} text-white p-1 rounded`}
+                      title={image.alt_text ? "Edit alt text" : "Add alt text (recommended)"}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                    </button>
                     {/* Move up */}
                     {index > 0 && (
                       <button
@@ -396,6 +498,11 @@ const ImageUploader: FC<ImageUploaderProps> = ({
         <div>
           <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
             Ready to Upload ({pendingFiles.length})
+            <span className="font-normal text-[var(--text-secondary)] ml-2">
+              {formatFileSize(totalPendingSize)} total
+              <span className="mx-1">•</span>
+              Est. upload: {estimateUploadTime(totalPendingSize)}
+            </span>
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {pendingFiles.map((pendingFile, index) => (
@@ -437,6 +544,25 @@ const ImageUploader: FC<ImageUploaderProps> = ({
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
+                    </button>
+                    {/* Edit alt text */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setEditingAltText({
+                          type: "pending",
+                          index,
+                          currentAltText: pendingFile.altText || "",
+                        });
+                      }}
+                      className={`${pendingFile.altText ? "bg-green-500 hover:bg-green-600" : "bg-yellow-500 hover:bg-yellow-600"} text-white p-1 rounded`}
+                      title={pendingFile.altText ? "Edit alt text" : "Add alt text (recommended)"}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                       </svg>
                     </button>
                     {/* Remove */}

@@ -165,6 +165,11 @@ const AvatarPicker: FC<AvatarPickerProps> = ({
 
   const handleSave = () => {
     const avatarUrl = buildAvatarUrl();
+    // Don't save blob URLs - they won't work after page reload
+    if (avatarUrl.startsWith("blob:")) {
+      setUploadError("Image is still uploading. Please wait.");
+      return;
+    }
     onSelect(avatarUrl);
   };
 
