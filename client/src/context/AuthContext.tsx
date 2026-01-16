@@ -1,5 +1,3 @@
-
-
 import {
   createContext,
   useState,
@@ -9,7 +7,7 @@ import {
 } from "react";
 import { supabase } from "../supabase";
 import { Session, User } from "@supabase/supabase-js";
-import { ThemeName } from "../../../shared/src/types";
+import { ThemeName, DateFormatPreference } from "../../../shared/src/types";
 import {
   getCachedProfile,
   setCachedProfile,
@@ -23,6 +21,7 @@ interface CustomUser extends User {
   username?: string | null;
   avatar_url?: string | null;
   theme_preference?: ThemeName;
+  date_format_preference?: DateFormatPreference;
 }
 
 // Define the shape of the context's value
@@ -33,7 +32,7 @@ interface AuthContextType {
   loading: boolean;
   token: string | null;
   isAdmin: boolean;
-  updateProfile: (data: { username?: string; avatar_url?: string; theme_preference?: ThemeName }) => Promise<void>;
+  updateProfile: (data: { username?: string; avatar_url?: string; theme_preference?: ThemeName; date_format_preference?: DateFormatPreference }) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -75,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Fetch fresh profile data
           const { data: profile, error } = await supabase
             .from("profiles")
-            .select("role, username, avatar_url, theme_preference")
+            .select("role, username, avatar_url, theme_preference, date_format_preference")
             .eq("id", session.user.id)
             .single();
 
@@ -89,6 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               avatar_url: profile.avatar_url,
               role: profile.role,
               theme_preference: profile.theme_preference,
+              date_format_preference: profile.date_format_preference,
             });
 
             // Update user with profile data once fetched
@@ -98,6 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               username: profile.username,
               avatar_url: profile.avatar_url,
               theme_preference: profile.theme_preference,
+              date_format_preference: profile.date_format_preference,
               token: session.access_token,
             });
           }
@@ -127,6 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               username: cachedProfile.username,
               avatar_url: cachedProfile.avatar_url,
               theme_preference: cachedProfile.theme_preference,
+              date_format_preference: cachedProfile.date_format_preference,
               token: session.access_token,
             });
           } else {
@@ -138,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Then fetch fresh profile data
           const { data: profile, error } = await supabase
             .from("profiles")
-            .select("role, username, avatar_url, theme_preference")
+            .select("role, username, avatar_url, theme_preference, date_format_preference")
             .eq("id", session.user.id)
             .single();
 
@@ -152,6 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               avatar_url: profile.avatar_url,
               role: profile.role,
               theme_preference: profile.theme_preference,
+              date_format_preference: profile.date_format_preference,
             });
 
             setUser({
@@ -160,6 +163,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               username: profile.username,
               avatar_url: profile.avatar_url,
               theme_preference: profile.theme_preference,
+              date_format_preference: profile.date_format_preference,
               token: session.access_token,
             });
           }
@@ -202,8 +206,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Compute isAdmin from user role
   const isAdmin = user?.role === "admin";
 
-  // Update user profile (username, avatar_url, theme_preference)
-  const updateProfile = async (data: { username?: string; avatar_url?: string; theme_preference?: ThemeName }) => {
+  // Update user profile (username, avatar_url, theme_preference, date_format_preference)
+  const updateProfile = async (data: { username?: string; avatar_url?: string; theme_preference?: ThemeName; date_format_preference?: DateFormatPreference }) => {
     if (!user) throw new Error("Not authenticated");
 
     console.log("updateProfile called with:", data);
@@ -218,6 +222,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     if (data.theme_preference !== undefined) {
       cleanData.theme_preference = data.theme_preference;
+    }
+    if (data.date_format_preference !== undefined) {
+      cleanData.date_format_preference = data.date_format_preference;
     }
 
     console.log("Sending to database:", cleanData);
@@ -253,6 +260,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       avatar_url: updatedUser.avatar_url ?? null,
       role: updatedUser.role || "viewer",
       theme_preference: updatedUser.theme_preference,
+      date_format_preference: updatedUser.date_format_preference,
     });
 
     console.log("Local state and cache updated");
@@ -264,7 +272,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("role, username, avatar_url, theme_preference")
+      .select("role, username, avatar_url, theme_preference, date_format_preference")
       .eq("id", session.user.id)
       .single();
 
@@ -281,6 +289,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         avatar_url: profile.avatar_url,
         role: profile.role,
         theme_preference: profile.theme_preference,
+        date_format_preference: profile.date_format_preference,
       });
 
       setUser({
@@ -289,6 +298,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         username: profile.username,
         avatar_url: profile.avatar_url,
         theme_preference: profile.theme_preference,
+        date_format_preference: profile.date_format_preference,
         token: session.access_token,
       });
     }

@@ -11,6 +11,7 @@ import Breadcrumbs from "./Breadcrumbs";
 import ImageGallery from "./ImageGallery";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
 import { CategoryIcon } from "../utils/categoryIcons";
+import { formatDate } from "../utils/dateTime";
 
 import { PostWithImages } from "../../../shared/src/types";
 
@@ -19,7 +20,7 @@ const PostDetail: FC = () => {
   const [post, setPost] = useState<PostWithImages | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   // Strip HTML tags for SEO meta description
   const stripHtml = (html: string | null): string => {
@@ -203,11 +204,7 @@ const PostDetail: FC = () => {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {new Date(post.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {formatDate(post.created_at, user?.date_format_preference || "relative")}
                 </p>
                 <span className="text-[var(--text-secondary)]">•</span>
                 <p className="flex items-center gap-2">

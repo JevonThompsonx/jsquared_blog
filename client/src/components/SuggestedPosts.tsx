@@ -2,6 +2,8 @@ import { useEffect, useState, FC, SyntheticEvent } from "react";
 import { Link } from "react-router-dom";
 import { Post } from "../../../shared/src/types";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
+import { useAuth } from "../context/AuthContext";
+import { formatDate } from "../utils/dateTime";
 
 interface SuggestedPostsProps {
   category?: string; // Filter by category
@@ -9,17 +11,6 @@ interface SuggestedPostsProps {
   limit?: number; // Number of posts to show
   title?: string; // Custom title for the section
 }
-
-const formatDateToSeasonYear = (dateString: string): string => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const month = date.getMonth();
-  const year = date.getFullYear();
-  if (month >= 2 && month <= 4) return `Spring ${year}`;
-  if (month >= 5 && month <= 7) return `Summer ${year}`;
-  if (month >= 8 && month <= 10) return `Fall ${year}`;
-  return `Winter ${year}`;
-};
 
 // Strip HTML tags - done once during data transformation
 const stripHtml = (html: string | null): string => {
@@ -37,6 +28,7 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
 }) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchSuggestedPosts = async () => {
@@ -112,7 +104,7 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {posts.map((post) => {
-            const formattedDate = formatDateToSeasonYear(post.created_at);
+            const formattedDate = formatDate(post.created_at, user?.date_format_preference || "relative");
             return (
               <Link
                 key={post.id}

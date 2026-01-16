@@ -8,6 +8,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import SEO from "./SEO";
 import { SkeletonGrid } from "./SkeletonCard";
 import { CategoryIcon } from "../utils/categoryIcons";
+import { formatDate } from "../utils/dateTime";
 
 // Small spinner for "loading more" at bottom
 const LoadingSpinner: FC = () => (
@@ -71,17 +72,6 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
   });
 };
 
-const formatDateToSeasonYear = (dateString: string): string => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const month = date.getMonth();
-  const year = date.getFullYear();
-  if (month >= 2 && month <= 4) return `Spring ${year}`;
-  if (month >= 5 && month <= 7) return `Summer ${year}`;
-  if (month >= 8 && month <= 10) return `Fall ${year}`;
-  return `Winter ${year}`;
-};
-
 // Check if post is less than 24 hours old
 const isNewPost = (dateString: string): boolean => {
   if (!dateString) return false;
@@ -94,10 +84,11 @@ const isNewPost = (dateString: string): boolean => {
 interface ArticleCardProps {
   article: Article;
   isAnimating?: boolean;
+  dateFormatPreference?: "relative" | "absolute";
 }
-const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
+const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPreference = "relative" }) => {
   const { id, image, category, title, date, description, gridClass, tags } = article;
-  const formattedDate = formatDateToSeasonYear(date);
+  const formattedDate = formatDate(date, dateFormatPreference);
   const isNew = article.status === "published" && isNewPost(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src =
@@ -624,6 +615,7 @@ export default function Home() {
                   key={article.id}
                   article={article}
                   isAnimating={isAnimating}
+                  dateFormatPreference={user?.date_format_preference || "relative"}
                 />
               ))}
               {/* Infinite scroll trigger */}

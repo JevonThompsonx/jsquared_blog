@@ -1,4 +1,4 @@
-import { ThemeName } from "../../../shared/src/types";
+import { ThemeName, DateFormatPreference } from "../../../shared/src/types";
 
 interface CachedProfile {
   userId: string;
@@ -6,6 +6,7 @@ interface CachedProfile {
   avatar_url: string | null;
   role: string;
   theme_preference?: ThemeName;
+  date_format_preference?: DateFormatPreference;
   timestamp: number;
 }
 

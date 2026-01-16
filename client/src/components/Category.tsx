@@ -7,6 +7,8 @@ import Breadcrumbs from "./Breadcrumbs";
 import { SkeletonGrid } from "./SkeletonCard";
 import { CategoryIcon } from "../utils/categoryIcons";
 import RelatedCategories from "./RelatedCategories";
+import { useAuth } from "../context/AuthContext";
+import { formatDate } from "../utils/dateTime";
 
 // Small spinner for "loading more" at bottom
 const LoadingSpinner: FC = () => (
@@ -66,17 +68,6 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
   });
 };
 
-const formatDateToSeasonYear = (dateString: string): string => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const month = date.getMonth();
-  const year = date.getFullYear();
-  if (month >= 2 && month <= 4) return `Spring ${year}`;
-  if (month >= 5 && month <= 7) return `Summer ${year}`;
-  if (month >= 8 && month <= 10) return `Fall ${year}`;
-  return `Winter ${year}`;
-};
-
 // Check if post is less than 24 hours old
 const isNewPost = (dateString: string): boolean => {
   if (!dateString) return false;
@@ -88,11 +79,12 @@ const isNewPost = (dateString: string): boolean => {
 
 interface ArticleCardProps {
   article: Article;
+  dateFormatPreference?: "relative" | "absolute";
 }
 
-const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
+const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "relative" }) => {
   const { id, image, category, title, date, description, gridClass, tags } = article;
-  const formattedDate = formatDateToSeasonYear(date);
+  const formattedDate = formatDate(date, dateFormatPreference);
   const isNew = article.status === "published" && isNewPost(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src =
@@ -321,6 +313,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
 
 const Category: FC = () => {
   const { category } = useParams<{ category: string }>();
+  const { user } = useAuth();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -471,7 +464,11 @@ const Category: FC = () => {
         ) : displayedArticles.length > 0 ? (
           <>
             {displayedArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
+              <ArticleCard 
+                key={article.id} 
+                article={article}
+                dateFormatPreference={user?.date_format_preference || "relative"}
+              />
             ))}
             <div ref={observerTarget} className="col-span-full h-10" />
             {isLoadingMore && <LoadingSpinner />}

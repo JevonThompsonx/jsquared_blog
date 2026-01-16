@@ -6,6 +6,7 @@ import ProfileAvatar from "./ProfileAvatar";
 import AvatarPicker from "./AvatarPicker";
 import Breadcrumbs from "./Breadcrumbs";
 import { uploadAvatar, deleteOldAvatar } from "../utils/avatarUpload";
+import { DateFormatPreference } from "../../../shared/src/types";
 
 const AccountSettings: FC = () => {
   const navigate = useNavigate();
@@ -29,6 +30,13 @@ const AccountSettings: FC = () => {
     }
   }, [user?.username]);
 
+  // Update dateFormat when user.date_format_preference changes
+  useEffect(() => {
+    if (user?.date_format_preference) {
+      setDateFormat(user.date_format_preference);
+    }
+  }, [user?.date_format_preference]);
+
   // Avatar state
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
@@ -46,6 +54,13 @@ const AccountSettings: FC = () => {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Date format preference state
+  const [dateFormat, setDateFormat] = useState<DateFormatPreference>(
+    user?.date_format_preference || "relative"
+  );
+  const [isUpdatingDateFormat, setIsUpdatingDateFormat] = useState(false);
+  const [dateFormatSuccess, setDateFormatSuccess] = useState(false);
 
   if (!user) {
     navigate("/auth");
@@ -168,6 +183,22 @@ const AccountSettings: FC = () => {
     }
   };
 
+  const handleUpdateDateFormat = async (newFormat: DateFormatPreference) => {
+    setIsUpdatingDateFormat(true);
+    setDateFormatSuccess(false);
+
+    try {
+      await updateProfile({ date_format_preference: newFormat });
+      setDateFormat(newFormat);
+      setDateFormatSuccess(true);
+      setTimeout(() => setDateFormatSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("Error updating date format preference:", err);
+    } finally {
+      setIsUpdatingDateFormat(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <div className="container mx-auto max-w-2xl">
@@ -252,6 +283,72 @@ const AccountSettings: FC = () => {
             {nameError && <p className="mt-2 text-sm text-red-500">{nameError}</p>}
             {nameSuccess && <p className="mt-2 text-sm text-green-500">Display name updated!</p>}
           </form>
+        </div>
+
+        {/* Preferences Section */}
+        <div className="bg-[var(--card-bg)] shadow-xl rounded-lg border border-[var(--border)] p-6 mb-6">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Preferences</h2>
+
+          {/* Date Format Preference */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-3">
+              Date Format
+            </label>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => handleUpdateDateFormat("relative")}
+                disabled={isUpdatingDateFormat}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                  dateFormat === "relative"
+                    ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--text-primary)]"
+                    : "border-[var(--border)] bg-[var(--background)] text-[var(--text-secondary)] hover:border-[var(--primary)]/50"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">Relative dates</div>
+                    <div className="text-sm text-[var(--text-secondary)] mt-1">
+                      e.g., "5 days ago", "2 hours ago"
+                    </div>
+                  </div>
+                  {dateFormat === "relative" && (
+                    <svg className="w-5 h-5 text-[var(--primary)]" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleUpdateDateFormat("absolute")}
+                disabled={isUpdatingDateFormat}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                  dateFormat === "absolute"
+                    ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--text-primary)]"
+                    : "border-[var(--border)] bg-[var(--background)] text-[var(--text-secondary)] hover:border-[var(--primary)]/50"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">Absolute dates</div>
+                    <div className="text-sm text-[var(--text-secondary)] mt-1">
+                      e.g., "Jan 10, 2026", "Dec 25, 2025"
+                    </div>
+                  </div>
+                  {dateFormat === "absolute" && (
+                    <svg className="w-5 h-5 text-[var(--primary)]" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+            </div>
+            {dateFormatSuccess && (
+              <p className="mt-3 text-sm text-green-500">Date format updated! Dates across the site will now display in your preferred format.</p>
+            )}
+          </div>
         </div>
 
         {/* Email Section */}

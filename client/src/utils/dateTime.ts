@@ -46,3 +46,68 @@ export function localDateTimeInputToISO(localDateTimeString: string | null | und
 export function getCurrentLocalDateTimeInput(): string {
   return isoToLocalDateTimeInput(new Date().toISOString());
 }
+
+/**
+ * Format a date string according to user preference
+ * @param dateString - ISO 8601 datetime string (e.g., "2026-01-13T02:40:00Z")
+ * @param format - "relative" (e.g., "5 days ago") or "absolute" (e.g., "Jan 10, 2026")
+ * @returns Formatted date string
+ */
+export function formatDate(dateString: string, format: "relative" | "absolute" = "relative"): string {
+  if (!dateString) return "";
+  
+  const date = new Date(dateString);
+  
+  if (format === "absolute") {
+    // Absolute format: "Jan 10, 2026"
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+  
+  // Relative format: "5 days ago", "2 hours ago", etc.
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
+  
+  if (diffSeconds < 60) {
+    return "just now";
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes} ${diffMinutes === 1 ? "minute" : "minutes"} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+  } else if (diffDays < 7) {
+    return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+  } else if (diffWeeks < 4) {
+    return `${diffWeeks} ${diffWeeks === 1 ? "week" : "weeks"} ago`;
+  } else if (diffMonths < 12) {
+    return `${diffMonths} ${diffMonths === 1 ? "month" : "months"} ago`;
+  } else {
+    return `${diffYears} ${diffYears === 1 ? "year" : "years"} ago`;
+  }
+}
+
+/**
+ * Format date to season and year (e.g., "Spring 2026")
+ * This is kept for backward compatibility and special use cases
+ * @param dateString - ISO 8601 datetime string
+ * @returns Season and year string (e.g., "Spring 2026")
+ */
+export function formatDateToSeasonYear(dateString: string): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const month = date.getMonth();
+  const year = date.getFullYear();
+  if (month >= 2 && month <= 4) return `Spring ${year}`;
+  if (month >= 5 && month <= 7) return `Summer ${year}`;
+  if (month >= 8 && month <= 10) return `Fall ${year}`;
+  return `Winter ${year}`;
+}
