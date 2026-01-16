@@ -262,10 +262,11 @@ app.get("/sitemap.xml", async (c) => {
     c.env.SUPABASE_ANON_KEY,
   );
 
-  // Fetch all posts
+  // Fetch only published posts
   const { data: posts } = await supabase
     .from("posts")
     .select("id, created_at")
+    .eq("status", "published")
     .order("created_at", { ascending: false });
 
   const baseUrl = "https://jsquaredadventures.com";
@@ -1969,6 +1970,84 @@ app.put("/api/posts/:postId/tags", authMiddleware, async (c) => {
   const resultTags = updatedTags?.map(pt => pt.tags).filter(Boolean) || [];
 
   return c.json({ tags: resultTags }, 200);
+});
+
+// GET posts by tag slug (public, with pagination)
+app.get("/api/tags/:slug/posts", async (c) => {
+  const { slug } = c.req.param();
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+
+  // Parse pagination params
+  const limit = Math.min(parseInt(c.req.query("limit") || "20"), 100);
+  const offset = parseInt(c.req.query("offset") || "0");
+
+  // First, get the tag by slug
+  const { data: tag, error: tagError } = await supabase
+    .from("tags")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (tagError || !tag) {
+    return c.json({ error: "Tag not found" }, 404);
+  }
+
+  // Get post IDs that have this tag
+  const { data: postTags, error: postTagsError } = await supabase
+    .from("post_tags")
+    .select("post_id")
+    .eq("tag_id", tag.id);
+
+  if (postTagsError) {
+    return c.json({ error: postTagsError.message }, 500);
+  }
+
+  const postIds = postTags?.map(pt => pt.post_id) || [];
+
+  if (postIds.length === 0) {
+    return c.json({
+      tag,
+      posts: [],
+      total: 0,
+      limit,
+      offset,
+      hasMore: false,
+    });
+  }
+
+  // Get posts with those IDs (only published)
+  const { data: posts, error: postsError, count } = await supabase
+    .from("posts")
+    .select("*, post_tags(tag_id, tags(*))", { count: "exact" })
+    .in("id", postIds)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (postsError) {
+    return c.json({ error: postsError.message }, 500);
+  }
+
+  // Transform posts to include tags array
+  const postsWithTags = (posts || []).map(post => {
+    const tags = post.post_tags?.map((pt: any) => pt.tags).filter(Boolean) || [];
+    const { post_tags, ...postWithoutJoin } = post;
+    return { ...postWithoutJoin, tags };
+  });
+
+  const total = count || 0;
+  const hasMore = offset + limit < total;
+
+  return c.json({
+    tag,
+    posts: postsWithTags,
+    total,
+    limit,
+    offset,
+    hasMore,
+  }, {
+    headers: { "Cache-Control": "public, max-age=60" },
+  });
 });
 
 // --- SCHEDULED CRON JOB ---

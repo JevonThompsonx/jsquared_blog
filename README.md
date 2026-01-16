@@ -57,6 +57,10 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional: For local scheduled post testing
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+DEV_MODE=true
 ```
 
 ### 3. Run Development Server
@@ -68,6 +72,23 @@ This starts:
 - Frontend on `http://localhost:5173`
 - Backend on `http://127.0.0.1:8787`
 - Shared types in watch mode
+
+### Local Scheduled Post Testing
+
+The Cloudflare cron job only runs in production. For local testing:
+
+```bash
+# Check environment variables are loaded
+curl http://127.0.0.1:8787/api/test/env
+
+# View scheduled posts and their timing
+curl http://127.0.0.1:8787/api/test/scheduled-posts
+
+# Manually trigger publish for due posts
+curl http://127.0.0.1:8787/api/test/cron
+```
+
+**Note:** Test endpoints require `DEV_MODE=true` in `.dev.vars`. Posts are also auto-published when someone visits `/api/posts` or `/api/posts/:id`.
 
 ---
 
@@ -103,6 +124,7 @@ This starts:
 
 ### SEO
 - Dynamic sitemap.xml
+- RSS feed (/feed.xml)
 - Open Graph + Twitter Cards
 - JSON-LD structured data
 - Proper heading hierarchy
@@ -176,17 +198,29 @@ wrangler deploy
 ## API Endpoints
 
 ```
-GET  /api/posts                    # Paginated posts (?limit, ?offset, ?search)
-GET  /api/posts/:id                # Single post with images
+GET  /api/posts                    # Paginated posts (?limit, ?offset, ?search, ?status)
+GET  /api/posts/:id                # Single post with images and tags
 POST /api/posts                    # Create post (admin)
 PUT  /api/posts/:id                # Update post (admin)
 DELETE /api/posts/:id              # Delete post (admin)
+
+GET  /api/posts/:id/images         # Get images for a post
+POST /api/posts/:id/images         # Upload images (admin)
+
 GET  /api/posts/:id/comments       # Comments (?sort=likes|newest|oldest)
 POST /api/posts/:id/comments       # Add comment (authenticated)
 POST /api/comments/:id/like        # Toggle like (authenticated)
 DELETE /api/comments/:id           # Delete comment (owner only)
+
 GET  /api/tags                     # All available tags
+POST /api/tags                     # Create tag (admin)
+PUT  /api/posts/:id/tags           # Update post tags (admin)
+GET  /api/tags/:slug/posts         # Get posts by tag (?limit, ?offset)
+
+GET  /api/authors/:username        # Author profile with posts
+
 GET  /sitemap.xml                  # Dynamic sitemap
+GET  /feed.xml                     # RSS feed
 ```
 
 ---

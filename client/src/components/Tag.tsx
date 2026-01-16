@@ -1,12 +1,11 @@
 import { useEffect, useState, FC, SyntheticEvent, useMemo, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Post, Article } from "../../../shared/src/types";
+import { Post, Article, Tag as TagType } from "../../../shared/src/types";
 import SEO from "./SEO";
 import SuggestedPosts from "./SuggestedPosts";
 import Breadcrumbs from "./Breadcrumbs";
 import { SkeletonGrid } from "./SkeletonCard";
-import { CategoryIcon } from "../utils/categoryIcons";
-import RelatedCategories from "./RelatedCategories";
+import RelatedTags from "./RelatedTags";
 
 // Small spinner for "loading more" at bottom
 const LoadingSpinner: FC = () => (
@@ -15,21 +14,21 @@ const LoadingSpinner: FC = () => (
   </div>
 );
 
-const NoResults: FC<{ category: string }> = ({ category }) => (
+const NoResults: FC<{ tagName: string }> = ({ tagName }) => (
   <div className="col-span-full bg-[var(--card-bg)] shadow-xl border border-[var(--border)] rounded-2xl p-12 text-center">
     <svg className="w-16 h-16 mx-auto mb-4 text-[var(--text-secondary)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
     </svg>
     <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">
       No Adventures Found
     </h3>
     <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto">
-      No posts found in the "{category}" category. Check back later for new adventures!
+      No posts found with the "{tagName}" tag. Check back later for new adventures!
     </p>
   </div>
 );
 
-// Strip HTML tags - done once during data transformation, not on every render
+// Strip HTML tags
 const stripHtml = (html: string): string => {
   if (!html) return "";
   const tmp = document.createElement("DIV");
@@ -56,12 +55,12 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
         "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found",
       category: post.category || "General",
       title: post.title,
-      description: stripHtml(post.description || ""), // Strip HTML once here
+      description: stripHtml(post.description || ""),
       date: post.created_at,
       gridClass: gridClass,
       dynamicViewType: post.type,
       status: post.status,
-      tags: (post as any).tags || [], // Include tags from post
+      tags: (post as any).tags || [],
     };
   });
 };
@@ -129,9 +128,13 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
             )}
           </div>
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
-            <div className="tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase">
+            <Link
+              to={`/category/${encodeURIComponent(category)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline"
+            >
               {category}
-            </div>
+            </Link>
             {tags && tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {tags.slice(0, 3).map((tag) => (
@@ -204,9 +207,13 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
           </div>
           <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
             <div>
-              <div className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase">
+              <Link
+                to={`/category/${encodeURIComponent(category)}`}
+                onClick={(e) => e.stopPropagation()}
+                className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
+              >
                 {category}
-              </div>
+              </Link>
               {tags && tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {tags.slice(0, 3).map((tag) => (
@@ -276,9 +283,13 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
           />
         </div>
         <div className="p-4 md:p-6 flex-grow flex flex-col">
-          <div className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase">
+          <Link
+            to={`/category/${encodeURIComponent(category)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
+          >
             {category}
-          </div>
+          </Link>
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {tags.slice(0, 3).map((tag) => (
@@ -319,21 +330,24 @@ const ArticleCard: FC<ArticleCardProps> = ({ article }) => {
   );
 };
 
-const Category: FC = () => {
-  const { category } = useParams<{ category: string }>();
+const TagPage: FC = () => {
+  const { slug } = useParams<{ slug: string }>();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [tag, setTag] = useState<TagType | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [notFound, setNotFound] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const POSTS_PER_PAGE = 20;
 
-  const fetchPosts = useCallback(async (currentOffset: number, categoryName: string, isInitial: boolean = false) => {
+  const fetchPosts = useCallback(async (currentOffset: number, tagSlug: string, isInitial: boolean = false) => {
     if (isInitial) {
       setIsLoading(true);
+      setNotFound(false);
     } else {
       setIsLoadingMore(true);
     }
@@ -342,30 +356,28 @@ const Category: FC = () => {
       const params = new URLSearchParams({
         limit: POSTS_PER_PAGE.toString(),
         offset: currentOffset.toString(),
-        search: categoryName, // Use search to filter by category
       });
 
-      const response = await fetch(`/api/posts?${params}`);
+      const response = await fetch(`/api/tags/${tagSlug}/posts?${params}`);
+      
+      if (response.status === 404) {
+        setNotFound(true);
+        setIsLoading(false);
+        return;
+      }
+      
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
 
       const data = await response.json();
 
-      // Filter to only posts matching this exact category
-      const categoryPosts = (data.posts || []).filter((post: Post) =>
-        post.category === categoryName
-      );
-
       if (isInitial) {
-        setAllPosts(categoryPosts);
-        setTotalCount(categoryPosts.length);
+        setTag(data.tag);
+        setAllPosts(data.posts || []);
+        setTotalCount(data.total || 0);
       } else {
-        setAllPosts(prev => {
-          const newPosts = [...prev, ...categoryPosts];
-          setTotalCount(newPosts.length);
-          return newPosts;
-        });
+        setAllPosts(prev => [...prev, ...(data.posts || [])]);
       }
 
       setHasMore(data.hasMore || false);
@@ -378,22 +390,22 @@ const Category: FC = () => {
   }, []);
 
   useEffect(() => {
-    if (category) {
-      // Scroll to top when category page loads
+    if (slug) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       setOffset(0);
       setAllPosts([]);
-      fetchPosts(0, category, true);
+      setTag(null);
+      fetchPosts(0, slug, true);
     }
-  }, [category, fetchPosts]);
+  }, [slug, fetchPosts]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore && category) {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore && slug) {
           const newOffset = offset + POSTS_PER_PAGE;
           setOffset(newOffset);
-          fetchPosts(newOffset, category, false);
+          fetchPosts(newOffset, slug, false);
         }
       },
       { threshold: 0.1 }
@@ -409,17 +421,40 @@ const Category: FC = () => {
         observer.unobserve(currentTarget);
       }
     };
-  }, [hasMore, isLoading, isLoadingMore, offset, category, fetchPosts]);
+  }, [hasMore, isLoading, isLoadingMore, offset, slug, fetchPosts]);
 
   const displayedArticles = useMemo<Article[]>(() => {
     return assignLayoutAndGridClass(allPosts);
   }, [allPosts]);
 
+  if (notFound) {
+    return (
+      <div className="min-h-screen pt-24 pb-12 flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div className="text-center">
+          <svg className="w-20 h-20 mx-auto mb-6 text-[var(--text-secondary)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-4">Tag Not Found</h1>
+          <p className="text-[var(--text-secondary)] mb-6">The tag "{slug}" doesn't exist.</p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--primary)] text-white rounded-lg hover:opacity-90 transition-opacity"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <SEO
-        title={`${category} Adventures`}
-        description={`Explore all ${category} posts from J²Adventures. Discover stories, photos, and experiences from our ${category} adventures around the world.`}
+        title={tag ? `${tag.name} Posts` : "Tag"}
+        description={tag ? `Explore all posts tagged with "${tag.name}" on J²Adventures. Discover stories, photos, and experiences.` : ""}
         type="website"
         structuredData={{
           "@context": "https://schema.org",
@@ -434,78 +469,82 @@ const Category: FC = () => {
             {
               "@type": "ListItem",
               "position": 2,
-              "name": `${category} Adventures`,
-              "item": `https://jsquaredadventures.com/category/${encodeURIComponent(category || '')}`
+              "name": tag?.name || "Tag",
+              "item": `https://jsquaredadventures.com/tag/${slug}`
             }
           ]
         }}
       />
       <div className="min-h-screen pt-24 pb-12" style={{ background: 'var(--background)' }}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <Breadcrumbs
-          items={[
-            { label: "Home", href: "/" },
-            { label: category || "Category" },
-          ]}
-        />
-        <h1 className="text-4xl font-bold text-[var(--text-primary)] flex items-center gap-3">
-          <CategoryIcon category={category || ""} className="w-8 h-8" />
-          {category} Adventures
-        </h1>
-        <p className="text-[var(--text-secondary)] mt-2">
-          {totalCount > 0 && (
-            <span className="inline-flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <strong>{totalCount}{hasMore && '+'}</strong> {totalCount === 1 ? 'adventure' : 'adventures'} in {category}
-            </span>
-          )}
-          {totalCount === 0 && !isLoading && `No adventures found in ${category}`}
-        </p>
-      </div>
-
-      <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense">
-        {isLoading ? (
-          <SkeletonGrid count={6} />
-        ) : displayedArticles.length > 0 ? (
-          <>
-            {displayedArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-            <div ref={observerTarget} className="col-span-full h-10" />
-            {isLoadingMore && <LoadingSpinner />}
-            {!hasMore && !isLoadingMore && displayedArticles.length > 0 && (
-              <div className="col-span-full text-center py-6">
-                <div className="inline-flex items-center gap-3 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-8 py-4 shadow-lg">
-                  <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-[var(--text-primary)] font-semibold">
-                    You've reached the end!
-                  </span>
-                </div>
-              </div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <Breadcrumbs
+            items={[
+              { label: "Home", href: "/" },
+              { label: tag?.name || slug || "Tag" },
+            ]}
+          />
+          <div className="flex items-center gap-3">
+            <svg className="w-8 h-8 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            <h1 className="text-4xl font-bold text-[var(--text-primary)]">
+              {tag?.name || slug}
+            </h1>
+          </div>
+          <p className="text-[var(--text-secondary)] mt-2">
+            {totalCount > 0 && (
+              <span className="inline-flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <strong>{totalCount}{hasMore && '+'}</strong> {totalCount === 1 ? 'adventure' : 'adventures'} tagged with {tag?.name || slug}
+              </span>
             )}
-          </>
-        ) : (
-          <NoResults category={category || ""} />
+            {totalCount === 0 && !isLoading && `No adventures found with this tag`}
+          </p>
+        </div>
+
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense">
+          {isLoading ? (
+            <SkeletonGrid count={6} />
+          ) : displayedArticles.length > 0 ? (
+            <>
+              {displayedArticles.map((article) => (
+                <ArticleCard key={article.id} article={article} />
+              ))}
+              <div ref={observerTarget} className="col-span-full h-10" />
+              {isLoadingMore && <LoadingSpinner />}
+              {!hasMore && !isLoadingMore && displayedArticles.length > 0 && (
+                <div className="col-span-full text-center py-6">
+                  <div className="inline-flex items-center gap-3 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-8 py-4 shadow-lg">
+                    <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-[var(--text-primary)] font-semibold">
+                      You've reached the end!
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <NoResults tagName={tag?.name || slug || ""} />
+          )}
+        </main>
+
+        {/* Related Tags Widget */}
+        {slug && !isLoading && (
+          <RelatedTags currentTagSlug={slug} limit={8} />
         )}
-      </main>
 
-      {/* Related Categories Widget */}
-      {category && !isLoading && (
-        <RelatedCategories currentCategory={category} limit={8} />
-      )}
-
-      {/* Suggested Posts from other categories */}
-      <SuggestedPosts
-        limit={4}
-        title="Explore Other Adventures"
-      />
+        {/* Suggested Posts */}
+        <SuggestedPosts
+          limit={4}
+          title="Explore More Adventures"
+        />
       </div>
     </>
   );
 };
 
-export default Category;
+export default TagPage;

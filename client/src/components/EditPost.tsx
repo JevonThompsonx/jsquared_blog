@@ -252,6 +252,56 @@ const EditPost: FC = () => {
     setReorderedImages(reordered);
   };
 
+  const handlePreview = () => {
+    if (!post) return;
+
+    // Store preview data in sessionStorage
+    const previewData = {
+      ...post,
+      images: [
+        ...existingImages,
+        ...pendingFiles.map((file, idx) => ({
+          id: -idx - 1, // Temporary negative IDs for pending files
+          post_id: parseInt(id || "0"),
+          image_url: file.previewUrl,
+          sort_order: existingImages.length + idx,
+          created_at: new Date().toISOString(),
+          focal_point: file.focalPoint,
+          alt_text: file.altText,
+        })),
+      ],
+      tags: selectedTags,
+    };
+    
+    sessionStorage.setItem("previewPost", JSON.stringify(previewData));
+    
+    // Open preview in new tab
+    window.open("/posts/preview", "_blank");
+  };
+
+  const handleCopyPost = () => {
+    if (!post) return;
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      "This will create a copy of this post as a new draft. The copy will include the title, description, category, and tags. Images will need to be re-uploaded. Continue?"
+    );
+
+    if (!confirmed) return;
+
+    // Navigate to admin page with post data in state
+    navigate("/admin", {
+      state: {
+        copiedPost: {
+          title: `Copy of ${post.title}`,
+          description: post.description,
+          category: post.category,
+          tags: selectedTags,
+        }
+      }
+    });
+  };
+
   const handleDelete = async () => {
     if (!user || !token || !id) return;
 
@@ -653,25 +703,63 @@ const EditPost: FC = () => {
                 "Update Post"
               )}
             </button>
+
+            {/* Preview Button */}
+            <button
+              type="button"
+              onClick={handlePreview}
+              disabled={isSubmitting}
+              className="w-full mt-3 bg-[var(--background)] border-2 border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white disabled:bg-gray-400 disabled:border-gray-400 text-[var(--primary)] font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Preview Post
+            </button>
           </form>
 
-          {/* Delete Button (outside form) */}
-          <button
-            onClick={handleDelete}
-            disabled={isSubmitting}
-            className="w-full mt-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          {/* Action Buttons (outside form) */}
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <button
+              onClick={handleCopyPost}
+              disabled={isSubmitting}
+              className="flex-1 bg-[var(--primary)] hover:bg-[var(--primary-dark)] disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Delete Post
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Copy Post
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete Post
+            </button>
+          </div>
         </div>
       </div>
     </div>

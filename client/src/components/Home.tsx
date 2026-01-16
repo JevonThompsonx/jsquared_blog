@@ -7,6 +7,7 @@ import { Post, Article } from "../../../shared/src/types";
 import { useDebounce } from "../hooks/useDebounce";
 import SEO from "./SEO";
 import { SkeletonGrid } from "./SkeletonCard";
+import { CategoryIcon } from "../utils/categoryIcons";
 
 // Small spinner for "loading more" at bottom
 const LoadingSpinner: FC = () => (
@@ -81,6 +82,15 @@ const formatDateToSeasonYear = (dateString: string): string => {
   return `Winter ${year}`;
 };
 
+// Check if post is less than 24 hours old
+const isNewPost = (dateString: string): boolean => {
+  if (!dateString) return false;
+  const postDate = new Date(dateString);
+  const now = new Date();
+  const hoursDiff = (now.getTime() - postDate.getTime()) / (1000 * 60 * 60);
+  return hoursDiff < 24;
+};
+
 interface ArticleCardProps {
   article: Article;
   isAnimating?: boolean;
@@ -88,6 +98,7 @@ interface ArticleCardProps {
 const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
   const { id, image, category, title, date, description, gridClass, tags } = article;
   const formattedDate = formatDateToSeasonYear(date);
+  const isNew = article.status === "published" && isNewPost(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src =
       "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
@@ -106,35 +117,45 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
-          {article.status === "draft" && (
-            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
-              DRAFT
-            </div>
-          )}
-          {article.status === "scheduled" && (
-            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
-              SCHEDULED
-            </div>
-          )}
+          <div className="absolute top-2 right-2 flex gap-2">
+            {isNew && (
+              <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded animate-pulse">
+                NEW
+              </div>
+            )}
+            {article.status === "draft" && (
+              <div className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
+                DRAFT
+              </div>
+            )}
+            {article.status === "scheduled" && (
+              <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+                SCHEDULED
+              </div>
+            )}
+          </div>
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
             <span
               onClick={(e) => {
                 e.preventDefault();
                 window.location.href = `/category/${encodeURIComponent(category)}`;
               }}
-              className="inline-block tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline cursor-pointer"
+              className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline cursor-pointer"
             >
+              <CategoryIcon category={category} className="w-3.5 h-3.5" />
               {category}
             </span>
             {tags && tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {tags.slice(0, 3).map((tag) => (
-                  <span
+                  <Link
                     key={tag.id}
-                    className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm"
+                    to={`/tag/${tag.slug}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
                   >
                     {tag.name}
-                  </span>
+                  </Link>
                 ))}
                 {tags.length > 3 && (
                   <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">
@@ -172,16 +193,23 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
         className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} block`}
       >
         <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row relative">
-          {article.status === "draft" && (
-            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
-              DRAFT
-            </div>
-          )}
-          {article.status === "scheduled" && (
-            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
-              SCHEDULED
-            </div>
-          )}
+          <div className="absolute top-2 right-2 flex gap-2 z-10">
+            {isNew && (
+              <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded animate-pulse">
+                NEW
+              </div>
+            )}
+            {article.status === "draft" && (
+              <div className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
+                DRAFT
+              </div>
+            )}
+            {article.status === "scheduled" && (
+              <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+                SCHEDULED
+              </div>
+            )}
+          </div>
           <div className="md:w-1/2 h-64 md:h-auto">
             <img
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -198,19 +226,22 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
                   e.preventDefault();
                   window.location.href = `/category/${encodeURIComponent(category)}`;
                 }}
-                className="inline-block tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline cursor-pointer"
               >
+                <CategoryIcon category={category} className="w-3.5 h-3.5" />
                 {category}
               </span>
               {tags && tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {tags.slice(0, 3).map((tag) => (
-                    <span
+                    <Link
                       key={tag.id}
-                      className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20"
+                      to={`/tag/${tag.slug}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
                     >
                       {tag.name}
-                    </span>
+                    </Link>
                   ))}
                   {tags.length > 3 && (
                     <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
@@ -246,16 +277,23 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
       className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} block`}
     >
       <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col relative">
-        {article.status === "draft" && (
-          <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
-            DRAFT
-          </div>
-        )}
-        {article.status === "scheduled" && (
-          <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
-            SCHEDULED
-          </div>
-        )}
+        <div className="absolute top-2 right-2 flex gap-2 z-10">
+          {isNew && (
+            <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded animate-pulse">
+              NEW
+            </div>
+          )}
+          {article.status === "draft" && (
+            <div className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
+              DRAFT
+            </div>
+          )}
+          {article.status === "scheduled" && (
+            <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+              SCHEDULED
+            </div>
+          )}
+        </div>
         <div className="h-56">
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -271,19 +309,22 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating }) => {
               e.preventDefault();
               window.location.href = `/category/${encodeURIComponent(category)}`;
             }}
-            className="inline-block tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline cursor-pointer"
+            className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline cursor-pointer"
           >
+            <CategoryIcon category={category} className="w-3.5 h-3.5" />
             {category}
           </span>
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {tags.slice(0, 3).map((tag) => (
-                <span
+                <Link
                   key={tag.id}
-                  className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20"
+                  to={`/tag/${tag.slug}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
                 >
                   {tag.name}
-                </span>
+                </Link>
               ))}
               {tags.length > 3 && (
                 <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
@@ -507,6 +548,18 @@ export default function Home() {
           <p className="landing-subtitle drop-shadow-md">
             Exploring the world, one adventure at a time.
           </p>
+          <a
+            href="/feed.xml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white/80 hover:text-white hover:bg-white/20 transition-all duration-300 text-sm"
+            title="Subscribe to RSS Feed"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"/>
+            </svg>
+            RSS Feed
+          </a>
         </div>
         <div className="scroll-indicator">
           <div className="arrow-down"></div>
@@ -579,7 +632,7 @@ export default function Home() {
               {isLoadingMore && <LoadingSpinner />}
               {/* End of results message */}
               {!hasMore && !isLoadingMore && displayedArticles.length > 0 && (
-                <div className="col-span-full text-center py-12">
+                <div className="col-span-full text-center py-6">
                   <div className="inline-flex items-center gap-3 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-8 py-4 shadow-lg">
                     <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

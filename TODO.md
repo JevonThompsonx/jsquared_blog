@@ -1,6 +1,6 @@
 # J²Adventures Blog - Project Tracker
 
-> **Last Updated**: January 15, 2026 | **Version**: 0.9.2
+> **Last Updated**: January 15, 2026 | **Version**: 0.9.3
 
 ---
 
@@ -84,6 +84,7 @@
 - [x] Proper heading hierarchy (h1 -> h2 -> h3)
 - [x] Canonical URLs
 - [x] 404 page with adventure theme
+- [x] RSS feed (`/feed.xml`) with homepage link
 
 ### Rich Text Editor
 - [x] Tiptap integration with React
@@ -142,7 +143,6 @@
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Post Likes/Hearts | Easy | Add likes to posts (not just comments) |
 | Public Author Profiles | Medium | `/author/:username` - show user's posts |
 | About Page | Easy | Tell J² story, team bios |
 
@@ -151,9 +151,7 @@
 | Feature | Effort | Notes |
 |---------|--------|-------|
 | Bookmarks/Favorites | Medium | Let users save posts for later |
-| Tag Pages | Easy | `/tag/:slug` - show posts with tag |
 | Email Notifications | Medium | Notify when someone replies to your comment |
-| RSS Feed | Easy | `/feed.xml` endpoint |
 
 ### Lower Priority (Polish)
 
@@ -189,7 +187,7 @@
 
 ### Homepage Enhancements
 - [ ] Featured/pinned posts at the top
-- [ ] "New" badge for posts less than 24h old
+- [x] "New" badge for posts less than 24h old
 - [ ] Filter by date range
 - [ ] View toggle (grid vs list view)
 
@@ -243,6 +241,7 @@ GET  /sitemap.xml                  - Dynamic sitemap
 /posts/:id           - Post detail (public)
 /posts/:id/edit      - Edit post (admin only)
 /category/:category  - Category page (public)
+/tag/:slug           - Tag page (public)
 /settings            - Account settings (authenticated)
 /*                   - 404 page
 ```
@@ -340,12 +339,11 @@ cd server && bunx wrangler deploy  # Backend to Workers
 - Share buttons
 
 ### Phase 3: Discovery - IN PROGRESS
-- [ ] Post likes
 - [ ] Public author profiles
-- [ ] Tag pages (`/tag/:slug`)
+- [x] Tag pages (`/tag/:slug`)
 - [ ] Advanced search (date range, filters)
 - [ ] Map view with adventure locations
-- [ ] RSS feed
+- [x] RSS feed with homepage link
 
 ### Phase 4: Engagement
 - [ ] Post bookmarks/favorites
@@ -361,6 +359,13 @@ cd server && bunx wrangler deploy  # Backend to Workers
 ---
 
 ## Recent Changes
+
+### v0.9.3 (January 15, 2026)
+- Added "NEW" badge for posts less than 24 hours old
+- Added tag pages (`/tag/:slug`) with infinite scroll
+- Made all tags clickable to filter posts by tag
+- Added RSS feed link to homepage landing section
+- Updated Vite proxy to handle `/feed.xml` and `/sitemap.xml`
 
 ### v0.9.2 (January 12, 2026)
 - Added tags system with autocomplete

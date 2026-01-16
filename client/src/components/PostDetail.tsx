@@ -10,6 +10,7 @@ import ShareButtons from "./ShareButtons";
 import Breadcrumbs from "./Breadcrumbs";
 import ImageGallery from "./ImageGallery";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
+import { CategoryIcon } from "../utils/categoryIcons";
 
 import { PostWithImages } from "../../../shared/src/types";
 
@@ -144,8 +145,9 @@ const PostDetail: FC = () => {
                 <div className="flex items-center gap-3">
                   <Link
                     to={`/category/${encodeURIComponent(post.category || "Uncategorized")}`}
-                    className="inline-block px-4 py-1.5 bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white rounded-full text-sm font-semibold transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white rounded-full text-sm font-semibold transition-colors"
                   >
+                    <CategoryIcon category={post.category || "Uncategorized"} className="w-4 h-4" />
                     {post.category || "Uncategorized"}
                   </Link>
                   {post.status === "draft" && (

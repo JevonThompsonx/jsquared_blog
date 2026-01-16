@@ -2,7 +2,7 @@
 
 import { useState, useEffect, FC } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { CATEGORIES, Tag } from "../../../shared/src/types";
 import RichTextEditor from "./RichTextEditor";
@@ -29,6 +29,7 @@ type Post = {
 const Admin: FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
 
   const [post, setPost] = useState<Omit<Post, "id" | "created_at" | "author_id">>({
@@ -66,6 +67,33 @@ const Admin: FC = () => {
     fetchTags();
   }, []);
 
+  // Check if there's a copied post in location state
+  useEffect(() => {
+    if (location.state?.copiedPost) {
+      const copiedData = location.state.copiedPost;
+      setPost((prev) => ({
+        ...prev,
+        title: copiedData.title || "",
+        description: copiedData.description || "",
+        category: copiedData.category || "",
+        status: "draft" as const, // Always create copies as drafts
+      }));
+      
+      if (copiedData.tags && copiedData.tags.length > 0) {
+        setSelectedTags(copiedData.tags);
+      }
+
+      // Check if category is custom
+      if (copiedData.category && !CATEGORIES.includes(copiedData.category as any)) {
+        setIsCustomCategory(true);
+        setCustomCategoryValue(copiedData.category);
+      }
+
+      // Clear the location state to prevent re-population on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -96,6 +124,27 @@ const Admin: FC = () => {
     const value = e.target.value;
     setCustomCategoryValue(value);
     setPost((prev) => ({ ...prev, category: value }));
+  };
+
+  const handlePreview = () => {
+    // Store preview data in sessionStorage
+    const previewData = {
+      ...post,
+      images: galleryFiles.map((file) => ({
+        image_url: file.previewUrl,
+        focal_point: file.focalPoint,
+        alt_text: file.altText,
+      })),
+      tags: selectedTags,
+      id: -1, // Temporary ID for preview
+      created_at: new Date().toISOString(),
+      author_id: user?.id || "",
+    };
+    
+    sessionStorage.setItem("previewPost", JSON.stringify(previewData));
+    
+    // Open preview in new tab
+    window.open("/posts/preview", "_blank");
   };
 
   const handleGalleryFilesSelected = (files: PendingFile[]) => {
@@ -536,6 +585,26 @@ const Admin: FC = () => {
               ) : (
                 "Create Post"
               )}
+            </button>
+
+            {/* Preview Button */}
+            <button
+              type="button"
+              onClick={handlePreview}
+              disabled={isSubmitting}
+              className="w-full mt-3 bg-[var(--background)] border-2 border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white disabled:bg-gray-400 disabled:border-gray-400 text-[var(--primary)] font-bold py-3 px-6 rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Preview Post
             </button>
           </form>
         </div>

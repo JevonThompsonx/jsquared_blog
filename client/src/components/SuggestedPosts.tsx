@@ -92,7 +92,7 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
 
   if (loading) {
     return (
-      <div className="py-12">
+      <div className="py-6">
         <div className="flex justify-center items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
         </div>
@@ -105,7 +105,7 @@ const SuggestedPosts: FC<SuggestedPostsProps> = ({
   }
 
   return (
-    <section className="py-12 border-t border-[var(--border)]">
+    <section className="py-10 border-t border-[var(--border)]">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-8 text-center">
           {title}

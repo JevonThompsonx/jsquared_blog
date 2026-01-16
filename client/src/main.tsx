@@ -16,7 +16,9 @@ const Auth = lazy(() => import("./components/Auth.tsx"));
 const Admin = lazy(() => import("./components/Admin.tsx"));
 const PostDetail = lazy(() => import("./components/PostDetail.tsx"));
 const EditPost = lazy(() => import("./components/EditPost.tsx"));
+const PreviewPost = lazy(() => import("./components/PreviewPost.tsx"));
 const Category = lazy(() => import("./components/Category.tsx"));
+const Tag = lazy(() => import("./components/Tag.tsx"));
 const NotFound = lazy(() => import("./components/NotFound.tsx"));
 const AccountSettings = lazy(() => import("./components/AccountSettings.tsx")); 
 
@@ -184,12 +186,20 @@ const router = createBrowserRouter([
         element: <PostDetail />,
       },
       {
+        path: "posts/preview",
+        element: <PrivateRoute><PreviewPost /></PrivateRoute>,
+      },
+      {
         path: "posts/:id/edit",
         element: <PrivateRoute><EditPost /></PrivateRoute>,
       },
       {
         path: "category/:category",
         element: <Category />,
+      },
+      {
+        path: "tag/:slug",
+        element: <Tag />,
       },
       {
         path: "settings",

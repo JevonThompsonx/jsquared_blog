@@ -20,6 +20,14 @@ export default defineConfig({
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
+      '/feed.xml': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
+      '/sitemap.xml': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
     },
   },
 });
