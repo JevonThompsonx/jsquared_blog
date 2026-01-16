@@ -1,2 +1,11 @@
-SUPABASE_URL="your_supabase_project_url"
-SUPABASE_ANON_KEY="your_supabase_anon_key"
+# Wrangler .dev.vars - DO NOT use quotes around values
+# Copy this file to .dev.vars and fill in your values
+
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional: Service role key bypasses RLS (needed for cron to update posts)
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Enable development-only test endpoints (/api/test/*)
+DEV_MODE=true

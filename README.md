@@ -1,173 +1,207 @@
 # J²Adventures Blog
 
-This is a monorepo for the J²Adventures blog, consisting of a React frontend, a Hono backend, and a shared types package.
+A full-stack travel blog application built with React, Hono, and Supabase. Features include infinite scroll, rich text editing, image galleries, comments, tags, post scheduling, and user profiles.
+
+**Live Site**: [jsquaredadventures.com](https://jsquaredadventures.com)
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | React 19 + Vite + TailwindCSS 4 |
+| **Backend** | Hono (Cloudflare Worker) |
+| **Database** | Supabase PostgreSQL |
+| **Auth** | Supabase Auth |
+| **Storage** | Supabase Storage (WebP conversion) |
+| **Deployment** | Cloudflare Pages (frontend) + Workers (backend) |
+| **Runtime** | Bun (local development) |
+
+---
 
 ## Project Structure
 
--   `client/`: React frontend application (Vite)
--   `server/`: Hono backend API
--   `shared/`: Shared types and utilities
--   `dist/`: Compiled output for the entire monorepo (from root build)
-
-## Local Development
-
-To run the project locally, ensure you have [Bun](https://bun.sh/docs/installation) installed.
-
-1.  **Install Dependencies:**
-    ```bash
-    bun install
-    ```
-2.  **Set up Environment Variables:**
-    Create a `.env` file in the `client/` directory with your Supabase credentials:
-    ```
-    # client/.env
-    VITE_SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
-    VITE_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
-    ```
-    Create a `.env` file in the `server/` directory with your Supabase credentials (for local development of the server):
-    ```
-    # server/.env
-    SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
-    SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
-    ```
-3.  **Start Development Servers:**
-    From the project root:
-    ```bash
-    bun run dev
-    ```
-    This command uses `concurrently` to start the development servers for `shared`, `server`, and `client`. The frontend will be accessible at `http://localhost:5173` (or another port if 5173 is in use).
-
-## Cloudflare Images Setup for Optimized Image Delivery
-
-This project leverages Cloudflare Images to provide optimized and fast image delivery, while using Supabase Storage as the primary storage for your original images. Cloudflare Images acts as a transformation and caching layer.
-
-### Prerequisites
-
--   A Cloudflare account with Cloudflare Images enabled.
-
-### Setup Steps
-
-1.  **Ensure Supabase Storage Bucket is Public:**
-    -   Go to your Supabase Dashboard.
-    -   Navigate to **Storage** -> **Buckets**.
-    -   Select your `post-images` bucket.
-    -   Go to **Settings** and ensure "Public bucket" is **enabled**. Cloudflare Images needs public read access to fetch your original images.
-
-2.  **Create a Cloudflare Images Variant with Custom Storage:**
-    -   Go to your Cloudflare Dashboard.
-    -   Navigate to **Images** -> **Variants**.
-    -   Click **Add variant**.
-    -   **Variant Name:** Choose a descriptive name (e.g., `supabase-original`, `webp-optimized`, `thumbnail`). This name will be part of your image URLs.
-    -   **Source URL:** This is the base URL where Cloudflare Images will find your original images in Supabase Storage. It should look like this:
-        `https://<YOUR_SUPABASE_PROJECT_REF>.supabase.co/storage/v1/object/public/post-images/`
-        -   Replace `<YOUR_SUPABASE_PROJECT_REF>` with your actual Supabase project reference (found in Supabase Dashboard -> **Project Settings** -> **General** -> **Project API keys**).
-    -   **Delivery URL:** This is the URL Cloudflare Images will use to serve your images. It will look like:
-        `https://imagedelivery.net/<YOUR_ACCOUNT_HASH>/<IMAGE_PATH_FROM_SUPABASE>/<VARIANT_NAME>`
-        -   Your **Account Hash** is: `87WtOE5oSHkx54q2OsGN8w` (This is hardcoded in the client-side code for image delivery).
-        -   `<IMAGE_PATH_FROM_SUPABASE>` is the filename/path you store in your Supabase `posts` table (e.g., `my-image.jpg`).
-        -   `<VARIANT_NAME>` is the name of the variant you defined (e.g., `public`, `webp-optimized`).
-    -   **Transformations:** Configure desired transformations (e.g., `Format: WebP`, `Quality: 80`, `Fit: cover`, `Width`, `Height`). These will be applied on the fly.
-
-### How it Works in This Project
-
--   When you upload an image on the "Create Post" page, the original image file is stored in your Supabase `post-images` bucket.
--   The `image_url` field in your Supabase `posts` table now stores only the **path/filename** of the image within the bucket (e.g., `a1b2c3d4-e5f6-7890-1234-567890abcdef.jpg`), not the full Supabase public URL.
--   On the homepage, the frontend constructs the image `src` attribute using the Cloudflare Images delivery URL format, combining your Account Hash, the stored image path, and a chosen variant name (e.g., `/public` for the original size, or a custom variant for optimized versions). This allows Cloudflare Images to fetch, transform, and serve the image efficiently.
-
-## Cloudflare Deployment
-
-This project is configured for deployment to Cloudflare Pages (frontend) and Cloudflare Workers (backend API).
-
-### Prerequisites
-
--   A Cloudflare account.
--   The `wrangler` CLI installed and configured (`bunx wrangler login`).
-
-### 1. Build the Project
-
-From the project root, run the unified build command:
-
-```bash
-bun run build
+```
+jsquared_blog/
+├── client/          # React frontend (Vite)
+├── server/          # Hono backend API (Cloudflare Worker)
+├── shared/          # Shared TypeScript types
+├── CLAUDE.md        # AI assistant guidance (comprehensive)
+├── TODO.md          # Feature tracker & roadmap
+└── docs/            # Additional documentation
 ```
 
-This will compile all workspaces (`shared`, `server`, `client`) and place their outputs in their respective `dist/` directories.
+---
 
-### 2. Deploy the Backend (Cloudflare Worker)
+## Quick Start
 
-Your Hono backend (`server/`) is configured as a Cloudflare Worker.
+### Prerequisites
+- [Bun](https://bun.sh/docs/installation) installed
+- Supabase project with credentials
 
-1.  **Navigate to the server directory:**
-    ```bash
-    cd server
-    ```
-2.  **Deploy the Worker:**
-    ```bash
-    bunx wrangler deploy
-    ```
-    Wrangler will deploy your Worker and provide a URL (e.g., `your-worker-name.your-account.workers.dev`). Make a note of this URL.
+### 1. Install Dependencies
+```bash
+bun install
+```
 
-3.  **Set Environment Variables (Secrets) in Cloudflare:**
-    Go to your Cloudflare dashboard:
-    -   Navigate to **Workers & Pages** -> **Overview** -> Your Worker (`jsquared-blog-api` by default).
-    -   Go to **Settings** -> **Variables**.
-    -   Add the following **Environment Variables (Secrets)**:
-        -   `SUPABASE_URL` (your Supabase project URL)
-        -   `SUPABASE_ANON_KEY` (your Supabase project Anon Key)
+### 2. Configure Environment Variables
 
-### 3. Deploy the Frontend (Cloudflare Pages)
+**Client** (`client/.env`):
+```
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-Your React frontend (`client/`) will be deployed to Cloudflare Pages.
+**Server** (`server/.dev.vars`) - **DO NOT use quotes around values**:
+```
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-1.  **Create a New Pages Project:**
-    -   Go to your Cloudflare dashboard: **Workers & Pages** -> **Overview** -> **Create application** -> **Pages** -> **Connect to Git**.
-    -   Select your Git repository.
+### 3. Run Development Server
+```bash
+bun run dev
+```
 
-2.  **Configure Build Settings:**
-    -   **Framework preset:** `React` (or `Vite`)
-    -   **Build command:** `bun run build` (This command, run from the root, builds the entire monorepo.)
-    -   **Build directory:** `client/dist` (This tells Pages where to find the static assets for your frontend.)
-
-3.  **Set Environment Variables for Pages:**
-    -   In the Pages project settings, go to **Environment variables**.
-    -   Add the following variables (these are used during the frontend build process):
-        -   `VITE_SUPABASE_URL` (your Supabase project URL)
-        -   `VITE_SUPABASE_ANON_KEY` (your Supabase project Anon Key)
-
-### 4. Connecting Frontend to Backend with a Custom Domain
-
-To ensure your frontend can communicate with your backend Worker using a clean custom domain (e.g., `api.yourdomain.com`), follow these steps:
-
-1.  **Add a Custom Domain to Cloudflare Pages:**
-    -   In your Cloudflare Pages project settings, go to **Custom domains**.
-    -   Follow the instructions to add your desired custom domain (e.g., `yourdomain.com`). Cloudflare will guide you through setting up the necessary DNS records.
-
-2.  **Create a CNAME Record for your API Subdomain:**
-    -   Once your custom domain is active on Pages, go to your Cloudflare DNS settings for `yourdomain.com`.
-    -   Add a new `CNAME` record:
-        -   **Type:** `CNAME`
-        -   **Name:** `api` (or whatever subdomain you prefer for your API)
-        -   **Target:** The URL of your deployed Cloudflare Worker (e.g., `your-worker-name.your-account.workers.dev`).
-        -   **Proxy status:** `Proxied` (orange cloud)
-
-    This will make your Worker accessible at `https://api.yourdomain.com`.
-
-3.  **Update Frontend API Calls:**
-    Currently, your frontend uses relative paths like `/api/posts`. For production deployment with a custom domain, you'll need to tell your frontend where your API lives.
-
-    **Recommendation:** Use an environment variable in your frontend to define the API base URL.
-
-    -   **In `client/.env` (for local development):**
-        ```
-        VITE_API_BASE_URL="http://localhost:3000"
-        ```
-    -   **In Cloudflare Pages Environment Variables (for production):**
-        Add a new environment variable:
-        ```
-        VITE_API_BASE_URL="https://api.yourdomain.com"
-        ```
-    -   **Modify your frontend code (e.g., `client/src/components/Home.tsx` and `client/src/components/Admin.tsx`):**
-        Change `fetch("/api/posts")` to `fetch(`${import.meta.env.VITE_API_BASE_URL}/api/posts")`.
-        You'll need to apply this change wherever your frontend makes API calls to your backend.
+This starts:
+- Frontend on `http://localhost:5173`
+- Backend on `http://127.0.0.1:8787`
+- Shared types in watch mode
 
 ---
+
+## Key Features
+
+### Content Management
+- Rich text editor (Tiptap) with full formatting
+- Multiple images per post with carousel gallery
+- Focal point editor for image positioning
+- Automatic WebP conversion (85% quality)
+- Draft/Published/Scheduled post status
+- Tags system with autocomplete
+- 15 predefined categories + custom
+
+### User Experience
+- Infinite scroll with Intersection Observer
+- Server-side search (title, description, category)
+- Four theme options (dark/light variants)
+- Responsive grid layouts (1-4 columns)
+- Back to top button, breadcrumbs, loading skeletons
+
+### User Profiles
+- Display name and avatar customization
+- Letter avatars, preset icons, or custom images
+- Theme preference persistence
+- Account settings page
+
+### Social Features
+- Comments with likes
+- Share buttons (copy link)
+- Reading time estimates
+- Related posts suggestions
+
+### SEO
+- Dynamic sitemap.xml
+- Open Graph + Twitter Cards
+- JSON-LD structured data
+- Proper heading hierarchy
+
+---
+
+## Development Commands
+
+```bash
+# Full stack development
+bun run dev
+
+# Individual services
+cd client && bun run dev          # Frontend only
+bunx wrangler dev --config server/wrangler.toml  # Backend only
+cd shared && bun run dev          # Types watch mode
+
+# Build
+bun run build                     # Full monorepo
+
+# Database seeding
+cd server && bun run seed         # Add starter posts
+
+# Deploy backend
+cd server && bunx wrangler deploy
+```
+
+---
+
+## Database Setup
+
+### New Project Setup
+Run the combined migration in Supabase SQL Editor:
+```bash
+# Copy contents from:
+server/migrations/APPLY_ALL_MIGRATIONS.sql
+```
+
+### Tables
+- `posts` - Blog posts with status, scheduling
+- `post_images` - Image gallery with focal points, alt text
+- `profiles` - User profiles with avatars, roles, theme
+- `comments` - Post comments
+- `comment_likes` - Comment likes (one per user)
+- `tags` / `post_tags` - Tag system
+
+---
+
+## Deployment
+
+### Backend (Cloudflare Workers)
+```bash
+cd server
+wrangler login
+wrangler secret put SUPABASE_URL
+wrangler secret put SUPABASE_ANON_KEY
+wrangler deploy
+```
+
+### Frontend (Cloudflare Pages)
+1. Connect GitHub repository in Cloudflare Pages
+2. Build settings:
+   - Build command: `bun run build`
+   - Output directory: `client/dist`
+3. Environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+
+---
+
+## API Endpoints
+
+```
+GET  /api/posts                    # Paginated posts (?limit, ?offset, ?search)
+GET  /api/posts/:id                # Single post with images
+POST /api/posts                    # Create post (admin)
+PUT  /api/posts/:id                # Update post (admin)
+DELETE /api/posts/:id              # Delete post (admin)
+GET  /api/posts/:id/comments       # Comments (?sort=likes|newest|oldest)
+POST /api/posts/:id/comments       # Add comment (authenticated)
+POST /api/comments/:id/like        # Toggle like (authenticated)
+DELETE /api/comments/:id           # Delete comment (owner only)
+GET  /api/tags                     # All available tags
+GET  /sitemap.xml                  # Dynamic sitemap
+```
+
+---
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [CLAUDE.md](./CLAUDE.md) | Complete technical reference |
+| [TODO.md](./TODO.md) | Feature tracker & roadmap |
+| [docs/TESTING.md](./docs/TESTING.md) | Testing guide for features |
+| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Detailed deployment guide |
+
+---
+
+## License
+
+MIT License - see [LICENSE](./LICENSE)

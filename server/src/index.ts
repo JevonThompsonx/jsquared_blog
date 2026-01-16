@@ -11,6 +11,8 @@ import { authMiddleware } from "./middleware/auth"; // Import the new middleware
 interface Bindings {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  DEV_MODE?: string;
 }
 
 // Cloudflare Workers types for scheduled events
@@ -1971,9 +1973,19 @@ app.put("/api/posts/:postId/tags", authMiddleware, async (c) => {
 
 // --- SCHEDULED CRON JOB ---
 // Auto-publish scheduled posts every 15 minutes
-async function autoPublishScheduledPosts(env: Bindings) {
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+async function autoPublishScheduledPosts(env: Bindings): Promise<{
+  found: number;
+  published: number;
+  posts: { id: number; title: string; status: string }[];
+}> {
+  const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
+  const supabase = createClient(env.SUPABASE_URL, supabaseKey);
   const now = new Date().toISOString();
+  const result = {
+    found: 0,
+    published: 0,
+    posts: [] as { id: number; title: string; status: string }[],
+  };
 
   try {
     // Find all scheduled posts that are past their scheduled time
@@ -1985,14 +1997,15 @@ async function autoPublishScheduledPosts(env: Bindings) {
 
     if (fetchError) {
       console.error("Error fetching scheduled posts:", fetchError);
-      return;
+      return result;
     }
 
     if (!scheduledPosts || scheduledPosts.length === 0) {
       console.log("No scheduled posts to publish");
-      return;
+      return result;
     }
 
+    result.found = scheduledPosts.length;
     console.log(`Found ${scheduledPosts.length} scheduled post(s) to publish`);
 
     // Auto-publish each post
@@ -2008,16 +2021,123 @@ async function autoPublishScheduledPosts(env: Bindings) {
 
       if (updateError) {
         console.error(`Failed to publish post ${post.id}:`, updateError);
+        result.posts.push({ id: post.id, title: post.title, status: "failed" });
       } else {
-        console.log(`✅ Published post ${post.id}: "${post.title}"`);
+        console.log(`Published post ${post.id}: "${post.title}"`);
+        result.published++;
+        result.posts.push({ id: post.id, title: post.title, status: "published" });
       }
     }
 
-    console.log(`Successfully published ${scheduledPosts.length} post(s)`);
+    console.log(`Successfully published ${result.published} post(s)`);
   } catch (error) {
     console.error("Error in autoPublishScheduledPosts:", error);
   }
+
+  return result;
 }
+
+// --- DEBUG ENDPOINT (Always available - safe, no secrets exposed) ---
+// GET /api/test/env - Check which env vars are set (for debugging .dev.vars issues)
+app.get("/api/test/env", (c) => {
+  return c.json({
+    message: "Environment variable status (values not shown for security)",
+    timestamp: new Date().toISOString(),
+    env: {
+      DEV_MODE: {
+        isSet: Boolean(c.env.DEV_MODE),
+        value: c.env.DEV_MODE || "(not set)",
+      },
+      SUPABASE_URL: {
+        isSet: Boolean(c.env.SUPABASE_URL),
+        // Show partial URL for debugging (safe - it's not a secret)
+        preview: c.env.SUPABASE_URL ? c.env.SUPABASE_URL.substring(0, 30) + "..." : "(not set)",
+      },
+      SUPABASE_ANON_KEY: {
+        isSet: Boolean(c.env.SUPABASE_ANON_KEY),
+        // Just show if it's set, don't expose the key
+        length: c.env.SUPABASE_ANON_KEY?.length || 0,
+      },
+      SUPABASE_SERVICE_ROLE_KEY: {
+        isSet: Boolean(c.env.SUPABASE_SERVICE_ROLE_KEY),
+        // Just show if it's set, don't expose the key
+        length: c.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+      },
+    },
+    tips: [
+      "If DEV_MODE is not set, check that server/.dev.vars exists",
+      "Make sure .dev.vars has no quotes around values (KEY=value not KEY=\"value\")",
+      "Restart wrangler dev after changing .dev.vars",
+    ],
+  });
+});
+
+// --- TEST ENDPOINT FOR CRON (Development Only) ---
+// Manually trigger the scheduled job for testing
+// GET /api/test/cron - Trigger cron job manually (for local testing)
+app.get("/api/test/cron", async (c) => {
+  if (c.env.DEV_MODE !== "true") {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  console.log("Manual cron trigger requested at:", new Date().toISOString());
+  
+  const result = await autoPublishScheduledPosts(c.env);
+  
+  return c.json({
+    message: "Cron job executed",
+    timestamp: new Date().toISOString(),
+    usingServiceRoleKey: Boolean(c.env.SUPABASE_SERVICE_ROLE_KEY),
+    result: {
+      scheduledPostsFound: result.found,
+      postsPublished: result.published,
+      details: result.posts,
+    },
+  });
+});
+
+// GET /api/test/scheduled-posts - View currently scheduled posts (for debugging)
+app.get("/api/test/scheduled-posts", async (c) => {
+  if (c.env.DEV_MODE !== "true") {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+  const now = new Date().toISOString();
+  
+  const { data: scheduledPosts, error } = await supabase
+    .from("posts")
+    .select("id, title, status, scheduled_for, created_at")
+    .eq("status", "scheduled")
+    .order("scheduled_for", { ascending: true });
+  
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+  
+  // Add helpful info about when each post will be published
+  const postsWithInfo = (scheduledPosts || []).map(post => {
+    const scheduledTime = new Date(post.scheduled_for);
+    const currentTime = new Date(now);
+    const isPastDue = scheduledTime <= currentTime;
+    const timeUntilPublish = scheduledTime.getTime() - currentTime.getTime();
+    
+    return {
+      ...post,
+      isPastDue,
+      timeUntilPublish: isPastDue ? "Ready to publish" : `${Math.ceil(timeUntilPublish / 1000 / 60)} minutes`,
+      scheduledForLocal: scheduledTime.toLocaleString(),
+    };
+  });
+  
+  return c.json({
+    currentTime: now,
+    currentTimeLocal: new Date(now).toLocaleString(),
+    totalScheduled: postsWithInfo.length,
+    pastDue: postsWithInfo.filter(p => p.isPastDue).length,
+    posts: postsWithInfo,
+  });
+})
 
 // --- SERVER SETUP ---
 // No need for Node.js 'serve' in Cloudflare Workers

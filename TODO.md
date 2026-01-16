@@ -1,23 +1,23 @@
 # J²Adventures Blog - Project Tracker
 
-> **Last Updated**: January 2, 2026 | **Version**: 0.9.0
+> **Last Updated**: January 15, 2026 | **Version**: 0.9.2
 
 ---
 
-## 📋 Quick Reference
+## Quick Reference
 
 | Component | Technology | Status |
 |-----------|------------|--------|
-| Frontend | React 19 + Vite + TailwindCSS 4 | ✅ Deployed |
-| Backend | Hono (Cloudflare Worker) | ✅ Deployed |
-| Database | Supabase PostgreSQL | ✅ Configured |
-| Auth | Supabase Auth | ✅ Working |
-| Storage | Supabase Storage (WebP) | ✅ Working |
-| Deployment | Cloudflare Pages + Workers | ✅ Live |
+| Frontend | React 19 + Vite + TailwindCSS 4 | Deployed |
+| Backend | Hono (Cloudflare Worker) | Deployed |
+| Database | Supabase PostgreSQL | Configured |
+| Auth | Supabase Auth | Working |
+| Storage | Supabase Storage (WebP) | Working |
+| Deployment | Cloudflare Pages + Workers | Live |
 
 ---
 
-## ✅ Completed Features
+## Completed Features
 
 ### Core Infrastructure
 - [x] Bun workspace monorepo (client/server/shared)
@@ -29,15 +29,9 @@
 
 ### User Profiles & Authentication
 - [x] Display name support (optional, falls back to email)
-- [x] Profile avatars with 3 options:
-  - Letter avatar (first letter of name)
-  - Preset adventure icons (hiker, camper, explorer, etc.)
-  - Custom image upload
+- [x] Profile avatars with 3 options: letter, preset icons, custom image
 - [x] 10 color choices for letter/icon avatars
 - [x] Account settings page (`/settings`)
-  - Edit display name
-  - Change email (with verification)
-  - Update password
 - [x] Profile dropdown in navbar with avatar
 - [x] Theme preference per profile (persists across sessions)
 - [x] Profile picture cropping before upload
@@ -65,7 +59,7 @@
 - [x] Clickable category badges on all post cards
 
 ### Image Handling
-- [x] **Multiple images per post** (image gallery)
+- [x] Multiple images per post (image gallery)
 - [x] Image carousel with navigation arrows
 - [x] Focal point editor for image positioning
 - [x] Automatic WebP conversion (85% quality)
@@ -73,7 +67,7 @@
 - [x] Smart file naming with timestamps
 - [x] Old image cleanup on replacement
 - [x] URL paste + file upload options
-- [x] URL-to-gallery image conversion
+- [x] Image alt text for accessibility and SEO
 
 ### Admin Features
 - [x] Role-based access control (admin/viewer)
@@ -87,24 +81,28 @@
 - [x] robots.txt + dynamic sitemap.xml
 - [x] Open Graph + Twitter Card meta tags
 - [x] JSON-LD structured data (Organization, BlogPosting, Breadcrumbs)
-- [x] Proper heading hierarchy (h1 → h2 → h3)
+- [x] Proper heading hierarchy (h1 -> h2 -> h3)
 - [x] Canonical URLs
 - [x] 404 page with adventure theme
 
 ### Rich Text Editor
 - [x] Tiptap integration with React
-- [x] Full-featured toolbar (bold, italic, headings, lists, links, code blocks, etc.)
+- [x] Full-featured toolbar (bold, italic, headings, lists, links, code blocks)
 - [x] Auto-loads existing content when editing posts
 - [x] HTML content rendering on post detail pages
 - [x] Plain text extraction for post previews and meta descriptions
 
-### Draft System
-- [x] Draft/published status field for posts
+### Draft & Scheduling System
+- [x] Draft/published/scheduled status field for posts
 - [x] Save posts as drafts before publishing
-- [x] Fixed draft visibility and scroll issues
+- [x] Post scheduling with datetime picker
+- [x] Auto-publish via Cloudflare Workers cron (every 15 min)
+- [x] Request-time auto-publish fallback
+- [x] Blue "SCHEDULED" badge for admin visibility
+- [x] Timezone-aware datetime handling
 
 ### Navigation & UX
-- [x] Breadcrumbs (Home → Category → Post)
+- [x] Breadcrumbs (Home -> Category -> Post)
 - [x] Loading skeleton for post cards
 - [x] Fixed initial load scroll behavior
 - [x] "Back to Top" button on long pages
@@ -117,6 +115,13 @@
 - [x] Sort by likes, newest, oldest
 - [x] Login prompt for unauthenticated users
 - [x] Relative time formatting (just now, 5m ago, etc.)
+
+### Tags System
+- [x] Tags table with predefined tags (10 built-in)
+- [x] Custom tag creation
+- [x] Tag autocomplete with keyboard navigation
+- [x] Tags displayed on post cards and detail pages
+- [x] Many-to-many relationship (posts <-> tags)
 
 ### Engagement Features
 - [x] Related/Suggested Posts component (by category)
@@ -131,7 +136,7 @@
 
 ---
 
-## 🚧 In Progress / Next Up
+## In Progress / Next Up
 
 ### High Priority
 
@@ -145,28 +150,26 @@
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Post Scheduling | Medium | Set future publish date for drafts |
 | Bookmarks/Favorites | Medium | Let users save posts for later |
-| Tag System | Medium | Multiple tags per post (beyond categories) |
+| Tag Pages | Easy | `/tag/:slug` - show posts with tag |
 | Email Notifications | Medium | Notify when someone replies to your comment |
-| Image Alt Text | Easy | Accessibility improvement for gallery images |
+| RSS Feed | Easy | `/feed.xml` endpoint |
 
 ### Lower Priority (Polish)
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Map View 🗺️ | High | Unique differentiator! Add location field to posts |
+| Map View | High | Add location field to posts, unique differentiator |
 | Post Series/Collections | Medium | Group related posts together |
-| RSS Feed | Easy | `/feed.xml` endpoint |
 | PWA Support | Medium | Service worker + manifest for offline |
 | Newsletter | Medium | Mailchimp/ConvertKit integration |
 | Post Analytics | Medium | Track view counts, popular posts |
 | Multi-language | High | i18n support for international readers |
-| Date organization | Medium | Organize by published date for posted content and drafts|
+| Date organization | Medium | Organize by published date |
 
 ---
 
-## 💡 Quick Wins (< 1 hour each)
+## Quick Wins (< 1 hour each)
 
 - [x] "Back to Top" button on long pages
 - [x] Loading skeleton for post cards
@@ -174,15 +177,15 @@
 - [x] Confirmation dialog before deleting posts
 - [x] Show image file size before upload
 - [x] Dark mode toggle in settings (persist preference)
-- [ ] Date formatting options (relative vs absolute)
 - [x] Copy post link button on post detail page
+- [ ] Date formatting options (relative vs absolute)
 - [ ] "Continue reading" indicator for long posts
 - [ ] Estimated upload time for large images
 - [ ] Keyboard navigation for image gallery (arrow keys)
 
 ---
 
-## 🎨 UI/UX Ideas
+## UI/UX Ideas
 
 ### Homepage Enhancements
 - [ ] Featured/pinned posts at the top
@@ -211,13 +214,13 @@
 
 ---
 
-## 🏗️ Architecture Notes
+## Architecture Notes
 
 ### API Endpoints
 
 ```
 GET  /api/posts                    - Paginated posts (?limit, ?offset, ?search)
-GET  /api/posts/:id                - Single post with images
+GET  /api/posts/:id                - Single post with images and tags
 POST /api/posts                    - Create post (admin)
 PUT  /api/posts/:id                - Update post (admin)
 DELETE /api/posts/:id              - Delete post (admin)
@@ -225,6 +228,9 @@ GET  /api/posts/:id/comments       - Get comments (?sort=likes|newest|oldest)
 POST /api/posts/:id/comments       - Add comment (authenticated)
 POST /api/comments/:id/like        - Toggle like (authenticated)
 DELETE /api/comments/:id           - Delete comment (owner only)
+GET  /api/tags                     - All available tags
+POST /api/tags                     - Create tag (admin)
+PUT  /api/posts/:id/tags           - Update post tags (admin)
 GET  /sitemap.xml                  - Dynamic sitemap
 ```
 
@@ -244,34 +250,36 @@ GET  /sitemap.xml                  - Dynamic sitemap
 ### Database Schema
 
 ```sql
-posts: id, created_at, title, description, image_url, category, author_id, type, status
-post_images: id, post_id, image_url, sort_order, focal_point, created_at
+posts: id, created_at, title, description, image_url, category, author_id, type, status, scheduled_for, published_at
+post_images: id, post_id, image_url, sort_order, focal_point, alt_text, created_at
 profiles: id (FK auth.users), username, avatar_url, role, theme_preference
 comments: id, created_at, content, post_id, user_id
 comment_likes: id, comment_id, user_id (unique constraint)
+tags: id, name, slug, created_at
+post_tags: post_id, tag_id, created_at (junction table)
 ```
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `server/src/index.ts` | API routes, pagination, WebP conversion |
+| `server/src/index.ts` | API routes, pagination, WebP conversion, cron |
 | `server/src/middleware/auth.ts` | JWT verification |
 | `client/src/main.tsx` | Routing, themes |
 | `client/src/context/AuthContext.tsx` | Auth state + profile management |
 | `client/src/components/Home.tsx` | Homepage + infinite scroll |
-| `client/src/components/AccountSettings.tsx` | User settings page |
-| `client/src/components/ProfileAvatar.tsx` | Avatar display component |
-| `client/src/components/AvatarPicker.tsx` | Avatar selection modal |
+| `client/src/components/Admin.tsx` | Post creation with tags/scheduling |
+| `client/src/components/EditPost.tsx` | Post editing |
+| `client/src/components/TagInput.tsx` | Tag autocomplete component |
+| `client/src/components/ImageUploader.tsx` | Image upload with alt text |
 | `client/src/components/ImageGallery.tsx` | Multi-image carousel |
-| `client/src/components/ImageUploader.tsx` | Image upload with focal point |
 | `client/src/components/Comments.tsx` | Comments with likes |
 | `client/src/components/SEO.tsx` | Meta tags + structured data |
 | `shared/src/types/index.ts` | Shared TypeScript types |
 
 ---
 
-## 📊 Storage & Limits
+## Storage & Limits
 
 ### Supabase Free Tier
 - **Storage**: 1GB (~3,300-10,000 images at 100-300KB each)
@@ -282,11 +290,11 @@ comment_likes: id, comment_id, user_id (unique constraint)
 ### When to Upgrade
 - Approaching 800MB storage usage
 - Hitting bandwidth limits consistently
-- **Supabase Pro**: $25/month → 8GB storage + 50GB bandwidth
+- **Supabase Pro**: $25/month -> 8GB storage + 50GB bandwidth
 
 ---
 
-## 🛠️ Development Commands
+## Development Commands
 
 ```bash
 # Install dependencies
@@ -302,71 +310,65 @@ cd shared && bun run dev          # Types watch mode
 
 # Build
 bun run build                     # Full monorepo build
-bun run build:client              # Frontend only
-bun run build:server              # Backend only
 
 # Seed database
 cd server && bun run seed
 
 # Deploy
 cd server && bunx wrangler deploy  # Backend to Workers
-# Frontend: Push to GitHub → Cloudflare Pages auto-deploys
-```
-
-### Environment Files
-
-**`client/.env`**
-```
-VITE_SUPABASE_URL=your_url
-VITE_SUPABASE_ANON_KEY=your_key
-```
-
-**`server/.dev.vars`** (local dev)
-```
-SUPABASE_URL="your_url"
-SUPABASE_ANON_KEY="your_key"
+# Frontend: Push to GitHub -> Cloudflare Pages auto-deploys
 ```
 
 ---
 
-## 🎯 Feature Roadmap
+## Feature Roadmap
 
-### Phase 1: Content Creation ✅ Complete
-- ~~Rich text editor~~ ✅
-- ~~Draft/publish workflow~~ ✅
-- ~~Multiple images per post~~ ✅
-- ~~Focal point editor~~ ✅
+### Phase 1: Content Creation - COMPLETE
+- Rich text editor
+- Draft/publish workflow
+- Multiple images per post
+- Focal point editor
+- Post scheduling
+- Tags system
+- Image alt text
 
-### Phase 2: User Experience ✅ Mostly Complete
-- ~~User profiles~~ ✅
-- ~~Avatar customization~~ ✅
-- ~~Account settings~~ ✅
-- ~~Comments system~~ ✅
-- ~~Share buttons~~ ✅
-- Post likes (pending)
+### Phase 2: User Experience - COMPLETE
+- User profiles
+- Avatar customization
+- Account settings
+- Comments system
+- Share buttons
 
-### Phase 3: Discovery
-- Public author profiles
-- Advanced search (date range, filters)
-- Tag system (in addition to categories)
-- Map view with adventure locations
-- RSS feed
+### Phase 3: Discovery - IN PROGRESS
+- [ ] Post likes
+- [ ] Public author profiles
+- [ ] Tag pages (`/tag/:slug`)
+- [ ] Advanced search (date range, filters)
+- [ ] Map view with adventure locations
+- [ ] RSS feed
 
 ### Phase 4: Engagement
-- Post bookmarks/favorites
-- Email notifications
-- Newsletter integration
-- Post scheduling
+- [ ] Post bookmarks/favorites
+- [ ] Email notifications
+- [ ] Newsletter integration
 
 ### Phase 5: Polish
-- PWA offline support
-- Analytics dashboard
-- Multi-language support
-- Post revision history
+- [ ] PWA offline support
+- [ ] Analytics dashboard
+- [ ] Multi-language support
+- [ ] Post revision history
 
 ---
 
-## 📝 Recent Changes
+## Recent Changes
+
+### v0.9.2 (January 12, 2026)
+- Added tags system with autocomplete
+- Added post scheduling with cron auto-publish
+- Added image alt text for accessibility
+- Fixed timezone issues with scheduling
+- Fixed display name save getting stuck
+- Added blue "SCHEDULED" badge indicator
 
 ### v0.9.1 (January 2, 2026)
 - Added theme preference per profile (persists to database)
@@ -391,7 +393,7 @@ SUPABASE_ANON_KEY="your_key"
 
 ---
 
-## 🔗 Resources
+## Resources
 
 - [Supabase Dashboard](https://supabase.com/dashboard)
 - [Cloudflare Workers](https://dash.cloudflare.com)

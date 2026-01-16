@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-J²Adventures Blog is a full-stack blog application built as a Bun workspace monorepo, featuring a React frontend deployed to Cloudflare Pages and a Hono API backend running as a Cloudflare Worker. The application uses Supabase for authentication, PostgreSQL database, and Supabase Storage for image hosting with automatic WebP conversion.
+J²Adventures Blog is a full-stack travel blog application built as a Bun workspace monorepo, featuring a React frontend deployed to Cloudflare Pages and a Hono API backend running as a Cloudflare Worker. The application uses Supabase for authentication, PostgreSQL database, and Supabase Storage for image hosting with automatic WebP conversion.
+
+**Live Site**: [jsquaredadventures.com](https://jsquaredadventures.com)
 
 ## Tech Stack
 
@@ -15,6 +17,7 @@ J²Adventures Blog is a full-stack blog application built as a Bun workspace mon
 - **Authentication**: Supabase Auth
 - **Image Storage**: Supabase Storage with automatic WebP conversion (85% quality)
 - **Deployment**: Cloudflare Pages (frontend) + Cloudflare Workers (backend)
+- **Rich Text**: Tiptap editor
 
 ## Monorepo Structure
 
@@ -90,13 +93,23 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ### Server Development (`.dev.vars` in `server/`)
 
-**REQUIRED for local development with wrangler dev:**
+**REQUIRED for local development:**
 ```
-SUPABASE_URL="your_supabase_project_url"
-SUPABASE_ANON_KEY="your_supabase_anon_key"
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-The `.dev.vars` file is used by `wrangler dev` for local development. Copy from `.dev.vars.example` and fill in your Supabase credentials. This file is gitignored to prevent committing secrets.
+**OPTIONAL for local cron/scheduled post testing:**
+```
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+DEV_MODE=true
+```
+
+**IMPORTANT**: Do NOT use quotes around values in `.dev.vars`. Use `KEY=value` not `KEY="value"`.
+
+The `.dev.vars` file is loaded by `server/dev-server.ts` for local development. Copy from `.dev.vars.example` and fill in your Supabase credentials. This file is gitignored to prevent committing secrets.
+
+When adding new environment variables, you must also add them to the `mockEnv` object in `server/dev-server.ts` for them to be available to the Hono app during local development.
 
 ### Server Production
 
@@ -115,16 +128,65 @@ For production deployment, set environment variables in Cloudflare Worker dashbo
 
 The Hono backend (`server/src/index.ts`) exposes:
 
+**Posts**
 - `GET /api/posts` - Fetch posts with pagination
   - Query params: `limit` (default 20, max 100), `offset` (default 0), `search` (optional)
   - Returns: `{ posts, total, limit, offset, hasMore }`
   - Supports server-side search across title, description, and category
+  - Includes tags with each post
 - `POST /api/posts` - Create new post (admin only)
 - `PUT /api/posts/:id` - Update post (admin only)
 - `DELETE /api/posts/:id` - Delete post (admin only)
-- `GET /api/posts/:id` - Fetch single post
+- `GET /api/posts/:id` - Fetch single post with images and tags
+
+**Comments**
+- `GET /api/posts/:id/comments` - Get comments for a post (?sort=likes|newest|oldest)
+- `POST /api/posts/:id/comments` - Add comment (authenticated)
+- `POST /api/comments/:id/like` - Toggle like on comment (authenticated)
+- `DELETE /api/comments/:id` - Delete comment (owner only)
+
+**Tags**
+- `GET /api/tags` - Fetch all available tags
+- `POST /api/tags` - Create new tag (admin only)
+- `PUT /api/posts/:id/tags` - Update tags for a post (admin only)
+
+**Other**
+- `GET /sitemap.xml` - Dynamic XML sitemap
 
 Protected routes use the `authMiddleware` which sets `c.get('user')` and `c.get('supabase')` for authenticated requests.
+
+### Scheduled Tasks (Cron)
+
+The backend includes a Cloudflare Workers cron trigger that runs every 15 minutes to auto-publish scheduled posts:
+- Configured in `server/wrangler.toml`: `crons = ["*/15 * * * *"]`
+- Handler in `server/src/index.ts` exports `scheduled` function
+- Also auto-publishes on request-time as fallback (in `GET /api/posts` and `GET /api/posts/:id`)
+
+#### Local Cron Testing
+
+To test scheduled post publishing locally:
+
+1. Add to `server/.dev.vars`:
+   ```
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   DEV_MODE=true
+   ```
+
+2. Restart the dev server (`bun run dev`)
+
+3. Use the test endpoints:
+   ```bash
+   # Check environment variables are loaded
+   curl http://127.0.0.1:8787/api/test/env
+   
+   # View scheduled posts and their timing
+   curl http://127.0.0.1:8787/api/test/scheduled-posts
+   
+   # Manually trigger the cron job
+   curl http://127.0.0.1:8787/api/test/cron
+   ```
+
+**Note**: The service role key bypasses Row Level Security (RLS), allowing the cron job to update posts without user authentication. These test endpoints only work when `DEV_MODE=true` and return 404 otherwise.
 
 ### Frontend Routes
 
@@ -239,9 +301,21 @@ All pages follow proper heading structure:
 
 Key tables:
 
-- `posts`: id, created_at, title, description, image_url, category, author_id, type
-- `profiles`: id (FK to auth.users), username, role
+- `posts`: id, created_at, title, description, image_url, category, author_id, type, status, scheduled_for, published_at
+- `post_images`: id, post_id, image_url, sort_order, focal_point, alt_text, created_at
+- `profiles`: id (FK to auth.users), username, avatar_url, role, theme_preference
+- `comments`: id, created_at, content, post_id, user_id
+- `comment_likes`: id, comment_id, user_id (unique constraint)
+- `tags`: id, name, slug, created_at
+- `post_tags`: post_id, tag_id, created_at (junction table)
 - `auth.users`: Managed by Supabase Auth
+
+### Database Migrations
+
+Run combined migrations in Supabase SQL Editor:
+```sql
+-- Copy contents from: server/migrations/APPLY_ALL_MIGRATIONS.sql
+```
 
 ## TypeScript Configuration
 
@@ -321,4 +395,11 @@ This requires a `.env` file in `server/` with `SUPABASE_URL` and `SUPABASE_ANON_
 - `client/src/components/Category.tsx` - Category-filtered posts page with infinite scroll
 - `client/src/components/NotFound.tsx` - 404 error page with adventure theme
 - `client/src/components/SEO.tsx` - Reusable SEO component for meta tags and structured data
+- `client/src/components/TagInput.tsx` - Tag autocomplete component
+- `client/src/components/ImageUploader.tsx` - Image upload with focal point and alt text
+- `client/src/components/ImageGallery.tsx` - Multi-image carousel display
+- `client/src/components/Comments.tsx` - Comments section with likes
+- `client/src/components/AccountSettings.tsx` - User profile settings
+- `client/src/components/ProfileAvatar.tsx` - Avatar display component
+- `client/src/utils/dateTime.ts` - Timezone-aware datetime utilities
 - `client/public/robots.txt` - Search engine crawler instructions

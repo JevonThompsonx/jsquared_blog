@@ -25,9 +25,11 @@ const app = (await import('./src/index')).default;
 const mockEnv = {
   SUPABASE_URL: process.env.SUPABASE_URL || '',
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID || '',
   CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN || '',
   CLOUDFLARE_IMAGES_ACCOUNT_HASH: process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH || '',
+  DEV_MODE: process.env.DEV_MODE || '',
 };
 
 console.log('\n⛅️  Starting local Hono dev server...\n');
@@ -50,4 +52,6 @@ Bun.serve({
 
 console.log('✓ Server running on http://localhost:8787');
 console.log('✓ Using Supabase URL:', mockEnv.SUPABASE_URL ? 'configured' : 'missing');
+console.log('✓ DEV_MODE:', mockEnv.DEV_MODE || 'not set');
+console.log('✓ Service Role Key:', mockEnv.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'not set');
 console.log('\nReady to handle requests!\n');

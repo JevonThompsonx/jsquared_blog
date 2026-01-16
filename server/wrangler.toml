@@ -12,3 +12,11 @@ crons = ["*/15 * * * *"]
 SUPABASE_URL = "your_supabase_url"
 SUPABASE_ANON_KEY = "your_supabase_anon_key"
 
+# Optional for local cron testing (recommended for dev only)
+# SUPABASE_SERVICE_ROLE_KEY = "your_supabase_service_role_key"
+# DEV_MODE = "true"
+
+# Development settings
+# To test the cron trigger locally, use: wrangler dev --test-scheduled
+# Then send: curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"
+
