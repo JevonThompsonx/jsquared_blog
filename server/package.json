@@ -7,7 +7,9 @@
     "build": "~/.bun/bin/bun x tsc",
     "dev": "~/.bun/bin/bun run dev-server.ts",
     "deploy": "wrangler deploy --minify src/index.ts",
-    "seed": "~/.bun/bin/bun run src/seed-posts.ts"
+    "seed": "~/.bun/bin/bun run src/seed-posts.ts",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix"
   },
   "dependencies": {
     "@jsquash/jpeg": "^1.6.0",
@@ -18,7 +20,11 @@
     "shared": "workspace:*"
   },
   "devDependencies": {
+    "@eslint/js": "^9.28.0",
     "@types/bun": "latest",
+    "eslint": "^9.28.0",
+    "globals": "^16.2.0",
+    "typescript-eslint": "^8.34.0",
     "wrangler": "^4.27.0"
   }
 }

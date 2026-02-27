@@ -63,6 +63,7 @@ const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
       gridClass: gridClass,
       dynamicViewType: post.type,
       status: post.status,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Post type lacks tags field but API returns it at runtime
       tags: (post as any).tags || [], // Include tags from post
     };
   });

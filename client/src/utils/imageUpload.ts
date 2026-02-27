@@ -25,7 +25,7 @@ export async function uploadImageToStorage(file: File): Promise<string> {
       console.error("Session error:", result.error);
       throw new Error(`Authentication error: ${result.error.message}`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Session check failed:", err);
     throw err;
   }
@@ -104,6 +104,7 @@ export async function addImageRecord(
   sortOrder?: number,
   focalPoint?: string,
   altText?: string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- return value is raw JSON from the API with no shared type definition
 ): Promise<any> {
   const body: { image_url: string; sort_order?: number; focal_point?: string; alt_text?: string } = { image_url: imageUrl };
   if (sortOrder !== undefined) {
@@ -141,6 +142,7 @@ export async function updateImageFocalPoint(
   imageId: number,
   focalPoint: string,
   token: string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- return value is raw JSON from the API with no shared type definition
 ): Promise<any> {
   const response = await fetch(`/api/posts/${postId}/images/${imageId}/focal-point`, {
     method: "PUT",
@@ -167,6 +169,7 @@ export async function updateImageAltText(
   imageId: number,
   altText: string,
   token: string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- return value is raw JSON from the API with no shared type definition
 ): Promise<any> {
   const response = await fetch(`/api/posts/${postId}/images/${imageId}/alt-text`, {
     method: "PUT",

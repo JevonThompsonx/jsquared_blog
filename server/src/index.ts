@@ -1,11 +1,23 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
-import { createClient, User, SupabaseClient } from "@supabase/supabase-js";
+import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- no generated Supabase DB types; any is Supabase's convention
+import { createClient, type User, type SupabaseClient } from "@supabase/supabase-js";
 import { encode as encodeWebP } from "@jsquash/webp";
 import { decode as decodeJPEG } from "@jsquash/jpeg";
 import { decode as decodePNG } from "@jsquash/png";
 
-import { authMiddleware } from "./middleware/auth"; // Import the new middleware
+import { authMiddleware } from "./middleware/auth";
+import { validateEnv } from "./lib/env";
+import { getErrorMessage } from "./lib/errors";
+import {
+  createPostBodySchema,
+  updatePostBodySchema,
+  createCommentBodySchema,
+  createTagBodySchema,
+  updatePostTagsBodySchema,
+} from "shared";
 
 // Define the environment variables (Bindings) expected by the Worker
 interface Bindings {
@@ -22,7 +34,7 @@ interface ScheduledEvent {
 }
 
 interface ExecutionContext {
-  waitUntil(promise: Promise<any>): void;
+  waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
 }
 
@@ -33,7 +45,8 @@ interface UserWithRole extends User {
 
 // Define the Variables expected by the Worker
 interface Variables {
-  supabase: SupabaseClient<any, 'public', any>; // Explicitly type SupabaseClient
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- no generated Supabase schema types available
+  supabase: SupabaseClient<any, "public", any>;
   user: UserWithRole;
 }
 
@@ -237,10 +250,47 @@ async function reassignAllPostLayouts(
   }
 }
 
-const app = new Hono<HonoEnv>(); // Use the explicit HonoEnv
+const app = new Hono<HonoEnv>();
 
-// --- MIDDLEWARE ---
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
 app.use("*", logger());
+
+// Security headers on every response (X-Content-Type-Options, X-Frame-Options, etc.)
+app.use("*", secureHeaders());
+
+// CORS — restrict to the production domain and local dev servers.
+// The Vite proxy forwards requests during development, so localhost origins are required.
+const ALLOWED_ORIGINS = [
+  "https://jsquaredadventures.com",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+app.use(
+  "*",
+  cors({
+    origin: (origin) =>
+      ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]!,
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    exposeHeaders: ["Cache-Control"],
+    maxAge: 600,
+    credentials: true,
+  })
+);
+
+// Validate required Worker bindings on every request — fail fast if the Worker
+// was deployed without the required environment secrets.
+app.use("*", async (c, next) => {
+  try {
+    validateEnv(c.env);
+  } catch (err) {
+    console.error("[env validation]", err);
+    return c.json({ error: { code: "SERVER_ERROR", message: "Server misconfiguration" } }, 500);
+  }
+  await next();
+});
 
 // --- PUBLIC ROUTES (No Auth Required) ---
 app.get("/", (c) => {
@@ -497,9 +547,11 @@ app.get("/api/posts", async (c) => {
       .select("post_id, tags(*)")
       .in("post_id", postIds);
 
-    // Group tags by post_id
+    // Group tags by post_id.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join results (tags(*)) are untyped without generated schema
     const tagsByPostId: Record<number, any[]> = {};
     if (postTagsData) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       postTagsData.forEach((pt: any) => {
         if (!tagsByPostId[pt.post_id]) {
           tagsByPostId[pt.post_id] = [];
@@ -594,6 +646,7 @@ app.get("/api/posts/:id", async (c) => {
     .select("tags(*)")
     .eq("post_id", id);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join results are untyped without generated schema
   const tags = postTagsData?.map((pt: any) => pt.tags).filter(Boolean) || [];
 
   // Don't cache drafts or scheduled posts, only cache published posts
@@ -660,6 +713,7 @@ app.post("/api/posts", authMiddleware, async (c) => {
 
   // Detect content type and parse accordingly
   const contentType = c.req.header("Content-Type") || "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.req.json() returns any; FormData values are string | File
   let body: Record<string, any>;
 
   if (contentType.includes("application/json")) {
@@ -670,41 +724,30 @@ app.post("/api/posts", authMiddleware, async (c) => {
     body = await c.req.parseBody();
   }
 
-  let title = body.title as string;
-  const description = (body.description as string) || null;
-  const category = (body.category as string) || null;
-  const status = (body.status as string) || "published"; // Default to published
-  const scheduled_for = (body.scheduled_for as string) || null; // ISO date string for scheduled posts
-  // const grid_class = (body.grid_class as string) || null; // grid_class will be determined by server
-  const imageFile = body.image as File | undefined; // File from upload
-  const imageUrl = body.image_url as string | undefined; // URL from input
+  const imageFile = body.image as File | undefined; // File from upload; not validated by Zod
 
-  // Validate status
-  if (status !== "draft" && status !== "published" && status !== "scheduled") {
-    return c.json({ error: "Invalid status. Must be 'draft', 'published', or 'scheduled'" }, 400);
+  // Validate all text fields with Zod (same schema used by the client).
+  const parseResult = createPostBodySchema.safeParse({
+    title: body.title,
+    description: body.description,
+    category: body.category,
+    status: body.status,
+    scheduled_for: body.scheduled_for,
+    image_url: body.image_url,
+  });
+
+  if (!parseResult.success) {
+    const fieldErrors = parseResult.error.flatten().fieldErrors;
+    return c.json(
+      { error: { code: "VALIDATION_ERROR", message: "Invalid input", details: fieldErrors } },
+      400
+    );
   }
 
-  // Validate scheduled_for if status is scheduled
-  if (status === "scheduled") {
-    if (!scheduled_for) {
-      return c.json({ error: "scheduled_for is required when status is 'scheduled'" }, 400);
-    }
-    const scheduledDate = new Date(scheduled_for);
-    if (isNaN(scheduledDate.getTime())) {
-      return c.json({ error: "Invalid scheduled_for date format" }, 400);
-    }
-    if (scheduledDate <= new Date()) {
-      return c.json({ error: "scheduled_for must be in the future" }, 400);
-    }
-  }
+  const { title: rawTitle, description, category, status, scheduled_for, image_url: imageUrl } = parseResult.data;
 
-  // For drafts, allow empty title (use default). For published posts, title is required.
-  if (!title || title.trim() === "") {
-    if (status === "published") {
-      return c.json({ error: "Title is required for published posts" }, 400);
-    }
-    title = "Untitled Draft"; // Default title for drafts
-  }
+  // Drafts may have an empty title — assign a default so the DB constraint is met.
+  let title = rawTitle.trim() || "Untitled Draft";
 
   let finalImageUrl: string | null = null;
 
@@ -730,9 +773,9 @@ app.post("/api/posts", authMiddleware, async (c) => {
         originalFileName,
         extension
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Image upload/conversion process failed:", error);
-      return c.json({ error: `Image upload failed: ${error.message}` }, 500);
+      return c.json({ error: `Image upload failed: ${getErrorMessage(error)}` }, 500);
     }
   } else if (imageUrl) {
     // --- Image URL Handling ---
@@ -815,6 +858,7 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
 
   // Detect content type and parse accordingly
   const contentType = c.req.header("Content-Type") || "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Hono c.req.json() returns any; FormData values are string | File
   let body: Record<string, any>;
 
   if (contentType.includes("application/json")) {
@@ -825,44 +869,42 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
     body = await c.req.parseBody();
   }
 
-  let title = body.title as string;
+  const imageFile = body.image as File | undefined; // File from upload; not validated by Zod
 
-  const description = (body.description as string) || null;
-  const category = (body.category as string) || null;
-  const status = (body.status as string) || null;
-  const scheduled_for = body.scheduled_for as string | null;
-  const grid_class = (body.grid_class as string) || null;
-  const postType = (body.type as PostType) || null;
-  const imageFile = body.image as File | undefined; // File from upload
-  const imageUrl = body.image_url as string | undefined; // URL from input
+  // Validate text fields with Zod.
+  const parseResult = updatePostBodySchema.safeParse({
+    title: body.title,
+    description: body.description,
+    category: body.category,
+    status: body.status,
+    scheduled_for: body.scheduled_for,
+    image_url: body.image_url,
+    type: body.type,
+    grid_class: body.grid_class,
+  });
 
-  // Validate status if provided
-  if (status && status !== "draft" && status !== "published" && status !== "scheduled") {
-    return c.json({ error: "Invalid status. Must be 'draft', 'published', or 'scheduled'" }, 400);
+  if (!parseResult.success) {
+    const fieldErrors = parseResult.error.flatten().fieldErrors;
+    return c.json(
+      { error: { code: "VALIDATION_ERROR", message: "Invalid input", details: fieldErrors } },
+      400
+    );
   }
 
-  // Validate scheduled_for if status is scheduled
-  if (status === "scheduled") {
-    if (!scheduled_for) {
-      return c.json({ error: "scheduled_for is required when status is 'scheduled'" }, 400);
-    }
-    const scheduledDate = new Date(scheduled_for);
-    if (isNaN(scheduledDate.getTime())) {
-      return c.json({ error: "Invalid scheduled_for date format" }, 400);
-    }
-    if (scheduledDate <= new Date()) {
-      return c.json({ error: "scheduled_for must be in the future" }, 400);
-    }
-  }
+  const {
+    title: rawTitle,
+    description,
+    category,
+    status,
+    scheduled_for,
+    image_url: imageUrl,
+    type: postType,
+    grid_class,
+  } = parseResult.data;
 
-  // For drafts, allow empty title (use default). For published posts, title is required.
-  if (!title || title.trim() === "") {
-    if (status === "published") {
-      return c.json({ error: "Title is required for published posts" }, 400);
-    }
-    // If no title and it's a draft (or status not specified but will remain draft), use default
-    title = "Untitled Draft";
-  }
+  // Drafts may have an empty title — assign a default so the DB constraint is met.
+  // rawTitle can be null (from empty-string preprocess) or undefined (field not sent).
+  let title = rawTitle?.trim() || "Untitled Draft";
 
   // Ensure the user is authorized to edit this post (e.g., is the author or an admin)
   const { data: existingPost, error: fetchError } = await supabase
@@ -915,9 +957,9 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
         originalFileName,
         extension
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Image upload/conversion process failed (PUT):", error);
-      return c.json({ error: `Image upload failed: ${error.message}` }, 500);
+      return c.json({ error: `Image upload failed: ${getErrorMessage(error)}` }, 500);
     }
   } else if (imageUrl !== undefined) { // If imageUrl is explicitly provided (can be null to clear)
     // If an old image existed in Supabase and a new URL is provided (or cleared), delete the old one
@@ -935,19 +977,32 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
 
   // Determine scheduling fields based on status transition
   const finalStatus = status !== null ? status : existingPost.status;
-  let updateData: Record<string, any> = {
+
+  interface PostUpdatePayload {
+    title: string;
+    description: string | null;
+    image_url: string | null;
+    category: string | null;
+    grid_class: string | null;
+    type: PostType | null;
+    status: string;
+    scheduled_for?: string | null;
+    published_at?: string | null;
+  }
+
+  const updateData: PostUpdatePayload = {
     title: title,
-    description: description,
-    image_url: finalImageUrl, // Use the determined image URL
-    category: category,
-    grid_class: grid_class !== null ? grid_class : existingPost.grid_class, // Use new grid_class if provided, else existing
-    type: postType !== null ? postType : existingPost.type, // Use new type if provided, else existing
+    description: description ?? null,
+    image_url: finalImageUrl,
+    category: category ?? null,
+    grid_class: grid_class !== null && grid_class !== undefined ? grid_class : existingPost.grid_class,
+    type: postType !== null && postType !== undefined ? postType : existingPost.type,
     status: finalStatus,
   };
 
   // Handle scheduling fields based on status
   if (finalStatus === "scheduled") {
-    updateData.scheduled_for = scheduled_for;
+    updateData.scheduled_for = scheduled_for ?? null;
     updateData.published_at = null; // Clear published_at for scheduled posts
   } else if (finalStatus === "published") {
     updateData.scheduled_for = null; // Clear scheduled_for for published posts
@@ -1235,17 +1290,21 @@ app.post("/api/posts/:postId/comments", authMiddleware, async (c) => {
   const supabase = c.get("supabase");
   const user = c.get("user");
 
-  const body = await c.req.json();
-  const { content } = body;
-
-  if (!content || content.trim().length === 0) {
-    return c.json({ error: "Comment content is required" }, 400);
+  const rawBody = await c.req.json();
+  const commentParse = createCommentBodySchema.safeParse(rawBody);
+  if (!commentParse.success) {
+    const fieldErrors = commentParse.error.flatten().fieldErrors;
+    return c.json(
+      { error: { code: "VALIDATION_ERROR", message: "Invalid input", details: fieldErrors } },
+      400
+    );
   }
+  const { content } = commentParse.data;
 
   const { data, error } = await supabase
     .from("comments")
     .insert([{
-      content: content.trim(),
+      content,
       post_id: parseInt(postId),
       user_id: user.id
     }])
@@ -1519,7 +1578,15 @@ app.post("/api/posts/:postId/images/record", authMiddleware, async (c) => {
   }
 
   // Build insert data with optional focal_point and alt_text
-  const insertData: Record<string, any> = {
+  interface PostImageInsertPayload {
+    post_id: number;
+    image_url: string;
+    sort_order: number;
+    focal_point?: string;
+    alt_text?: string;
+  }
+
+  const insertData: PostImageInsertPayload = {
     post_id: parseInt(postId),
     image_url,
     sort_order: finalSortOrder,
@@ -1829,14 +1896,14 @@ app.post("/api/tags", authMiddleware, async (c) => {
     return c.json({ error: "Admin access required" }, 403);
   }
 
-  const body = await c.req.json();
-  const { name } = body;
+  const rawBody = await c.req.json();
+  const { name: rawName } = rawBody as { name?: unknown };
 
-  if (!name || typeof name !== "string" || name.trim() === "") {
+  if (!rawName || typeof rawName !== "string" || rawName.trim() === "") {
     return c.json({ error: "Tag name is required" }, 400);
   }
 
-  const trimmedName = name.trim();
+  const trimmedName = rawName.trim();
   const slug = trimmedName.toLowerCase().replace(/\s+/g, "-");
 
   // Check if tag already exists
@@ -2030,6 +2097,7 @@ app.get("/api/tags/:slug/posts", async (c) => {
 
   // Transform posts to include tags array
   const postsWithTags = (posts || []).map(post => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join results are untyped without generated schema
     const tags = post.post_tags?.map((pt: any) => pt.tags).filter(Boolean) || [];
     const { post_tags, ...postWithoutJoin } = post;
     return { ...postWithoutJoin, tags };
@@ -2219,12 +2287,16 @@ app.get("/api/test/scheduled-posts", async (c) => {
 })
 
 // --- SERVER SETUP ---
-// No need for Node.js 'serve' in Cloudflare Workers
+
+// Named export of the app instance — used by server/src/client.ts for type inference.
+// Cloudflare Workers ignores named exports; the runtime only uses the default export.
+export { app };
+
 export default {
   fetch: app.fetch,
   // Scheduled handler for cron triggers
   async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
-    console.log("🕐 Cron trigger fired:", new Date().toISOString());
+    console.log("Cron trigger fired:", new Date().toISOString());
     ctx.waitUntil(autoPublishScheduledPosts(env));
   },
 };

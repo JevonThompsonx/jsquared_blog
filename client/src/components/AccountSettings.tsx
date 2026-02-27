@@ -83,9 +83,9 @@ const AccountSettings: FC = () => {
       console.log("Username updated successfully");
       setNameSuccess(true);
       setTimeout(() => setNameSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating username:", err);
-      setNameError(err.message || "Failed to update display name");
+      setNameError(err instanceof Error ? err.message : "Failed to update display name");
     } finally {
       setIsUpdatingName(false);
     }
@@ -109,7 +109,7 @@ const AccountSettings: FC = () => {
       if (avatarUrl) {
         await updateProfile({ avatar_url: avatarUrl });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to update avatar:", err);
     } finally {
       setIsUpdatingAvatar(false);
@@ -132,8 +132,8 @@ const AccountSettings: FC = () => {
       setEmailSuccess(true);
       setNewEmail("");
       // Note: Supabase sends a confirmation email to the new address
-    } catch (err: any) {
-      setEmailError(err.message || "Failed to update email");
+    } catch (err: unknown) {
+      setEmailError(err instanceof Error ? err.message : "Failed to update email");
     } finally {
       setIsUpdatingEmail(false);
     }
@@ -176,8 +176,8 @@ const AccountSettings: FC = () => {
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => setPasswordSuccess(false), 3000);
-    } catch (err: any) {
-      setPasswordError(err.message || "Failed to update password");
+    } catch (err: unknown) {
+      setPasswordError(err instanceof Error ? err.message : "Failed to update password");
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -192,7 +192,7 @@ const AccountSettings: FC = () => {
       setDateFormat(newFormat);
       setDateFormatSuccess(true);
       setTimeout(() => setDateFormatSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating date format preference:", err);
     } finally {
       setIsUpdatingDateFormat(false);

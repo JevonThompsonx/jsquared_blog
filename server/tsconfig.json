@@ -8,7 +8,11 @@
     "noEmit": false,
     "baseUrl": ".", // Explicitly set baseUrl for server
     "paths": {
-      "hono/cloudflare": ["./node_modules/hono/dist/cloudflare/index.d.ts"]
+      "hono/cloudflare": ["./node_modules/hono/dist/cloudflare/index.d.ts"],
+      // Resolve the shared workspace package to its TypeScript source for type safety.
+      // At runtime (wrangler/bun), node_modules/shared/dist is used instead.
+      "shared": ["../shared/src/index.ts"],
+      "shared/*": ["../shared/src/*"]
     }
   },
   "references": [

@@ -1,5 +1,6 @@
 import { hc } from "hono/client";
-import type app from "./index";
+// Import the named Hono app instance (not the default Worker export) for correct type inference.
+import type { app } from "./index";
 
 export type AppType = typeof app;
 export type Client = ReturnType<typeof hc<AppType>>;

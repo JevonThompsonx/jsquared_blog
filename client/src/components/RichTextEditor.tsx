@@ -11,11 +11,8 @@ interface RichTextEditorProps {
 }
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
-  if (!editor) {
-    return null;
-  }
-
   const setLink = useCallback(() => {
+    if (!editor) return;
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('URL', previousUrl);
 
@@ -33,6 +30,10 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     // update link
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   }, [editor]);
+
+  if (!editor) {
+    return null;
+  }
 
   return (
     <div className="border-b border-[var(--border)] bg-[var(--background)] rounded-t-md p-2 flex flex-wrap gap-1">

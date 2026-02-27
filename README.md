@@ -143,7 +143,14 @@ bunx wrangler dev --config server/wrangler.toml  # Backend only
 cd shared && bun run dev          # Types watch mode
 
 # Build
-bun run build                     # Full monorepo
+bun run build                     # Full monorepo (tsc --build)
+
+# Lint
+cd client && bun run lint         # Client ESLint
+cd server && bun run lint         # Server ESLint
+
+# Tests (shared package — Zod schema validation)
+cd shared && bun test src
 
 # Database seeding
 cd server && bun run seed         # Add starter posts
@@ -222,6 +229,26 @@ GET  /api/authors/:username        # Author profile with posts
 GET  /sitemap.xml                  # Dynamic sitemap
 GET  /feed.xml                     # RSS feed
 ```
+
+---
+
+## Code Quality
+
+| Check | Tool | Command |
+|-------|------|---------|
+| Type-check | TypeScript project references | `bun x tsc --build` |
+| Lint (client) | ESLint + typescript-eslint | `cd client && bun run lint` |
+| Lint (server) | ESLint + typescript-eslint | `cd server && bun run lint` |
+| Tests | Bun native test runner | `cd shared && bun test src` |
+| CI | GitHub Actions | Auto-runs on PR / push to `main` |
+
+**CI pipeline** (`.github/workflows/ci.yml`) runs on every PR: build shared → type-check → lint → test → build client.
+
+**Input validation** uses [Zod](https://zod.dev) schemas defined in `shared/src/schemas/` — the same schemas are used by both the server (route validation) and client (form validation) for end-to-end type safety.
+
+**Security headers** — every API response includes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and related headers via Hono's `secureHeaders` middleware.
+
+**CORS** — the API only accepts requests from `jsquaredadventures.com` (and `localhost:5173` in development).
 
 ---
 

@@ -47,8 +47,8 @@ const PostDetail: FC = () => {
         }
         const data: PostWithImages = await response.json();
         setPost(data);
-      } catch (e: any) {
-        setError(e.message);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "An unexpected error occurred");
       } finally {
         setLoading(false);
       }
@@ -222,8 +222,10 @@ const PostDetail: FC = () => {
               </div>
 
               {/* Tags */}
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- PostWithImages.tags is typed as optional; cast needed for runtime access */}
               {(post as any).tags && (post as any).tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-8">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- tag items are untyped here; PostWithImages has tags?: Tag[] but cast is needed */}
                   {(post as any).tags.map((tag: any) => (
                     <span
                       key={tag.id}

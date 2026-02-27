@@ -54,6 +54,7 @@ const AvatarPicker: FC<AvatarPickerProps> = ({
   const [selectedIcon, setSelectedIcon] = useState<PresetAvatarId | null>(parsed.icon || null);
   const [selectedColor, setSelectedColor] = useState<string>(parsed.color || AVATAR_COLORS[0].hex);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- parseCurrentAvatar returns a discriminated shape; imageUrl only exists on mode==="image"
     parsed.mode === "image" ? (parsed as any).imageUrl : null
   );
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -144,8 +145,8 @@ const AvatarPicker: FC<AvatarPickerProps> = ({
       // Replace blob URL with actual uploaded URL
       URL.revokeObjectURL(previewBlobUrl);
       setUploadedImageUrl(uploadedUrl);
-    } catch (err: any) {
-      setUploadError(err.message || "Failed to upload image");
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Failed to upload image");
       // Revert to letter mode on error
       URL.revokeObjectURL(previewBlobUrl);
       setUploadedImageUrl(null);

@@ -84,6 +84,7 @@ const Admin: FC = () => {
       }
 
       // Check if category is custom
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- copiedData is untyped location state from router
       if (copiedData.category && !CATEGORIES.includes(copiedData.category as any)) {
         setIsCustomCategory(true);
         setCustomCategoryValue(copiedData.category);
@@ -216,9 +217,9 @@ const Admin: FC = () => {
       setTimeout(() => {
         window.location.href = "/";
       }, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Shuffle error:", error);
-      setShuffleMessage(`❌ Error: ${error.message}`);
+      setShuffleMessage(`❌ Error: ${error instanceof Error ? error.message : "An unexpected error occurred"}`);
     } finally {
       setIsShuffling(false);
     }
@@ -302,9 +303,9 @@ const Admin: FC = () => {
             console.log(`Adding database record for ${pendingFile.file.name}...`);
             await addImageRecord(postId, imageUrl, user.token, undefined, pendingFile.focalPoint, pendingFile.altText);
             console.log(`Database record added for ${pendingFile.file.name}`);
-          } catch (uploadErr: any) {
+          } catch (uploadErr: unknown) {
             console.error("Error uploading image:", pendingFile.file.name, uploadErr);
-            uploadErrors.push(`${pendingFile.file.name}: ${uploadErr.message}`);
+            uploadErrors.push(`${pendingFile.file.name}: ${uploadErr instanceof Error ? uploadErr.message : "Unknown error"}`);
           }
         }
         if (uploadErrors.length > 0) {
@@ -324,7 +325,7 @@ const Admin: FC = () => {
             body: JSON.stringify({ tags: selectedTags }),
           });
           console.log(`Tags saved for post ${postId}`);
-        } catch (tagErr: any) {
+        } catch (tagErr: unknown) {
           console.error("Failed to save tags:", tagErr);
         }
       }
@@ -345,9 +346,9 @@ const Admin: FC = () => {
       if (postId) {
         navigate(`/posts/${postId}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      alert(`Error creating post: ${error.message}`);
+      alert(`Error creating post: ${error instanceof Error ? error.message : "An unexpected error occurred"}`);
     } finally {
       setIsSubmitting(false);
     }

@@ -213,6 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log("updateProfile called with:", data);
 
     // Convert empty strings to null for database
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cleanData is a dynamic object built from known profile fields
     const cleanData: any = {};
     if (data.username !== undefined) {
       cleanData.username = data.username || null;
@@ -240,6 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTimeout(() => reject(new Error("Update timed out after 10 seconds. Please check your internet connection and Supabase permissions.")), 10000)
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Promise.race between Supabase and timeout requires any cast to destructure result
     const { error, data: result } = await Promise.race([updatePromise, timeoutPromise]) as any;
 
     if (error) {

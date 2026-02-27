@@ -79,6 +79,7 @@ const EditPost: FC = () => {
         }
 
         // Check if category is custom (not in predefined list)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- data.category may be a custom string not in the CATEGORIES tuple
         if (data.category && !CATEGORIES.includes(data.category as any)) {
           setIsCustomCategory(true);
           setCustomCategoryValue(data.category);
@@ -90,7 +91,7 @@ const EditPost: FC = () => {
           const tagsData = await tagsResponse.json();
           setSelectedTags(tagsData.tags || []);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("Error fetching post in EditPost.tsx:", e);
       }
     };
@@ -189,9 +190,9 @@ const EditPost: FC = () => {
           setPost((prev) => ({ ...prev, image_url: "" } as PostWithImages));
 
           console.log(`Converted URL image: ${(file.size / 1024).toFixed(0)}KB → ${(finalFile.size / 1024).toFixed(0)}KB`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Failed to convert URL image:", err);
-          alert(`Failed to convert image: ${err.message}\n\nThe image URL will be kept.`);
+          alert(`Failed to convert image: ${err instanceof Error ? err.message : "An unexpected error occurred"}\n\nThe image URL will be kept.`);
         } finally {
           setIsConvertingUrl(false);
         }
@@ -327,9 +328,9 @@ const EditPost: FC = () => {
 
       alert("Post deleted successfully!");
       navigate("/");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert(`Error deleting post: ${err.message}`);
+      alert(`Error deleting post: ${err instanceof Error ? err.message : "An unexpected error occurred"}`);
     }
   };
 
@@ -462,9 +463,9 @@ const EditPost: FC = () => {
             console.log(`Adding database record for ${pendingFile.file.name}...`);
             await addImageRecord(parseInt(id), imageUrl, token, undefined, pendingFile.focalPoint, pendingFile.altText);
             console.log(`Database record added for ${pendingFile.file.name}`);
-          } catch (uploadErr: any) {
+          } catch (uploadErr: unknown) {
             console.error("Error uploading image:", pendingFile.file.name, uploadErr);
-            uploadErrors.push(`${pendingFile.file.name}: ${uploadErr.message}`);
+            uploadErrors.push(`${pendingFile.file.name}: ${uploadErr instanceof Error ? uploadErr.message : "Unknown error"}`);
           }
         }
         if (uploadErrors.length > 0) {
@@ -483,15 +484,15 @@ const EditPost: FC = () => {
           body: JSON.stringify({ tags: selectedTags }),
         });
         console.log(`Tags updated for post ${id}`);
-      } catch (tagErr: any) {
+      } catch (tagErr: unknown) {
         console.error("Failed to update tags:", tagErr);
       }
 
       alert("Post updated successfully!");
       navigate(`/posts/${id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert(`Error updating post: ${err.message}`);
+      alert(`Error updating post: ${err instanceof Error ? err.message : "An unexpected error occurred"}`);
     } finally {
       setIsSubmitting(false);
     }
