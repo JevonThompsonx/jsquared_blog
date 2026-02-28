@@ -336,7 +336,6 @@ const Category: FC = () => {
       const params = new URLSearchParams({
         limit: POSTS_PER_PAGE.toString(),
         offset: currentOffset.toString(),
-        search: categoryName, // Use search to filter by category
       });
 
       const response = await fetch(`/api/posts?${params}`);
@@ -347,22 +346,23 @@ const Category: FC = () => {
       const data = await response.json();
 
       // Filter to only posts matching this exact category
+      const normalizedCategory = categoryName.toLowerCase();
       const categoryPosts = (data.posts || []).filter((post: Post) =>
-        post.category === categoryName
+        (post.category || "").toLowerCase() === normalizedCategory
       );
 
       if (isInitial) {
         setAllPosts(categoryPosts);
-        setTotalCount(categoryPosts.length);
+        setTotalCount(data.total || categoryPosts.length);
       } else {
         setAllPosts(prev => {
           const newPosts = [...prev, ...categoryPosts];
-          setTotalCount(newPosts.length);
+          setTotalCount(data.total || newPosts.length);
           return newPosts;
         });
       }
 
-      setHasMore(data.hasMore || false);
+      setHasMore(categoryPosts.length === POSTS_PER_PAGE && data.hasMore !== false);
     } catch (error) {
       console.error("Failed to fetch posts:", error);
     } finally {

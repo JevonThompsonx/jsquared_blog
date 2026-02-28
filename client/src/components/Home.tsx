@@ -127,28 +127,26 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
             )}
           </div>
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
-            <span
-              onClick={(e) => {
-                e.preventDefault();
-                window.location.href = `/category/${encodeURIComponent(category)}`;
-              }}
-              className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline cursor-pointer"
+            <Link
+              to={`/category/${encodeURIComponent(category)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline"
             >
               <CategoryIcon category={category} className="w-3.5 h-3.5" />
               {category}
-            </span>
+            </Link>
             {tags && tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {tags.slice(0, 3).map((tag) => (
-                  <Link
-                    key={tag.id}
-                    to={`/tag/${tag.slug}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
-                  >
-                    {tag.name}
-                  </Link>
-                ))}
+                  {tags.slice(0, 3).map((tag) => (
+                    <Link
+                      key={tag.id}
+                      to={`/tag/${tag.slug}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
+                    >
+                      {tag.name}
+                    </Link>
+                  ))}
                 {tags.length > 3 && (
                   <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">
                     +{tags.length - 3}
@@ -226,14 +224,18 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
               {tags && tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {tags.slice(0, 3).map((tag) => (
-                    <Link
+                    <button
                       key={tag.id}
-                      to={`/tag/${tag.slug}`}
-                      onClick={(e) => e.stopPropagation()}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.location.href = `/tag/${tag.slug}`;
+                      }}
                       className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
                     >
                       {tag.name}
-                    </Link>
+                    </button>
                   ))}
                   {tags.length > 3 && (
                     <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
@@ -308,16 +310,20 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
           </span>
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {tags.slice(0, 3).map((tag) => (
-                <Link
-                  key={tag.id}
-                  to={`/tag/${tag.slug}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
-                >
-                  {tag.name}
-                </Link>
-              ))}
+                {tags.slice(0, 3).map((tag) => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.location.href = `/tag/${tag.slug}`;
+                    }}
+                    className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
+                  >
+                    {tag.name}
+                  </button>
+                ))}
               {tags.length > 3 && (
                 <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
                   +{tags.length - 3}
@@ -513,7 +519,13 @@ export default function Home() {
   }, [isLoading, allPosts.length, showContent]);
 
   const displayedArticles = useMemo<Article[]>(() => {
-    return assignLayoutAndGridClass(allPosts);
+    const seenIds = new Set<number>();
+    const uniquePosts = allPosts.filter((post) => {
+      if (seenIds.has(post.id)) return false;
+      seenIds.add(post.id);
+      return true;
+    });
+    return assignLayoutAndGridClass(uniquePosts);
   }, [allPosts]);
 
   return (

@@ -1,11 +1,13 @@
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../supabase";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { createLogger } from "../utils/logger";
 
 export default function Auth() {
+  const logger = useMemo(() => createLogger("auth-ui"), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -13,76 +15,155 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const location = useLocation();
+  const { user, authStatus, retryAuth } = useAuth();
+  const redirectParam = new URLSearchParams(location.search).get("redirect");
+  const redirectPath = (location.state as { from?: Location })?.from?.pathname || redirectParam || "/";
+
+  const runWithTimeout = async <T,>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ): Promise<T> =>
+    await Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs),
+      ),
+    ]);
 
   // Redirect to home if user is already logged in
   useEffect(() => {
     if (user) {
-      navigate("/", { replace: true });
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectPath]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      setError(error.message);
+    const startTime = performance.now();
+
+    try {
+      logger.info("Login started", { hasEmail: Boolean(trimmedEmail) });
+      const { data, error } = await runWithTimeout(
+        supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password,
+        }),
+        10000,
+        "Login timed out. Please try again.",
+      );
+
+      const durationMs = Math.round(performance.now() - startTime);
+      if (error) {
+        logger.warn("Login failed", { durationMs, error });
+        setError(error.message);
+        return;
+      }
+
+      logger.info("Login completed", {
+        durationMs,
+        hasSession: Boolean(data?.session),
+        hasUser: Boolean(data?.user),
+      });
+
+      if (!data?.session) {
+        setError("Login succeeded but no session was returned. Please verify your email and try again.");
+        return;
+      }
+
+      retryAuth();
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "Login failed.";
+      logger.error("Login exception", { message });
+      setError(message);
+    } finally {
       setLoading(false);
     }
-    // Navigation is handled by useEffect when user becomes available
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignup = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    const startTime = performance.now();
 
-    // First, try to log in the user
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      logger.info("Signup started", { hasEmail: Boolean(trimmedEmail) });
 
-    if (loginError) {
-      // If login fails, check if it's because the user doesn't exist
-      // Supabase error message for user not found is typically 'Invalid login credentials'
-      if (loginError.message.includes("Invalid login credentials")) {
-        // User does not exist, proceed with signup
-        const { data: signupData, error: signupError } = await supabase.auth.signUp({
-          email,
+      const { error: loginError } = await runWithTimeout(
+        supabase.auth.signInWithPassword({
+          email: trimmedEmail,
           password,
-        });
+        }),
+        10000,
+        "Login timed out. Please try again.",
+      );
+
+      if (loginError && loginError.message.includes("Invalid login credentials")) {
+        const { data: signupData, error: signupError } = await runWithTimeout(
+          supabase.auth.signUp({
+            email: trimmedEmail,
+            password,
+          }),
+          10000,
+          "Signup timed out. Please try again.",
+        );
 
         if (signupError) {
+          logger.warn("Signup failed", { error: signupError });
           setError(signupError.message);
-          setLoading(false);
-        } else {
-          // If display name was provided and we have a user, update the profile
-          if (displayName.trim() && signupData.user) {
-            await supabase
-              .from("profiles")
-              .update({ username: displayName.trim() })
-              .eq("id", signupData.user.id);
-          }
-
-          alert(
-            "Signup successful! Please check your email to verify your account.",
-          );
-          setLoading(false);
-          // Navigation will happen via useEffect if auto-login occurs
+          return;
         }
-      } else {
-        // Other login errors (e.g., incorrect password for existing user)
-        setError(loginError.message);
-        setLoading(false);
+
+        if (displayName.trim() && signupData.user) {
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .update({ username: displayName.trim() })
+            .eq("id", signupData.user.id);
+          if (profileError) {
+            logger.warn("Signup profile update failed", { error: profileError });
+          }
+        }
+
+        const durationMs = Math.round(performance.now() - startTime);
+        logger.info("Signup completed", {
+          durationMs,
+          hasSession: Boolean(signupData.session),
+        });
+
+        alert("Signup successful! Please check your email to verify your account.");
+        return;
       }
+
+      if (loginError) {
+        logger.warn("Login failed during signup", { error: loginError });
+        setError(loginError.message);
+        return;
+      }
+
+      const durationMs = Math.round(performance.now() - startTime);
+      logger.info("Login succeeded during signup", { durationMs });
+      retryAuth();
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "Signup failed.";
+      logger.error("Signup exception", { message });
+      setError(message);
+    } finally {
+      setLoading(false);
     }
-    // Navigation is handled by useEffect when user becomes available
   };
 
   return (
@@ -95,7 +176,33 @@ export default function Auth() {
           {isSignupMode ? "Sign up to get started" : "Login to your account"}
         </p>
 
-        <form className="space-y-6">
+        {authStatus === "timedOut" && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-amber-800 text-sm">
+              We could not confirm your session. You can still try to log in, or retry the session check.
+            </p>
+            <button
+              type="button"
+              onClick={retryAuth}
+              className="mt-2 text-[var(--primary)] hover:text-[var(--primary-light)] font-semibold transition-colors"
+            >
+              Retry session check
+            </button>
+          </div>
+        )}
+
+        <form
+          className="space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (loading) return;
+            if (isSignupMode) {
+              void handleSignup();
+            } else {
+              void handleLogin();
+            }
+          }}
+        >
           <div>
             <label
               className="block text-sm font-semibold text-[var(--text-primary)] mb-2"
@@ -160,7 +267,6 @@ export default function Auth() {
           <button
             className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] transition-all disabled:opacity-50"
             type="submit"
-            onClick={isSignupMode ? handleSignup : handleLogin}
             disabled={loading}
           >
             {loading

@@ -25,7 +25,7 @@ try {
       process.env[key.trim()] = value;
     }
   });
-} catch (error) {
+} catch {
   console.log("⚠️  Could not load .dev.vars file, using system environment variables");
 }
 

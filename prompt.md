@@ -34,7 +34,7 @@ Override these defaults when the project demands it, but document why.
 ## Non-Negotiable Rules
 
 1. **Strict TypeScript Always** -- `strict: true` in `tsconfig.json`. No `any` unless explicitly justified with a `// eslint-disable-next-line @typescript-eslint/no-explicit-any` and a comment explaining why. `unknown` is the correct type when you genuinely don't know the shape.
-2. **Testing** -- Test every script, component, and API route locally before considering it done. If there's a build error or test failure, fix it before presenting it as finished.
+2. **Testing** -- Test every script, component, and API route locally before considering it done. If there's a build error or test failure, fix it before presenting it as finished. Check if my environment is fully setup for you to test something. If it is, proceed with all the tests you can. Only ask me to run tests myself if you cannot run the test on your end.
 3. **Clarity** -- If there's any ambiguity in what the application should do, ask questions before writing code. Don't guess. Especially don't guess on security-sensitive details like auth flows, data access patterns, or secret handling.
 4. **Repeatability** -- Every deployment must be safe to run multiple times. Database migrations must be idempotent. CI/CD pipelines must produce identical artifacts from identical inputs. Infrastructure-as-code must converge, not diverge.
 5. **Security First** -- Every decision considers attack surface. Validate all inputs. Sanitize all outputs. Never trust the client. Never expose secrets. Treat every Server Action and API route as a public HTTP endpoint. Explain security implications so I learn alongside the code.

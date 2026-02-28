@@ -33,7 +33,13 @@ export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 // Normalise empty strings from HTML forms/JSON bodies to null.
 // This prevents `.url()` and other validators from rejecting "" when the
 // field was intentionally left blank.
-const emptyStringToNull = <T>(v: T) => (v === "" ? null : v);
+const emptyStringToNull = (value: unknown) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? null : trimmed;
+  }
+  return value;
+};
 
 /**
  * Schema for validating POST /api/posts JSON body.

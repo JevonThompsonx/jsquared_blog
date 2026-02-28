@@ -1,6 +1,6 @@
 import React, { useState, CSSProperties, useRef, useEffect, lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import "./index.css";
 
 // Eager load critical components for initial render (Home is the main route)
@@ -80,18 +80,27 @@ const themes: Record<ThemeName, Theme> = {
 
 // Route that requires admin role
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, authStatus, profileStatus, retryAuth } = useAuth();
+  const location = useLocation();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingFallback />;
+  }
+
+  if (authStatus === "timedOut") {
+    return <AuthTimeoutPanel onRetry={retryAuth} />;
   }
 
   if (!user) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/auth" replace state={{ from: location }} />;
+  }
+
+  if (profileStatus === "loading") {
+    return <LoadingFallback />;
   }
 
   if (user.role !== 'admin') {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -99,14 +108,19 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Route that only requires authentication (no admin role needed)
 const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, authStatus, retryAuth } = useAuth();
+  const location = useLocation();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingFallback />;
+  }
+
+  if (authStatus === "timedOut") {
+    return <AuthTimeoutPanel onRetry={retryAuth} />;
   }
 
   if (!user) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
   return children;
@@ -117,6 +131,32 @@ const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
 const LoadingFallback = () => (
   <div className="flex justify-center items-center h-[50vh]">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
+  </div>
+);
+
+const AuthTimeoutPanel = ({ onRetry }: { onRetry: () => void }) => (
+  <div className="flex flex-col items-center justify-center text-center min-h-[50vh] px-6">
+    <div className="max-w-md w-full bg-[var(--card-bg)] shadow-xl rounded-2xl border border-[var(--border)] p-6">
+      <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">Session check timed out</h2>
+      <p className="text-[var(--text-secondary)] mb-6">
+        We could not confirm your login status. This is usually a network issue or a blocked request.
+      </p>
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={onRetry}
+          className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] transition-all"
+        >
+          Retry session check
+        </button>
+        <Link
+          to="/auth"
+          className="w-full text-[var(--primary)] hover:text-[var(--primary-light)] font-semibold transition-colors"
+        >
+          Go to login
+        </Link>
+      </div>
+    </div>
   </div>
 );
 
@@ -203,6 +243,10 @@ const router = createBrowserRouter([
       },
       {
         path: "settings",
+        element: <Navigate to="/profile" replace />,
+      },
+      {
+        path: "profile",
         element: <AuthenticatedRoute><AccountSettings /></AuthenticatedRoute>,
       },
       {
@@ -213,11 +257,22 @@ const router = createBrowserRouter([
   },
 ]);
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const container = document.getElementById("root");
+if (!container) {
+  throw new Error("Root container not found");
+}
+
+type RootContainer = typeof container & { __root?: ReactDOM.Root };
+const rootContainer = container as RootContainer;
+if (!rootContainer.__root) {
+  rootContainer.__root = ReactDOM.createRoot(container);
+}
+
+rootContainer.__root.render(
   <React.StrictMode>
     <AuthProvider>
       <ThemeProvider>
-        <RouterProvider router={router} />
+        <RouterProvider router={router} future={{ v7_startTransition: true }} />
       </ThemeProvider>
     </AuthProvider>
   </React.StrictMode>,

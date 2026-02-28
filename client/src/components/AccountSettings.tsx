@@ -1,5 +1,4 @@
 import { useState, useEffect, FC } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../supabase";
 import ProfileAvatar from "./ProfileAvatar";
@@ -9,7 +8,6 @@ import { uploadAvatar, deleteOldAvatar } from "../utils/avatarUpload";
 import { DateFormatPreference } from "../../../shared/src/types";
 
 const AccountSettings: FC = () => {
-  const navigate = useNavigate();
   const { user, updateProfile, refreshProfile } = useAuth();
 
   // Display name state
@@ -21,7 +19,7 @@ const AccountSettings: FC = () => {
   // Refresh profile on mount to ensure we have latest data
   useEffect(() => {
     refreshProfile();
-  }, []);
+  }, [refreshProfile]);
 
   // Update displayName when user changes (after refresh)
   useEffect(() => {
@@ -63,7 +61,6 @@ const AccountSettings: FC = () => {
   const [dateFormatSuccess, setDateFormatSuccess] = useState(false);
 
   if (!user) {
-    navigate("/auth");
     return null;
   }
 

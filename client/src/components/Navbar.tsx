@@ -83,7 +83,11 @@ export default function Navbar({
   return (
     <header className="navbar-landing">
       <div className="container mx-auto flex justify-between items-center p-4 max-w-full">
-        <Link to="/" className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
+        <Link
+          to="/"
+          onClick={() => setSearchTerm("")}
+          className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]"
+        >
           J²Adventures
         </Link>
         <div className="hidden md:flex items-center space-x-4">
@@ -161,7 +165,7 @@ export default function Navbar({
                   {/* Menu items */}
                   <div className="py-1">
                     <Link
-                      to="/settings"
+                      to="/profile"
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors"
                     >
@@ -293,8 +297,8 @@ export default function Navbar({
                   </div>
                 </div>
 
-                <Link
-                  to="/settings"
+                  <Link
+                    to="/profile"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-[var(--text-primary)] p-2 text-sm hover:bg-[var(--border)] rounded transition-colors"
                 >

@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { supabase, supabaseAnonKey, supabaseUrl } from "../supabase";
 
 const BUCKET_NAME = "jsquared_blog";
 
@@ -6,36 +6,42 @@ const BUCKET_NAME = "jsquared_blog";
  * Upload an image directly to Supabase Storage from the client.
  * Bypasses the Cloudflare Worker which has body size limitations.
  */
-export async function uploadImageToStorage(file: File): Promise<string> {
+export async function uploadImageToStorage(
+  file: File,
+  accessToken?: string
+): Promise<string> {
   console.log("Starting uploadImageToStorage for:", file.name);
 
-  // First, verify we have an authenticated session (with timeout)
-  console.log("Checking session...");
+  let token = accessToken;
 
-  const sessionPromise = supabase.auth.getSession();
-  const sessionTimeout = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error("Session check timed out. Please refresh the page.")), 10000);
-  });
-
-  let session;
-  try {
-    const result = await Promise.race([sessionPromise, sessionTimeout]);
-    session = result.data?.session;
-    if (result.error) {
-      console.error("Session error:", result.error);
-      throw new Error(`Authentication error: ${result.error.message}`);
+  if (!token) {
+    // Verify we have an authenticated session before upload
+    console.log("Checking session...");
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("Session error:", sessionError);
+      throw new Error(`Authentication error: ${sessionError.message}`);
     }
-  } catch (err: unknown) {
-    console.error("Session check failed:", err);
-    throw err;
-  }
 
-  if (!session) {
-    console.error("No active session found for storage upload");
-    throw new Error("You must be logged in to upload images. Please refresh the page and try again.");
-  }
+    let session = sessionData.session;
+    if (!session) {
+      console.warn("No active session found, attempting refresh...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error("Session refresh error:", refreshError);
+        throw new Error(`Authentication error: ${refreshError.message}`);
+      }
+      session = refreshData.session ?? null;
+    }
 
-  console.log("Session valid, proceeding with upload. User:", session.user.email);
+    if (!session) {
+      console.error("No active session found for storage upload");
+      throw new Error("You must be logged in to upload images. Please refresh the page and try again.");
+    }
+
+    token = session.access_token;
+    console.log("Session valid, proceeding with upload. User:", session.user.email);
+  }
 
   // Generate unique filename with timestamp
   const timestamp = Date.now();
@@ -47,22 +53,35 @@ export async function uploadImageToStorage(file: File): Promise<string> {
 
   // Create a timeout promise to prevent hanging indefinitely
   const timeoutMs = 60000; // 60 second timeout
-  const uploadPromise = supabase.storage
-    .from(BUCKET_NAME)
-    .upload(uniqueFileName, file, {
-      contentType: file.type,
-      upsert: false,
-    });
+  const uploadPromise = fetch(
+    `${supabaseUrl}/storage/v1/object/${BUCKET_NAME}/${encodeURIComponent(uniqueFileName)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: supabaseAnonKey,
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": "false",
+      },
+      body: file,
+    }
+  ).then(async (response) => {
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `Upload failed with status ${response.status}`);
+    }
+    return null;
+  });
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error(`Upload timed out after ${timeoutMs / 1000} seconds. Check your Supabase Storage bucket permissions.`)), timeoutMs);
   });
 
-  const { error } = await Promise.race([uploadPromise, timeoutPromise]);
-
-  if (error) {
+  try {
+    await Promise.race([uploadPromise, timeoutPromise]);
+  } catch (error: unknown) {
     console.error("Supabase Storage upload error:", error);
-    throw new Error(`Failed to upload image: ${error.message}`);
+    throw new Error(`Failed to upload image: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 
   console.log("Upload successful, getting public URL...");

@@ -87,8 +87,9 @@ async function runMigrations() {
             errorCount++;
           }
         }
-      } catch (error: any) {
-        console.log(`   ⚠️  Error (may be expected): ${error.message}`);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.log(`   ⚠️  Error (may be expected): ${message}`);
         errorCount++;
       }
     }
@@ -106,7 +107,7 @@ async function runMigrations() {
     console.log("   4. Verify 'post_images' table has 'alt_text' column");
     console.log("   5. Run 'bun run dev' to test the application\n");
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Fatal error running migrations:", error);
     process.exit(1);
   }
@@ -128,8 +129,9 @@ function printMigrationSQL() {
 }
 
 // Run migrations and provide fallback instructions
-runMigrations().catch((error) => {
-  console.error("\n❌ Automatic migration failed:", error.message);
+runMigrations().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : "Unknown error";
+  console.error("\n❌ Automatic migration failed:", message);
   printMigrationSQL();
   process.exit(1);
 });

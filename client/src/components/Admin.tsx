@@ -251,8 +251,8 @@ const Admin: FC = () => {
         return;
       }
       const scheduledDate = new Date(post.scheduled_for);
-      if (scheduledDate <= new Date()) {
-        alert("Scheduled time must be in the future.");
+      if (Number.isNaN(scheduledDate.getTime())) {
+        alert("Scheduled time is invalid.");
         return;
       }
     }
@@ -264,6 +264,10 @@ const Admin: FC = () => {
       // Convert scheduled_for to ISO string if set (preserves timezone info)
       const postData = {
         ...post,
+        image_url:
+          uploadMethod === "url"
+            ? post.image_url?.trim() || null
+            : null,
         author_id: user.id,
         scheduled_for: post.status === "scheduled" && post.scheduled_for
           ? new Date(post.scheduled_for).toISOString()
@@ -281,12 +285,38 @@ const Admin: FC = () => {
         body: bodyContent,
       });
 
+      const responseText = await response.text();
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create post");
+        let message = "Failed to create post";
+        if (responseText) {
+          try {
+            const errorData = JSON.parse(responseText) as {
+              error?: string | { message?: string; details?: Record<string, string[]> };
+            };
+            if (typeof errorData.error === "string") {
+              message = errorData.error;
+            } else if (errorData.error?.message) {
+              message = errorData.error.message;
+            } else {
+              message = JSON.stringify(errorData.error ?? errorData);
+            }
+
+            if (typeof errorData.error !== "string" && errorData.error?.details) {
+              const detailEntries = Object.entries(errorData.error.details)
+                .filter(([, errors]) => errors && errors.length > 0)
+                .map(([field, errors]) => `${field}: ${errors.join(", ")}`);
+              if (detailEntries.length > 0) {
+                message = `${message}\n${detailEntries.join("\n")}`;
+              }
+            }
+          } catch {
+            message = responseText;
+          }
+        }
+        throw new Error(message);
       }
 
-      const newPost: Post[] = await response.json();
+      const newPost = JSON.parse(responseText) as Post[];
       const postId = newPost[0]?.id;
 
       // Step 2: Upload gallery images directly to Supabase Storage (bypasses Worker limits)
@@ -296,7 +326,7 @@ const Admin: FC = () => {
           try {
             // Upload directly to Supabase Storage
             console.log(`Uploading ${pendingFile.file.name} to Supabase Storage...`);
-            const imageUrl = await uploadImageToStorage(pendingFile.file);
+            const imageUrl = await uploadImageToStorage(pendingFile.file, user.token);
             console.log(`Storage upload successful: ${imageUrl}`);
 
             // Add database record via lightweight API endpoint (with focal point and alt text)

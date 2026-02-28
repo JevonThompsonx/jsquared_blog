@@ -37,7 +37,7 @@ const SEO: FC<SEOProps> = ({
   // Memoize computed values to prevent unnecessary recalculations
   const finalTitle = useMemo(() => title ? `${title} | J²Adventures` : defaultTitle, [title]);
   const finalDescription = useMemo(() => description || defaultDescription, [description]);
-  const finalImage = useMemo(() => image || defaultImage, [image]);
+  const finalImage = useMemo(() => image || defaultImage, [image, defaultImage]);
   const canonicalUrl = useMemo(() => `${baseUrl}${location.pathname}`, [location.pathname]);
 
   // Memoize structured data JSON strings to prevent unnecessary updates

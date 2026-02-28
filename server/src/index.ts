@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- no generated Supabase DB types; any is Supabase's convention
 import { createClient, type User, type SupabaseClient } from "@supabase/supabase-js";
 import { encode as encodeWebP } from "@jsquash/webp";
 import { decode as decodeJPEG } from "@jsquash/jpeg";
@@ -15,8 +14,6 @@ import {
   createPostBodySchema,
   updatePostBodySchema,
   createCommentBodySchema,
-  createTagBodySchema,
-  updatePostTagsBodySchema,
 } from "shared";
 
 // Define the environment variables (Bindings) expected by the Worker
@@ -136,7 +133,7 @@ async function uploadImageToSupabase(
                       extension === 'jpg' ? 'image/jpeg' :
                       extension === 'png' ? 'image/png' : 'application/octet-stream';
 
-  const { data, error } = await supabase.storage
+  const { data: _uploadData, error } = await supabase.storage
     .from(bucket)
     .upload(uniqueFileName, imageBuffer, {
       contentType,
@@ -213,7 +210,8 @@ function getRandomLayout(postIndex: number, totalPosts: number): { type: PostTyp
 }
 
 async function reassignAllPostLayouts(
-  supabase: SupabaseClient<any, 'public', any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- no generated Supabase schema types available
+  supabase: SupabaseClient<any, "public", any>,
   _layoutPatterns: { type: PostType; grid_class: string }[]
 ) {
   const { data: allPosts, error: fetchAllError } = await supabase
@@ -449,6 +447,7 @@ app.get("/api/posts", async (c) => {
     .from("posts")
     .select("id")
     .eq("status", "scheduled")
+    .not("scheduled_for", "is", null)
     .lte("scheduled_for", now);
 
   if (scheduledPosts && scheduledPosts.length > 0) {
@@ -589,29 +588,37 @@ app.get("/api/posts", async (c) => {
 
 app.get("/api/posts/:id", async (c) => {
   const { id } = c.req.param();
+  const postId = Number(id);
+  if (!Number.isInteger(postId) || postId <= 0) {
+    return c.json({ error: "Invalid post ID" }, 400);
+  }
   const supabase = createClient(
     c.env.SUPABASE_URL,
     c.env.SUPABASE_ANON_KEY,
   );
-  let { data, error } = await supabase
+  const { data: postRows, error } = await supabase
     .from("posts")
     .select("*")
-    .eq("id", id)
-    .single();
+    .eq("id", postId)
+    .limit(1);
 
   if (error) {
+    console.error("Post fetch error", { id: postId, error });
     return c.json({ error: error.message }, 500);
   }
 
-  if (!data) {
+  const postData = postRows?.[0] ?? null;
+  if (!postData) {
     return c.json({ error: "Post not found" }, 404);
   }
 
+  let data = postData;
+
   // Auto-publish if this scheduled post is past its scheduled time
-  if (data.status === "scheduled" && data.scheduled_for) {
-    const scheduledTime = new Date(data.scheduled_for);
-    const now = new Date();
-    if (scheduledTime <= now) {
+   if (data.status === "scheduled" && data.scheduled_for) {
+     const scheduledTime = new Date(data.scheduled_for);
+     const now = new Date();
+     if (!Number.isNaN(scheduledTime.getTime()) && scheduledTime <= now) {
       const publishedAt = now.toISOString();
       await supabase
         .from("posts")
@@ -620,7 +627,7 @@ app.get("/api/posts/:id", async (c) => {
           published_at: publishedAt,
           scheduled_for: null,
         })
-        .eq("id", id);
+        .eq("id", postId);
 
       // Update the data object for the response
       data = {
@@ -637,14 +644,14 @@ app.get("/api/posts/:id", async (c) => {
   const { data: images } = await supabase
     .from("post_images")
     .select("*")
-    .eq("post_id", id)
+    .eq("post_id", postId)
     .order("sort_order", { ascending: true });
 
   // Fetch tags for this post
   const { data: postTagsData } = await supabase
     .from("post_tags")
     .select("tags(*)")
-    .eq("post_id", id);
+    .eq("post_id", postId);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join results are untyped without generated schema
   const tags = postTagsData?.map((pt: any) => pt.tags).filter(Boolean) || [];
@@ -747,7 +754,7 @@ app.post("/api/posts", authMiddleware, async (c) => {
   const { title: rawTitle, description, category, status, scheduled_for, image_url: imageUrl } = parseResult.data;
 
   // Drafts may have an empty title — assign a default so the DB constraint is met.
-  let title = rawTitle.trim() || "Untitled Draft";
+  const title = rawTitle.trim() || "Untitled Draft";
 
   let finalImageUrl: string | null = null;
 
@@ -840,7 +847,7 @@ app.post("/api/posts", authMiddleware, async (c) => {
 
   if (error) {
     console.error("Supabase insert error:", error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 400);
   }
 
   // After successful post insertion, re-assign layouts for all posts
@@ -904,7 +911,7 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
 
   // Drafts may have an empty title — assign a default so the DB constraint is met.
   // rawTitle can be null (from empty-string preprocess) or undefined (field not sent).
-  let title = rawTitle?.trim() || "Untitled Draft";
+  const title = rawTitle?.trim() || "Untitled Draft";
 
   // Ensure the user is authorized to edit this post (e.g., is the author or an admin)
   const { data: existingPost, error: fetchError } = await supabase
@@ -1265,7 +1272,7 @@ app.get("/api/posts/:postId/comments", async (c) => {
   }
 
   // Combine data
-  let enrichedComments = comments.map(comment => ({
+  const enrichedComments = comments.map(comment => ({
     ...comment,
     user_email: userMap.get(comment.user_id) || "Unknown User",
     like_count: likeCountMap.get(comment.id) || 0,
@@ -2099,7 +2106,7 @@ app.get("/api/tags/:slug/posts", async (c) => {
   const postsWithTags = (posts || []).map(post => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join results are untyped without generated schema
     const tags = post.post_tags?.map((pt: any) => pt.tags).filter(Boolean) || [];
-    const { post_tags, ...postWithoutJoin } = post;
+    const { post_tags: _postTags, ...postWithoutJoin } = post;
     return { ...postWithoutJoin, tags };
   });
 

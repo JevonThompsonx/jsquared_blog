@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from "react";
+import { useState, useEffect, FC, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Comment, CommentSortOption } from "../../../shared/src/types";
 
@@ -14,7 +14,7 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       const headers: HeadersInit = {};
       if (user?.token) {
@@ -31,11 +31,11 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [postId, sortBy, user?.token]);
 
   useEffect(() => {
     fetchComments();
-  }, [postId, sortBy]);
+  }, [fetchComments]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,8 +128,8 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
       </h2>
 
       {/* Comment Form */}
-      {user ? (
-        <form onSubmit={handleSubmitComment} className="mb-8">
+        {user ? (
+          <form onSubmit={handleSubmitComment} className="mb-8">
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
@@ -148,13 +148,13 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
             </button>
           </div>
         </form>
-      ) : (
-        <div className="mb-8 p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg text-center">
-          <p className="text-[var(--text-secondary)]">
-            Please <a href="/auth" className="text-[var(--primary)] hover:underline">login</a> to comment
-          </p>
-        </div>
-      )}
+        ) : (
+          <div className="mb-8 p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg text-center">
+            <p className="text-[var(--text-secondary)]">
+              Please <a href={`/auth?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`} className="text-[var(--primary)] hover:underline">login</a> to comment
+            </p>
+          </div>
+        )}
 
       {/* Sort Options */}
       <div className="flex items-center gap-4 mb-6">

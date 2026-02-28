@@ -366,15 +366,19 @@ const TagPage: FC = () => {
 
       const data = await response.json();
 
+      const filteredPosts = (data.posts || []).filter((post: Post) =>
+        post.status === "published"
+      );
+
       if (isInitial) {
         setTag(data.tag);
-        setAllPosts(data.posts || []);
-        setTotalCount(data.total || 0);
+        setAllPosts(filteredPosts);
+        setTotalCount(data.total || filteredPosts.length || 0);
       } else {
-        setAllPosts(prev => [...prev, ...(data.posts || [])]);
+        setAllPosts(prev => [...prev, ...filteredPosts]);
       }
 
-      setHasMore(data.hasMore || false);
+      setHasMore(filteredPosts.length === POSTS_PER_PAGE && data.hasMore !== false);
     } catch (error) {
       console.error("Failed to fetch posts:", error);
     } finally {

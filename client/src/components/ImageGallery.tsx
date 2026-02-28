@@ -185,6 +185,14 @@ const ImageGallery: FC<ImageGalleryProps> = ({
     );
   }
 
+  const renderAltOverlay = (altText: string) => (
+    <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm shadow-lg transition-opacity duration-300 ${
+      isHovered ? "opacity-100" : "opacity-0"
+    }`}>
+      {altText}
+    </div>
+  );
+
   // Single image - no controls needed, but clickable for lightbox
   if (totalImages === 1) {
     return (
@@ -193,6 +201,8 @@ const ImageGallery: FC<ImageGalleryProps> = ({
         <div
           className="relative h-[500px] overflow-hidden cursor-pointer"
           onClick={() => setIsLightboxOpen(true)}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
           <img
             src={displayImages[0].url}
@@ -202,6 +212,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
             onError={handleImageError}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+          {renderAltOverlay(displayImages[0].altText)}
           {/* Click to expand hint */}
           <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,17 +229,17 @@ const ImageGallery: FC<ImageGalleryProps> = ({
   return (
     <>
       <Lightbox />
-      <div
-        className="relative h-[500px] overflow-hidden group"
-        onMouseEnter={() => {
-          setIsHovered(true);
-          setIsPaused(true);
-        }}
-        onMouseLeave={() => {
-          setIsHovered(false);
-          setIsPaused(false);
-        }}
-      >
+        <div
+          className="relative h-[500px] overflow-hidden group"
+          onMouseEnter={() => {
+            setIsHovered(true);
+            setIsPaused(true);
+          }}
+          onMouseLeave={() => {
+            setIsHovered(false);
+            setIsPaused(false);
+          }}
+        >
         {/* Images Container */}
         <div
           className="flex h-full transition-transform duration-500 ease-in-out cursor-pointer"
@@ -313,6 +324,8 @@ const ImageGallery: FC<ImageGalleryProps> = ({
         <div className="absolute top-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-10">
           {currentIndex + 1} / {totalImages}
         </div>
+
+        {renderAltOverlay(displayImages[currentIndex].altText)}
       </div>
     </>
   );

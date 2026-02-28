@@ -1,6 +1,5 @@
 // server/src/middleware/auth.ts
 import { createMiddleware } from "hono/factory";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase requires these generic params; no generated DB types in this project
 import { createClient, type User, type SupabaseClient } from "@supabase/supabase-js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

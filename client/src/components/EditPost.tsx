@@ -361,8 +361,8 @@ const EditPost: FC = () => {
         return;
       }
       const scheduledDate = new Date(post.scheduled_for);
-      if (scheduledDate <= new Date()) {
-        alert("Scheduled time must be in the future.");
+      if (Number.isNaN(scheduledDate.getTime())) {
+        alert("Scheduled time is invalid.");
         return;
       }
     }
@@ -456,7 +456,7 @@ const EditPost: FC = () => {
           try {
             // Upload directly to Supabase Storage
             console.log(`Uploading ${pendingFile.file.name} to Supabase Storage...`);
-            const imageUrl = await uploadImageToStorage(pendingFile.file);
+            const imageUrl = await uploadImageToStorage(pendingFile.file, token);
             console.log(`Storage upload successful: ${imageUrl}`);
 
             // Add database record via lightweight API endpoint (with focal point and alt text)
