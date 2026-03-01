@@ -224,6 +224,9 @@ POST /api/tags                     # Create tag (admin)
 PUT  /api/posts/:id/tags           # Update post tags (admin)
 GET  /api/tags/:slug/posts         # Get posts by tag (?limit, ?offset)
 
+POST /api/admin/reassign-layouts   # Shuffle post layouts (admin)
+POST /api/admin/publish-scheduled  # Publish past-due scheduled posts (admin)
+
 GET  /api/authors/:username        # Author profile with posts
 
 GET  /sitemap.xml                  # Dynamic sitemap
@@ -260,6 +263,7 @@ GET  /feed.xml                     # RSS feed
 | [TODO.md](./TODO.md) | Feature tracker & roadmap |
 | [docs/TESTING.md](./docs/TESTING.md) | Testing guide for features |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Detailed deployment guide |
+| [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | Current status + recent fixes |
 
 ---
 

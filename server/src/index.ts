@@ -439,21 +439,29 @@ app.get("/api/posts", async (c) => {
     c.env.SUPABASE_URL,
     c.env.SUPABASE_ANON_KEY,
   );
+  const adminSupabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_SERVICE_ROLE_KEY || c.env.SUPABASE_ANON_KEY,
+  );
 
   // Auto-publish scheduled posts that are past their scheduled time
   // This is a query-time check that runs on each request
   const now = new Date().toISOString();
-  const { data: scheduledPosts } = await supabase
+  const { data: scheduledPosts, error: scheduledFetchError } = await adminSupabase
     .from("posts")
     .select("id")
     .eq("status", "scheduled")
     .not("scheduled_for", "is", null)
     .lte("scheduled_for", now);
 
+  if (scheduledFetchError) {
+    console.error("Failed to fetch scheduled posts:", scheduledFetchError);
+  }
+
   if (scheduledPosts && scheduledPosts.length > 0) {
     // Auto-publish these posts
     for (const post of scheduledPosts) {
-      await supabase
+      const { error: publishError } = await adminSupabase
         .from("posts")
         .update({
           status: "published",
@@ -461,6 +469,9 @@ app.get("/api/posts", async (c) => {
           scheduled_for: null, // Clear the scheduled time
         })
         .eq("id", post.id);
+      if (publishError) {
+        console.error("Auto-publish failed for post", post.id, publishError);
+      }
     }
     console.log(`Auto-published ${scheduledPosts.length} scheduled post(s)`);
   }
@@ -596,6 +607,10 @@ app.get("/api/posts/:id", async (c) => {
     c.env.SUPABASE_URL,
     c.env.SUPABASE_ANON_KEY,
   );
+  const adminSupabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_SERVICE_ROLE_KEY || c.env.SUPABASE_ANON_KEY,
+  );
   const { data: postRows, error } = await supabase
     .from("posts")
     .select("*")
@@ -615,12 +630,12 @@ app.get("/api/posts/:id", async (c) => {
   let data = postData;
 
   // Auto-publish if this scheduled post is past its scheduled time
-   if (data.status === "scheduled" && data.scheduled_for) {
-     const scheduledTime = new Date(data.scheduled_for);
-     const now = new Date();
-     if (!Number.isNaN(scheduledTime.getTime()) && scheduledTime <= now) {
+  if (data.status === "scheduled" && data.scheduled_for) {
+    const scheduledTime = new Date(data.scheduled_for);
+    const now = new Date();
+    if (!Number.isNaN(scheduledTime.getTime()) && scheduledTime <= now) {
       const publishedAt = now.toISOString();
-      await supabase
+      const { error: publishError } = await adminSupabase
         .from("posts")
         .update({
           status: "published",
@@ -628,6 +643,11 @@ app.get("/api/posts/:id", async (c) => {
           scheduled_for: null,
         })
         .eq("id", postId);
+
+      if (publishError) {
+        console.error("Auto-publish failed for post", postId, publishError);
+        return c.json({ error: publishError.message }, 500);
+      }
 
       // Update the data object for the response
       data = {
@@ -2044,6 +2064,53 @@ app.put("/api/posts/:postId/tags", authMiddleware, async (c) => {
   const resultTags = updatedTags?.map(pt => pt.tags).filter(Boolean) || [];
 
   return c.json({ tags: resultTags }, 200);
+});
+
+// Admin: publish scheduled posts immediately (past-due only)
+app.post("/api/admin/publish-scheduled", authMiddleware, async (c) => {
+  console.log("publish-scheduled hit", {
+    method: c.req.method,
+    path: c.req.path,
+  });
+  const user = c.get("user");
+
+  if (user.role !== "admin") {
+    return c.json({ error: "Unauthorized" }, 403);
+  }
+
+  const supabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_SERVICE_ROLE_KEY || c.env.SUPABASE_ANON_KEY,
+  );
+
+  const now = new Date().toISOString();
+  const { data: scheduledPosts, error } = await supabase
+    .from("posts")
+    .select("id")
+    .eq("status", "scheduled")
+    .not("scheduled_for", "is", null)
+    .lte("scheduled_for", now);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  let published = 0;
+  for (const post of scheduledPosts || []) {
+    const { error: publishError } = await supabase
+      .from("posts")
+      .update({
+        status: "published",
+        published_at: now,
+        scheduled_for: null,
+      })
+      .eq("id", post.id);
+    if (!publishError) {
+      published += 1;
+    }
+  }
+
+  return c.json({ found: scheduledPosts?.length || 0, published }, 200);
 });
 
 // GET posts by tag slug (public, with pagination)

@@ -100,7 +100,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
   if (article.dynamicViewType === "hover") {
     return (
       <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
-        <Link to={`/posts/${id}`} className="group relative h-full rounded-lg overflow-hidden shadow-lg block">
+        <div className="group relative h-full rounded-lg overflow-hidden shadow-lg block">
           <img
             className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
             src={image}
@@ -154,9 +154,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
                 )}
               </div>
             )}
-            <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-white">
+            <Link
+              to={`/posts/${id}`}
+              className="mt-1 text-lg md:text-xl font-bold leading-tight text-white block"
+            >
               {title}
-            </h3>
+            </Link>
             <div className="text-gray-300 text-xs mt-2">
               {formattedDate}
             </div>
@@ -170,7 +173,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
               </svg>
             </span>
           </div>
-        </Link>
+        </div>
       </div>
     );
   }
@@ -178,10 +181,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
   // STYLE 2: SPLIT-HORIZONTAL - Side by side layout with image and content
   if (article.dynamicViewType === "split-horizontal") {
     return (
-      <Link
-        to={`/posts/${id}`}
-        className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} block`}
-      >
+      <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
         <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row relative">
           <div className="absolute top-2 right-2 flex gap-2 z-10">
             {isNew && (
@@ -211,31 +211,25 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
           </div>
           <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
             <div>
-              <span
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = `/category/${encodeURIComponent(category)}`;
-                }}
-                className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline cursor-pointer"
+              <Link
+                to={`/category/${encodeURIComponent(category)}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
               >
                 <CategoryIcon category={category} className="w-3.5 h-3.5" />
                 {category}
-              </span>
+              </Link>
               {tags && tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {tags.slice(0, 3).map((tag) => (
-                    <button
+                    <Link
                       key={tag.id}
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.location.href = `/tag/${tag.slug}`;
-                      }}
+                      to={`/tag/${tag.slug}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
                     >
                       {tag.name}
-                    </button>
+                    </Link>
                   ))}
                   {tags.length > 3 && (
                     <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
@@ -244,9 +238,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
                   )}
                 </div>
               )}
-              <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors">
+              <Link
+                to={`/posts/${id}`}
+                className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors block"
+              >
                 {title}
-              </h3>
+              </Link>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
               <span className="mt-3 text-[var(--primary)] text-sm font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
                 Continue reading
@@ -260,16 +257,13 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     );
   }
 
   // STYLE 3: SPLIT-VERTICAL - Image on top, content below
   return (
-    <Link
-      to={`/posts/${id}`}
-      className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} block`}
-    >
+    <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
       <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col relative">
         <div className="absolute top-2 right-2 flex gap-2 z-10">
           {isNew && (
@@ -298,31 +292,25 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
           />
         </div>
         <div className="p-4 md:p-6 flex-grow flex flex-col">
-          <span
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.href = `/category/${encodeURIComponent(category)}`;
-            }}
-            className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline cursor-pointer"
+          <Link
+            to={`/category/${encodeURIComponent(category)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
           >
             <CategoryIcon category={category} className="w-3.5 h-3.5" />
             {category}
-          </span>
+          </Link>
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
                 {tags.slice(0, 3).map((tag) => (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.location.href = `/tag/${tag.slug}`;
-                    }}
-                    className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
-                  >
-                    {tag.name}
-                  </button>
+                <Link
+                  key={tag.id}
+                  to={`/tag/${tag.slug}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
+                >
+                  {tag.name}
+                </Link>
                 ))}
               {tags.length > 3 && (
                 <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
@@ -331,9 +319,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
               )}
             </div>
           )}
-          <h3 className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors">
+          <Link
+            to={`/posts/${id}`}
+            className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors block"
+          >
             {title}
-          </h3>
+          </Link>
           <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
             {description}
           </p>
@@ -348,7 +339,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
           </p>
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 

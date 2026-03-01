@@ -10,7 +10,7 @@ import RichTextEditor from "./RichTextEditor";
 import ImageUploader, { PendingFile } from "./ImageUploader";
 import TagInput from "./TagInput";
 import { uploadImageToStorage, addImageRecord, updateImageFocalPoint, updateImageAltText } from "../utils/imageUpload";
-import { isoToLocalDateTimeInput, localDateTimeInputToISO, getCurrentLocalDateTimeInput } from "../utils/dateTime";
+import { isoToLocalDateTimeInput, getCurrentLocalDateTimeInput } from "../utils/dateTime";
 
 // Compression options for converting URL images
 const compressionOptions = {
@@ -127,9 +127,8 @@ const EditPost: FC = () => {
       }
     } else if (name === "scheduled_for") {
       // For datetime-local inputs, value is in local time format: "YYYY-MM-DDTHH:mm"
-      // Convert to ISO (UTC) for storage
-      const isoDateTime = localDateTimeInputToISO(value);
-      setPost((prev) => ({ ...prev, [name]: isoDateTime } as PostWithImages));
+      // Store the local value; convert to ISO when submitting
+      setPost((prev) => ({ ...prev, [name]: value } as PostWithImages));
     } else {
       setPost((prev) => ({ ...prev, [name]: value } as PostWithImages));
     }

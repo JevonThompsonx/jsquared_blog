@@ -9,7 +9,7 @@ import RichTextEditor from "./RichTextEditor";
 import ImageUploader, { PendingFile } from "./ImageUploader";
 import TagInput from "./TagInput";
 import { uploadImageToStorage, addImageRecord } from "../utils/imageUpload";
-import { isoToLocalDateTimeInput, localDateTimeInputToISO, getCurrentLocalDateTimeInput } from "../utils/dateTime";
+import { isoToLocalDateTimeInput, getCurrentLocalDateTimeInput } from "../utils/dateTime";
 
 
 type Post = {
@@ -109,9 +109,8 @@ const Admin: FC = () => {
       }
     } else if (name === "scheduled_for") {
       // For datetime-local inputs, value is in local time format: "YYYY-MM-DDTHH:mm"
-      // Convert to ISO (UTC) for storage
-      const isoDateTime = localDateTimeInputToISO(value);
-      setPost((prev) => ({ ...prev, [name]: isoDateTime }));
+      // Store the local value; convert to ISO when submitting
+      setPost((prev) => ({ ...prev, [name]: value }));
     } else {
       setPost((prev) => ({ ...prev, [name]: value }));
     }
@@ -222,6 +221,42 @@ const Admin: FC = () => {
       setShuffleMessage(`❌ Error: ${error instanceof Error ? error.message : "An unexpected error occurred"}`);
     } finally {
       setIsShuffling(false);
+    }
+  };
+
+  const handlePublishNow = async () => {
+    if (!user || !user.token) return;
+
+    const confirmed = window.confirm(
+      "Publish all past-due scheduled posts now? This will immediately set them to published.",
+    );
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch("/api/admin/publish-scheduled", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const responseText = await response.text();
+      if (!response.ok) {
+        let message = "Failed to publish scheduled posts";
+        try {
+          const errorData = JSON.parse(responseText);
+          message = errorData.error || message;
+        } catch {
+          message = responseText || message;
+        }
+        throw new Error(message);
+      }
+
+      const result = JSON.parse(responseText) as { published: number; found: number };
+      alert(`Published ${result.published} post(s). Found ${result.found} scheduled post(s).`);
+    } catch (error: unknown) {
+      alert(`Publish failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   };
 
@@ -423,6 +458,22 @@ const Admin: FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             {isShuffling ? "Shuffling..." : "Shuffle All Post Layouts"}
+          </button>
+
+          <button
+            onClick={handlePublishNow}
+            className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-3-3m3 3l3-3m-6 8h6" />
+            </svg>
+            Publish Past-Due Scheduled Posts
           </button>
         </div>
 
