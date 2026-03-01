@@ -1,5 +1,5 @@
 import { useEffect, useState, FC, SyntheticEvent, useMemo, useCallback, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Post, Article, Tag as TagType } from "../../../shared/src/types";
 import SEO from "./SEO";
 import SuggestedPosts from "./SuggestedPosts";
@@ -83,7 +83,9 @@ interface ArticleCardProps {
 }
 
 const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "relative" }) => {
+  const navigate = useNavigate();
   const { id, image, category, title, date, description, gridClass, tags } = article;
+  const categoryLabel = category || "General";
   const formattedDate = formatDate(date, dateFormatPreference);
   const isNew = article.status === "published" && isNewPost(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
@@ -93,7 +95,18 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
 
   if (article.dynamicViewType === "hover") {
     return (
-      <Link to={`/posts/${id}`} className={`${gridClass}`}>
+      <div
+        onClick={() => navigate(`/posts/${id}`)}
+        role="link"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            navigate(`/posts/${id}`);
+          }
+        }}
+        className={`${gridClass} cursor-pointer`}
+      >
         <div className="group relative h-full rounded-lg overflow-hidden shadow-lg">
           <img
             className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
@@ -122,11 +135,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
           </div>
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
             <Link
-              to={`/category/${encodeURIComponent(category)}`}
+              to={`/category/${encodeURIComponent(categoryLabel)}`}
               onClick={(e) => e.stopPropagation()}
               className="tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline"
             >
-              {category}
+              {categoryLabel}
             </Link>
             {tags && tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -164,13 +177,24 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
             </span>
           </div>
         </div>
-      </Link>
+      </div>
     );
   }
 
   if (article.dynamicViewType === "split-horizontal") {
     return (
-      <Link to={`/posts/${id}`} className={`${gridClass}`}>
+      <div
+        onClick={() => navigate(`/posts/${id}`)}
+        role="link"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            navigate(`/posts/${id}`);
+          }
+        }}
+        className={`${gridClass} cursor-pointer`}
+      >
         <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row relative">
           <div className="absolute top-2 right-2 flex gap-2 z-10">
             {isNew && (
@@ -201,11 +225,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
           <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
             <div>
               <Link
-                to={`/category/${encodeURIComponent(category)}`}
+                to={`/category/${encodeURIComponent(categoryLabel)}`}
                 onClick={(e) => e.stopPropagation()}
                 className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
               >
-                {category}
+                {categoryLabel}
               </Link>
               {tags && tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -226,9 +250,13 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
                   )}
                 </div>
               )}
-              <h3 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)]">
+              <Link
+                to={`/posts/${id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] block"
+              >
                 {title}
-              </h3>
+              </Link>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
               <span className="mt-3 text-[var(--primary)] text-sm font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
                 Continue reading
@@ -242,12 +270,23 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     );
   }
 
   return (
-    <Link to={`/posts/${id}`} className={`${gridClass}`}>
+    <div
+      onClick={() => navigate(`/posts/${id}`)}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate(`/posts/${id}`);
+        }
+      }}
+      className={`${gridClass} cursor-pointer`}
+    >
       <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col relative">
         <div className="absolute top-2 right-2 flex gap-2 z-10">
           {isNew && (
@@ -277,11 +316,11 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
         </div>
         <div className="p-4 md:p-6 flex-grow flex flex-col">
           <Link
-            to={`/category/${encodeURIComponent(category)}`}
+            to={`/category/${encodeURIComponent(categoryLabel)}`}
             onClick={(e) => e.stopPropagation()}
             className="tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
           >
-            {category}
+            {categoryLabel}
           </Link>
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -302,9 +341,13 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
               )}
             </div>
           )}
-          <h3 className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)]">
+          <Link
+            to={`/posts/${id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)] block"
+          >
             {title}
-          </h3>
+          </Link>
           <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
             {description}
           </p>
@@ -319,7 +362,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "re
           </p>
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 

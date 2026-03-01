@@ -1,7 +1,7 @@
 
 
 import { useEffect, useMemo, FC, SyntheticEvent, useState, useRef, useCallback } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Post, Article } from "../../../shared/src/types";
 import { useDebounce } from "../hooks/useDebounce";
@@ -88,7 +88,9 @@ interface ArticleCardProps {
   dateFormatPreference?: "relative" | "absolute";
 }
 const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPreference = "relative" }) => {
+  const navigate = useNavigate();
   const { id, image, category, title, date, description, gridClass, tags } = article;
+  const categoryLabel = category || "General";
   const formattedDate = formatDate(date, dateFormatPreference);
   const isNew = article.status === "published" && isNewPost(date);
   const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
@@ -99,7 +101,18 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
   // STYLE 1: HOVER - Image with overlay that reveals description on hover
   if (article.dynamicViewType === "hover") {
     return (
-      <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
+      <div
+        onClick={() => navigate(`/posts/${id}`)}
+        role="link"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            navigate(`/posts/${id}`);
+          }
+        }}
+        className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} cursor-pointer`}
+      >
         <div className="group relative h-full rounded-lg overflow-hidden shadow-lg block">
           <img
             className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
@@ -128,12 +141,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
           </div>
           <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
             <Link
-              to={`/category/${encodeURIComponent(category)}`}
+              to={`/category/${encodeURIComponent(categoryLabel)}`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline"
             >
-              <CategoryIcon category={category} className="w-3.5 h-3.5" />
-              {category}
+              <CategoryIcon category={categoryLabel} className="w-3.5 h-3.5" />
+              {categoryLabel}
             </Link>
             {tags && tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -156,6 +169,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
             )}
             <Link
               to={`/posts/${id}`}
+              onClick={(e) => e.stopPropagation()}
               className="mt-1 text-lg md:text-xl font-bold leading-tight text-white block"
             >
               {title}
@@ -181,7 +195,18 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
   // STYLE 2: SPLIT-HORIZONTAL - Side by side layout with image and content
   if (article.dynamicViewType === "split-horizontal") {
     return (
-      <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
+      <div
+        onClick={() => navigate(`/posts/${id}`)}
+        role="link"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            navigate(`/posts/${id}`);
+          }
+        }}
+        className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} cursor-pointer`}
+      >
         <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row relative">
           <div className="absolute top-2 right-2 flex gap-2 z-10">
             {isNew && (
@@ -212,12 +237,12 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
           <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
             <div>
               <Link
-                to={`/category/${encodeURIComponent(category)}`}
+                to={`/category/${encodeURIComponent(categoryLabel)}`}
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
               >
-                <CategoryIcon category={category} className="w-3.5 h-3.5" />
-                {category}
+                <CategoryIcon category={categoryLabel} className="w-3.5 h-3.5" />
+                {categoryLabel}
               </Link>
               {tags && tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -240,6 +265,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
               )}
               <Link
                 to={`/posts/${id}`}
+                onClick={(e) => e.stopPropagation()}
                 className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors block"
               >
                 {title}
@@ -263,7 +289,18 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
 
   // STYLE 3: SPLIT-VERTICAL - Image on top, content below
   return (
-    <div className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"}`}>
+    <div
+      onClick={() => navigate(`/posts/${id}`)}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate(`/posts/${id}`);
+        }
+      }}
+      className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} cursor-pointer`}
+    >
       <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col relative">
         <div className="absolute top-2 right-2 flex gap-2 z-10">
           {isNew && (
@@ -297,8 +334,8 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
           >
-            <CategoryIcon category={category} className="w-3.5 h-3.5" />
-            {category}
+            <CategoryIcon category={categoryLabel} className="w-3.5 h-3.5" />
+            {categoryLabel}
           </Link>
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -321,6 +358,7 @@ const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPre
           )}
           <Link
             to={`/posts/${id}`}
+            onClick={(e) => e.stopPropagation()}
             className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors block"
           >
             {title}

@@ -38,8 +38,9 @@ This document captures the current state of the J²Adventures Blog project, rece
 - Publish Past‑Due Scheduled Posts endpoint works and reports success.
 
 **In progress / needs confirmation:**
-- Posts `42` and `43` still do not appear on the public homepage after being published via the admin endpoint.
-- Confirm whether these posts are actually `published` in the database or if the homepage query is filtering them out.
+- Publish endpoint confirmed (reports 2 posts published), but posts `42` and `43` still do not appear on the public homepage after logout.
+- Added no‑store cache on public `/api/posts` to reduce stale responses.
+- Added dev-only `/api/test/post-visibility` endpoint to verify DB status for specific IDs.
 
 ## Admin Tools Added
 

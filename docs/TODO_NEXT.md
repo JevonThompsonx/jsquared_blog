@@ -9,6 +9,8 @@ This is a short, actionable checklist for the next work session.
 1. **Scheduled publish check**
    - Button reports success, but posts 42/43 are still missing from the public homepage.
    - Confirm `status`, `published_at`, and `scheduled_for` values in Supabase for those posts.
+   - If the homepage still misses them, verify cache headers and the `/api/posts` response contents.
+   - Run `cd server && bun run src/debug-rls.ts` to compare anon vs service role visibility.
 
 2. **Tag/category after publish**
    - Once posts show as published on homepage, confirm they appear on tag/category pages.

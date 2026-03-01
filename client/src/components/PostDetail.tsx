@@ -145,11 +145,11 @@ const PostDetail: FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
                   <Link
-                    to={`/category/${encodeURIComponent(post.category || "Uncategorized")}`}
+                    to={`/category/${encodeURIComponent(post.category || "General")}`}
                     className="inline-flex items-center gap-2 px-4 py-1.5 bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white rounded-full text-sm font-semibold transition-colors"
                   >
-                    <CategoryIcon category={post.category || "Uncategorized"} className="w-4 h-4" />
-                    {post.category || "Uncategorized"}
+                    <CategoryIcon category={post.category || "General"} className="w-4 h-4" />
+                    {post.category || "General"}
                   </Link>
                   {post.status === "draft" && (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500 text-black rounded-full text-sm font-bold">

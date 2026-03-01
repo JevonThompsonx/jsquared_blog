@@ -459,21 +459,35 @@ app.get("/api/posts", async (c) => {
   }
 
   if (scheduledPosts && scheduledPosts.length > 0) {
+    let autoPublished = 0;
+    let blocked = 0;
     // Auto-publish these posts
     for (const post of scheduledPosts) {
-      const { error: publishError } = await adminSupabase
+      const { data: updatedRows, error: publishError } = await adminSupabase
         .from("posts")
         .update({
           status: "published",
           published_at: now,
           scheduled_for: null, // Clear the scheduled time
         })
-        .eq("id", post.id);
+        .eq("id", post.id)
+        .select("id");
       if (publishError) {
         console.error("Auto-publish failed for post", post.id, publishError);
+        continue;
       }
+      if (!updatedRows || updatedRows.length === 0) {
+        blocked += 1;
+        continue;
+      }
+      autoPublished += 1;
     }
-    console.log(`Auto-published ${scheduledPosts.length} scheduled post(s)`);
+    console.log(`Auto-published ${autoPublished} scheduled post(s)`);
+    if (blocked > 0) {
+      console.warn(
+        `Auto-publish blocked for ${blocked} post(s). Configure SUPABASE_SERVICE_ROLE_KEY to bypass RLS.`,
+      );
+    }
   }
 
   // Check if user is authenticated and is an admin
@@ -582,7 +596,7 @@ app.get("/api/posts", async (c) => {
   // Use private cache for authenticated users (may contain drafts/scheduled), public for anonymous
   const cacheControl = isAdmin
     ? "private, no-cache, no-store, must-revalidate"
-    : "public, max-age=300";
+    : "no-store";
 
   return c.json({
     posts: postsWithTags,
@@ -2358,7 +2372,40 @@ app.get("/api/test/scheduled-posts", async (c) => {
     pastDue: postsWithInfo.filter(p => p.isPastDue).length,
     posts: postsWithInfo,
   });
-})
+});
+
+// --- DEBUG: check visibility of specific post IDs (dev-only) ---
+app.get("/api/test/post-visibility", async (c) => {
+  if (c.env.DEV_MODE !== "true") {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  const idsParam = c.req.query("ids") || "";
+  const ids = idsParam
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0);
+
+  if (ids.length === 0) {
+    return c.json({ error: "Provide ids query param" }, 400);
+  }
+
+  const supabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_ANON_KEY,
+  );
+
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("id, status, published_at, scheduled_for, created_at, title")
+    .in("id", ids);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ posts: posts || [] });
+});
 
 // --- SERVER SETUP ---
 
