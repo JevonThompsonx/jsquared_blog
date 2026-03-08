@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "~/.bun/bin/bun x tsc -b && vite build",
+    "build": "bun x tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "vercel-build": "bun run build"

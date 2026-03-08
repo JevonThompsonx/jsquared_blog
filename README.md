@@ -47,6 +47,17 @@ bun install
 
 ### 2. Configure Environment Variables
 
+**Monorepo reference** (`.env`) — useful for Vercel env copy/paste:
+```
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+ADMIN_GITHUB_USERNAME=your-github-username
+```
+
 **Client** (`client/.env`):
 ```
 VITE_SUPABASE_URL=your_supabase_project_url

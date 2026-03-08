@@ -4,10 +4,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "~/.bun/bin/bun x tsc",
-    "dev": "~/.bun/bin/bun run dev-server.ts",
+    "build": "bun x tsc",
+    "dev": "bun run dev-server.ts",
     "deploy": "wrangler deploy --minify src/index.ts",
-    "seed": "~/.bun/bin/bun run src/seed-posts.ts",
+    "seed": "bun run src/seed-posts.ts",
     "lint": "eslint src --max-warnings 0",
     "lint:fix": "eslint src --fix"
   },
