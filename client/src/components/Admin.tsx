@@ -10,6 +10,7 @@ import ImageUploader, { PendingFile } from "./ImageUploader";
 import TagInput from "./TagInput";
 import { uploadImageToStorage, addImageRecord } from "../utils/imageUpload";
 import { isoToLocalDateTimeInput, getCurrentLocalDateTimeInput } from "../utils/dateTime";
+import { apiPath } from "../utils/api";
 
 
 type Post = {
@@ -55,7 +56,7 @@ const Admin: FC = () => {
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const response = await fetch("/api/tags");
+        const response = await fetch(apiPath("/api/tags"));
         if (response.ok) {
           const data = await response.json();
           setAvailableTags(data.tags || []);
@@ -176,7 +177,7 @@ const Admin: FC = () => {
     setShuffleMessage(null);
 
     try {
-      const response = await fetch("/api/admin/reassign-layouts", {
+      const response = await fetch(apiPath("/api/admin/reassign-layouts"), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -233,7 +234,7 @@ const Admin: FC = () => {
     if (!confirmed) return;
 
     try {
-      const response = await fetch("/api/admin/publish-scheduled", {
+      const response = await fetch(apiPath("/api/admin/publish-scheduled"), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -314,7 +315,7 @@ const Admin: FC = () => {
         'Content-Type': 'application/json',
       };
 
-      const response = await fetch("/api/posts", {
+      const response = await fetch(apiPath("/api/posts"), {
         method: "POST",
         headers: headers,
         body: bodyContent,
@@ -381,7 +382,7 @@ const Admin: FC = () => {
       // Step 3: Save tags for the post
       if (postId && selectedTags.length > 0) {
         try {
-          await fetch(`/api/posts/${postId}/tags`, {
+          await fetch(apiPath(`/api/posts/${postId}/tags`), {
             method: "PUT",
             headers: {
               Authorization: `Bearer ${user.token}`,

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying J²Adventures Blog to production using Cloudflare Pages (frontend) and Cloudflare Workers (backend).
+This guide covers deploying J²Adventures Blog to production. The project currently supports a single Vercel deployment for frontend + API, while the older Cloudflare split deployment remains as a legacy option.
 
 ---
 
@@ -39,7 +39,49 @@ Run the combined migration in Supabase SQL Editor:
 
 ---
 
-## 2. Deploy Backend to Cloudflare Workers
+## 2. Deploy to Vercel (Recommended)
+
+### Architecture Overview
+
+```
+Vercel Project
+├── client/              # Vite frontend build output
+├── api/[[...route]].ts  # Hono API as Vercel Functions
+└── shared/              # Shared types/schemas
+```
+
+### Vercel Settings
+
+Use the repo root as the Vercel project root.
+
+| Setting | Value |
+|---------|-------|
+| Install Command | `bun install` |
+| Build Command | `cd client && bun run vercel-build` |
+| Output Directory | `client/dist` |
+
+### Required Environment Variables
+
+#### Frontend
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+#### API / Serverless
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ADMIN_GITHUB_USERNAME`
+
+### Notes
+- `vercel.json` already includes SPA rewrites and security headers.
+- `api/[[...route]].ts` mounts the Hono app under `/api` for Vercel Functions.
+- Public assets are still served from `client/public`.
+
+---
+
+## 3. Legacy Cloudflare Deployment
+
+## 3A. Deploy Backend to Cloudflare Workers
 
 ### Prerequisites
 - Cloudflare account
@@ -76,7 +118,7 @@ crons = ["*/15 * * * *"]
 
 ---
 
-## 3. Deploy Frontend to Cloudflare Pages
+## 3B. Deploy Frontend to Cloudflare Pages
 
 ### Steps
 

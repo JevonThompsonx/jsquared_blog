@@ -1,6 +1,7 @@
 import { useState, useEffect, FC, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Comment, CommentSortOption } from "../../../shared/src/types";
+import { apiPath } from "../utils/api";
 
 interface CommentsProps {
   postId: number;
@@ -21,7 +22,7 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
         headers.Authorization = `Bearer ${user.token}`;
       }
 
-      const response = await fetch(`/api/posts/${postId}/comments?sort=${sortBy}`, { headers });
+      const response = await fetch(apiPath(`/api/posts/${postId}/comments?sort=${sortBy}`), { headers });
       if (!response.ok) throw new Error("Failed to fetch comments");
 
       const data = await response.json();
@@ -43,7 +44,7 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/posts/${postId}/comments`, {
+      const response = await fetch(apiPath(`/api/posts/${postId}/comments`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -71,7 +72,7 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
     }
 
     try {
-      const response = await fetch(`/api/comments/${commentId}/like`, {
+      const response = await fetch(apiPath(`/api/comments/${commentId}/like`), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -92,7 +93,7 @@ const Comments: FC<CommentsProps> = ({ postId }) => {
     if (!user || !user.token) return;
 
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
+      const response = await fetch(apiPath(`/api/comments/${commentId}`), {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${user.token}`,

@@ -30,6 +30,7 @@ const mockEnv = {
   CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN || '',
   CLOUDFLARE_IMAGES_ACCOUNT_HASH: process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH || '',
   DEV_MODE: process.env.DEV_MODE || '',
+  ADMIN_GITHUB_USERNAME: process.env.ADMIN_GITHUB_USERNAME || '',
 };
 
 console.log('\n⛅️  Starting local Hono dev server...\n');
@@ -40,6 +41,7 @@ Bun.serve({
   fetch(req) {
     // Mock Cloudflare context
     return app.fetch(req, mockEnv, {
+      props: {},
       waitUntil: () => {},
       passThroughOnException: () => {},
     });
@@ -54,4 +56,5 @@ console.log('✓ Server running on http://localhost:8787');
 console.log('✓ Using Supabase URL:', mockEnv.SUPABASE_URL ? 'configured' : 'missing');
 console.log('✓ DEV_MODE:', mockEnv.DEV_MODE || 'not set');
 console.log('✓ Service Role Key:', mockEnv.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'not set');
+console.log('✓ Admin GitHub Username:', mockEnv.ADMIN_GITHUB_USERNAME ? 'configured' : 'not set');
 console.log('\nReady to handle requests!\n');

@@ -11,6 +11,7 @@ import ImageUploader, { PendingFile } from "./ImageUploader";
 import TagInput from "./TagInput";
 import { uploadImageToStorage, addImageRecord, updateImageFocalPoint, updateImageAltText } from "../utils/imageUpload";
 import { isoToLocalDateTimeInput, getCurrentLocalDateTimeInput } from "../utils/dateTime";
+import { apiPath } from "../utils/api";
 
 // Compression options for converting URL images
 const compressionOptions = {
@@ -61,7 +62,7 @@ const EditPost: FC = () => {
         return;
       }
       try {
-        const response = await fetch(`/api/posts/${id}`);
+        const response = await fetch(apiPath(`/api/posts/${id}`));
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -86,7 +87,7 @@ const EditPost: FC = () => {
         }
 
         // Fetch tags for this post
-        const tagsResponse = await fetch(`/api/posts/${id}/tags`);
+        const tagsResponse = await fetch(apiPath(`/api/posts/${id}/tags`));
         if (tagsResponse.ok) {
           const tagsData = await tagsResponse.json();
           setSelectedTags(tagsData.tags || []);
@@ -99,7 +100,7 @@ const EditPost: FC = () => {
     // Fetch available tags for autocomplete
     const fetchAvailableTags = async () => {
       try {
-        const response = await fetch("/api/tags");
+        const response = await fetch(apiPath("/api/tags"));
         if (response.ok) {
           const data = await response.json();
           setAvailableTags(data.tags || []);
@@ -313,7 +314,7 @@ const EditPost: FC = () => {
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`/api/posts/${id}`, {
+      const response = await fetch(apiPath(`/api/posts/${id}`), {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -383,7 +384,7 @@ const EditPost: FC = () => {
         'Content-Type': 'application/json',
       };
 
-      const response = await fetch(`/api/posts/${id}`, {
+      const response = await fetch(apiPath(`/api/posts/${id}`), {
         method: "PUT",
         headers: headers,
         body: bodyContent,
@@ -397,7 +398,7 @@ const EditPost: FC = () => {
       // Step 2: Delete images marked for deletion
       for (const imageId of imagesToDelete) {
         try {
-          await fetch(`/api/posts/${id}/images/${imageId}`, {
+          await fetch(apiPath(`/api/posts/${id}/images/${imageId}`), {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -413,7 +414,7 @@ const EditPost: FC = () => {
           sort_order: idx,
         }));
 
-        await fetch(`/api/posts/${id}/images/reorder`, {
+        await fetch(apiPath(`/api/posts/${id}/images/reorder`), {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -474,7 +475,7 @@ const EditPost: FC = () => {
 
       // Step 5: Update tags
       try {
-        await fetch(`/api/posts/${id}/tags`, {
+        await fetch(apiPath(`/api/posts/${id}/tags`), {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,

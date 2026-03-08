@@ -41,10 +41,10 @@ const themes: Record<ThemeName, Theme> = {
     "--text-primary": "#ECF9EE",
     "--text-secondary": "#A9C0A9",
     "--card-bg": "#2D6A4F",
-    "--primary": "#9370DB",
-    "--primary-light": "#B19CD9",
+    "--primary": "#7FB685",
+    "--primary-light": "#A7D0A7",
     "--border": "#40916C",
-    "--spinner": "#9370DB",
+    "--spinner": "#7FB685",
     "--text-shadow": "0 1px 3px rgba(0,0,0,0.4)",
   },
   daylightGarden: {

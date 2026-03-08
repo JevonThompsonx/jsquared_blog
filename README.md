@@ -57,6 +57,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
+ADMIN_GITHUB_USERNAME=your-github-username
 
 # Optional: For local scheduled post testing
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
@@ -264,6 +265,35 @@ GET  /feed.xml                     # RSS feed
 | [docs/TESTING.md](./docs/TESTING.md) | Testing guide for features |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Detailed deployment guide |
 | [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | Current status + recent fixes |
+
+## Vercel Notes
+
+- This monorepo can now deploy to a single Vercel project with:
+  - `client/` served as the static frontend
+  - `api/[[...route]].ts` serving the Hono backend as Vercel Functions
+- `vercel.json` is configured for:
+  - Bun install
+  - `client` build output
+  - SPA rewrites
+  - security headers
+- Required Vercel environment variables:
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+  - `SUPABASE_URL`
+  - `SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `ADMIN_GITHUB_USERNAME`
+
+- Optional:
+  - `DEV_MODE` (not for production)
+  - `VITE_API_BASE_URL` only if frontend points to a different API host
+
+## Admin Auth
+
+- Public readers do not need to log in.
+- Admin access is now intended to go through GitHub OAuth only.
+- Configure `ADMIN_GITHUB_USERNAME` in `server/.dev.vars` and in production server envs.
+- The GitHub account matching `ADMIN_GITHUB_USERNAME` is treated as admin in server auth checks.
 
 ---
 

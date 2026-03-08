@@ -10,6 +10,7 @@ import { decode as decodePNG } from "@jsquash/png";
 import { authMiddleware } from "./middleware/auth";
 import { validateEnv } from "./lib/env";
 import { getErrorMessage } from "./lib/errors";
+import { getRuntimeEnv } from "./lib/runtime-env";
 import {
   createPostBodySchema,
   updatePostBodySchema,
@@ -22,6 +23,7 @@ interface Bindings {
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   DEV_MODE?: string;
+  ADMIN_GITHUB_USERNAME?: string;
 }
 
 // Cloudflare Workers types for scheduled events
@@ -282,7 +284,7 @@ app.use(
 // was deployed without the required environment secrets.
 app.use("*", async (c, next) => {
   try {
-    validateEnv(c.env);
+    validateEnv(c.env, getRuntimeEnv(c));
   } catch (err) {
     console.error("[env validation]", err);
     return c.json({ error: { code: "SERVER_ERROR", message: "Server misconfiguration" } }, 500);
@@ -439,26 +441,34 @@ app.get("/api/posts", async (c) => {
     c.env.SUPABASE_URL,
     c.env.SUPABASE_ANON_KEY,
   );
+  const serviceRoleKey = c.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const adminSupabase = createClient(
     c.env.SUPABASE_URL,
-    c.env.SUPABASE_SERVICE_ROLE_KEY || c.env.SUPABASE_ANON_KEY,
+    serviceRoleKey || c.env.SUPABASE_ANON_KEY,
   );
 
   // Auto-publish scheduled posts that are past their scheduled time
   // This is a query-time check that runs on each request
   const now = new Date().toISOString();
-  const { data: scheduledPosts, error: scheduledFetchError } = await adminSupabase
-    .from("posts")
-    .select("id")
-    .eq("status", "scheduled")
-    .not("scheduled_for", "is", null)
-    .lte("scheduled_for", now);
+  let scheduledPosts: Array<{ id: number }> = [];
+  try {
+    const { data, error: scheduledFetchError } = await adminSupabase
+      .from("posts")
+      .select("id")
+      .eq("status", "scheduled")
+      .not("scheduled_for", "is", null)
+      .lte("scheduled_for", now);
 
-  if (scheduledFetchError) {
-    console.error("Failed to fetch scheduled posts:", scheduledFetchError);
+    if (scheduledFetchError) {
+      console.error("Failed to fetch scheduled posts:", scheduledFetchError);
+    } else {
+      scheduledPosts = data || [];
+    }
+  } catch (error) {
+    console.error("Scheduled post check failed:", error);
   }
 
-  if (scheduledPosts && scheduledPosts.length > 0) {
+  if (scheduledPosts.length > 0) {
     let autoPublished = 0;
     let blocked = 0;
     // Auto-publish these posts
@@ -557,6 +567,7 @@ app.get("/api/posts", async (c) => {
   const { data, error, count } = await query;
 
   if (error) {
+    console.error("Failed to fetch posts:", error);
     return c.json({ error: error.message }, 500);
   }
 

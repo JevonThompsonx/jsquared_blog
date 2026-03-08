@@ -13,7 +13,7 @@ interface BreadcrumbsProps {
 const Breadcrumbs: FC<BreadcrumbsProps> = ({ items }) => {
   return (
     <nav aria-label="Breadcrumb" className="mb-6">
-      <ol className="flex flex-wrap items-center gap-2 text-sm">
+      <ol className="flex flex-wrap items-center gap-2 text-sm rounded-full border border-[var(--border)] bg-[var(--card-bg)]/90 px-4 py-3 shadow-sm backdrop-blur-sm">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
 

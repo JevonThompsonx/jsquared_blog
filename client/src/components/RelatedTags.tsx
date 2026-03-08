@@ -2,6 +2,7 @@ import { useEffect, useState, FC } from "react";
 import { Link } from "react-router-dom";
 import { Tag } from "../../../shared/src/types";
 import { TagIcon } from "../utils/tagIcons";
+import { apiPath } from "../utils/api";
 
 interface RelatedTagsProps {
   currentTagSlug: string;
@@ -18,7 +19,7 @@ const RelatedTags: FC<RelatedTagsProps> = ({ currentTagSlug, limit = 8 }) => {
         setIsLoading(true);
         
         // Fetch all tags
-        const response = await fetch("/api/tags");
+        const response = await fetch(apiPath("/api/tags"));
         if (!response.ok) {
           throw new Error("Failed to fetch tags");
         }
@@ -65,8 +66,8 @@ const RelatedTags: FC<RelatedTagsProps> = ({ currentTagSlug, limit = 8 }) => {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-2">
-      <div className="bg-[var(--card-bg)] shadow-lg rounded-2xl border border-[var(--border)] p-6 sm:p-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-[var(--card-bg)] shadow-[0_24px_80px_rgba(15,23,42,0.08)] rounded-[2rem] border border-[var(--border)] p-6 sm:p-8">
         <div className="flex items-center gap-3 mb-4">
           <svg 
             className="w-6 h-6 text-[var(--primary)]" 
@@ -81,12 +82,12 @@ const RelatedTags: FC<RelatedTagsProps> = ({ currentTagSlug, limit = 8 }) => {
               d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" 
             />
           </svg>
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+          <h2 className="text-2xl font-semibold text-[var(--text-primary)]">
             Related Tags
           </h2>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-6">
-          Discover more adventures by exploring these related topics
+            Follow the threads into more adventures with these related vibes
         </p>
         <div className="flex flex-wrap gap-3">
           {relatedTags.map((tag) => (

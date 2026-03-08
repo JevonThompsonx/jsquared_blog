@@ -12,6 +12,7 @@ import ImageGallery from "./ImageGallery";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
 import { CategoryIcon } from "../utils/categoryIcons";
 import { formatDate } from "../utils/dateTime";
+import { apiPath } from "../utils/api";
 
 import { PostWithImages } from "../../../shared/src/types";
 
@@ -41,7 +42,7 @@ const PostDetail: FC = () => {
         return;
       }
       try {
-        const response = await fetch(`/api/posts/${id}`);
+        const response = await fetch(apiPath(`/api/posts/${id}`));
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -97,8 +98,8 @@ const PostDetail: FC = () => {
           }}
         />
       )}
-      <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
-        <div className="container mx-auto max-w-4xl">
+      <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
+        <div className="container mx-auto max-w-5xl">
         {/* Breadcrumbs */}
         {post ? (
           <Breadcrumbs
@@ -129,7 +130,7 @@ const PostDetail: FC = () => {
             <p className="text-[var(--text-secondary)]">The post you're looking for doesn't exist.</p>
           </div>
         ) : (
-          <article className="bg-[var(--card-bg)] shadow-xl rounded-2xl overflow-hidden border border-[var(--border)]">
+          <article className="bg-[var(--card-bg)] shadow-[0_30px_100px_rgba(15,23,42,0.10)] rounded-[2rem] overflow-hidden border border-[var(--border)]">
             {/* Image Gallery section */}
             {(post.images && post.images.length > 0) || post.image_url ? (
               <ImageGallery
@@ -140,7 +141,7 @@ const PostDetail: FC = () => {
             ) : null}
 
             {/* Content section */}
-            <div className="p-8 sm:p-12">
+             <div className="p-8 sm:p-12 lg:p-14">
               {/* Category, Draft status, and Admin controls */}
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
@@ -188,12 +189,12 @@ const PostDetail: FC = () => {
               </div>
 
               {/* Title */}
-              <h1 className="text-4xl sm:text-5xl font-bold text-[var(--text-primary)] mb-4 leading-tight">
-                {post.title}
-              </h1>
+               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-[var(--text-primary)] mb-5 leading-tight">
+                 {post.title}
+               </h1>
 
               {/* Date and Reading Time */}
-              <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-secondary)] mb-4">
+               <div className="flex flex-wrap items-center gap-4 text-sm uppercase tracking-[0.2em] text-[var(--text-secondary)] mb-6">
                 <p className="flex items-center gap-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -245,10 +246,10 @@ const PostDetail: FC = () => {
               <hr className="border-[var(--border)] mb-8" />
 
               {/* Description */}
-              <div
-                className="prose prose-lg max-w-none text-lg text-[var(--text-primary)] leading-relaxed tiptap"
-                dangerouslySetInnerHTML={{ __html: post.description || "" }}
-              />
+               <div
+                 className="prose prose-lg max-w-none text-lg text-[var(--text-primary)] leading-relaxed tiptap journal-prose"
+                 dangerouslySetInnerHTML={{ __html: post.description || "" }}
+               />
 
               {/* Share Buttons */}
               <div className="mt-8 pt-6 border-t border-[var(--border)]">

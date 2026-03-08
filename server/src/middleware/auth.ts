@@ -1,12 +1,15 @@
 // server/src/middleware/auth.ts
 import { createMiddleware } from "hono/factory";
 import { createClient, type User, type SupabaseClient } from "@supabase/supabase-js";
+import { getRuntimeEnv } from "../lib/runtime-env";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Bindings {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  ADMIN_GITHUB_USERNAME?: string;
 }
 
 export interface UserWithRole extends User {
@@ -27,6 +30,16 @@ interface HonoEnv {
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
 export const authMiddleware = createMiddleware<HonoEnv>(async (c, next) => {
+  const runtimeEnv = getRuntimeEnv(c);
+  const supabaseUrl = c.env.SUPABASE_URL || runtimeEnv.SUPABASE_URL;
+  const supabaseAnonKey = c.env.SUPABASE_ANON_KEY || runtimeEnv.SUPABASE_ANON_KEY;
+  const supabaseServiceRoleKey = c.env.SUPABASE_SERVICE_ROLE_KEY || runtimeEnv.SUPABASE_SERVICE_ROLE_KEY;
+  const adminGithubUsername = c.env.ADMIN_GITHUB_USERNAME || runtimeEnv.ADMIN_GITHUB_USERNAME;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return c.json({ error: "Server misconfiguration" }, 500);
+  }
+
   // 1. Require a Bearer token in the Authorization header.
   const authHeader = c.req.header("Authorization");
 
@@ -38,7 +51,7 @@ export const authMiddleware = createMiddleware<HonoEnv>(async (c, next) => {
 
   // 2. Create a Supabase client scoped to this user's JWT.
   //    This client only performs operations the user's RLS policies allow.
-  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY, {
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
@@ -52,20 +65,35 @@ export const authMiddleware = createMiddleware<HonoEnv>(async (c, next) => {
   }
 
   // 4. Fetch the user's role from the profiles table.
-  //    We use a fresh anonymous client here to sidestep any RLS that would
-  //    prevent the user from reading their own profile via the JWT client.
-  const anonClient = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+  //    Prefer the service role client when available so auth does not depend on profile RLS.
+  const roleClient = createClient(
+    supabaseUrl,
+    supabaseServiceRoleKey?.trim() || supabaseAnonKey,
+  );
 
-  const { data: profile } = await anonClient
+  const { data: profile } = await roleClient
     .from("profiles")
-    .select("role")
+    .select("role, username")
     .eq("id", user.id)
     .single();
+
+  const allowedGithubUsername = adminGithubUsername?.trim().toLowerCase();
+  const metadataGithubUsername = typeof user.user_metadata?.user_name === "string"
+    ? user.user_metadata.user_name.toLowerCase()
+    : typeof user.user_metadata?.preferred_username === "string"
+      ? user.user_metadata.preferred_username.toLowerCase()
+      : null;
+
+  const isAllowedGithubAdmin = Boolean(
+    allowedGithubUsername && metadataGithubUsername && metadataGithubUsername === allowedGithubUsername,
+  );
+
+  const resolvedRole = isAllowedGithubAdmin ? "admin" : profile?.role;
 
   // 5. Attach the role-enriched user and the JWT-scoped client to request context.
   const userWithRole: UserWithRole = {
     ...user,
-    role: profile?.role ?? undefined,
+    role: resolvedRole ?? undefined,
   };
 
   c.set("supabase", supabase);

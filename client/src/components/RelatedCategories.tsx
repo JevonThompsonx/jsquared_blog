@@ -19,8 +19,8 @@ const RelatedCategories: FC<RelatedCategoriesProps> = ({ currentCategory, limit 
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div className="bg-[var(--card-bg)] shadow-lg rounded-2xl border border-[var(--border)] p-6 sm:p-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-[var(--card-bg)] shadow-[0_24px_80px_rgba(15,23,42,0.08)] rounded-[2rem] border border-[var(--border)] p-6 sm:p-8">
         <div className="flex items-center gap-3 mb-4">
           <svg 
             className="w-6 h-6 text-[var(--primary)]" 
@@ -35,12 +35,12 @@ const RelatedCategories: FC<RelatedCategoriesProps> = ({ currentCategory, limit 
               d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" 
             />
           </svg>
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-            Explore Other Categories
+          <h2 className="text-2xl font-semibold text-[var(--text-primary)]">
+            Explore More Adventures
           </h2>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-6">
-          Discover more adventures in these categories
+          Find another kind of adventure to wander into next
         </p>
         <div className="flex flex-wrap gap-3">
           {relatedCategories.map((category) => (

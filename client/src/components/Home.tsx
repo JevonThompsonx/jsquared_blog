@@ -1,79 +1,43 @@
-
-
-import { useEffect, useMemo, FC, SyntheticEvent, useState, useRef, useCallback } from "react";
-import { Link, useNavigate, useOutletContext } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { Post, Article } from "../../../shared/src/types";
+import { FC, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useOutletContext } from "react-router-dom";
+import { Article, Post } from "../../../shared/src/types";
 import { useDebounce } from "../hooks/useDebounce";
+import { useAuth } from "../context/AuthContext";
 import SEO from "./SEO";
 import { SkeletonGrid } from "./SkeletonCard";
 import { CategoryIcon } from "../utils/categoryIcons";
 import { formatDate } from "../utils/dateTime";
+import { apiPath } from "../utils/api";
 
-// Small spinner for "loading more" at bottom
+const POSTS_PER_PAGE = 20;
+
+type HomeProps = {
+  searchTerm: string;
+};
+
 const LoadingSpinner: FC = () => (
   <div className="flex justify-center items-center col-span-full py-8">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--spinner)]"></div>
   </div>
 );
+
 const NoResults: FC = () => (
-  <div className="col-span-full bg-[var(--card-bg)] shadow-xl border border-[var(--border)] rounded-2xl p-12 text-center">
-    <svg className="w-16 h-16 mx-auto mb-4 text-[var(--text-secondary)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-    <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">
-      No Adventures Found
-    </h3>
-    <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto">
-      Try adjusting your search term or check back later for new adventures.
+  <div className="col-span-full rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)] p-12 text-center shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+    <p className="text-xs uppercase tracking-[0.35em] text-[var(--primary)] mb-3">No Results</p>
+    <h3 className="text-2xl font-semibold text-[var(--text-primary)] mb-3">No adventures matched that search</h3>
+    <p className="mx-auto max-w-xl text-sm text-[var(--text-secondary)]">
+      Try a different keyword, or clear the search to jump back into the full journal.
     </p>
   </div>
 );
 
-// Strip HTML tags - done once during data transformation, not on every render
 const stripHtml = (html: string): string => {
   if (!html) return "";
-  const tmp = document.createElement("DIV");
+  const tmp = document.createElement("div");
   tmp.innerHTML = html;
   return tmp.textContent || tmp.innerText || "";
 };
 
-const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
-  return posts.map((post) => {
-    // Use backend-assigned type and create grid classes based on it
-    let gridClass = "col-span-1"; // Default for mobile
-
-    // Desktop layout based on post type
-    if (post.type === "split-horizontal") {
-      // Horizontal cards take 2 columns
-      gridClass = "col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-2";
-    } else if (post.type === "split-vertical") {
-      // Vertical cards take 1 column
-      gridClass = "col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-1";
-    } else if (post.type === "hover") {
-      // Hover cards take 1 column
-      gridClass = "col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-1";
-    }
-
-    return {
-      id: post.id,
-      image:
-        post.image_url ||
-        "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found",
-      category: post.category || "General",
-      title: post.title,
-      description: stripHtml(post.description || ""), // Strip HTML once here
-      date: post.created_at,
-      gridClass: gridClass,
-      dynamicViewType: post.type,
-      status: post.status,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Post type lacks tags field but API returns it at runtime
-      tags: (post as any).tags || [], // Include tags from post
-    };
-  });
-};
-
-// Check if post is less than 24 hours old
 const isNewPost = (dateString: string): boolean => {
   if (!dateString) return false;
   const postDate = new Date(dateString);
@@ -82,336 +46,184 @@ const isNewPost = (dateString: string): boolean => {
   return hoursDiff < 24;
 };
 
-interface ArticleCardProps {
-  article: Article;
-  isAnimating?: boolean;
-  dateFormatPreference?: "relative" | "absolute";
-}
-const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPreference = "relative" }) => {
-  const navigate = useNavigate();
-  const { id, image, category, title, date, description, gridClass, tags } = article;
-  const categoryLabel = category || "General";
-  const formattedDate = formatDate(date, dateFormatPreference);
-  const isNew = article.status === "published" && isNewPost(date);
-  const handleImageError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
-    e.currentTarget.src =
-      "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
-  };
+const assignLayoutAndGridClass = (posts: Post[]): Article[] => {
+  return posts.map((post) => {
+    let gridClass = "col-span-1";
 
-  // STYLE 1: HOVER - Image with overlay that reveals description on hover
-  if (article.dynamicViewType === "hover") {
-    return (
-      <div
-        onClick={() => navigate(`/posts/${id}`)}
-        role="link"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            navigate(`/posts/${id}`);
-          }
-        }}
-        className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} cursor-pointer`}
-      >
-        <div className="group relative h-full rounded-lg overflow-hidden shadow-lg block">
-          <img
-            className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
-            src={image}
-            alt={title}
-            onError={handleImageError}
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
-          <div className="absolute top-2 right-2 flex gap-2">
-            {isNew && (
-              <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded animate-pulse">
-                NEW
-              </div>
-            )}
-            {article.status === "draft" && (
-              <div className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
-                DRAFT
-              </div>
-            )}
-            {article.status === "scheduled" && (
-              <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
-                SCHEDULED
-              </div>
-            )}
-          </div>
-          <div className="absolute bottom-0 left-0 p-4 md:p-6 right-0">
-            <Link
-              to={`/category/${encodeURIComponent(categoryLabel)}`}
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary-light)] font-semibold uppercase hover:underline"
-            >
-              <CategoryIcon category={categoryLabel} className="w-3.5 h-3.5" />
-              {categoryLabel}
-            </Link>
-            {tags && tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                  {tags.slice(0, 3).map((tag) => (
-                    <Link
-                      key={tag.id}
-                      to={`/tag/${tag.slug}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
-                    >
-                      {tag.name}
-                    </Link>
-                  ))}
-                {tags.length > 3 && (
-                  <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">
-                    +{tags.length - 3}
-                  </span>
-                )}
-              </div>
-            )}
-            <Link
-              to={`/posts/${id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="mt-1 text-lg md:text-xl font-bold leading-tight text-white block"
-            >
-              {title}
-            </Link>
-            <div className="text-gray-300 text-xs mt-2">
-              {formattedDate}
-            </div>
-            <p className="mt-2 text-gray-200 text-sm opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-300 ease-in-out overflow-hidden">
-              {description}
-            </p>
-            <span className="mt-2 text-[var(--primary-light)] text-sm font-medium inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Continue reading
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </span>
-          </div>
-        </div>
-      </div>
-    );
+    if (post.type === "split-horizontal") {
+      gridClass = "col-span-1 lg:col-span-2";
+    }
+
+    return {
+      id: post.id,
+      image: post.image_url || "https://placehold.co/900x700/EEE/31343C?text=Image+Not+Found",
+      category: post.category || "General",
+      title: post.title,
+      description: stripHtml(post.description || ""),
+      date: post.created_at,
+      gridClass,
+      dynamicViewType: post.type,
+      status: post.status,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API includes tags at runtime
+      tags: (post as any).tags || [],
+    };
+  });
+};
+
+type ArticleCardProps = {
+  article: Article;
+  dateFormatPreference?: "relative" | "absolute";
+};
+
+const StatusBadge: FC<{ status: Article["status"]; date: string }> = ({ status, date }) => {
+  if (status === "draft") {
+    return <span className="rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-amber-950">DRAFT</span>;
   }
 
-  // STYLE 2: SPLIT-HORIZONTAL - Side by side layout with image and content
-  if (article.dynamicViewType === "split-horizontal") {
-    return (
-      <div
-        onClick={() => navigate(`/posts/${id}`)}
-        role="link"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            navigate(`/posts/${id}`);
-          }
-        }}
-        className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} cursor-pointer`}
+  if (status === "scheduled") {
+    return <span className="rounded-full bg-sky-500 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-white">SCHEDULED</span>;
+  }
+
+  if (isNewPost(date)) {
+    return <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-white">NEW</span>;
+  }
+
+  return null;
+};
+
+const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "relative" }) => {
+  const { id, image, category, title, date, description, gridClass, tags, dynamicViewType, status } = article;
+  const formattedDate = formatDate(date, dateFormatPreference);
+
+  const handleImageError = (event: SyntheticEvent<HTMLImageElement, Event>) => {
+    event.currentTarget.src = "https://placehold.co/900x700/EEE/31343C?text=Image+Not+Found";
+  };
+
+  const bodyClass = dynamicViewType === "split-horizontal"
+    ? "lg:grid lg:grid-cols-2"
+    : "flex flex-col";
+
+  const imageHeightClass = dynamicViewType === "split-horizontal"
+    ? "h-72 lg:h-full lg:min-h-[22rem]"
+    : dynamicViewType === "hover"
+      ? "h-[26rem]"
+      : "h-72";
+
+  const contentClass = dynamicViewType === "split-horizontal"
+    ? "flex h-full flex-col gap-4 p-6 sm:p-7 lg:min-h-[22rem] lg:bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.98))]"
+    : "flex h-full flex-col gap-4 p-6 sm:p-7";
+
+  const cardToneClass = dynamicViewType === "hover"
+    ? "overflow-hidden bg-[linear-gradient(160deg,rgba(7,12,20,0.18),rgba(7,12,20,0.02))]"
+    : "overflow-hidden bg-[var(--card-bg)]";
+
+  return (
+    <article className={gridClass}>
+      <Link
+        to={`/posts/${id}`}
+        className={`group block h-full rounded-[2rem] border border-[var(--border)] shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-[var(--primary)]/60 hover:shadow-[0_28px_90px_rgba(15,23,42,0.14)] ${cardToneClass}`}
       >
-        <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col md:flex-row relative">
-          <div className="absolute top-2 right-2 flex gap-2 z-10">
-            {isNew && (
-              <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded animate-pulse">
-                NEW
-              </div>
-            )}
-            {article.status === "draft" && (
-              <div className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
-                DRAFT
-              </div>
-            )}
-            {article.status === "scheduled" && (
-              <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
-                SCHEDULED
-              </div>
-            )}
-          </div>
-          <div className="md:w-1/2 h-64 md:h-auto">
+        <div className={bodyClass}>
+          <div className={`relative overflow-hidden ${imageHeightClass}`}>
             <img
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               src={image}
               alt={title}
               onError={handleImageError}
               loading="lazy"
+              className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
             />
-          </div>
-          <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
-            <div>
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.55))]" />
+            <div className="absolute left-5 top-5 right-5 flex items-start justify-between gap-4">
               <Link
-                to={`/category/${encodeURIComponent(categoryLabel)}`}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
+                to={`/category/${encodeURIComponent(category)}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-white backdrop-blur-md hover:bg-black/45"
               >
-                <CategoryIcon category={categoryLabel} className="w-3.5 h-3.5" />
-                {categoryLabel}
+                <CategoryIcon category={category} className="h-3.5 w-3.5" />
+                {category}
               </Link>
+              <StatusBadge status={status} date={date} />
+            </div>
+          </div>
+
+          <div className={contentClass}>
+            <div className="flex items-center justify-between gap-4 text-xs uppercase tracking-[0.25em] text-[var(--text-secondary)]">
+              <span>{formattedDate}</span>
+              <span className="text-[var(--primary)]">Adventure</span>
+            </div>
+
+            <div className="space-y-4 lg:flex-1 lg:justify-center lg:flex lg:flex-col">
+              <div className="space-y-3">
+                <h2 className="text-2xl font-semibold leading-tight text-[var(--text-primary)] transition-colors group-hover:text-[var(--primary)]">
+                  {title}
+                </h2>
+                <p className="text-sm leading-7 text-[var(--text-secondary)] line-clamp-4 lg:line-clamp-6">
+                  {description || "Open the post to wander through the full adventure."}
+                </p>
+              </div>
+
               {tags && tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {tags.slice(0, 3).map((tag) => (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {tags.slice(0, 4).map((tag) => (
                     <Link
                       key={tag.id}
                       to={`/tag/${tag.slug}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                      }}
+                      className="rounded-full border border-[var(--border)] bg-[var(--background)]/90 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-secondary)] hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
                     >
                       {tag.name}
                     </Link>
                   ))}
-                  {tags.length > 3 && (
-                    <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
-                      +{tags.length - 3}
-                    </span>
-                  )}
                 </div>
               )}
-              <Link
-                to={`/posts/${id}`}
-                onClick={(e) => e.stopPropagation()}
-                className="mt-1 text-lg md:text-xl font-bold leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors block"
-              >
-                {title}
-              </Link>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
-              <span className="mt-3 text-[var(--primary)] text-sm font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
-                Continue reading
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </div>
+
+            <div className="mt-auto flex items-center justify-between border-t border-[var(--border)] pt-4 text-sm">
+              <span className="font-medium text-[var(--text-primary)]">Open Adventure</span>
+              <span className="inline-flex items-center gap-2 text-[var(--primary)] transition-transform duration-200 group-hover:translate-x-1">
+                Read
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </span>
             </div>
-            <div className="mt-4 text-xs text-[var(--text-secondary)]">
-              {formattedDate}
-            </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // STYLE 3: SPLIT-VERTICAL - Image on top, content below
-  return (
-    <div
-      onClick={() => navigate(`/posts/${id}`)}
-      role="link"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          navigate(`/posts/${id}`);
-        }
-      }}
-      className={`${gridClass} ${isAnimating ? "transition-all duration-1000 ease-out transform scale-0 opacity-0" : "transition-all duration-1000 ease-out transform scale-100 opacity-100"} cursor-pointer`}
-    >
-      <div className="group h-full rounded-lg overflow-hidden shadow-lg bg-[var(--card-bg)] border border-[var(--border)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-xl flex flex-col relative">
-        <div className="absolute top-2 right-2 flex gap-2 z-10">
-          {isNew && (
-            <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded animate-pulse">
-              NEW
-            </div>
-          )}
-          {article.status === "draft" && (
-            <div className="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
-              DRAFT
-            </div>
-          )}
-          {article.status === "scheduled" && (
-            <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
-              SCHEDULED
-            </div>
-          )}
-        </div>
-        <div className="h-56">
-          <img
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            src={image}
-            alt={title}
-            onError={handleImageError}
-            loading="lazy"
-          />
-        </div>
-        <div className="p-4 md:p-6 flex-grow flex flex-col">
-          <Link
-            to={`/category/${encodeURIComponent(category)}`}
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 tracking-wide text-xs text-[var(--primary)] font-semibold uppercase hover:underline"
-          >
-            <CategoryIcon category={categoryLabel} className="w-3.5 h-3.5" />
-            {categoryLabel}
-          </Link>
-          {tags && tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-                {tags.slice(0, 3).map((tag) => (
-                <Link
-                  key={tag.id}
-                  to={`/tag/${tag.slug}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-colors"
-                >
-                  {tag.name}
-                </Link>
-                ))}
-              {tags.length > 3 && (
-                <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
-                  +{tags.length - 3}
-                </span>
-              )}
-            </div>
-          )}
-          <Link
-            to={`/posts/${id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="mt-1 font-bold text-lg leading-tight text-[var(--text-primary)] hover:text-[var(--primary)] transition-colors block"
-          >
-            {title}
-          </Link>
-          <p className="mt-2 text-sm text-[var(--text-secondary)] flex-grow">
-            {description}
-          </p>
-          <span className="mt-3 text-[var(--primary)] text-sm font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
-            Continue reading
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </span>
-          <p className="mt-4 text-xs text-[var(--text-secondary)] self-start">
-            {formattedDate}
-          </p>
-        </div>
-      </div>
-    </div>
+      </Link>
+    </article>
   );
 };
 
-interface HomeProps {
-  searchTerm: string;
-}
-
 export default function Home() {
   const { user, token } = useAuth();
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isAnimating] = useState(false); // Start false for faster perceived load
-  const [showContent, setShowContent] = useState(true); // Start visible to prevent scroll issues
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const [showDraftsOnly, setShowDraftsOnly] = useState(false); // Draft filter toggle
-  const mainContentRef = useRef<HTMLDivElement>(null);
-  const observerTarget = useRef<HTMLDivElement>(null);
-
   const { searchTerm } = useOutletContext<HomeProps>();
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
-  const POSTS_PER_PAGE = 20;
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showContent, setShowContent] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [showDraftsOnly, setShowDraftsOnly] = useState(false);
 
-  // Check if user is admin
-  const isAdmin = user?.role === 'admin';
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const prevSearchRef = useRef(debouncedSearchTerm);
+  const prevDraftsRef = useRef(showDraftsOnly);
+
+  const isAdmin = user?.role === "admin";
 
   const fetchPosts = useCallback(async (
     currentOffset: number,
     search: string,
     isInitial: boolean = false,
     authToken?: string | null,
-    draftsOnly: boolean = false
+    draftsOnly: boolean = false,
   ) => {
     if (isInitial) {
       setIsLoading(true);
@@ -425,28 +237,19 @@ export default function Home() {
         offset: currentOffset.toString(),
       });
 
-      if (search) {
-        params.append("search", search);
-      }
+      if (search) params.append("search", search);
+      if (draftsOnly) params.append("status", "draft");
 
-      // Add status filter for drafts only view
-      if (draftsOnly) {
-        params.append("status", "draft");
-      }
-
-      // Include auth token if user is logged in (for admin draft visibility)
       const headers: HeadersInit = {};
-      const fetchOptions: RequestInit = { headers };
-
+      const requestInit: RequestInit = { headers };
       if (authToken) {
-        headers["Authorization"] = `Bearer ${authToken}`;
-        // Bypass browser cache for authenticated requests to get fresh data
-        fetchOptions.cache = "no-store";
+        headers.Authorization = `Bearer ${authToken}`;
+        requestInit.cache = "no-store";
       }
 
-      const response = await fetch(`/api/posts?${params}`, fetchOptions);
+      const response = await fetch(apiPath(`/api/posts?${params}`), requestInit);
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        throw new Error("Failed to fetch posts");
       }
 
       const data = await response.json();
@@ -454,10 +257,10 @@ export default function Home() {
       if (isInitial) {
         setAllPosts(data.posts || []);
       } else {
-        setAllPosts(prev => [...prev, ...(data.posts || [])]);
+        setAllPosts((prev) => [...prev, ...(data.posts || [])]);
       }
 
-      setHasMore(data.hasMore || false);
+      setHasMore(Boolean(data.hasMore));
     } catch (error) {
       console.error("Failed to fetch posts:", error);
     } finally {
@@ -466,29 +269,21 @@ export default function Home() {
     }
   }, []);
 
-  // Track previous values to detect actual filter changes (not just token updates)
-  const prevSearchRef = useRef(debouncedSearchTerm);
-  const prevDraftsRef = useRef(showDraftsOnly);
-
-  // Initial load and search changes (also re-fetch when token/filter changes)
   useEffect(() => {
     const searchChanged = prevSearchRef.current !== debouncedSearchTerm;
     const filterChanged = prevDraftsRef.current !== showDraftsOnly;
 
-    // Update refs
     prevSearchRef.current = debouncedSearchTerm;
     prevDraftsRef.current = showDraftsOnly;
 
     setOffset(0);
-    // Only clear posts when search or filter actually changes, not when token changes
-    // This prevents the flash where posts disappear and reappear on initial auth
     if (searchChanged || filterChanged) {
       setAllPosts([]);
     }
+
     fetchPosts(0, debouncedSearchTerm, true, token, showDraftsOnly);
   }, [debouncedSearchTerm, fetchPosts, token, showDraftsOnly]);
 
-  // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -498,54 +293,30 @@ export default function Home() {
           fetchPosts(newOffset, debouncedSearchTerm, false, token, showDraftsOnly);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     const currentTarget = observerTarget.current;
-    if (currentTarget) {
-      observer.observe(currentTarget);
-    }
+    if (currentTarget) observer.observe(currentTarget);
 
     return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget);
-      }
+      if (currentTarget) observer.unobserve(currentTarget);
     };
-  }, [hasMore, isLoading, isLoadingMore, offset, debouncedSearchTerm, fetchPosts, token, showDraftsOnly]);
+  }, [debouncedSearchTerm, fetchPosts, hasMore, isLoading, isLoadingMore, offset, showDraftsOnly, token]);
 
-  // Show content on scroll or immediately if already scrolled past landing
   useEffect(() => {
     const handleScroll = () => {
-      if (mainContentRef.current) {
-        const { top } = mainContentRef.current.getBoundingClientRect();
-        if (top <= window.innerHeight * 0.5) {
-          setShowContent(true);
-        }
+      if (!mainContentRef.current) return;
+      const { top } = mainContentRef.current.getBoundingClientRect();
+      if (top <= window.innerHeight * 0.6) {
+        setShowContent(true);
       }
     };
 
-    // Check immediately on mount - if user refreshed while scrolled down
     handleScroll();
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Also show content immediately once posts are loaded (for faster perceived load)
-  useEffect(() => {
-    if (!isLoading && allPosts.length > 0 && !showContent) {
-      // Small delay to allow browser to render, then trigger visibility check
-      requestAnimationFrame(() => {
-        if (mainContentRef.current) {
-          const { top } = mainContentRef.current.getBoundingClientRect();
-          // Show if content is at all visible in viewport
-          if (top < window.innerHeight) {
-            setShowContent(true);
-          }
-        }
-      });
-    }
-  }, [isLoading, allPosts.length, showContent]);
 
   const displayedArticles = useMemo<Article[]>(() => {
     const seenIds = new Set<number>();
@@ -554,6 +325,7 @@ export default function Home() {
       seenIds.add(post.id);
       return true;
     });
+
     return assignLayoutAndGridClass(uniquePosts);
   }, [allPosts]);
 
@@ -563,123 +335,119 @@ export default function Home() {
         structuredData={{
           "@context": "https://schema.org",
           "@type": "Organization",
-          "name": "J²Adventures",
-          "url": "https://jsquaredadventures.com",
-          "logo": "https://jsquaredadventures.com/og-image.jpg",
-          "description": "Join us on our adventures around the world! From hiking and camping to food tours and city explorations, we share our travel stories and experiences.",
-          "sameAs": []
+          name: "J²Adventures",
+          url: "https://jsquaredadventures.com",
+          logo: "https://jsquaredadventures.com/og-image.jpg",
+          description: "Join us on our adventures around the world! From hiking and camping to food tours and city explorations, we share our travel stories and experiences.",
+          sameAs: [],
         }}
       />
-      <div
+
+      <section
         className="landing-page"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1682686578842-00ba49b0a71a?q=60&w=1075&fm=webp&fit=crop&ixlib=rb-4.1.0')`,
+          backgroundImage: "url('https://images.unsplash.com/photo-1682686578842-00ba49b0a71a?q=60&w=1075&fm=webp&fit=crop&ixlib=rb-4.1.0')",
         }}
       >
-        <div className="welcome-text backdrop-blur-sm">
-          <h1 className="landing-title drop-shadow-lg">J²Adventures</h1>
-          <p className="landing-subtitle drop-shadow-md">
-            Exploring the world, one adventure at a time.
-          </p>
-          <a
-            href="/feed.xml"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white/80 hover:text-white hover:bg-white/20 transition-all duration-300 text-sm"
-            title="Subscribe to RSS Feed"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"/>
-            </svg>
-            RSS Feed
-          </a>
+        <div className="landing-page__veil" />
+        <div className="landing-page__content">
+          <h1 className="landing-title">J²Adventures</h1>
         </div>
         <div className="scroll-indicator">
+          <span className="scroll-indicator__label">Scroll</span>
           <div className="arrow-down"></div>
         </div>
-      </div>
+      </section>
 
       <div
+        id="dispatches"
         ref={mainContentRef}
-        className={`main-content ${
-          showContent ? "main-content-visible" : "main-content-hidden"
-        }`}
+        className={`main-content ${showContent ? "main-content-visible" : "main-content-hidden"}`}
       >
-        {user && (
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-4 shadow-lg">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-[var(--text-secondary)]">
-                  <span className="font-semibold text-[var(--primary)]">Welcome back,</span> {user.email}!
-                </p>
-                {isAdmin && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-[var(--text-secondary)]">View:</span>
-                    <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden">
-                      <button
-                        onClick={() => setShowDraftsOnly(false)}
-                        className={`px-4 py-2 text-sm font-medium transition-colors ${
-                          !showDraftsOnly
-                            ? 'bg-[var(--primary)] text-white'
-                            : 'bg-[var(--background)] text-[var(--text-secondary)] hover:bg-[var(--border)]'
-                        }`}
-                      >
-                        All Posts
-                      </button>
-                      <button
-                        onClick={() => setShowDraftsOnly(true)}
-                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                          showDraftsOnly
-                            ? 'bg-yellow-500 text-black'
-                            : 'bg-[var(--background)] text-[var(--text-secondary)] hover:bg-[var(--border)]'
-                        }`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        Drafts Only
-                      </button>
-                    </div>
-                  </div>
-                )}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
+            <div className="space-y-4">
+              <p className="text-xs uppercase tracking-[0.35em] text-[var(--primary)]">Latest Dispatches</p>
+              <h2 className="text-4xl md:text-5xl font-semibold leading-tight text-[var(--text-primary)] max-w-4xl">
+                A simple collection of adventures, sweet little detours, and places worth remembering.
+              </h2>
+              <p className="max-w-2xl text-base md:text-lg leading-8 text-[var(--text-secondary)]">
+                Browse the latest adventures, search for a mood or category, and hop into whatever feels fun next.
+              </p>
+            </div>
+
+            <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+                <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--primary)]">Status</p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                    {isAdmin ? "Switch between published stories and admin drafts without leaving the homepage." : "Browse the public adventures and use search to jump into anything that fits the vibe."}
+                  </p>
+                </div>
+                <div className="rounded-full bg-[var(--background)] px-4 py-2 text-sm font-medium text-[var(--text-primary)]">
+                  {displayedArticles.length} loaded
+                </div>
               </div>
+
+              {isAdmin && user && (
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => setShowDraftsOnly(false)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                      !showDraftsOnly
+                        ? "bg-[var(--primary)] text-white"
+                        : "bg-[var(--background)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
+                    }`}
+                  >
+                    All Posts
+                  </button>
+                  <button
+                    onClick={() => setShowDraftsOnly(true)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                      showDraftsOnly
+                        ? "bg-amber-300 text-amber-950"
+                        : "bg-[var(--background)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
+                    }`}
+                  >
+                    Drafts Only
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </section>
 
-        <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense">
+        <main className="container mx-auto px-4 pb-16 sm:px-6 lg:px-8">
           {isLoading ? (
-            <SkeletonGrid count={6} />
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3 auto-rows-[minmax(300px,auto)]">
+              <SkeletonGrid count={6} />
+            </div>
           ) : displayedArticles.length > 0 ? (
-            <>
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3 auto-rows-[minmax(300px,auto)] grid-flow-dense">
               {displayedArticles.map((article) => (
                 <ArticleCard
                   key={article.id}
                   article={article}
-                  isAnimating={isAnimating}
                   dateFormatPreference={user?.date_format_preference || "relative"}
                 />
               ))}
-              {/* Infinite scroll trigger */}
+
               <div ref={observerTarget} className="col-span-full h-10" />
-              {/* Loading more indicator */}
               {isLoadingMore && <LoadingSpinner />}
-              {/* End of results message */}
+
               {!hasMore && !isLoadingMore && displayedArticles.length > 0 && (
-                <div className="col-span-full text-center py-6">
-                  <div className="inline-flex items-center gap-3 bg-[var(--card-bg)] border border-[var(--border)] rounded-full px-8 py-4 shadow-lg">
-                    <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-[var(--text-primary)] font-semibold">
-                      You've reached the end of the adventures!
-                    </span>
+                <div className="col-span-full pt-4">
+                  <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)] px-8 py-5 text-center shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+                    <p className="text-xs uppercase tracking-[0.35em] text-[var(--primary)] mb-2">That’s Everything</p>
+                    <p className="text-[var(--text-primary)] font-medium">You’ve reached the end of the current adventures.</p>
                   </div>
                 </div>
               )}
-            </>
+            </div>
           ) : (
-            <NoResults />
+            <div className="grid grid-cols-1 gap-8">
+              <NoResults />
+            </div>
           )}
         </main>
       </div>

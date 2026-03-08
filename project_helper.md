@@ -20,6 +20,7 @@ This file is a refreshed version of `prompt.md` tuned to this repo and the issue
 - `.dev.vars` must exist at `server/.dev.vars` and must **not** contain placeholder duplicates.
 - If `/api/test/env` shows missing values, **restart dev server** and re-check.
 - **Service role key is required** for scheduled auto-publish and admin publish endpoints.
+- `ADMIN_GITHUB_USERNAME` must be configured when using GitHub-only admin access.
 
 ### Auto‑Publish & Scheduled Posts
 - Auto-publish triggers on **`/api/posts`** and **`/api/posts/:id`**.
@@ -30,6 +31,15 @@ This file is a refreshed version of `prompt.md` tuned to this repo and the issue
   - If missing publicly, this is **RLS** or cache — not UI.
 - Dev-only debug endpoint (requires `DEV_MODE=true`):
   - `GET /api/test/post-visibility?ids=42,43`
+- If service-role connectivity fails, public post listing must still load; scheduled auto-publish errors should degrade gracefully and never break `/api/posts`.
+
+### Auth / Profile RLS
+- If auth succeeds but profile fetches intermittently fail, prefer the service role on the server for role lookup instead of relying on anonymous profile reads.
+- Admin access should be separated from public readers. For this project, GitHub OAuth + `ADMIN_GITHUB_USERNAME` is the preferred gate.
+
+### Deployment Notes
+- Vercel can host this monorepo with `client/` as the SPA and `api/[[...route]].ts` as Hono-powered Vercel Functions.
+- Keep backend runtime compatibility in mind: use runtime env fallback (`process.env`) in addition to Cloudflare-style bindings.
 
 ### UI Pitfalls We Hit
 - **Never nest `<Link>` inside `<Link>`**; use a non-link wrapper and link the title.
@@ -45,6 +55,17 @@ This file is a refreshed version of `prompt.md` tuned to this repo and the issue
 ### Category Label Consistency
 - Use **"General"** consistently when `post.category` is null.
 - Avoid mixing "Uncategorized" in PostDetail.
+
+### Card Click Behavior
+- Home, Tag, and Category cards should be consistently clickable across the entire visual card.
+- If using full-card `<Link>`, inner category/tag/title links must stop propagation or be replaced with non-link labels.
+
+### Rewrite Guidance
+- When redesigning this blog, preserve all route behavior first; redesign should be a visual/system rewrite, not a navigation rewrite.
+- Favor soft, adventurous, airy styling over rugged or overly masculine travel language.
+- Keep the homepage hero minimal when requested: simple brand mark + original image can be stronger than layered copy.
+- Use the `J²Adventures` brand consistently. Avoid swapping to `J2Squared Adventures` in copy.
+- Homepage cards need clickable category chips even when the full card is clickable; stop propagation on inner links.
 
 ### Ports & Process Collisions
 - Hono dev server binds **8787**. If you see `EADDRINUSE`, kill the old process.
@@ -76,6 +97,10 @@ This file is a refreshed version of `prompt.md` tuned to this repo and the issue
 - If `/api/test/env` shows `DEV_MODE` or role key unset:
   - Ensure `server/.dev.vars` exists and has **no placeholder duplicates**.
   - Restart dev server.
+
+### Supabase Availability
+- If `/api/posts` suddenly returns 500 with Cloudflare 521 / connection refused HTML, check whether the Supabase project/database is paused or sleeping.
+- Resume the Supabase project before debugging app logic.
 
 ### Nested Link Warning
 - Replace card `<Link>` wrappers with `<div>` + linked title.

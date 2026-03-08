@@ -81,14 +81,15 @@ export default function Navbar({
   };
 
   return (
-    <header className="navbar-landing">
-      <div className="container mx-auto flex justify-between items-center p-4 max-w-full">
+    <header className="navbar-landing border-b border-white/10 backdrop-blur-xl">
+      <div className="container mx-auto flex justify-between items-center px-4 py-4 max-w-full sm:px-6 lg:px-8">
         <Link
           to="/"
           onClick={() => setSearchTerm("")}
-          className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]"
+          className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)]"
+          aria-label="J squared Adventures"
         >
-          J²Adventures
+          J<sup className="text-[0.58em] align-super">2</sup>Adventures
         </Link>
         <div className="hidden md:flex items-center space-x-4">
           <div className="relative">
@@ -98,7 +99,7 @@ export default function Navbar({
               value={searchTerm}
               onChange={handleSearchChange}
               ref={searchInputRef}
-              className="pl-8 pr-2 py-1.5 rounded-md border border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] w-40 lg:w-64 transition-all duration-300"
+              className="pl-8 pr-4 py-2.5 rounded-full border border-[var(--border)] bg-[var(--card-bg)]/80 text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] w-48 lg:w-72 transition-all duration-300 shadow-sm"
             />
             <div className="absolute left-2 top-1/2 -translate-y-1/2">
               <SearchIcon />
@@ -150,8 +151,8 @@ export default function Navbar({
               </button>
 
               {/* Dropdown Menu */}
-              {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg shadow-xl z-50">
+               {isUserMenuOpen && (
+                 <div className="absolute right-0 mt-2 w-56 bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl shadow-xl z-50 overflow-hidden">
                   {/* User info header */}
                   <div className="px-4 py-3 border-b border-[var(--border)]">
                     <p className="font-semibold text-[var(--text-primary)] truncate">
@@ -233,8 +234,8 @@ export default function Navbar({
           </button>
         </div>
       </div>
-      {isMenuOpen && (
-        <div className="md:hidden mobile-menu w-full max-w-full overflow-x-hidden">
+       {isMenuOpen && (
+         <div className="md:hidden mobile-menu w-full max-w-full overflow-x-hidden border-t border-[var(--border)]/60">
           <div className="px-4 pt-2 pb-3 space-y-2">
             <div className="relative">
               <input
