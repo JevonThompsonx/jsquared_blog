@@ -1,6 +1,6 @@
 import { useEffect, useState, FC, SyntheticEvent, useMemo, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Post, Article, Tag as TagType } from "../../../shared/src/types";
+import { Post, Article, DateFormatPreference, Tag as TagType } from "../../../shared/src/types";
 import SEO from "./SEO";
 import SuggestedPosts from "./SuggestedPosts";
 import Breadcrumbs from "./Breadcrumbs";
@@ -79,7 +79,7 @@ const isNewPost = (dateString: string): boolean => {
 
 interface ArticleCardProps {
   article: Article;
-  dateFormatPreference?: "relative" | "absolute";
+  dateFormatPreference?: DateFormatPreference;
 }
 
 const ArticleCard: FC<ArticleCardProps> = ({ article, dateFormatPreference = "relative" }) => {

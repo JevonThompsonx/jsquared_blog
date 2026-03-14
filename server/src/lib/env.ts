@@ -18,6 +18,8 @@ const envSchema = z.object({
     .min(10, "SUPABASE_ANON_KEY appears to be missing or truncated"),
   // Optional bindings — validated only when present
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  TURSO_DATABASE_URL: z.string().url().optional(),
+  TURSO_AUTH_TOKEN: z.string().optional(),
   DEV_MODE: z.string().optional(),
 });
 

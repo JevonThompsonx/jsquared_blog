@@ -4,6 +4,7 @@ import { PostWithImagesAndTags } from "../../../shared/src/types";
 import ImageGallery from "./ImageGallery";
 import { calculateReadingTime } from "../utils/readingTime";
 import ShareButtons from "./ShareButtons";
+import { sanitizeHtml } from "../utils/sanitizeHtml";
 
 const PreviewPost: FC = () => {
   const [post, setPost] = useState<PostWithImagesAndTags | null>(null);
@@ -37,6 +38,7 @@ const PreviewPost: FC = () => {
   }
 
   const readingTime = calculateReadingTime(post.description || "");
+  const safeDescription = sanitizeHtml(post.description, "<p>No content yet.</p>");
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
@@ -111,7 +113,7 @@ const PreviewPost: FC = () => {
             {/* Post Description */}
             <div
               className="prose prose-lg max-w-none text-[var(--text-primary)]"
-              dangerouslySetInnerHTML={{ __html: post.description || "<p>No content yet.</p>" }}
+              dangerouslySetInnerHTML={{ __html: safeDescription }}
             />
 
             {/* Share Buttons */}

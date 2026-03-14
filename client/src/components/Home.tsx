@@ -3,7 +3,7 @@
 import { useEffect, useMemo, FC, SyntheticEvent, useState, useRef, useCallback } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Post, Article } from "../../../shared/src/types";
+import { Post, Article, DateFormatPreference } from "../../../shared/src/types";
 import { useDebounce } from "../hooks/useDebounce";
 import SEO from "./SEO";
 import { SkeletonGrid } from "./SkeletonCard";
@@ -85,7 +85,7 @@ const isNewPost = (dateString: string): boolean => {
 interface ArticleCardProps {
   article: Article;
   isAnimating?: boolean;
-  dateFormatPreference?: "relative" | "absolute";
+  dateFormatPreference?: DateFormatPreference;
 }
 const ArticleCard: FC<ArticleCardProps> = ({ article, isAnimating, dateFormatPreference = "relative" }) => {
   const { id, image, category, title, date, description, gridClass, tags } = article;

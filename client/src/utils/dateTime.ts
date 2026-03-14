@@ -53,10 +53,17 @@ export function getCurrentLocalDateTimeInput(): string {
  * @param format - "relative" (e.g., "5 days ago") or "absolute" (e.g., "Jan 10, 2026")
  * @returns Formatted date string
  */
-export function formatDate(dateString: string, format: "relative" | "absolute" = "relative"): string {
+export function formatDate(
+  dateString: string,
+  format: "seasonal" | "relative" | "absolute" = "relative"
+): string {
   if (!dateString) return "";
   
   const date = new Date(dateString);
+
+  if (format === "seasonal") {
+    return formatDateToSeasonYear(dateString);
+  }
   
   if (format === "absolute") {
     // Absolute format: "Jan 10, 2026"

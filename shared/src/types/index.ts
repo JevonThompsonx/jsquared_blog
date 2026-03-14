@@ -4,7 +4,7 @@ export type ThemeName =
   | "enchantedForest"
   | "daylitForest";
 
-export type DateFormatPreference = "relative" | "absolute";
+export type DateFormatPreference = "seasonal" | "relative" | "absolute";
 
 export type PostType = "split-horizontal" | "split-vertical" | "hover";
 
@@ -134,6 +134,17 @@ export type UserProfile = {
   role: "admin" | "viewer";
   theme_preference?: ThemeName;
   date_format_preference?: DateFormatPreference;
+};
+
+export type AuthorProfile = {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  bio: string | null;
+  location?: string | null;
+  favorite_category?: string | null;
+  favorite_destination?: string | null;
+  is_profile_public?: boolean;
 };
 
 // Preset avatar icons (adventure-themed)

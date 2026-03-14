@@ -179,7 +179,7 @@ export const updateProfileBodySchema = z.object({
   theme_preference: z
     .enum(["midnightGarden", "daylightGarden", "enchantedForest", "daylitForest"])
     .optional(),
-  date_format_preference: z.enum(["relative", "absolute"]).optional(),
+  date_format_preference: z.enum(["seasonal", "relative", "absolute"]).optional(),
 });
 
 export type UpdateProfileBody = z.infer<typeof updateProfileBodySchema>;

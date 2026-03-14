@@ -10,6 +10,7 @@ import { decode as decodePNG } from "@jsquash/png";
 import { authMiddleware } from "./middleware/auth";
 import { validateEnv } from "./lib/env";
 import { getErrorMessage } from "./lib/errors";
+import { deletePostFromTurso, syncPostFromSupabase, syncTagBySlug } from "./lib/tursoSync";
 import {
   createPostBodySchema,
   updatePostBodySchema,
@@ -21,6 +22,8 @@ interface Bindings {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  TURSO_DATABASE_URL?: string;
+  TURSO_AUTH_TOKEN?: string;
   DEV_MODE?: string;
 }
 
@@ -249,6 +252,15 @@ async function reassignAllPostLayouts(
 }
 
 const app = new Hono<HonoEnv>();
+
+function runBackgroundSync(c: { env: Bindings }, task: Promise<unknown>) {
+  void task.catch((error) => {
+    console.error("[turso sync]", error);
+  });
+
+  const contextWithExecution = c as { executionCtx?: { waitUntil(promise: Promise<unknown>): void } };
+  contextWithExecution.executionCtx?.waitUntil(task);
+}
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
@@ -873,6 +885,11 @@ app.post("/api/posts", authMiddleware, async (c) => {
   // After successful post insertion, re-assign layouts for all posts
   
   await reassignAllPostLayouts(supabase, layoutPatterns);
+
+  const createdPostId = data?.[0]?.id;
+  if (typeof createdPostId === "number") {
+    runBackgroundSync(c, syncPostFromSupabase(c.env, createdPostId));
+  }
   
 
   return c.json(data, 201);
@@ -1054,6 +1071,8 @@ app.put("/api/posts/:id", authMiddleware, async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(id)));
+
   return c.json(data, 200);
 });
 
@@ -1122,6 +1141,8 @@ app.delete("/api/posts/:id", authMiddleware, async (c) => {
     console.error("Supabase delete error:", deleteError);
     return c.json({ error: deleteError.message }, 500);
   }
+
+  runBackgroundSync(c, deletePostFromTurso(c.env, Number(id)));
 
   return c.json({ message: "Post deleted successfully" }, 200);
 });
@@ -1554,6 +1575,8 @@ app.post("/api/posts/:postId/images", authMiddleware, async (c) => {
     }
   }
 
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(postId)));
+
   return c.json({
     images: uploadedImages,
     skipped: skippedFiles.length > 0 ? skippedFiles : undefined,
@@ -1655,6 +1678,8 @@ app.post("/api/posts/:postId/images/record", authMiddleware, async (c) => {
     }
   }
 
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(postId)));
+
   return c.json(data, 201);
 });
 
@@ -1748,6 +1773,8 @@ app.delete("/api/posts/:postId/images/:imageId", authMiddleware, async (c) => {
     }
   }
 
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(postId)));
+
   return c.json({ message: "Image deleted successfully" }, 200);
 });
 
@@ -1793,6 +1820,8 @@ app.put("/api/posts/:postId/images/:imageId/focal-point", authMiddleware, async 
     console.error("Failed to update focal point:", error);
     return c.json({ error: "Failed to update focal point" }, 500);
   }
+
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(postId)));
 
   return c.json(data, 200);
 });
@@ -1840,6 +1869,8 @@ app.put("/api/posts/:postId/images/:imageId/alt-text", authMiddleware, async (c)
     console.error("Failed to update alt text:", error);
     return c.json({ error: "Failed to update alt text" }, 500);
   }
+
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(postId)));
 
   return c.json(data, 200);
 });
@@ -1891,6 +1922,8 @@ app.put("/api/posts/:postId/images/reorder", authMiddleware, async (c) => {
         .eq("id", postId);
     }
   }
+
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(postId)));
 
   return c.json({ message: "Images reordered successfully" }, 200);
 });
@@ -1954,6 +1987,8 @@ app.post("/api/tags", authMiddleware, async (c) => {
   if (error) {
     return c.json({ error: error.message }, 500);
   }
+
+  runBackgroundSync(c, syncTagBySlug(c.env, slug));
 
   return c.json(data, 201);
 });
@@ -2063,6 +2098,8 @@ app.put("/api/posts/:postId/tags", authMiddleware, async (c) => {
 
   const resultTags = updatedTags?.map(pt => pt.tags).filter(Boolean) || [];
 
+  runBackgroundSync(c, syncPostFromSupabase(c.env, Number(postId)));
+
   return c.json({ tags: resultTags }, 200);
 });
 
@@ -2107,6 +2144,7 @@ app.post("/api/admin/publish-scheduled", authMiddleware, async (c) => {
       .eq("id", post.id);
     if (!publishError) {
       published += 1;
+      runBackgroundSync(c, syncPostFromSupabase(c.env, post.id));
     }
   }
 
@@ -2247,6 +2285,7 @@ async function autoPublishScheduledPosts(env: Bindings): Promise<{
         console.log(`Published post ${post.id}: "${post.title}"`);
         result.published++;
         result.posts.push({ id: post.id, title: post.title, status: "published" });
+        await syncPostFromSupabase(env, post.id);
       }
     }
 

@@ -8,16 +8,22 @@
   "workspaces": [
     "./server",
     "./client",
-    "./shared"
+    "./shared",
+    "./web"
   ],
   "scripts": {
     "dev:client": "cd client && ~/.bun/bin/bun run dev",
     "dev:server": "cd server && ~/.bun/bin/bun run dev",
     "dev:shared": "cd shared && ~/.bun/bin/bun run dev",
-    "dev": "concurrently \"bun run dev:shared\" \"bun run dev:server\" \"bun run dev:client\"",
+    "dev:web": "cd web && ~/.bun/bin/bun run dev",
+    "dev": "concurrently \"bun run dev:shared\" \"bun run dev:server\" \"bun run dev:client\" \"bun run dev:web\"",
     "build:client": "cd client && ~/.bun/bin/bun run build",
     "build:shared": "cd shared && ~/.bun/bin/bun run build",
     "build:server": "cd server && ~/.bun/bin/bun run build",
+    "build:web": "cd web && ~/.bun/bin/bun run build",
+    "lint:web": "cd web && ~/.bun/bin/bun run lint",
+    "test:web": "cd web && ~/.bun/bin/bun run test",
+    "test:e2e:web": "cd web && ~/.bun/bin/bun run test:e2e",
     "build": "~/.bun/bin/bun x tsc --build"
   },
   "keywords": [

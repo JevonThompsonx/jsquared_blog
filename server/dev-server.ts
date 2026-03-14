@@ -1,22 +1,27 @@
-// Load environment variables from .dev.vars
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-// Parse .dev.vars file
-const devVarsPath = resolve(__dirname, '.dev.vars');
-try {
-  const devVars = readFileSync(devVarsPath, 'utf-8');
-  devVars.split('\n').forEach(line => {
-    if (line.trim() && !line.startsWith('#')) {
-      const [key, ...values] = line.split('=');
-      const value = values.join('=').replace(/^"|"$/g, '');
-      process.env[key.trim()] = value.trim();
-    }
-  });
-  console.log('✓ Loaded environment variables from .dev.vars');
-} catch (err) {
-  console.warn('⚠️  Could not load .dev.vars file');
+function loadEnvFile(fileName: string) {
+  const filePath = resolve(__dirname, fileName);
+  try {
+    const envContent = readFileSync(filePath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+      if (line.trim() && !line.startsWith('#')) {
+        const [key, ...values] = line.split('=');
+        if (!process.env[key.trim()]) {
+          const value = values.join('=').replace(/^"|"$/g, '');
+          process.env[key.trim()] = value.trim();
+        }
+      }
+    });
+    console.log(`✓ Loaded environment variables from ${fileName}`);
+  } catch {
+    console.warn(`⚠️  Could not load ${fileName} file`);
+  }
 }
+
+loadEnvFile('.dev.vars');
+loadEnvFile('.env');
 
 // Import app after env vars are loaded
 const app = (await import('./src/index')).default;
@@ -26,6 +31,8 @@ const mockEnv = {
   SUPABASE_URL: process.env.SUPABASE_URL || '',
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL || '',
+  TURSO_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN || '',
   CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID || '',
   CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN || '',
   CLOUDFLARE_IMAGES_ACCOUNT_HASH: process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH || '',
@@ -42,7 +49,8 @@ Bun.serve({
     return app.fetch(req, mockEnv, {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    });
+      props: {},
+    } as never);
   },
   error(error) {
     console.error('Server error:', error);
@@ -52,6 +60,7 @@ Bun.serve({
 
 console.log('✓ Server running on http://localhost:8787');
 console.log('✓ Using Supabase URL:', mockEnv.SUPABASE_URL ? 'configured' : 'missing');
+console.log('✓ Turso URL:', mockEnv.TURSO_DATABASE_URL ? 'configured' : 'missing');
 console.log('✓ DEV_MODE:', mockEnv.DEV_MODE || 'not set');
 console.log('✓ Service Role Key:', mockEnv.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'not set');
 console.log('\nReady to handle requests!\n');

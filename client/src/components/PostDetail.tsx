@@ -12,6 +12,7 @@ import ImageGallery from "./ImageGallery";
 import { calculateReadingTime, formatReadingTime } from "../utils/readingTime";
 import { CategoryIcon } from "../utils/categoryIcons";
 import { formatDate } from "../utils/dateTime";
+import { sanitizeHtml } from "../utils/sanitizeHtml";
 
 import { PostWithImages } from "../../../shared/src/types";
 
@@ -21,6 +22,7 @@ const PostDetail: FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { isAdmin, user } = useAuth();
+  const safeDescription = sanitizeHtml(post?.description);
 
   // Strip HTML tags for SEO meta description
   const stripHtml = (html: string | null): string => {
@@ -245,10 +247,10 @@ const PostDetail: FC = () => {
               <hr className="border-[var(--border)] mb-8" />
 
               {/* Description */}
-              <div
-                className="prose prose-lg max-w-none text-lg text-[var(--text-primary)] leading-relaxed tiptap"
-                dangerouslySetInnerHTML={{ __html: post.description || "" }}
-              />
+                <div
+                  className="prose prose-lg max-w-none text-lg text-[var(--text-primary)] leading-relaxed tiptap"
+                  dangerouslySetInnerHTML={{ __html: safeDescription }}
+                />
 
               {/* Share Buttons */}
               <div className="mt-8 pt-6 border-t border-[var(--border)]">
