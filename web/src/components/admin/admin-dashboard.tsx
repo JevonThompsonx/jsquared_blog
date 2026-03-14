@@ -26,13 +26,13 @@ export function AdminDashboard({
 }) {
   return (
     <div className="mt-10 space-y-8">
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl sm:p-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Authorized</p>
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editorial workspace</p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-[var(--foreground)]">Welcome back, {session.user?.githubLogin ?? session.user?.email ?? "admin"}.</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">Welcome back, {session.user?.githubLogin ?? session.user?.email ?? "admin"}.</h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-              This is the new Next.js admin home. It already reads directly from Turso and reflects mirrored legacy writes while native create and edit flows are being ported.
+              Start a new story, tighten a draft, or review the publishing queue. The dashboard should help you make progress quickly, not explain the migration to you.
             </p>
           </div>
           <Link
@@ -49,7 +49,7 @@ export function AdminDashboard({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["Total posts", counts.total],
           ["Published", counts.published],
@@ -63,33 +63,33 @@ export function AdminDashboard({
         ))}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl sm:p-8">
+      <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editorial queue</p>
-              <h3 className="mt-2 text-2xl font-semibold text-[var(--foreground)]">Latest posts in Turso</h3>
+              <h3 className="mt-2 text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">Latest posts in Turso</h3>
             </div>
             <span className="text-sm text-[var(--muted)]">24 most recent entries</span>
           </div>
 
           <div className="mt-6 space-y-4">
             {posts.map((post) => (
-              <article key={post.id} className="rounded-lg border border-[var(--border)] bg-[var(--background)] p-4">
+              <article key={post.id} className="rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${getStatusStyles(post.status)}`}>
                         {post.status}
                       </span>
                       {post.category ? <span className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">{post.category}</span> : null}
                     </div>
-                    <h4 className="mt-3 text-xl font-semibold text-[var(--foreground)]">{post.title}</h4>
+                    <h4 className="mt-3 text-lg font-semibold text-[var(--foreground)] sm:text-xl">{post.title}</h4>
                     <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                       {post.excerpt || "This post is synced into Turso and ready for native admin tooling."}
                     </p>
                   </div>
-                  <div className="text-right text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                  <div className="w-full text-left text-xs uppercase tracking-[0.16em] text-[var(--muted)] sm:w-auto sm:text-right">
                     <p>Created</p>
                     <p className="mt-1 text-sm normal-case tracking-normal text-[var(--foreground)]">{formatPublishedDate(post.createdAt.toISOString())}</p>
                   </div>
@@ -99,7 +99,7 @@ export function AdminDashboard({
                     {post.publishedAt ? <span>Published {formatPublishedDate(post.publishedAt.toISOString())}</span> : null}
                     {post.scheduledPublishTime ? <span>Scheduled {formatPublishedDate(post.scheduledPublishTime.toISOString())}</span> : null}
                   </div>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex w-full flex-wrap gap-4 sm:w-auto">
                     <a className="font-semibold text-[var(--accent)]" href={`/admin/posts/${post.id}/edit`}>
                       Edit
                     </a>
@@ -114,21 +114,21 @@ export function AdminDashboard({
         </div>
 
         <aside className="space-y-6">
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Security posture</p>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Operational notes</p>
             <ul className="mt-4 space-y-3 text-sm leading-7 text-[var(--muted)]">
-              <li>Auth.js admin access is fail-closed until your GitHub allowlist matches.</li>
-              <li>Successful admin sign-ins are mirrored into Turso auth records.</li>
-              <li>Legacy writes continue syncing into Turso so read-side drift stays low.</li>
+              <li>GitHub admin access is locked to your numeric allowlist.</li>
+              <li>Cloudinary uploads now feed the native editor directly.</li>
+              <li>Turso remains the working source for the new Next.js surface.</li>
             </ul>
           </div>
 
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Next migration slice</p>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editorial priorities</p>
             <ul className="mt-4 space-y-3 text-sm leading-7 text-[var(--muted)]">
-              <li>Native Next.js post creation form</li>
-              <li>Turso-first edit/update mutations with tags and media metadata</li>
-              <li>Cloudinary-backed uploads still pending</li>
+              <li>Review newly created posts for category and layout quality.</li>
+              <li>Use tags and featured imagery to strengthen discovery.</li>
+              <li>Keep scheduled pieces clearly dated before publishing.</li>
             </ul>
           </div>
         </aside>

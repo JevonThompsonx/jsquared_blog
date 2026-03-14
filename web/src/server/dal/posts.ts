@@ -57,6 +57,29 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
     .limit(limit);
 }
 
+export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord[]> {
+  const db = getDb();
+
+  return db
+    .select({
+      id: posts.id,
+      slug: posts.slug,
+      title: posts.title,
+      excerpt: posts.excerpt,
+      contentJson: posts.contentJson,
+      category: categories.name,
+      imageUrl: mediaAssets.secureUrl,
+      layoutType: posts.layoutType,
+      createdAt: posts.createdAt,
+      publishedAt: posts.publishedAt,
+    })
+    .from(posts)
+    .leftJoin(categories, eq(posts.categoryId, categories.id))
+    .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
+    .where(eq(posts.status, "published"))
+    .orderBy(desc(posts.publishedAt), desc(posts.createdAt));
+}
+
 export async function listTagsByPostIds(postIds: string[]): Promise<PublishedPostTagRecord[]> {
   if (postIds.length === 0) {
     return [];

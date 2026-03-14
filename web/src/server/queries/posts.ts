@@ -7,6 +7,7 @@ import { getPostIdFromSlug, getLegacyApiBaseUrl, slugify } from "@/lib/utils";
 import { legacyPostListSchema, legacyPostSchema } from "@/schemas/legacy-posts";
 import {
   getPublishedPostRecordBySlug,
+  listAllPublishedPostRecords,
   listImagesForPost,
   listPublishedPostRecords,
   listTagsByPostIds,
@@ -74,6 +75,22 @@ async function fetchLegacyPublishedPosts(limit: number, offset = 0): Promise<Blo
     .map(mapLegacyPost);
 }
 
+async function fetchLegacyPublishedPostsBySearch(limit: number, offset = 0, search?: string): Promise<BlogPost[]> {
+  const query = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+
+  if (search?.trim()) {
+    query.set("search", search.trim());
+  }
+
+  const payload = await fetchLegacyJson(`/api/posts?${query.toString()}`, legacyPostListSchema);
+  return payload.posts
+    .filter((post) => !post.status || post.status === "published")
+    .map(mapLegacyPost);
+}
+
 async function fetchLegacyPublishedPostById(id: number): Promise<BlogPost | null> {
   const post = await fetchLegacyJson(`/api/posts/${id}`, legacyPostSchema);
   if (post.status && post.status !== "published") {
@@ -117,6 +134,56 @@ async function listPublishedPostsFromTurso(limit: number, offset = 0): Promise<B
   }));
 }
 
+async function listAllPublishedPostsFromTurso(): Promise<BlogPost[]> {
+  const postRows = await listAllPublishedPostRecords();
+
+  if (postRows.length === 0) {
+    return [];
+  }
+
+  const postIds = postRows.map((post) => post.id);
+  const tagRows = await listTagsByPostIds(postIds);
+
+  const tagsByPostId = new Map<string, BlogTag[]>();
+  for (const row of tagRows) {
+    const existing = tagsByPostId.get(row.postId) ?? [];
+    existing.push({ id: row.tagId, name: row.name, slug: row.slug });
+    tagsByPostId.set(row.postId, existing);
+  }
+
+  return postRows.map((post) => ({
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    description: renderTiptapJson(post.contentJson) ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null),
+    excerpt: post.excerpt,
+    imageUrl: post.imageUrl,
+    category: post.category ?? null,
+    createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
+    status: "published",
+    layoutType: post.layoutType ?? "standard",
+    tags: tagsByPostId.get(post.id) ?? [],
+    images: [],
+    source: "turso",
+  }));
+}
+
+function filterPublishedPosts(posts: BlogPost[], search?: string): BlogPost[] {
+  const normalizedSearch = search?.trim().toLowerCase();
+  if (!normalizedSearch) {
+    return posts;
+  }
+
+  return posts.filter((post) => {
+    const haystack = [post.title, post.category, post.excerpt, post.description, ...post.tags.map((tag) => tag.name)]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(normalizedSearch);
+  });
+}
+
 async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost | null> {
   const post = await getPublishedPostRecordBySlug(slug);
   if (!post) {
@@ -156,8 +223,13 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
   };
 }
 
-export async function listPublishedPosts(limit = 12, offset = 0): Promise<BlogPost[]> {
+export async function listPublishedPosts(limit = 12, offset = 0, search?: string): Promise<BlogPost[]> {
   try {
+    if (search?.trim()) {
+      const tursoPosts = filterPublishedPosts(await listAllPublishedPostsFromTurso(), search);
+      return tursoPosts.slice(offset, offset + limit);
+    }
+
     const tursoPosts = await listPublishedPostsFromTurso(limit, offset);
     if (tursoPosts.length > 0) {
       return tursoPosts;
@@ -167,7 +239,7 @@ export async function listPublishedPosts(limit = 12, offset = 0): Promise<BlogPo
   }
 
   try {
-    return await fetchLegacyPublishedPosts(limit, offset);
+    return await fetchLegacyPublishedPostsBySearch(limit, offset, search);
   } catch {
     return [];
   }

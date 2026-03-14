@@ -21,11 +21,11 @@ export default async function AdminPage({
     <main className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
-      <section className="container mx-auto max-w-4xl rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl sm:p-8">
+      <section className="container mx-auto max-w-4xl rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Admin access</p>
-        <h1 className="mt-4 text-4xl font-semibold text-[var(--foreground)]">GitHub admin authentication</h1>
+        <h1 className="mt-4 text-3xl font-semibold text-[var(--foreground)] sm:text-4xl">Editorial control center</h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)]">
-          This is the staged Auth.js entry point for the Next.js rewrite. GitHub admins are mapped into Turso authorization records before any future native admin UI ships.
+          Sign in once, then stay focused on writing, refining, and publishing. The system details stay in the background unless you need them.
         </p>
 
         {!authConfigured ? (
@@ -47,7 +47,7 @@ export default async function AdminPage({
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <AdminAuthButton disabled={!authConfigured} isSignedIn={Boolean(session?.user?.id)} />
           {session?.user?.id ? (
-            <span className="text-sm text-[var(--muted)]">
+            <span className="min-w-0 break-all text-sm text-[var(--muted)]">
               Signed in as `{session.user.githubLogin ?? session.user.email ?? session.user.id}`
             </span>
           ) : null}

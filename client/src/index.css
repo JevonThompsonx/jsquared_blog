@@ -1,35 +1,37 @@
 @import "tailwindcss";
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary: #6366f1;
-  --primary-light: #a5b4fc;
-  --primary-dark: #4f46e5;
-  --secondary: #10b981;
-  --background: #f9fafb;
+  /* Teal primary — evokes water, trails, open sky */
+  --primary: #0f766e;
+  --primary-light: #5eead4;
+  --primary-dark: #0d5d57;
+  /* Amber accent — warmth, golden hour, campfire */
+  --secondary: #d97706;
+  /* Stone neutrals — earthy, warm-white base */
+  --background: #fafaf9;
   --card-bg: #ffffff;
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --border: #e5e7eb;
-  --ring: #c7d2fe;
-  --spinner: #4f46e5;
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --border: #d6d3d1;
+  --ring: #99f6e4;
+  --spinner: #0f766e;
 }
 
 [data-theme="dark"] {
-  --primary: #818cf8;
-  --primary-light: #a5b4fc;
-  --primary-dark: #6366f1;
-  --secondary: #34d399;
-  --background: #111827;
-  --card-bg: #1f2937;
-  --text-primary: #f5deb3;
-  --text-secondary: #c2a68c;
-  --border: #374151;
-  --ring: #4f46e5;
-  --spinner: #818cf8;
+  --primary: #2dd4bf;
+  --primary-light: #5eead4;
+  --primary-dark: #14b8a6;
+  --secondary: #fbbf24;
+  --background: #1c1917;
+  --card-bg: #292524;
+  --text-primary: #f5f5f4;
+  --text-secondary: #a8a29e;
+  --border: #44403c;
+  --ring: #0f766e;
+  --spinner: #2dd4bf;
 }
 
 /* Ensure only the document scrolls, not nested containers */
@@ -166,7 +168,7 @@ body {
 /* Landing Page */
 .landing-page {
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height for mobile */
+  height: 100dvh;
   background-size: cover;
   background-position: center;
   display: flex;
@@ -400,4 +402,69 @@ body {
 
 .tiptap s {
   text-decoration: line-through;
+}
+
+/* === Image overlay card text protection === */
+
+.card-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Frosted text panel anchored to bottom of card */
+.card-overlay-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 1.25rem 1.25rem 1rem;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.70) 60%,
+    rgba(0, 0, 0, 0.40) 100%
+  );
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+/* Category labels */
+.card-overlay-content .category-label {
+  color: var(--primary-light);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Titles */
+.card-overlay-content .card-title {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Body / excerpt text */
+.card-overlay-content p {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Continue reading link */
+.card-overlay-content .card-link {
+  color: var(--primary-light);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card-overlay-content .card-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* Dates / meta */
+.card-overlay-content .card-date {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.8rem;
 }

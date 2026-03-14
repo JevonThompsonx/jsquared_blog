@@ -1,19 +1,25 @@
 import Link from "next/link";
 
+import { FeedbackPanel } from "@/components/ui/feedback-panel";
+
 export default function NotFound() {
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-3xl flex-col justify-center px-6 py-20">
-      <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Trail marker missing</p>
-      <h1 className="mt-4 text-4xl font-semibold text-[var(--foreground)]">That route does not exist yet.</h1>
-      <p className="mt-4 text-lg text-[var(--muted)]">
-        The Next.js migration is underway. Head back to the homepage and keep exploring.
-      </p>
-      <Link
-        className="mt-8 inline-flex w-fit rounded-full bg-[var(--accent-strong)] px-5 py-3 text-sm font-semibold text-white"
-        href="/"
-      >
-        Return home
-      </Link>
+    <div className="mx-auto flex min-h-[70vh] max-w-3xl flex-col justify-center px-4 py-16 sm:px-6 sm:py-20">
+      <FeedbackPanel
+        actions={(
+          <>
+            <Link className="inline-flex w-fit rounded-full bg-[var(--accent-strong)] px-5 py-3 text-sm font-semibold text-white" href="/">
+              Return home
+            </Link>
+            <Link className="inline-flex w-fit rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--text-primary)]" href="/admin">
+              Open admin
+            </Link>
+          </>
+        )}
+        description="Try heading back to the homepage, opening the admin dashboard, or picking up another story from the trail."
+        eyebrow="Trail marker missing"
+        title="That page could not be found."
+      />
     </div>
   );
 }
