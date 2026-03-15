@@ -22,6 +22,11 @@ export type PublishedPostRecord = {
   layoutType: "standard" | "split-horizontal" | "split-vertical" | "hover" | null;
   createdAt: Date;
   publishedAt: Date | null;
+  locationName: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationZoom: number | null;
+  iovanderUrl: string | null;
 };
 
 export type PublishedPostTagRecord = {
@@ -53,6 +58,11 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
       publishedAt: posts.publishedAt,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -78,6 +88,11 @@ export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
       publishedAt: posts.publishedAt,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -116,6 +131,11 @@ const POST_DETAIL_SELECT = {
   layoutType: posts.layoutType,
   createdAt: posts.createdAt,
   publishedAt: posts.publishedAt,
+  locationName: posts.locationName,
+  locationLat: posts.locationLat,
+  locationLng: posts.locationLng,
+  locationZoom: posts.locationZoom,
+  iovanderUrl: posts.iovanderUrl,
 } as const;
 
 export async function getPublishedPostRecordBySlug(slug: string): Promise<PublishedPostRecord | null> {
@@ -183,6 +203,11 @@ export async function listPublishedPostRecordsByCategory(
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
       publishedAt: posts.publishedAt,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
     })
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
@@ -211,6 +236,11 @@ export async function listPublishedPostRecordsByTagSlug(
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
       publishedAt: posts.publishedAt,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
     })
     .from(posts)
     .innerJoin(postTags, eq(postTags.postId, posts.id))

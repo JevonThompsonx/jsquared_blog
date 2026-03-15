@@ -2,7 +2,7 @@ import "server-only";
 
 import { desc, eq, sql } from "drizzle-orm";
 
-import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
+import { categories, mediaAssets, postImages, postTags, posts, series, tags } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
 
 export type AdminPostRecord = {
@@ -23,6 +23,14 @@ export type AdminEditablePostRecord = AdminPostRecord & {
   layoutType: "standard" | "split-horizontal" | "split-vertical" | "hover" | null;
   contentJson: string;
   featuredImageAlt: string | null;
+  seriesId: string | null;
+  seriesTitle: string | null;
+  seriesOrder: number | null;
+  locationName: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationZoom: number | null;
+  iovanderUrl: string | null;
   tags: Array<{ id: string; name: string; slug: string }>;
   galleryImages: Array<{ id: string; imageUrl: string; altText: string | null; sortOrder: number; focalX: number | null; focalY: number | null }>;
 };
@@ -101,10 +109,19 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       scheduledPublishTime: posts.scheduledPublishTime,
       layoutType: posts.layoutType,
       contentJson: posts.contentJson,
+      seriesId: posts.seriesId,
+      seriesTitle: series.title,
+      seriesOrder: posts.seriesOrder,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
+    .leftJoin(series, eq(posts.seriesId, series.id))
     .where(eq(posts.id, postId))
     .limit(1);
 
@@ -130,6 +147,14 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
   return {
     ...post,
     featuredImageAlt: post.featuredImageAlt ?? null,
+    seriesId: post.seriesId ?? null,
+    seriesTitle: post.seriesTitle ?? null,
+    seriesOrder: post.seriesOrder ?? null,
+    locationName: post.locationName ?? null,
+    locationLat: post.locationLat ?? null,
+    locationLng: post.locationLng ?? null,
+    locationZoom: post.locationZoom ?? null,
+    iovanderUrl: post.iovanderUrl ?? null,
     tags: postTagRows,
     galleryImages: galleryRows,
   };

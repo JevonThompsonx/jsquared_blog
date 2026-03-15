@@ -1,4 +1,12 @@
-import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+export const series = sqliteTable("series", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+});
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -63,9 +71,16 @@ export const posts = sqliteTable(
     scheduledPublishTime: integer("scheduled_publish_time", { mode: "timestamp_ms" }),
     authorId: text("author_id").notNull().references(() => users.id),
     categoryId: text("category_id").references(() => categories.id),
+    seriesId: text("series_id").references(() => series.id),
+    seriesOrder: integer("series_order"),
     featuredImageId: text("featured_image_id").references(() => mediaAssets.id),
     externalGalleryUrl: text("external_gallery_url"),
     externalGalleryLabel: text("external_gallery_label"),
+    locationName: text("location_name"),
+    locationLat: real("location_lat"),
+    locationLng: real("location_lng"),
+    locationZoom: integer("location_zoom"),
+    iovanderUrl: text("ioverlander_url"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
@@ -74,6 +89,7 @@ export const posts = sqliteTable(
     statusIndex: index("posts_status_idx").on(table.status),
     publishedAtIndex: index("posts_published_at_idx").on(table.publishedAt),
     authorIndex: index("posts_author_id_idx").on(table.authorId),
+    seriesIndex: index("posts_series_id_idx").on(table.seriesId),
   }),
 );
 
@@ -123,5 +139,18 @@ export const commentLikes = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.commentId, table.userId] }),
+  }),
+);
+
+export const postBookmarks = sqliteTable(
+  "post_bookmarks",
+  {
+    postId: text("post_id").notNull().references(() => posts.id),
+    userId: text("user_id").notNull().references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.postId, table.userId] }),
+    userIdx: index("post_bookmarks_user_id_idx").on(table.userId),
   }),
 );

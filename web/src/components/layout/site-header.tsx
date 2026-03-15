@@ -132,6 +132,9 @@ export function SiteHeader() {
             <Link className="nav-link-pill" href="/">
               Home
             </Link>
+            <Link className="nav-link-pill" href="/map">
+              Map
+            </Link>
             <Link className="nav-link-pill" href="/about">
               About
             </Link>
@@ -158,9 +161,14 @@ export function SiteHeader() {
           <ThemeToggle />
 
           {isPublicSignedIn ? (
-            <Link className="nav-link-pill text-sm" href="/account">
-              Account
-            </Link>
+            <>
+              <Link className="nav-link-pill text-sm" href="/bookmarks">
+                Saved
+              </Link>
+              <Link className="nav-link-pill text-sm" href="/account">
+                Account
+              </Link>
+            </>
           ) : !isAdminSignedIn ? (
             <Link className="nav-link-pill text-sm" href={{ pathname: "/login", query: { redirectTo: pathname ?? "/" } }}>
               Sign in
@@ -224,6 +232,13 @@ export function SiteHeader() {
             </Link>
             <Link
               className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
+              href="/map"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Map
+            </Link>
+            <Link
+              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
               href="/about"
               onClick={() => setIsMenuOpen(false)}
             >
@@ -247,6 +262,13 @@ export function SiteHeader() {
 
             {isPublicSignedIn ? (
               <>
+                <Link
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
+                  href="/bookmarks"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Saved posts
+                </Link>
                 <Link
                   className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
                   href="/account"

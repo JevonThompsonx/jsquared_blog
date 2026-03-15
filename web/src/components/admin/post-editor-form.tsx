@@ -1,16 +1,20 @@
 import { getEditableHtmlFromContent } from "@/lib/content";
 import type { AdminCategoryRecord, AdminEditablePostRecord } from "@/server/dal/admin-posts";
+import type { SeriesRecord } from "@/server/dal/series";
 import { PostRichTextEditor } from "@/components/admin/post-rich-text-editor";
 import { PostMediaManager } from "@/components/admin/post-media-manager";
+import { LocationAutocomplete } from "@/components/admin/location-autocomplete";
 
 export function PostEditorForm({
   mode,
   categories,
+  allSeries,
   post,
   action,
 }: {
   mode: "create" | "edit";
   categories: AdminCategoryRecord[];
+  allSeries: SeriesRecord[];
   post?: AdminEditablePostRecord | null;
   action: (formData: FormData) => void | Promise<void>;
 }) {
@@ -138,6 +142,64 @@ export function PostEditorForm({
                 ))}
               </datalist>
             </label>
+          </section>
+
+            <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Series</p>
+            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Group this post into a named series. Type an existing series name or a new one — it will be created automatically.</p>
+            <div className="mt-5 space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Series name</span>
+                <input
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                  defaultValue={post?.seriesTitle ?? ""}
+                  list="admin-series"
+                  name="seriesTitle"
+                  placeholder="e.g. Pacific Crest Trail"
+                />
+                <datalist id="admin-series">
+                  {allSeries.map((s) => (
+                    <option key={s.id} value={s.title} />
+                  ))}
+                </datalist>
+                <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">Leave blank to remove this post from any series.</span>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Part number</span>
+                <input
+                  className="mt-1 block w-32 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                  defaultValue={post?.seriesOrder ?? ""}
+                  min="1"
+                  name="seriesOrder"
+                  placeholder="1"
+                  type="number"
+                />
+                <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">Controls the reading order within the series.</span>
+              </label>
+            </div>
+          </section>
+
+            <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Location</p>
+            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Add a location for this post. Be as specific or broad as you like — "Portland, Oregon", "California", or "Pacific Northwest" all work. Coordinates are geocoded automatically on save.</p>
+            <div className="mt-5 space-y-4">
+              <div>
+                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Location name</span>
+                <LocationAutocomplete defaultValue={post?.locationName ?? ""} />
+                <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">A city, region, country, or any recognizable place name. Start typing for suggestions. Leave blank to remove the location.</span>
+              </div>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">iOverlander link</span>
+                <input
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                  defaultValue={post?.iovanderUrl ?? ""}
+                  name="iovanderUrl"
+                  placeholder="https://www.ioverlander.com/places/..."
+                  type="url"
+                />
+                <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">Optional link to the iOverlander camp or place entry for this location.</span>
+              </label>
+            </div>
           </section>
 
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">

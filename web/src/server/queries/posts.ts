@@ -51,6 +51,11 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     tags: tagsByPostId.get(post.id) ?? [],
     images: [],
     source: "turso" as const,
+    locationName: post.locationName ?? null,
+    locationLat: post.locationLat ?? null,
+    locationLng: post.locationLng ?? null,
+    locationZoom: post.locationZoom ?? null,
+    iovanderUrl: post.iovanderUrl ?? null,
   }));
 }
 
@@ -106,6 +111,11 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     })),
     images,
     source: "turso",
+    locationName: post.locationName ?? null,
+    locationLat: post.locationLat ?? null,
+    locationLng: post.locationLng ?? null,
+    locationZoom: post.locationZoom ?? null,
+    iovanderUrl: post.iovanderUrl ?? null,
   };
 }
 
@@ -133,4 +143,29 @@ export async function listPublishedPostsByTagSlug(tagSlug: string, limit = 12, o
 
 export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | null> {
   return getPublishedPostFromTursoBySlug(slug);
+}
+
+export async function getRelatedPosts(post: BlogPost, limit = 3): Promise<BlogPost[]> {
+  const all = await listAllPublishedPosts();
+  const currentTagSlugs = new Set(post.tags.map((t) => t.slug));
+  const currentDate = new Date(post.createdAt).getTime();
+
+  const scored = all
+    .filter((p) => p.slug !== post.slug)
+    .map((p) => {
+      let score = 0;
+      // Same category: strong signal
+      if (post.category && p.category === post.category) score += 3;
+      // Each shared tag: medium signal
+      for (const tag of p.tags) {
+        if (currentTagSlugs.has(tag.slug)) score += 2;
+      }
+      // Published within 90 days of this post: slight recency proximity boost
+      const daysDiff = Math.abs(new Date(p.createdAt).getTime() - currentDate) / (1000 * 60 * 60 * 24);
+      if (daysDiff <= 90) score += 1;
+      return { post: p, score };
+    })
+    .sort((a, b) => b.score - a.score || new Date(b.post.createdAt).getTime() - new Date(a.post.createdAt).getTime());
+
+  return scored.slice(0, limit).map((s) => s.post);
 }

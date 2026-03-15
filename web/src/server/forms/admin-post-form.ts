@@ -14,6 +14,13 @@ export const adminPostFormSchema = z
     featuredImageAlt: z.string().trim().optional().default(""),
     galleryEntries: z.string().trim().optional().default("[]"),
     contentHtml: z.string().trim().min(1, "Content is required"),
+    seriesTitle: z.string().trim().optional().default(""),
+    seriesOrder: z.preprocess(
+      (val) => (val === "" || val == null ? undefined : Number(val)),
+      z.number().int().positive().optional(),
+    ),
+    locationName: z.string().trim().optional().default(""),
+    iovanderUrl: z.string().trim().optional().default(""),
   })
   .superRefine((value, ctx) => {
     if (value.status === "scheduled") {

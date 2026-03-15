@@ -165,3 +165,46 @@ export function htmlToPlainText(html: string | null | undefined): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+export type TocHeading = { id: string; text: string; level: number };
+
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * Adds `id` attributes to h2–h4 headings in sanitized HTML and returns
+ * both the modified HTML and the extracted headings for TOC rendering.
+ */
+export function processHeadings(html: string): { html: string; headings: TocHeading[] } {
+  const headings: TocHeading[] = [];
+  const seen = new Map<string, number>();
+
+  const processedHtml = html.replace(
+    /<h([2-4])([^>]*)>([\s\S]*?)<\/h\1>/gi,
+    (_, levelStr, attrs: string, inner: string) => {
+      const level = parseInt(levelStr, 10);
+      const text = inner
+        .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+      const base = slugifyHeading(text) || `heading-${headings.length}`;
+      const count = seen.get(base) ?? 0;
+      const id = count === 0 ? base : `${base}-${count}`;
+      seen.set(base, count + 1);
+      headings.push({ id, text, level });
+      return `<h${level} id="${id}"${attrs}>${inner}</h${level}>`;
+    },
+  );
+
+  return { html: processedHtml, headings };
+}

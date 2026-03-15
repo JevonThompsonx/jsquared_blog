@@ -25,4 +25,9 @@ export type BlogPost = {
   tags: BlogTag[];
   images: BlogImage[];
   source: "turso";
+  locationName: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationZoom: number | null;
+  iovanderUrl: string | null;
 };

@@ -2,7 +2,8 @@
 import Link from "next/link";
 
 import type { BlogPost } from "@/types/blog";
-import { formatPublishedDate, getCategoryHref, getPostHref, getTagHref, htmlToPlainText } from "@/lib/utils";
+import { getCategoryHref, getPostHref, getTagHref, htmlToPlainText } from "@/lib/utils";
+import { PostDate } from "@/components/blog/post-date";
 
 function isNewPost(dateString: string): boolean {
   const postDate = new Date(dateString);
@@ -47,7 +48,7 @@ export function HomePostCard({ post }: { post: BlogPost }) {
             <div className="card-overlay-title mt-1 block text-lg font-bold leading-tight md:text-xl">{post.title}</div>
             <p className="card-overlay-body text-sm opacity-95 transition-all duration-300 ease-in-out sm:max-h-0 sm:overflow-hidden sm:opacity-0 sm:group-hover:max-h-24 sm:group-hover:opacity-100">{overlayDescription}</p>
             <div className="card-overlay-footer">
-              <div className="card-overlay-meta text-xs">{formatPublishedDate(post.createdAt)}</div>
+              <PostDate className="card-overlay-meta text-xs" dateString={post.createdAt} />
               <span className="card-overlay-link">Read story <span aria-hidden="true">→</span></span>
             </div>
           </div>
@@ -83,7 +84,7 @@ export function HomePostCard({ post }: { post: BlogPost }) {
                 <span className="post-card-link mt-3 inline-flex items-center gap-1 text-sm font-medium transition-all duration-200 group-hover:gap-2">Continue reading <span aria-hidden="true">→</span></span>
               ) : null}
             </div>
-            <div className="post-card-date mt-4 text-xs">{formatPublishedDate(post.createdAt)}</div>
+            <PostDate className="post-card-date mt-4 text-xs" dateString={post.createdAt} />
           </div>
         </article>
       </div>
@@ -114,7 +115,7 @@ export function HomePostCard({ post }: { post: BlogPost }) {
           {description.length > 170 ? (
             <span className="post-card-link mt-3 inline-flex items-center gap-1 text-sm font-medium transition-all duration-200 group-hover:gap-2">Continue reading <span aria-hidden="true">→</span></span>
           ) : null}
-          <p className="post-card-date mt-4 self-start text-xs">{formatPublishedDate(post.createdAt)}</p>
+          <PostDate className="post-card-date mt-4 self-start text-xs" dateString={post.createdAt} />
         </div>
       </article>
     </div>

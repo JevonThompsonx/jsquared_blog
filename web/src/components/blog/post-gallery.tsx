@@ -17,9 +17,42 @@ type Props = {
   featuredImageUrl?: string | null;
 };
 
+function ChevronLeftIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <path d="M15 3h6m0 0v6m0-6L14 10M9 21H3m0 0v-6m0 6l7-7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function PostGallery({ images, postTitle, featuredImageUrl }: Props) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
+  const filmstripRef = useRef<HTMLDivElement>(null);
 
   const isOpen = activeIndex !== null;
 
@@ -54,7 +87,7 @@ export function PostGallery({ images, postTitle, featuredImageUrl }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen, prev, next, close]);
 
-  // Scroll lock: non-passive touchmove preventDefault (works on iOS) + body class for HomeFeed
+  // Scroll lock
   useEffect(() => {
     if (!isOpen) return;
     function preventTouchScroll(e: TouchEvent) {
@@ -67,6 +100,16 @@ export function PostGallery({ images, postTitle, featuredImageUrl }: Props) {
       document.removeEventListener("touchmove", preventTouchScroll);
     };
   }, [isOpen]);
+
+  // Auto-scroll filmstrip to keep active thumbnail visible
+  useEffect(() => {
+    if (!isOpen || activeIndex === null || !filmstripRef.current) return;
+    const strip = filmstripRef.current;
+    const thumb = strip.children[activeIndex] as HTMLElement | undefined;
+    if (thumb) {
+      thumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [activeIndex, isOpen]);
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartXRef.current = e.touches[0]?.clientX ?? null;
@@ -98,12 +141,9 @@ export function PostGallery({ images, postTitle, featuredImageUrl }: Props) {
             loading="eager"
             src={featuredImageUrl}
           />
-          {/* Expand affordance on hover */}
           <div className="absolute inset-0 flex items-end justify-end bg-black/0 transition-colors duration-300 group-hover:bg-black/10">
             <div className="m-3 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
-              <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path d="M15 3h6m0 0v6m0-6L14 10M9 21H3m0 0v-6m0 6l7-7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <ExpandIcon />
               {allImages.length > 1 ? `${allImages.length} photos` : "Full size"}
             </div>
           </div>
@@ -127,7 +167,7 @@ export function PostGallery({ images, postTitle, featuredImageUrl }: Props) {
                 loading="lazy"
                 src={image.imageUrl}
               />
-              <div className="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/15 rounded-lg" />
+              <div className="absolute inset-0 rounded-lg bg-black/0 transition-colors duration-200 group-hover:bg-black/15" />
             </button>
           ))}
         </div>
@@ -138,76 +178,107 @@ export function PostGallery({ images, postTitle, featuredImageUrl }: Props) {
         <div
           aria-label="Image viewer"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/92"
+          className="fixed inset-0 z-50 flex flex-col bg-black/95"
           role="dialog"
           onClick={close}
           onTouchEnd={onTouchEnd}
           onTouchStart={onTouchStart}
         >
-          {/* Close */}
-          <button
-            aria-label="Close"
-            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white"
-            onClick={close}
-            type="button"
-          >
-            ✕
-          </button>
+          {/* Top bar: counter + close */}
+          <div className="flex shrink-0 items-center justify-between px-4 py-3" onClick={(e) => e.stopPropagation()}>
+            {allImages.length > 1 ? (
+              <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white/80 backdrop-blur-sm">
+                {(activeIndex ?? 0) + 1} / {allImages.length}
+              </span>
+            ) : (
+              <span />
+            )}
+            <button
+              aria-label="Close"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white"
+              onClick={close}
+              type="button"
+            >
+              <CloseIcon />
+            </button>
+          </div>
 
-          {/* Prev / Next */}
-          {allImages.length > 1 ? (
-            <>
+          {/* Main image area */}
+          <div className="relative flex min-h-0 flex-1 items-center justify-center px-16">
+            {/* Prev */}
+            {allImages.length > 1 ? (
               <button
-                aria-label="Previous"
-                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white sm:left-4"
+                aria-label="Previous photo"
+                className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white sm:left-4"
                 onClick={(e) => { e.stopPropagation(); prev(); }}
                 type="button"
               >
-                ←
+                <ChevronLeftIcon />
               </button>
+            ) : null}
+
+            {/* Image — key triggers fade animation on each change */}
+            <div
+              key={activeIndex}
+              className="lightbox-img-enter flex max-h-full flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                alt={active.altText ?? postTitle}
+                className="max-h-full max-w-full rounded-xl object-contain shadow-2xl"
+                src={active.imageUrl}
+                style={{ maxHeight: "calc(100vh - 12rem)" }}
+              />
+              {active.altText && active.altText !== postTitle ? (
+                <p className="mt-3 max-w-md text-center text-sm text-white/60">{active.altText}</p>
+              ) : null}
+            </div>
+
+            {/* Next */}
+            {allImages.length > 1 ? (
               <button
-                aria-label="Next"
-                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white sm:right-4"
+                aria-label="Next photo"
+                className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white sm:right-4"
                 onClick={(e) => { e.stopPropagation(); next(); }}
                 type="button"
               >
-                →
+                <ChevronRightIcon />
               </button>
-            </>
-          ) : null}
-
-          {/* Image */}
-          <div
-            className="flex max-h-[90vh] max-w-[90vw] flex-col items-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              alt={active.altText ?? postTitle}
-              className="max-h-[80vh] max-w-[88vw] rounded-xl object-contain shadow-2xl"
-              src={active.imageUrl}
-            />
-            {active.altText && active.altText !== postTitle ? (
-              <p className="mt-3 max-w-sm text-center text-sm text-white/70">{active.altText}</p>
             ) : null}
           </div>
 
-          {/* Dot indicators + counter */}
+          {/* Filmstrip */}
           {allImages.length > 1 ? (
-            <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
-              <div className="flex gap-1.5">
-                {allImages.map((_, i) => (
+            <div
+              className="shrink-0 border-t border-white/10 bg-black/40 px-4 py-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                ref={filmstripRef}
+                className="flex gap-2 overflow-x-auto pb-1"
+                style={{ scrollbarWidth: "none" }}
+              >
+                {allImages.map((img, i) => (
                   <button
-                    key={i}
-                    aria-label={`Go to photo ${i + 1}`}
-                    className={`h-1.5 rounded-full transition-all duration-200 ${i === activeIndex ? "w-5 bg-white" : "w-1.5 bg-white/35 hover:bg-white/65"}`}
-                    onClick={(e) => { e.stopPropagation(); setActiveIndex(i); }}
+                    key={img.id}
+                    aria-label={img.altText ?? `Photo ${i + 1}`}
+                    className={`relative shrink-0 overflow-hidden rounded-lg transition-all duration-200 focus:outline-2 focus:outline-white ${
+                      i === activeIndex
+                        ? "ring-2 ring-white ring-offset-1 ring-offset-black opacity-100"
+                        : "opacity-50 hover:opacity-80"
+                    }`}
+                    onClick={() => setActiveIndex(i)}
                     type="button"
-                  />
+                  >
+                    <img
+                      alt={img.altText ?? `Photo ${i + 1}`}
+                      className="h-14 w-20 object-cover"
+                      loading="lazy"
+                      src={img.imageUrl}
+                    />
+                  </button>
                 ))}
               </div>
-              <span className="rounded-full bg-white/10 px-3 py-0.5 text-xs text-white/60 backdrop-blur-sm">
-                {(activeIndex ?? 0) + 1} / {allImages.length}
-              </span>
             </div>
           ) : null}
         </div>

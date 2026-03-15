@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import type { BlogPost } from "@/types/blog";
-import { formatPublishedDate, getPostHref, htmlToPlainText } from "@/lib/utils";
+import { getPostHref, htmlToPlainText } from "@/lib/utils";
+import { PostDate } from "@/components/blog/post-date";
 
 export function PostCard({ post }: { post: BlogPost }) {
   return (
@@ -22,7 +23,7 @@ export function PostCard({ post }: { post: BlogPost }) {
       <div className="p-6">
         <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
           <span>{post.category ?? "Adventure"}</span>
-          <span className="text-[var(--muted)]">{formatPublishedDate(post.createdAt)}</span>
+          <PostDate className="text-[var(--muted)]" dateString={post.createdAt} />
         </div>
 
         <h3 className="mt-4 text-2xl font-semibold leading-tight text-[var(--foreground)]">

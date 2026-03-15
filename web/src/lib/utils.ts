@@ -39,6 +39,14 @@ export function getAuthorHref(userId: string): `/author/${string}` {
   return `/author/${userId}`;
 }
 
+export function getSeriesHref(slug: string): `/series/${string}` {
+  return `/series/${slug}`;
+}
+
+export function getMapHref(): "/map" {
+  return "/map";
+}
+
 export function getPostIdFromSlug(slug: string): number | null {
   const match = slug.match(/^(\d+)/);
   if (!match) {
@@ -55,6 +63,18 @@ export function formatPublishedDate(value: string): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+export function formatRelativeDate(value: string): string {
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  const diffMs = new Date(value).getTime() - Date.now();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const absDays = Math.abs(diffDays);
+  if (absDays < 1) return rtf.format(Math.round(diffMs / (1000 * 60 * 60)), "hour");
+  if (absDays < 7) return rtf.format(diffDays, "day");
+  if (absDays < 30) return rtf.format(Math.round(diffDays / 7), "week");
+  if (absDays < 365) return rtf.format(Math.round(diffDays / 30), "month");
+  return rtf.format(Math.round(diffDays / 365), "year");
 }
 
 export function escapeXml(value: string): string {

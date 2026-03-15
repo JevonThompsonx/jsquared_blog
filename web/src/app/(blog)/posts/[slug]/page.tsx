@@ -4,13 +4,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { Comments } from "@/components/blog/comments";
+import { CopyLinkButton } from "@/components/blog/copy-link-button";
 import { PostGallery } from "@/components/blog/post-gallery";
+import { PostMap } from "@/components/blog/post-map";
+import { ReadingProgressBar } from "@/components/blog/reading-progress-bar";
 import { SiteHeader } from "@/components/layout/site-header";
-import { htmlToPlainText, sanitizeRichTextHtml } from "@/lib/content";
-import { formatPublishedDate, getCanonicalPostUrl, getCategoryHref, getTagHref, getPostHref } from "@/lib/utils";
+import { htmlToPlainText, processHeadings, sanitizeRichTextHtml } from "@/lib/content";
+import { TableOfContents } from "@/components/blog/table-of-contents";
+import { getCanonicalPostUrl, getCategoryHref, getTagHref, getPostHref } from "@/lib/utils";
+import { PostDate } from "@/components/blog/post-date";
 import { getAdminServerSession } from "@/lib/auth/session";
-import { getPublishedPostBySlug, listPublishedPosts } from "@/server/queries/posts";
+import { getPublicEnv } from "@/lib/env";
+import { getPublishedPostBySlug, getRelatedPosts } from "@/server/queries/posts";
+import { getSeriesNavForPost } from "@/server/dal/series";
+import { SeriesNav } from "@/components/blog/series-nav";
 
 type PostPageProps = {
   params: Promise<{ slug: string }>;
@@ -54,13 +63,25 @@ export default async function PostPage({ params }: PostPageProps) {
   }
 
   const isAdmin = adminSession?.user?.role === "admin";
-  const safeDescription = sanitizeRichTextHtml(post.description);
+  const sanitized = sanitizeRichTextHtml(post.description);
+  const { html: safeDescription, headings } = processHeadings(sanitized);
   const readingTime = Math.max(1, Math.ceil(htmlToPlainText(post.description).split(/\s+/).filter(Boolean).length / 220));
-  const relatedPosts = (await listPublishedPosts(6)).filter((entry) => entry.slug !== post.slug).slice(0, 3);
+  const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
+  const [relatedPosts, seriesNav] = await Promise.all([
+    getRelatedPosts(post, 3),
+    getSeriesNavForPost(post.id),
+  ]);
+  const hasLocation =
+    post.locationLat !== null &&
+    post.locationLng !== null &&
+    NEXT_PUBLIC_STADIA_MAPS_API_KEY;
   const hasMedia = post.imageUrl || post.images.length > 0;
+
+  const canonicalUrl = getCanonicalPostUrl(post);
 
   return (
     <main className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+      <ReadingProgressBar />
       <SiteHeader />
 
       <div className="container mx-auto mt-4 max-w-4xl px-4 sm:mt-6 sm:px-6 lg:px-8">
@@ -78,14 +99,17 @@ export default async function PostPage({ params }: PostPageProps) {
             ) : null}
             <span className="text-[var(--text-primary)] font-medium truncate max-w-[18ch]">{post.title}</span>
           </nav>
-          {isAdmin ? (
-            <Link
-              className="shrink-0 rounded-full border border-[var(--primary)] px-3 py-1 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-white"
-              href={`/admin/posts/${post.id}/edit`}
-            >
-              Edit post
-            </Link>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            {!isAdmin ? <BookmarkButton postId={post.id} /> : null}
+            {isAdmin ? (
+              <Link
+                className="rounded-full border border-[var(--primary)] px-3 py-1 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-white"
+                href={`/admin/posts/${post.id}/edit`}
+              >
+                Edit post
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {/* Article card */}
@@ -114,7 +138,7 @@ export default async function PostPage({ params }: PostPageProps) {
                 </Link>
               ) : null}
               {post.category ? <span className="text-[var(--border)]">·</span> : null}
-              <time className="tabular-nums" dateTime={post.createdAt}>{formatPublishedDate(post.createdAt)}</time>
+              <PostDate className="tabular-nums" dateString={post.createdAt} />
               <span className="text-[var(--border)]">·</span>
               <span>{readingTime} min read</span>
             </div>
@@ -145,11 +169,29 @@ export default async function PostPage({ params }: PostPageProps) {
 
           {/* Prose content */}
           <div className="px-5 py-9 sm:px-10">
-            <div
-              className="prose-content mx-auto max-w-[68ch] text-[1.0625rem] leading-[1.85]"
-              dangerouslySetInnerHTML={{ __html: safeDescription }}
-            />
+            <div className="mx-auto max-w-[68ch]">
+              {seriesNav ? <SeriesNav nav={seriesNav} /> : null}
+              {headings.length >= 2 ? <TableOfContents headings={headings} /> : null}
+              <div
+                className="prose-content text-[1.0625rem] leading-[1.85]"
+                dangerouslySetInnerHTML={{ __html: safeDescription }}
+              />
+            </div>
           </div>
+
+          {/* Location map */}
+          {hasLocation ? (
+            <div className="border-t border-[var(--border)] px-5 py-8 sm:px-10">
+              <PostMap
+                apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY!}
+                iovanderUrl={post.iovanderUrl}
+                lat={post.locationLat!}
+                lng={post.locationLng!}
+                locationName={post.locationName ?? ""}
+                zoom={post.locationZoom ?? 10}
+              />
+            </div>
+          ) : null}
 
           {/* Comments */}
           <div className="border-t border-[var(--border)] px-5 pb-10 sm:px-10">
@@ -164,12 +206,15 @@ export default async function PostPage({ params }: PostPageProps) {
                 <h2 className="mt-1.5 text-xl font-bold text-[var(--text-primary)] sm:text-2xl">Carry the trail forward.</h2>
                 <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">Every story leads to the next. Pick up where this one left off.</p>
               </div>
-              <Link
-                className="shrink-0 self-start rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 sm:self-auto"
-                href="/"
-              >
-                More stories →
-              </Link>
+              <div className="flex shrink-0 flex-wrap items-center gap-3 self-start sm:self-auto">
+                <CopyLinkButton url={canonicalUrl} />
+                <Link
+                  className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+                  href="/"
+                >
+                  More stories →
+                </Link>
+              </div>
             </div>
           </div>
 

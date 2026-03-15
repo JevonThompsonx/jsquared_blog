@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 
 import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
+import { ensureSeriesId } from "@/server/dal/series";
 import { requireAdminSession } from "@/lib/auth/session";
 import { buildLegacyHtmlPayload, htmlToPlainText } from "@/lib/content";
 import { getDb } from "@/lib/db";
@@ -80,7 +81,53 @@ function parseFormData(formData: FormData) {
     featuredImageAlt: formData.get("featuredImageAlt"),
     galleryEntries: formData.get("galleryEntries"),
     contentHtml: formData.get("contentHtml"),
+    seriesTitle: formData.get("seriesTitle"),
+    seriesOrder: formData.get("seriesOrder"),
+    locationName: formData.get("locationName"),
+    iovanderUrl: formData.get("iovanderUrl"),
   });
+}
+
+type GeoResult = {
+  lat: number;
+  lng: number;
+  zoom: number;
+};
+
+async function geocodeLocation(locationName: string): Promise<GeoResult | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "jsquaredadventures.com (travel blog)" },
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = (await res.json()) as Array<{ lat: string; lon: string; type: string }>;
+    const first = data[0];
+    if (!first) {
+      return null;
+    }
+
+    const lat = parseFloat(first.lat);
+    const lng = parseFloat(first.lon);
+
+    // Determine default zoom based on result type
+    const countryTypes = new Set(["country", "continent"]);
+    const regionTypes = new Set(["state", "region", "province", "county"]);
+    const cityTypes = new Set(["city", "town", "village", "municipality"]);
+    let zoom = 10;
+    if (countryTypes.has(first.type)) zoom = 5;
+    else if (regionTypes.has(first.type)) zoom = 7;
+    else if (cityTypes.has(first.type)) zoom = 10;
+    else zoom = 13;
+
+    return { lat, lng, zoom };
+  } catch {
+    return null;
+  }
 }
 
 function parseTagNames(value: string) {
@@ -251,7 +298,11 @@ export async function createAdminPostAction(formData: FormData) {
   const authorId = await ensureAdmin();
   const values = parseFormData(formData);
   const db = getDb();
-  const categoryId = await ensureCategoryId(values.categoryName);
+  const [categoryId, seriesId, geo] = await Promise.all([
+    ensureCategoryId(values.categoryName),
+    ensureSeriesId(values.seriesTitle ?? ""),
+    values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
+  ]);
   const postId = crypto.randomUUID();
   const slug = slugify(values.slug.trim() || values.title);
   const now = new Date();
@@ -270,9 +321,16 @@ export async function createAdminPostAction(formData: FormData) {
     scheduledPublishTime,
     authorId,
     categoryId,
+    seriesId,
+    seriesOrder: values.seriesOrder ?? null,
     featuredImageId: null,
     externalGalleryUrl: null,
     externalGalleryLabel: null,
+    locationName: values.locationName || null,
+    locationLat: geo?.lat ?? null,
+    locationLng: geo?.lng ?? null,
+    locationZoom: geo?.zoom ?? null,
+    iovanderUrl: values.iovanderUrl || null,
     createdAt: now,
     updatedAt: now,
   });
@@ -295,7 +353,11 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   const authorId = await ensureAdmin();
   const values = parseFormData(formData);
   const db = getDb();
-  const categoryId = await ensureCategoryId(values.categoryName);
+  const [categoryId, seriesId, geo] = await Promise.all([
+    ensureCategoryId(values.categoryName),
+    ensureSeriesId(values.seriesTitle ?? ""),
+    values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
+  ]);
   const slug = slugify(values.slug.trim() || values.title);
   const now = new Date();
   const scheduledPublishTime = normalizeScheduledTimestamp(values.scheduledPublishTime, values.status);
@@ -312,6 +374,13 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
       publishedAt: values.status === "published" ? now : null,
       scheduledPublishTime,
       categoryId,
+      seriesId,
+      seriesOrder: values.seriesOrder ?? null,
+      locationName: values.locationName || null,
+      locationLat: geo?.lat ?? null,
+      locationLng: geo?.lng ?? null,
+      locationZoom: geo?.zoom ?? null,
+      iovanderUrl: values.iovanderUrl || null,
       updatedAt: now,
     })
     .where(eq(posts.id, postId));

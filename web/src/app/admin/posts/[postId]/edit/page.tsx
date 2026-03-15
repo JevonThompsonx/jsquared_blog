@@ -5,6 +5,7 @@ import { PostEditorForm } from "@/components/admin/post-editor-form";
 import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getAdminEditablePostById, listAdminCategories } from "@/server/dal/admin-posts";
+import { listAllSeries } from "@/server/dal/series";
 
 import { updateAdminPostAction } from "../../../actions";
 
@@ -21,9 +22,10 @@ export default async function EditAdminPostPage({
   }
 
   const { postId } = await params;
-  const [post, categories, resolvedSearchParams] = await Promise.all([
+  const [post, categories, allSeries, resolvedSearchParams] = await Promise.all([
     getAdminEditablePostById(postId),
     listAdminCategories(),
+    listAllSeries(),
     searchParams,
   ]);
 
@@ -58,6 +60,7 @@ export default async function EditAdminPostPage({
 
         <PostEditorForm
           action={updateAdminPostAction.bind(null, postId)}
+          allSeries={allSeries}
           categories={categories}
           mode="edit"
           post={post}

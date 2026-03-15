@@ -4,6 +4,7 @@ import { PostEditorForm } from "@/components/admin/post-editor-form";
 import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
 import { listAdminCategories } from "@/server/dal/admin-posts";
+import { listAllSeries } from "@/server/dal/series";
 
 import { createAdminPostAction } from "../../actions";
 
@@ -13,7 +14,7 @@ export default async function NewAdminPostPage() {
     return null;
   }
 
-  const categories = await listAdminCategories();
+  const [categories, allSeries] = await Promise.all([listAdminCategories(), listAllSeries()]);
 
   return (
     <main className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
@@ -28,7 +29,7 @@ export default async function NewAdminPostPage() {
             Back to dashboard
           </Link>
         </div>
-        <PostEditorForm action={createAdminPostAction} categories={categories} mode="create" />
+        <PostEditorForm action={createAdminPostAction} allSeries={allSeries} categories={categories} mode="create" />
       </section>
     </main>
   );
