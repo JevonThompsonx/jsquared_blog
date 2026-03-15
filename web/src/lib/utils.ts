@@ -35,6 +35,10 @@ export function getTagHref(slug: string): `/tag/${string}` {
   return `/tag/${slug}`;
 }
 
+export function getAuthorHref(userId: string): `/author/${string}` {
+  return `/author/${userId}`;
+}
+
 export function getPostIdFromSlug(slug: string): number | null {
   const match = slug.match(/^(\d+)/);
   if (!match) {

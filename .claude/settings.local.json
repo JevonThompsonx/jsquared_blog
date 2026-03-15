@@ -9,7 +9,8 @@
       "Bash(curl -s \"http://localhost:3000/admin\")",
       "Bash(pkill -f \"next dev\")",
       "Bash(cmd.exe /c \"rmdir /s /q client && rmdir /s /q server && rmdir /s /q shared\")",
-      "Bash(powershell -Command \"Remove-Item -Recurse -Force ''c:\\\\Users\\\\Jevon\\\\Nextcloud\\\\Projects\\\\jsquared_blog\\\\client'' -ErrorAction Stop; Write-Host ''client deleted''\")"
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force ''c:\\\\Users\\\\Jevon\\\\Nextcloud\\\\Projects\\\\jsquared_blog\\\\client'' -ErrorAction Stop; Write-Host ''client deleted''\")",
+      "Bash(ls -la \"c:\\\\Users\\\\Jevon\\\\Nextcloud\\\\Projects\\\\jsquared_blog\\\\web\\\\drizzle\"\" 2>/dev/null || echo \"web/drizzle does not exist \")"
     ]
   }
 }

@@ -102,8 +102,8 @@
 
 | Feature | Notes |
 |---------|-------|
-| Public author profiles | `/author/:username` — show user's published comments/activity |
-| About page | Tell the J² story |
+| ~~Public author profiles~~ | ✅ Done — `/author/[id]` with profile card, stats, comment activity feed. Author names in comments link to profile. |
+| ~~About page~~ | ✅ Done — editorial layout with photo placeholders, two-col bios, CTA. Nav link added. |
 | Post bookmarks/favorites | Let readers save posts |
 
 ### Lower Priority

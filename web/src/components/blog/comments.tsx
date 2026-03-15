@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { getAuthorHref } from "@/lib/utils";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 
@@ -104,7 +106,9 @@ function CommentCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-semibold text-[var(--text-primary)]">{comment.authorDisplayName}</span>
+            <Link className="font-semibold text-[var(--text-primary)] hover:text-[var(--accent)] hover:underline" href={getAuthorHref(comment.authorId)}>
+              {comment.authorDisplayName}
+            </Link>
             <span className="text-[var(--text-secondary)]">{formatCommentDate(comment.createdAt)}</span>
           </div>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[var(--text-primary)]">{comment.content}</p>

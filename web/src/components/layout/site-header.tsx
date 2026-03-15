@@ -128,9 +128,12 @@ export function SiteHeader() {
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-3 md:flex">
-          <nav>
+          <nav className="flex items-center gap-1">
             <Link className="nav-link-pill" href="/">
               Home
+            </Link>
+            <Link className="nav-link-pill" href="/about">
+              About
             </Link>
           </nav>
 
@@ -218,6 +221,13 @@ export function SiteHeader() {
               onClick={() => setIsMenuOpen(false)}
             >
               Home
+            </Link>
+            <Link
+              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
+              href="/about"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              About
             </Link>
 
             {isAdminSignedIn ? (

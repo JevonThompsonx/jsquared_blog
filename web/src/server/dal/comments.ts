@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 
 import { commentLikes, comments, posts, profiles } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
@@ -99,6 +99,65 @@ export async function listCommentsForPost(postId: string, currentUserId: string 
     userHasLiked: likedByCurrentUser.has(row.id),
     canDelete: currentUserId === row.authorId,
   })), sortBy);
+}
+
+export type UserCommentSummary = {
+  id: string;
+  content: string;
+  parentId: string | null;
+  createdAt: Date;
+  likeCount: number;
+  post: { id: string; title: string; slug: string };
+};
+
+export async function listCommentsByUserId(userId: string, limit = 20): Promise<UserCommentSummary[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: comments.id,
+      content: comments.content,
+      parentId: comments.parentId,
+      createdAt: comments.createdAt,
+      postId: posts.id,
+      postTitle: posts.title,
+      postSlug: posts.slug,
+    })
+    .from(comments)
+    .innerJoin(posts, eq(posts.id, comments.postId))
+    .where(and(eq(comments.authorId, userId), eq(posts.status, "published")))
+    .orderBy(desc(comments.createdAt))
+    .limit(limit);
+
+  if (rows.length === 0) return [];
+
+  const commentIds = rows.map((r) => r.id);
+  const likeRows = await db
+    .select({ commentId: commentLikes.commentId })
+    .from(commentLikes)
+    .where(inArray(commentLikes.commentId, commentIds));
+
+  const likeCountMap = new Map<string, number>();
+  for (const row of likeRows) {
+    likeCountMap.set(row.commentId, (likeCountMap.get(row.commentId) ?? 0) + 1);
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    content: row.content,
+    parentId: row.parentId,
+    createdAt: row.createdAt,
+    likeCount: likeCountMap.get(row.id) ?? 0,
+    post: { id: row.postId, title: row.postTitle, slug: row.postSlug },
+  }));
+}
+
+export async function countCommentsByUserId(userId: string): Promise<number> {
+  const db = getDb();
+  const rows = await db
+    .select({ total: count() })
+    .from(comments)
+    .where(eq(comments.authorId, userId));
+  return rows[0]?.total ?? 0;
 }
 
 export async function canCommentOnPost(postId: string): Promise<boolean> {
