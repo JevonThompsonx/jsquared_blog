@@ -24,5 +24,5 @@ export type BlogPost = {
   layoutType?: "standard" | "split-horizontal" | "split-vertical" | "hover";
   tags: BlogTag[];
   images: BlogImage[];
-  source: "turso" | "legacy";
+  source: "turso";
 };

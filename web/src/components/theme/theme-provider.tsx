@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useSyncExternalStore, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, useState, type CSSProperties, type ReactNode } from "react";
 
 type ThemeMode = "light" | "dark";
 type ThemeLook = "sage" | "lichen";
@@ -20,6 +20,8 @@ type ThemeContextValue = {
   setLook: (look: ThemeLook) => void;
   toggleMode: () => void;
   cycleLook: () => void;
+  /** Atomically restore all three theme dimensions from a saved preference. */
+  restorePreference: (mode: ThemeMode, lightLook: ThemeLook, darkLook: ThemeLook) => void;
 };
 
 type ThemeVariables = Record<string, string>;
@@ -27,6 +29,37 @@ type ThemeVariables = Record<string, string>;
 const MODE_STORAGE_KEY = "j2adventures_theme_mode";
 const LIGHT_LOOK_STORAGE_KEY = "j2adventures_theme_look_light";
 const DARK_LOOK_STORAGE_KEY = "j2adventures_theme_look_dark";
+const THEME_COOKIE = "j2_theme";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+function readThemeCookie(): { mode: ThemeMode | null; lightLook: ThemeLook | null; darkLook: ThemeLook | null } {
+  try {
+    const match = document.cookie.match(/(?:^|; )j2_theme=([^;]*)/);
+    if (!match?.[1]) return { mode: null, lightLook: null, darkLook: null };
+    const parsed = JSON.parse(decodeURIComponent(match[1])) as Record<string, unknown>;
+    const m = parsed["mode"] as ThemeMode | undefined;
+    const ll = parsed["lightLook"] as ThemeLook | undefined;
+    const dl = parsed["darkLook"] as ThemeLook | undefined;
+    return {
+      mode: m === "light" || m === "dark" ? m : null,
+      lightLook: ll && LOOK_ORDER.includes(ll) ? ll : null,
+      darkLook: dl && LOOK_ORDER.includes(dl) ? dl : null,
+    };
+  } catch {
+    return { mode: null, lightLook: null, darkLook: null };
+  }
+}
+
+function writeThemeCookie(mode: ThemeMode, lightLook: ThemeLook, darkLook: ThemeLook) {
+  const value = JSON.stringify({ mode, lightLook, darkLook });
+  document.cookie = `${THEME_COOKIE}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; SameSite=Lax`;
+}
+/** Returns true if localStorage already has a saved theme mode — used by UserThemeSync. */
+export function hasStoredThemePreference(): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.localStorage.getItem(MODE_STORAGE_KEY));
+}
+
 const LOOK_ORDER: ThemeLook[] = ["sage", "lichen"];
 const LOOK_LABELS: Record<ThemeLook, string> = {
   sage: "Moss & Linen",
@@ -293,6 +326,34 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
   const [lightLookState, setLightLookState] = useState<ThemeLook>("sage");
   const [darkLookState, setDarkLookState] = useState<ThemeLook>("lichen");
 
+  // Sync React state from storage once after mount. localStorage is primary;
+  // cookie is a cross-session fallback (e.g. after clearing localStorage).
+  useEffect(() => {
+    let storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as ThemeMode | null;
+    let storedLightLook = window.localStorage.getItem(LIGHT_LOOK_STORAGE_KEY) as ThemeLook | null;
+    let storedDarkLook = window.localStorage.getItem(DARK_LOOK_STORAGE_KEY) as ThemeLook | null;
+
+    if (!storedMode || !storedLightLook || !storedDarkLook) {
+      const cookie = readThemeCookie();
+      if (!storedMode && cookie.mode) {
+        storedMode = cookie.mode;
+        window.localStorage.setItem(MODE_STORAGE_KEY, cookie.mode);
+      }
+      if (!storedLightLook && cookie.lightLook) {
+        storedLightLook = cookie.lightLook;
+        window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, cookie.lightLook);
+      }
+      if (!storedDarkLook && cookie.darkLook) {
+        storedDarkLook = cookie.darkLook;
+        window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, cookie.darkLook);
+      }
+    }
+
+    if (storedMode === "light" || storedMode === "dark") setModeState(storedMode);
+    if (storedLightLook && LOOK_ORDER.includes(storedLightLook)) setLightLookState(storedLightLook);
+    if (storedDarkLook && LOOK_ORDER.includes(storedDarkLook)) setDarkLookState(storedDarkLook);
+  }, []);
+
   const mode = useMemo<ThemeMode>(() => {
     if (!hydrated) {
       return "light";
@@ -341,32 +402,47 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
     setMode: (nextMode) => {
       setModeState(nextMode);
       window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+      writeThemeCookie(nextMode, lightLook, darkLook);
     },
     setLook: (nextLook) => {
       if (mode === "light") {
         setLightLookState(nextLook);
         window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLook);
+        writeThemeCookie(mode, nextLook, darkLook);
         return;
       }
 
       setDarkLookState(nextLook);
       window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextLook);
+      writeThemeCookie(mode, lightLook, nextLook);
     },
     toggleMode: () => {
       const nextMode = mode === "light" ? "dark" : "light";
       setModeState(nextMode);
       window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+      writeThemeCookie(nextMode, lightLook, darkLook);
     },
     cycleLook: () => {
       const nextLook = LOOK_ORDER[(LOOK_ORDER.indexOf(look) + 1) % LOOK_ORDER.length];
       if (mode === "light") {
         setLightLookState(nextLook);
         window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLook);
+        writeThemeCookie(mode, nextLook, darkLook);
         return;
       }
 
       setDarkLookState(nextLook);
       window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextLook);
+      writeThemeCookie(mode, lightLook, nextLook);
+    },
+    restorePreference: (nextMode, nextLightLook, nextDarkLook) => {
+      setModeState(nextMode);
+      setLightLookState(nextLightLook);
+      setDarkLookState(nextDarkLook);
+      window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+      window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLightLook);
+      window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextDarkLook);
+      writeThemeCookie(nextMode, nextLightLook, nextDarkLook);
     },
   }), [darkLook, lightLook, look, mode]);
 

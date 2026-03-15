@@ -1,9 +1,0 @@
-# deps
-node_modules/
-
-# environment variables
-.env
-.dev.vars
-
-# wrangler
-.wrangler/

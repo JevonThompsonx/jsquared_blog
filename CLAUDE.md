@@ -1,405 +1,161 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
-J²Adventures Blog is a full-stack travel blog application built as a Bun workspace monorepo, featuring a React frontend deployed to Cloudflare Pages and a Hono API backend running as a Cloudflare Worker. The application uses Supabase for authentication, PostgreSQL database, and Supabase Storage for image hosting with automatic WebP conversion.
+J²Adventures Blog is a travel blog application. The active codebase is the Next.js app in `web/`. The legacy `client/` (Vite/React), `server/` (Hono/Cloudflare Worker), and `shared/` directories are present but retired — do not touch them.
 
 **Live Site**: [jsquaredadventures.com](https://jsquaredadventures.com)
 
-## Tech Stack
+## Active Tech Stack (`web/`)
 
-- **Runtime**: Bun (for local development)
-- **Frontend**: React 19 + Vite + TypeScript + TailwindCSS 4
-- **Backend**: Hono (Cloudflare Worker runtime)
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
-- **Image Storage**: Supabase Storage with automatic WebP conversion (85% quality)
-- **Deployment**: Cloudflare Pages (frontend) + Cloudflare Workers (backend)
-- **Rich Text**: Tiptap editor
+- **Framework**: Next.js 15 (App Router, Turbopack)
+- **Runtime**: Node.js / Vercel
+- **Database**: Turso (SQLite via libSQL) + Drizzle ORM
+- **Public auth**: Supabase Auth (sign up, login, email callback)
+- **Admin auth**: Auth.js (next-auth v4) + GitHub OAuth
+- **Image hosting**: Cloudinary
+- **Styling**: TailwindCSS 4 + CSS custom properties (theme variables)
+- **Rich text**: Tiptap (transitional HTML payload stored in `content_json`)
 
 ## Monorepo Structure
 
-This is a Bun workspace with three packages:
-
-- **`client/`**: React frontend (Vite app)
-- **`server/`**: Hono backend API (Cloudflare Worker)
-- **`shared/`**: Shared TypeScript types used by both client and server
-
-The `shared` package provides end-to-end type safety across the full stack. Both `client` and `server` depend on `shared` via `workspace:*` protocol.
+```
+web/          ← ACTIVE: Next.js app — all development happens here
+client/       ← RETIRED: legacy Vite/React frontend (do not touch)
+server/       ← RETIRED: legacy Hono/Cloudflare Worker (do not touch)
+shared/       ← RETIRED: legacy shared types (do not touch)
+docs/         ← Project documentation
+```
 
 ## Development Commands
 
-### Full Stack Development
-
-**IMPORTANT**: Before running the dev server, ensure you have a `.dev.vars` file in the `server/` directory with your Supabase credentials. Copy from `.dev.vars.example` and fill in your values.
-
 ```bash
-# Install all dependencies
-bun install
-
-# Start all services (shared watch mode, server, client)
-bun run dev
+# From web/
+cd web
+bun run dev        # dev server at http://localhost:3000
+bun run build      # production build
+bun run lint       # ESLint
+bun run db:generate  # generate Drizzle migrations after schema changes
+bun run db:migrate   # apply migrations to Turso
 ```
 
-This runs:
-- `shared` in watch mode (TypeScript compilation)
-- `server` via `wrangler dev` on port 8787 (uses `.dev.vars` for env variables)
-- `client` via Vite on port 5173
+## Environment Variables (`web/.env.local`)
 
-The Vite dev server proxies `/api/*` requests to the Wrangler dev server at `http://127.0.0.1:8787`.
-
-### Individual Workspace Commands
-
-```bash
-# Client only
-cd client && bun run dev
-
-# Server only (from root)
-bunx wrangler dev --config server/wrangler.toml
-
-# Shared types in watch mode
-cd shared && bun run dev
 ```
-
-### Building
-
-```bash
-# Build entire monorepo (runs TypeScript project references)
-bun run build
-
-# Individual builds
-bun run build:client
-bun run build:server
-bun run build:shared
+TURSO_DATABASE_URL=libsql://your-db.turso.io
+TURSO_AUTH_TOKEN=...
+AUTH_SECRET=...
+AUTH_GITHUB_ID=...
+AUTH_GITHUB_SECRET=...
+AUTH_ADMIN_GITHUB_IDS=...
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+NEXT_PUBLIC_SITE_URL=https://jsquaredadventures.com
 ```
-
-The root `build` command uses `tsc --build` which respects TypeScript project references for efficient incremental compilation.
-
-### Linting
-
-```bash
-cd client && bun run lint
-```
-
-## Environment Variables
-
-### Client (`.env` in `client/`)
-```
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### Server Development (`.dev.vars` in `server/`)
-
-**REQUIRED for local development:**
-```
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-**OPTIONAL for local cron/scheduled post testing:**
-```
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-DEV_MODE=true
-```
-
-**IMPORTANT**: Do NOT use quotes around values in `.dev.vars`. Use `KEY=value` not `KEY="value"`.
-
-The `.dev.vars` file is loaded by `server/dev-server.ts` for local development. Copy from `.dev.vars.example` and fill in your Supabase credentials. This file is gitignored to prevent committing secrets.
-
-When adding new environment variables, you must also add them to the `mockEnv` object in `server/dev-server.ts` for them to be available to the Hono app during local development.
-
-### Server Production
-
-For production deployment, set environment variables in Cloudflare Worker dashboard (not in files).
 
 ## Architecture
 
-### Authentication Flow
+### Two Auth Systems (by design)
 
-- Uses Supabase Auth with custom `profiles` table that stores user roles (`admin` or `viewer`)
-- Frontend uses `AuthContext` (`client/src/context/AuthContext.tsx`) to manage auth state globally
-- Server uses auth middleware (`server/src/middleware/auth.ts`) to protect routes by verifying Supabase JWT tokens
-- Admin routes require both authentication AND `role: 'admin'` in the user's profile
+- **Supabase Auth** → public readers (sign up, login, comments, account settings)
+- **Auth.js + GitHub** → admin only (post create/edit/delete, image upload)
 
-### API Routes (Backend)
+They are completely separate. Admin users cannot access `/account`. Public users cannot access `/admin`.
 
-The Hono backend (`server/src/index.ts`) exposes:
+### Key Files
 
-**Posts**
-- `GET /api/posts` - Fetch posts with pagination
-  - Query params: `limit` (default 20, max 100), `offset` (default 0), `search` (optional)
-  - Returns: `{ posts, total, limit, offset, hasMore }`
-  - Supports server-side search across title, description, and category
-  - Includes tags with each post
-- `POST /api/posts` - Create new post (admin only)
-- `PUT /api/posts/:id` - Update post (admin only)
-- `DELETE /api/posts/:id` - Delete post (admin only)
-- `GET /api/posts/:id` - Fetch single post with images and tags
+| Purpose | File |
+|---|---|
+| Root layout + providers | `web/src/app/layout.tsx` |
+| App providers (theme, session) | `web/src/components/providers/app-providers.tsx` |
+| Theme sync from DB on login | `web/src/components/providers/user-theme-sync.tsx` |
+| Theme provider | `web/src/components/theme/theme-provider.tsx` |
+| Site header | `web/src/components/layout/site-header.tsx` |
+| Homepage feed | `web/src/components/blog/home-feed.tsx` |
+| Post detail page | `web/src/app/(blog)/posts/[slug]/page.tsx` |
+| Comments component | `web/src/components/blog/comments.tsx` |
+| Account settings UI | `web/src/app/account/account-settings.tsx` |
+| Admin server actions | `web/src/app/admin/actions.ts` |
+| Post reads (Turso-only) | `web/src/server/queries/posts.ts` |
+| Post DAL | `web/src/server/dal/posts.ts` |
+| Comments DAL | `web/src/server/dal/comments.ts` |
+| Profiles DAL | `web/src/server/dal/profiles.ts` |
+| Public user mapping | `web/src/server/auth/public-users.ts` |
+| Drizzle schema | `web/src/drizzle/schema.ts` |
+| Cloudinary uploads | `web/src/lib/cloudinary/uploads.ts` |
+| Admin session helper | `web/src/lib/auth/session.ts` |
+| URL helpers | `web/src/lib/utils.ts` |
 
-**Comments**
-- `GET /api/posts/:id/comments` - Get comments for a post (?sort=likes|newest|oldest)
-- `POST /api/posts/:id/comments` - Add comment (authenticated)
-- `POST /api/comments/:id/like` - Toggle like on comment (authenticated)
-- `DELETE /api/comments/:id` - Delete comment (owner only)
+### API Routes
 
-**Tags**
-- `GET /api/tags` - Fetch all available tags
-- `POST /api/tags` - Create new tag (admin only)
-- `PUT /api/posts/:id/tags` - Update tags for a post (admin only)
-
-**Other**
-- `GET /sitemap.xml` - Dynamic XML sitemap
-
-Protected routes use the `authMiddleware` which sets `c.get('user')` and `c.get('supabase')` for authenticated requests.
-
-### Scheduled Tasks (Cron)
-
-The backend includes a Cloudflare Workers cron trigger that runs every 15 minutes to auto-publish scheduled posts:
-- Configured in `server/wrangler.toml`: `crons = ["*/15 * * * *"]`
-- Handler in `server/src/index.ts` exports `scheduled` function
-- Also auto-publishes on request-time as fallback (in `GET /api/posts` and `GET /api/posts/:id`)
-
-#### Local Cron Testing
-
-To test scheduled post publishing locally:
-
-1. Add to `server/.dev.vars`:
-   ```
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-   DEV_MODE=true
-   ```
-
-2. Restart the dev server (`bun run dev`)
-
-3. Use the test endpoints:
-   ```bash
-   # Check environment variables are loaded
-   curl http://127.0.0.1:8787/api/test/env
-   
-   # View scheduled posts and their timing
-   curl http://127.0.0.1:8787/api/test/scheduled-posts
-   
-   # Manually trigger the cron job
-   curl http://127.0.0.1:8787/api/test/cron
-   ```
-
-**Note**: The service role key bypasses Row Level Security (RLS), allowing the cron job to update posts without user authentication. These test endpoints only work when `DEV_MODE=true` and return 404 otherwise.
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/posts` | public | Paginated post list |
+| GET | `/api/posts/[postId]/comments` | optional | List comments |
+| POST | `/api/posts/[postId]/comments` | Supabase | Post a comment or reply |
+| POST | `/api/comments/[commentId]/like` | Supabase | Toggle like |
+| DELETE | `/api/comments/[commentId]` | Supabase | Delete own comment |
+| GET | `/api/account/profile` | Supabase | Get profile |
+| PATCH | `/api/account/profile` | Supabase | Update profile |
+| POST | `/api/account/avatar` | Supabase | Upload avatar image |
+| POST | `/api/admin/uploads/images` | Admin | Upload editorial image |
+| GET/POST | `/api/auth/[...nextauth]` | — | Auth.js GitHub OAuth |
 
 ### Frontend Routes
 
-Defined in `client/src/main.tsx` using React Router:
-
-- `/` - Home page (public)
-- `/auth` - Login/signup (public)
-- `/admin` - Admin dashboard (requires admin role)
-- `/posts/:id` - Single post detail (public)
-- `/posts/:id/edit` - Edit post (requires admin role)
-- `/category/:category` - Category page showing filtered posts (public)
-- `/*` - 404 Not Found page with fun adventure-themed message (public)
-
-Protected routes use the `PrivateRoute` component which checks both authentication and admin role.
-
-### Image Handling
-
-- **Upload**: Images (JPG, PNG, WebP) are uploaded via admin interface
-- **Conversion**: Server automatically converts JPG/PNG to WebP format at 85% quality using @jsquash libraries
-- **Storage**: Images stored in Supabase Storage (`jsquared_blog` bucket, 5MB file size limit)
-- **Naming**: Files are saved with timestamp prefix for uniqueness (e.g., `1234567890-image.webp`)
-- **Database**: The `posts.image_url` field stores the full public URL from Supabase Storage
-- **Deletion**: Old images are automatically deleted when replacing with new uploads
-- **Capacity**: 1GB free tier = approximately 3,300-10,000 images depending on size
+```
+/                   Public blog feed
+/posts/[slug]       Post detail with comments
+/category/[cat]     Category-filtered feed
+/tag/[slug]         Tag-filtered feed
+/login              Supabase login
+/signup             Supabase signup
+/callback           Supabase email callback
+/account            Public user account settings
+/settings           Redirects to /account
+/admin              Admin dashboard (GitHub auth)
+/admin/posts/new    Create post
+/admin/posts/[id]/edit  Edit post
+```
 
 ### Theme System
 
-The app supports multiple visual themes defined in `client/src/main.tsx`:
+Two dimensions: **mode** (`light` | `dark`) and **look** (`sage` | `lichen`). Each combination has full CSS variable sets. Stored in:
+1. React state (live)
+2. `localStorage` (primary persistence)
+3. `j2_theme` cookie (cross-session fallback)
+4. Supabase `profiles.theme_preference` (DB backup, synced on login via `UserThemeSync`)
 
-- `midnightGarden` (dark green)
-- `enchantedForest` (dark teal + purple)
-- `daylightGarden` (light green)
-- `daylitForest` (light teal)
+`UserThemeSync` runs once per session: if no localStorage theme is found and a Supabase user is logged in, it fetches the DB preference and restores it.
 
-Themes are applied via CSS custom properties and managed through React state.
+### Avatar System
 
-### Post Layout Types
+Three avatar types:
+1. **Preset icons** — stored as `j2:mountain`, `j2:compass`, etc. in `profiles.avatar_url`
+2. **Uploaded image** — Cloudinary URL (via `POST /api/account/avatar`)
+3. **Initials fallback** — rendered from `displayName` when `avatarUrl` is null
 
-Posts support three display types (defined in `shared/src/types/index.ts`):
+### Comment Replies
 
-- `split-horizontal` - Split view with image on left/right (2-column span on desktop)
-- `split-vertical` - Standard card with image on top, content below (1-column span)
-- `hover` - Image with gradient overlay that reveals description on hover (1-column span)
+Comments support one level of replies via `comments.parent_id`. Top-level comments have `parentId = null`. Replies are displayed nested under their parent, sorted oldest-first.
 
-The backend uses a pattern-based randomization algorithm (6-post repeating cycle) to assign layout types. The homepage grid uses `grid-flow-dense` to automatically fill gaps and prevent layout issues with larger posts.
+## Code Rules (must stay in force)
 
-### Categories
-
-Posts can be organized into predefined categories or custom categories:
-
-- **Predefined**: Hiking, Camping, Food, Nature, Culture, Water Sports, Biking, Road Trip, City Adventure, Wildlife, Beach, Mountains, Photography, Winter Sports, Other
-- **Custom**: Admins can create custom categories by selecting "Other" and typing a new name
-- **Navigation**: Category badges are clickable and lead to filtered category pages (`/category/:category`)
-- **Category Pages**: Each category has a dedicated page with infinite scroll showing only posts in that category
-
-### SEO (Search Engine Optimization)
-
-The application implements comprehensive SEO best practices:
-
-#### Core SEO Components
-
-- **robots.txt** (`client/public/robots.txt`): Tells search engines to crawl all pages and points to sitemap
-- **Sitemap.xml** (`GET /sitemap.xml`): Dynamic XML sitemap generated server-side listing homepage and all blog posts
-- **SEO Component** (`client/src/components/SEO.tsx`): Reusable component that manages all meta tags and structured data
-
-#### Meta Tags & Social Sharing
-
-The SEO component automatically updates:
-- Document title with site branding
-- Meta description for search results
-- Open Graph tags for Facebook/LinkedIn sharing (og:title, og:description, og:image, og:url, og:type)
-- Twitter Card tags for Twitter sharing (twitter:card, twitter:title, twitter:description, twitter:image)
-- Article-specific tags for blog posts (article:published_time, article:author, article:section, article:tag)
-- Canonical URLs to prevent duplicate content issues
-
-#### JSON-LD Structured Data
-
-Implements schema.org structured data for better search engine understanding:
-
-- **Organization Schema** (Home page): Defines J²Adventures as an organization with name, URL, logo, and description
-- **BlogPosting Schema** (Post Detail pages): Rich metadata for blog posts including headline, description, image, author, publisher, dates, and article section
-- **BreadcrumbList Schema** (Category pages): Navigation hierarchy for category pages showing Home → Category path
-
-#### Heading Hierarchy
-
-All pages follow proper heading structure:
-- Each page has exactly one `<h1>` tag for the main heading
-- Article cards use `<h3>` tags for titles (appropriate as sub-elements)
-- No skipped heading levels (maintains h1 → h2 → h3 order)
-
-#### Image Optimization for SEO
-
-- All images have descriptive `alt` attributes for accessibility and SEO
-- Images converted to WebP for faster loading (better Core Web Vitals scores)
-- Lazy loading implemented (`loading="lazy"`) to improve initial page load
-- Proper image dimensions to prevent layout shift
-
-#### URL Structure
-
-- Clean, semantic URLs: `/posts/:id`, `/category/:category`
-- Category names properly URL-encoded in paths
-- Canonical URLs set on all pages to avoid duplicate content penalties
-
-#### Additional SEO Features
-
-- 404 page with proper messaging and navigation back to content
-- Fast page loads via Cloudflare CDN caching (Cache-Control headers)
-- Mobile-responsive design (important for mobile-first indexing)
-- Infinite scroll with proper URL handling (no pagination URLs to dilute SEO)
-
-## Database Schema (Supabase)
-
-Key tables:
-
-- `posts`: id, created_at, title, description, image_url, category, author_id, type, status, scheduled_for, published_at
-- `post_images`: id, post_id, image_url, sort_order, focal_point, alt_text, created_at
-- `profiles`: id (FK to auth.users), username, avatar_url, role, theme_preference
-- `comments`: id, created_at, content, post_id, user_id
-- `comment_likes`: id, comment_id, user_id (unique constraint)
-- `tags`: id, name, slug, created_at
-- `post_tags`: post_id, tag_id, created_at (junction table)
-- `auth.users`: Managed by Supabase Auth
-
-### Database Migrations
-
-Run combined migrations in Supabase SQL Editor:
-```sql
--- Copy contents from: server/migrations/APPLY_ALL_MIGRATIONS.sql
-```
-
-## TypeScript Configuration
-
-The monorepo uses TypeScript project references:
-
-- Root `tsconfig.json` references all workspaces
-- Each workspace has its own `tsconfig.json` with `composite: true`
-- Build with `tsc --build` for incremental compilation
+- All server DAL files import `"server-only"` at the top
+- No `any`, `as`, or `!` — strict TypeScript throughout
+- Zod validation at every API trust boundary
+- Server actions and API routes check auth before touching the DB
+- API routes that need a Supabase user call `getRequestSupabaseUser(request)`
+- Dynamic `Link` hrefs use typed helpers (`getCategoryHref`, `getTagHref`, `getPostHref`)
+- After adding new app routes, run `bun run build` from `web/` to regenerate `.next/types/link.d.ts`
 
 ## Deployment
 
-### Backend (Cloudflare Worker)
-
-```bash
-cd server
-bunx wrangler deploy
-```
-
-Set secrets in Cloudflare dashboard: `SUPABASE_URL`, `SUPABASE_ANON_KEY`
-
-### Frontend (Cloudflare Pages)
-
-Configure Pages project:
-- Build command: `bun run build`
-- Build directory: `client/dist`
-- Set environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-
-For custom domains, set up CNAME record for API subdomain pointing to Worker URL.
-
-## Performance Optimizations
-
-### Infinite Scroll
-
-The homepage (`client/src/components/Home.tsx`) implements infinite scroll for optimal performance:
-
-- Loads 20 posts initially, then 20 more as user scrolls
-- Uses Intersection Observer API to detect when user reaches bottom
-- Prevents loading all posts at once (critical for scalability)
-- Shows loading indicator while fetching more posts
-- Displays "end of adventures" message when no more posts
-
-### Search Performance
-
-- Search input is debounced by 400ms using custom `useDebounce` hook
-- Server-side search available via `?search=keyword` query parameter
-- Frontend debouncing prevents unnecessary API calls and re-renders
-
-### Caching
-
-- Backend sets Cache-Control headers (5 minutes for paginated posts)
-- Cloudflare CDN caches responses at the edge for faster delivery
-
-## Database Seeding
-
-To add starter posts for development/testing:
-
-```bash
-cd server
-bun run seed
-```
-
-This requires a `.env` file in `server/` with `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
-
-## Key Files to Know
-
-- `server/src/index.ts` - Main API implementation with all routes, pagination, sitemap, and WebP conversion
-- `server/src/middleware/auth.ts` - Authentication middleware
-- `server/src/seed-posts.ts` - Database seeding script for starter posts
-- `client/src/main.tsx` - App routing, theme system, and route configuration
-- `client/src/context/AuthContext.tsx` - Global auth state management
-- `client/src/hooks/useDebounce.ts` - Search debouncing hook
-- `shared/src/types/index.ts` - Shared TypeScript types including CATEGORIES constant
-- `client/src/components/Home.tsx` - Main homepage with infinite scroll and landing page
-- `client/src/components/Admin.tsx` - Admin dashboard for creating posts with category dropdown
-- `client/src/components/EditPost.tsx` - Edit existing posts interface
-- `client/src/components/PostDetail.tsx` - Individual post page with full content
-- `client/src/components/Category.tsx` - Category-filtered posts page with infinite scroll
-- `client/src/components/NotFound.tsx` - 404 error page with adventure theme
-- `client/src/components/SEO.tsx` - Reusable SEO component for meta tags and structured data
-- `client/src/components/TagInput.tsx` - Tag autocomplete component
-- `client/src/components/ImageUploader.tsx` - Image upload with focal point and alt text
-- `client/src/components/ImageGallery.tsx` - Multi-image carousel display
-- `client/src/components/Comments.tsx` - Comments section with likes
-- `client/src/components/AccountSettings.tsx` - User profile settings
-- `client/src/components/ProfileAvatar.tsx` - Avatar display component
-- `client/src/utils/dateTime.ts` - Timezone-aware datetime utilities
-- `client/public/robots.txt` - Search engine crawler instructions
+Production: Vercel, root directory `web/`. Full setup in `docs/deployment.md`.

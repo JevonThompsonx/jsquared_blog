@@ -1,265 +1,173 @@
-# Deployment Guide
+# J²Adventures — Next.js Production Deployment
 
-This guide covers deploying J²Adventures Blog to production using Cloudflare Pages (frontend) and Cloudflare Workers (backend).
+Last updated: 2026-03-14
 
----
+## Overview
 
-## Architecture Overview
+The production stack is a single Next.js app (`web/`) deployed to Vercel, with:
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Cloudflare    │     │   Cloudflare    │     │    Supabase     │
-│   (DNS/Domain)  │────▶│     Pages       │────▶│   (Database +   │
-│                 │     │   (Frontend)    │     │    Storage)     │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                               │
-                               ▼
-                        ┌─────────────────┐
-                        │   Cloudflare    │
-                        │    Workers      │
-                        │   (Backend)     │
-                        └─────────────────┘
-```
+- **Turso** — application database (posts, profiles, comments, tags, media)
+- **Supabase Auth** — public user authentication (sign up, login, password reset)
+- **Auth.js + GitHub** — admin authentication
+- **Cloudinary** — image and media hosting
+
+The legacy Cloudflare Worker (`server/`) and Vite frontend (`client/`) are retired.
 
 ---
 
-## 1. Supabase Setup
+## Required Environment Variables
 
-Your Supabase project should have:
-- Tables: `posts`, `post_images`, `profiles`, `comments`, `comment_likes`, `tags`, `post_tags`
-- Storage bucket: `jsquared_blog` (public read access)
-- Row Level Security (RLS) configured
-- Auth enabled
+Set all of these in the Vercel project dashboard under **Settings → Environment Variables**.
 
-### Database Migrations
-Run the combined migration in Supabase SQL Editor:
-```sql
--- Copy contents from: server/migrations/APPLY_ALL_MIGRATIONS.sql
-```
+### Database
 
----
-
-## 2. Deploy Backend to Cloudflare Workers
-
-### Prerequisites
-- Cloudflare account
-- Wrangler CLI installed (`bun add -g wrangler`)
-
-### Steps
-
-1. **Login to Cloudflare:**
-   ```bash
-   wrangler login
-   ```
-
-2. **Configure secrets:**
-   ```bash
-   cd server
-   wrangler secret put SUPABASE_URL
-   wrangler secret put SUPABASE_ANON_KEY
-   ```
-
-3. **Deploy:**
-   ```bash
-   wrangler deploy
-   ```
-
-4. **Note the Worker URL** (e.g., `https://jsquared-blog-api.your-subdomain.workers.dev`)
-
-### Cron Job (Post Scheduling)
-The backend includes a cron trigger that runs every 15 minutes to auto-publish scheduled posts:
-```toml
-# server/wrangler.toml
-[triggers]
-crons = ["*/15 * * * *"]
-```
-
----
-
-## 3. Deploy Frontend to Cloudflare Pages
-
-### Steps
-
-1. **Connect Repository:**
-   - Go to Cloudflare Dashboard → Workers & Pages → Create Application → Pages
-   - Connect your GitHub repository
-
-2. **Configure Build Settings:**
-   | Setting | Value |
-   |---------|-------|
-   | Framework Preset | Vite |
-   | Build Command | `bun run build` |
-   | Build Output Directory | `client/dist` |
-   | Root Directory | `/` (leave blank) |
-
-3. **Add Environment Variables:**
-   | Variable | Value |
-   |----------|-------|
-   | `VITE_SUPABASE_URL` | Your Supabase project URL |
-   | `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key |
-
-4. **Deploy** - Cloudflare Pages auto-deploys on every push to `main`
-
----
-
-## 4. Connect Custom Domain
-
-### For Frontend (Cloudflare Pages)
-
-1. **In Cloudflare Pages project:**
-   - Go to Settings → Custom Domains
-   - Add your domain (e.g., `jsquaredadventures.com`)
-
-2. **DNS is automatic** when domain is in the same Cloudflare account
-
-### For Backend API (Optional subdomain)
-
-If you want a custom API subdomain like `api.yourdomain.com`:
-
-1. **In Cloudflare DNS:**
-   | Type | Name | Target | Proxy |
-   |------|------|--------|-------|
-   | CNAME | `api` | `jsquared-blog-api.workers.dev` | Proxied (orange cloud) |
-
-2. **Update Worker routing** in Cloudflare dashboard if needed
-
----
-
-## 5. SPA Routing Configuration
-
-The frontend uses client-side routing. Cloudflare Pages handles this via `_redirects`:
-
-```
-# client/public/_redirects
-/*    /index.html   200
-```
-
-This ensures all routes serve the SPA and let React Router handle navigation.
-
----
-
-## 6. Environment Variables Summary
-
-### Client (Cloudflare Pages)
 | Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key |
+|---|---|
+| `TURSO_DATABASE_URL` | Turso database URL — `libsql://your-db.turso.io` |
+| `TURSO_AUTH_TOKEN` | Turso auth token from the Turso dashboard |
 
-### Server (Cloudflare Workers - Secrets)
+### Auth.js (Admin auth via GitHub)
+
 | Variable | Description |
-|----------|-------------|
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key |
+|---|---|
+| `AUTH_SECRET` | Random 32+ character secret — run `openssl rand -base64 32` |
+| `AUTH_GITHUB_ID` | GitHub OAuth app client ID |
+| `AUTH_GITHUB_SECRET` | GitHub OAuth app client secret |
+| `AUTH_ADMIN_GITHUB_IDS` | Comma-separated GitHub user IDs allowed admin access (e.g. `12345678`) |
 
-### Local Development
-**Client** (`client/.env`):
+### Supabase (Public user auth)
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Supabase project URL (server-side usage) |
+| `SUPABASE_ANON_KEY` | Supabase anon key (server-side usage) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Same Supabase project URL (client-side usage) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same Supabase anon key (client-side usage) |
+
+### Cloudinary (Media)
+
+| Variable | Description |
+|---|---|
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+
+### Site
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` | Production URL — `https://jsquaredadventures.com` |
+
+> **Note:** `LEGACY_API_BASE_URL` was a transitional variable pointing to the old Hono worker. It is no longer used and should not be set in production.
+
+---
+
+## Vercel Deployment Setup
+
+1. Import the repository into Vercel.
+2. Set the **Root Directory** to `web/`.
+3. Vercel auto-detects Next.js — leave the build command as default (`next build`).
+4. Add all environment variables listed above.
+5. Deploy.
+
+### GitHub OAuth callback URL
+
+In your GitHub OAuth app settings, set the callback URL to:
+
 ```
-VITE_SUPABASE_URL="https://xxx.supabase.co"
-VITE_SUPABASE_ANON_KEY="eyJhbGc..."
+https://jsquaredadventures.com/api/auth/callback/github
 ```
 
-**Server** (`server/.dev.vars`):
+For the Vercel preview environment, also add:
+
 ```
-SUPABASE_URL="https://xxx.supabase.co"
-SUPABASE_ANON_KEY="eyJhbGc..."
+https://<your-vercel-project>.vercel.app/api/auth/callback/github
+```
+
+### Supabase Auth callback URL
+
+In the Supabase dashboard under **Authentication → URL Configuration**, add:
+
+```
+https://jsquaredadventures.com/auth/callback
 ```
 
 ---
 
-## 7. Deployment Checklist
+## Database Migrations
 
-### Initial Setup
-- [ ] Supabase project created
-- [ ] Database migrations applied
-- [ ] RLS policies configured
-- [ ] Storage bucket created with public read access
+Migrations live in `web/drizzle/`. Run them against Turso:
 
-### Backend Deployment
-- [ ] Wrangler logged in (`wrangler login`)
-- [ ] Secrets configured (`SUPABASE_URL`, `SUPABASE_ANON_KEY`)
-- [ ] Worker deployed (`wrangler deploy`)
-- [ ] Worker URL noted for frontend config
-
-### Frontend Deployment
-- [ ] GitHub repo connected to Cloudflare Pages
-- [ ] Build settings configured
-- [ ] Environment variables set
-- [ ] Build succeeds
-- [ ] Custom domain configured (optional)
-
-### Verification
-- [ ] Homepage loads
-- [ ] Login/signup works
-- [ ] Image uploads work
-- [ ] Post creation works (admin)
-- [ ] Comments work
-- [ ] Scheduled posts auto-publish (wait 15 min)
-
----
-
-## 8. Troubleshooting
-
-### CORS Errors
-The Hono backend includes CORS middleware. Ensure your frontend domain is allowed:
-```typescript
-// server/src/index.ts
-app.use('*', cors({
-  origin: '*', // Or specific domains
-  credentials: true,
-}))
-```
-
-### Images Not Loading
-1. Check Supabase Storage bucket is public
-2. Verify bucket name is `jsquared_blog`
-3. Check CORS settings in Supabase Storage
-
-### Auth Not Working
-1. Verify Supabase anon key is correct
-2. Check Supabase Auth settings (allowed redirects)
-3. Clear localStorage and try again
-
-### Build Failures
 ```bash
-# Clean install
-rm -rf node_modules bun.lock
+cd web
+bun run db:migrate
+```
+
+This executes `web/scripts/migrate.ts` which applies any pending Drizzle migrations.
+
+To generate migrations after schema changes:
+
+```bash
+cd web
+bun run db:generate
+```
+
+Migrations are append-only — never edit an applied migration file.
+
+---
+
+## Decommissioning the Legacy Cloudflare Stack
+
+Once the Next.js app is confirmed live and healthy:
+
+### Cloudflare Workers dashboard
+
+1. Go to Workers & Pages → your Hono worker (e.g. `jsquared-blog-api`)
+2. Click **Manage** → **Delete** the worker
+3. Remove any associated custom domain routes (`api.jsquaredadventures.com` or similar)
+
+### Cloudflare Pages dashboard
+
+If the old Vite frontend was deployed to Cloudflare Pages:
+
+1. Go to Workers & Pages → your Pages project
+2. Update the build settings to point to `web/` OR delete the old project if it was separate
+3. Remove old environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+
+### Legacy environment variables to remove
+
+These were only needed for the old Cloudflare Worker — they are no longer used:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `DEV_MODE`
+
+---
+
+## Local Development
+
+```bash
+# From repo root
 bun install
 
-# Type check
-bun run build
+# From web/
+cd web
+cp .env.example .env.local
+# Fill in .env.local with your values
+
+bun run dev
 ```
 
-### Scheduled Posts Not Publishing
-1. Cron triggers only work in production (not local dev)
-2. Check Worker logs in Cloudflare dashboard
-3. Posts also auto-publish on page request (fallback)
+Dev server runs at `http://localhost:3000`.
 
 ---
 
-## 9. Monitoring & Logs
+## Health Checks After Deploy
 
-### Cloudflare Worker Logs
-1. Go to Cloudflare Dashboard → Workers & Pages
-2. Select your worker
-3. Click "Logs" tab
-4. Enable real-time logs or view historical
+Verify these URLs return expected content:
 
-### Cron Job Logs
-Scheduled handler logs appear in the same Worker logs with `Cron trigger` prefix.
-
----
-
-## 10. Updates & Redeployment
-
-### Backend Updates
-```bash
-cd server
-wrangler deploy
-```
-
-### Frontend Updates
-Just push to the connected GitHub branch - Cloudflare Pages auto-deploys.
-
-### Database Migrations
-Run new migrations in Supabase SQL Editor, then deploy updated code.
+| URL | Expected |
+|---|---|
+| `/` | Homepage with posts feed |
+| `/sitemap.xml` | Valid XML sitemap |
+| `/feed.xml` | Valid RSS feed |
+| `/api/auth/session` | JSON (null if unauthenticated) |

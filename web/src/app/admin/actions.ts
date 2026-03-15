@@ -186,8 +186,11 @@ async function replacePostMedia(options: {
 
   let featuredImageId: string | null = existingPost?.featuredImageId ?? null;
   if (featuredImageId) {
-    await db.delete(mediaAssets).where(eq(mediaAssets.id, featuredImageId));
+    const oldFeaturedImageId = featuredImageId;
     featuredImageId = null;
+    // Unlink the FK before deleting the media asset to avoid FOREIGN KEY constraint
+    await db.update(posts).set({ featuredImageId: null }).where(eq(posts.id, options.postId));
+    await db.delete(mediaAssets).where(eq(mediaAssets.id, oldFeaturedImageId));
   }
 
   if (options.featuredImageUrl.trim()) {

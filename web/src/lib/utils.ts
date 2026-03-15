@@ -27,6 +27,14 @@ export function getCanonicalPostUrl(post: Pick<BlogPost, "id" | "title" | "slug"
   return `https://jsquaredadventures.com${getPostHref(post)}`;
 }
 
+export function getCategoryHref(category: string): `/category/${string}` {
+  return `/category/${encodeURIComponent(category)}`;
+}
+
+export function getTagHref(slug: string): `/tag/${string}` {
+  return `/tag/${slug}`;
+}
+
 export function getPostIdFromSlug(slug: string): number | null {
   const match = slug.match(/^(\d+)/);
   if (!match) {
@@ -52,19 +60,6 @@ export function escapeXml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&apos;");
-}
-
-export function getLegacyApiBaseUrl(): string {
-  const fromEnv = process.env.LEGACY_API_BASE_URL;
-  if (fromEnv) {
-    return fromEnv.replace(/\/$/, "");
-  }
-
-  if (process.env.NODE_ENV === "development") {
-    return "http://127.0.0.1:8787";
-  }
-
-  return "https://jsquaredadventures.com";
 }
 
 export { htmlToPlainText };

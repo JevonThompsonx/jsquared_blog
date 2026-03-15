@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(xargs ls -lh)",
-      "Bash(bun x tsc --build --noEmit)"
+      "Bash(bun x tsc --build --noEmit)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"process.env.SUPABASE_SERVICE_ROLE_KEY\\\\|SUPABASE_URL.*supabase\\\\|supabase.*fetch\" c:/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"\\\\.source\\\\|post\\\\.source\" c:/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src --include=*.ts --include=*.tsx)",
+      "Bash(curl -s \"http://localhost:3000/admin\")",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(cmd.exe /c \"rmdir /s /q client && rmdir /s /q server && rmdir /s /q shared\")",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force ''c:\\\\Users\\\\Jevon\\\\Nextcloud\\\\Projects\\\\jsquared_blog\\\\client'' -ErrorAction Stop; Write-Host ''client deleted''\")"
     ]
   }
 }

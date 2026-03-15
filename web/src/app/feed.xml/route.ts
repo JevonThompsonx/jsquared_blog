@@ -1,8 +1,8 @@
-import { listPublishedPosts } from "@/server/queries/posts";
+import { listAllPublishedPosts } from "@/server/queries/posts";
 import { escapeXml, getCanonicalPostUrl, htmlToPlainText } from "@/lib/utils";
 
 export async function GET() {
-  const posts = await listPublishedPosts(20);
+  const posts = await listAllPublishedPosts();
   const buildDate = new Date().toUTCString();
 
   const items = posts
@@ -25,7 +25,7 @@ export async function GET() {
     <channel>
       <title>J²Adventures</title>
       <link>https://jsquaredadventures.com</link>
-      <description>Travel stories from J²Adventures, now migrating into Next.js.</description>
+      <description>Travel stories and adventures from J²Adventures.</description>
       <lastBuildDate>${buildDate}</lastBuildDate>${items}
     </channel>
   </rss>`;

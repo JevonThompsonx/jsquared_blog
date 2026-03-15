@@ -1,20 +1,28 @@
 import { NextResponse } from "next/server";
 
-import { listPublishedPosts } from "@/server/queries/posts";
+import { listPublishedPosts, listPublishedPostsByCategory, listPublishedPostsByTagSlug } from "@/server/queries/posts";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Number(searchParams.get("limit") ?? 20);
   const offset = Number(searchParams.get("offset") ?? 0);
   const search = searchParams.get("search") ?? undefined;
+  const category = searchParams.get("category") ?? undefined;
+  const tag = searchParams.get("tag") ?? undefined;
 
-  const posts = await listPublishedPosts(limit, offset, search);
+  let posts;
+  if (category) {
+    posts = await listPublishedPostsByCategory(category, limit, offset);
+  } else if (tag) {
+    posts = await listPublishedPostsByTagSlug(tag, limit, offset);
+  } else {
+    posts = await listPublishedPosts(limit, offset, search);
+  }
 
   return NextResponse.json({
     posts,
     limit,
     offset,
-    search: search ?? null,
     hasMore: posts.length === limit,
   });
 }

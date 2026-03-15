@@ -1,13 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-import { getPublicEnv } from "@/lib/env";
-
 export function getSupabaseBrowserClient() {
-  const env = getPublicEnv();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase browser env vars are not configured.");
   }
 
-  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return createClient(supabaseUrl, supabaseAnonKey);
 }

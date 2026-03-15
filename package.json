@@ -1,53 +1,20 @@
 {
   "name": "jsquaredadventures",
   "version": "0.3.1",
-  "description": "Princess and I ",
+  "description": "J² Adventures travel blog",
   "author": "Jevon Thompson",
   "license": "MIT",
   "homepage": "https://jsquaredadventures.com",
   "workspaces": [
-    "./server",
-    "./client",
-    "./shared",
     "./web"
   ],
   "scripts": {
-    "dev:client": "cd client && ~/.bun/bin/bun run dev",
-    "dev:server": "cd server && ~/.bun/bin/bun run dev",
-    "dev:shared": "cd shared && ~/.bun/bin/bun run dev",
-    "dev:web": "cd web && ~/.bun/bin/bun run dev",
-    "dev": "concurrently \"bun run dev:shared\" \"bun run dev:server\" \"bun run dev:client\" \"bun run dev:web\"",
-    "build:client": "cd client && ~/.bun/bin/bun run build",
-    "build:shared": "cd shared && ~/.bun/bin/bun run build",
-    "build:server": "cd server && ~/.bun/bin/bun run build",
-    "build:web": "cd web && ~/.bun/bin/bun run build",
-    "lint:web": "cd web && ~/.bun/bin/bun run lint",
-    "test:web": "cd web && ~/.bun/bin/bun run test",
-    "test:e2e:web": "cd web && ~/.bun/bin/bun run test:e2e",
-    "build": "~/.bun/bin/bun x tsc --build"
+    "dev": "cd web && bun run dev",
+    "build": "cd web && bun run build",
+    "lint": "cd web && bun run lint",
+    "test": "cd web && bun run test"
   },
-  "keywords": [
-    "bun",
-    "hono",
-    "react",
-    "vite",
-    "monorepo",
-    "cloudflare"
-  ],
   "devDependencies": {
-    "bun-types": "latest",
-    "concurrently": "^9.2.0",
-    "drizzle-kit": "^0.31.4",
-    "postgres": "^3.4.8",
-    "tsx": "^4.20.3",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "@libsql/client": "^0.15.10",
-    "dotenv": "^16.6.1",
-    "drizzle-orm": "^0.44.4",
-    "hono": "^4.9.0",
-    "react-router": "^7.8.0",
-    "wrangler": "^4.28.1"
+    "concurrently": "^9.2.0"
   }
 }

@@ -8,6 +8,8 @@ import { slugify } from "../src/lib/utils";
 import {
   authAccounts,
   categories,
+  commentLikes,
+  comments,
   mediaAssets,
   postImages,
   postTags,
@@ -68,6 +70,20 @@ type SupabaseTag = {
 type SupabasePostTag = {
   post_id: number;
   tag_id: number;
+};
+
+type SupabaseComment = {
+  id: string;
+  post_id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+type SupabaseCommentLike = {
+  comment_id: string;
+  user_id: string;
 };
 
 function requireEnv(name: string): string {
@@ -139,6 +155,10 @@ function toLegacyMediaId(source: "featured" | "gallery", postId: number, imageId
 
 function toLegacyPostImageId(imageId: number): string {
   return `legacy-post-image-${imageId}`;
+}
+
+function toLegacyCommentId(commentId: string): string {
+  return `legacy-comment-${commentId}`;
 }
 
 function toLegacyTagId(tagId: number): string {
@@ -261,7 +281,7 @@ async function main() {
 
   const db = getDb();
 
-  const [profileRows, postRows, imageRows, tagRows, postTagRows] = await Promise.all([
+  const [profileRows, postRows, imageRows, tagRows, postTagRows, commentRows, commentLikeRows] = await Promise.all([
     fetchAllRows((from, to) => fetchProfilesPage(supabase, from, to)),
     fetchAllRows(async (from, to) => {
       const { data, error } = await supabase
@@ -301,6 +321,31 @@ async function main() {
       }
 
       return (data ?? []) as SupabasePostTag[];
+    }),
+    fetchAllRows(async (from, to) => {
+      const { data, error } = await supabase
+        .from("comments")
+        .select("id, post_id, user_id, content, created_at, updated_at")
+        .order("created_at", { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        throw new Error(`Failed to fetch comments: ${error.message}`);
+      }
+
+      return (data ?? []) as SupabaseComment[];
+    }),
+    fetchAllRows(async (from, to) => {
+      const { data, error } = await supabase
+        .from("comment_likes")
+        .select("comment_id, user_id")
+        .range(from, to);
+
+      if (error) {
+        throw new Error(`Failed to fetch comment_likes: ${error.message}`);
+      }
+
+      return (data ?? []) as SupabaseCommentLike[];
     }),
   ]);
 
@@ -362,8 +407,14 @@ async function main() {
   const importedMediaIds = [...featuredMediaIds, ...galleryMediaIds];
   const importedPostImageIds = imageRows.map((image) => toLegacyPostImageId(image.id));
   const importedAuthAccountIds = allProfiles.map((profile) => toLegacyAuthAccountId(profile.id));
+  const importedCommentIds = commentRows.map((comment) => toLegacyCommentId(comment.id));
 
   await db.transaction(async (tx) => {
+    if (importedCommentIds.length > 0) {
+      await tx.delete(commentLikes).where(inArray(commentLikes.commentId, importedCommentIds));
+      await tx.delete(comments).where(inArray(comments.id, importedCommentIds));
+    }
+
     if (importedPostImageIds.length > 0) {
       await tx.delete(postImages).where(inArray(postImages.id, importedPostImageIds));
     }
@@ -536,9 +587,46 @@ async function main() {
         }))
       );
     }
+
+    const importedPostIdSet = new Set(importedPostIds);
+
+    const validCommentRows = commentRows.filter((comment) =>
+      importedPostIdSet.has(toLegacyPostId(comment.post_id))
+    );
+
+    if (validCommentRows.length > 0) {
+      await tx.insert(comments).values(
+        validCommentRows.map((comment) => {
+          const timestamp = toTimestamp(comment.created_at);
+          return {
+            id: toLegacyCommentId(comment.id),
+            postId: toLegacyPostId(comment.post_id),
+            authorId: resolveImportedUserId(comment.user_id),
+            content: comment.content,
+            parentId: null,
+            createdAt: timestamp,
+            updatedAt: toTimestamp(comment.updated_at ?? comment.created_at),
+          };
+        })
+      );
+    }
+
+    const validCommentIdSet = new Set(validCommentRows.map((c) => c.id));
+    const validCommentLikeRows = commentLikeRows.filter((like) =>
+      validCommentIdSet.has(like.comment_id)
+    );
+
+    if (validCommentLikeRows.length > 0) {
+      await tx.insert(commentLikes).values(
+        validCommentLikeRows.map((like) => ({
+          commentId: toLegacyCommentId(like.comment_id),
+          userId: resolveImportedUserId(like.user_id),
+        }))
+      );
+    }
   });
 
-  const [userCount, categoryCount, tagCount, mediaCount, postCount, postImageCount, postTagCount] = await Promise.all([
+  const [userCount, categoryCount, tagCount, mediaCount, postCount, postImageCount, postTagCount, commentCount, commentLikeCount] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(users),
     db.select({ count: sql<number>`count(*)` }).from(categories),
     db.select({ count: sql<number>`count(*)` }).from(tags),
@@ -546,6 +634,8 @@ async function main() {
     db.select({ count: sql<number>`count(*)` }).from(posts),
     db.select({ count: sql<number>`count(*)` }).from(postImages),
     db.select({ count: sql<number>`count(*)` }).from(postTags),
+    db.select({ count: sql<number>`count(*)` }).from(comments),
+    db.select({ count: sql<number>`count(*)` }).from(commentLikes),
   ]);
 
   console.log("Imported Supabase content into Turso:");
@@ -556,6 +646,8 @@ async function main() {
   console.log(`- posts: ${postCount[0]?.count ?? 0}`);
   console.log(`- post_images: ${postImageCount[0]?.count ?? 0}`);
   console.log(`- post_tags: ${postTagCount[0]?.count ?? 0}`);
+  console.log(`- comments: ${commentCount[0]?.count ?? 0}`);
+  console.log(`- comment_likes: ${commentLikeCount[0]?.count ?? 0}`);
 }
 
 void main();

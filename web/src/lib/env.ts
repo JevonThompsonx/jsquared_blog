@@ -25,7 +25,6 @@ const serverEnvSchema = z.object({
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_ANON_KEY: z.string().min(1).optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
-  LEGACY_API_BASE_URL: z.string().url().optional(),
 });
 
 const publicEnvSchema = z.object({
