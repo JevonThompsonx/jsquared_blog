@@ -11,8 +11,14 @@ type GalleryImage = {
   altText: string | null;
 };
 
+type InlineImage = {
+  imageUrl: string;
+  altText: string | null;
+};
+
 type Props = {
   images: BlogImage[];
+  inlineImages?: InlineImage[];
   postTitle: string;
   featuredImageUrl?: string | null;
 };
@@ -49,18 +55,29 @@ function ExpandIcon() {
   );
 }
 
-export function PostGallery({ images, postTitle, featuredImageUrl }: Props) {
+export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl }: Props) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const filmstripRef = useRef<HTMLDivElement>(null);
 
   const isOpen = activeIndex !== null;
 
-  // Combined images: featured first, then gallery extras
+  // Combined images: featured first, then gallery extras, then inline content images
   const allImages: GalleryImage[] = [
     ...(featuredImageUrl ? [{ id: "featured", imageUrl: featuredImageUrl, altText: postTitle }] : []),
     ...images,
+    ...(inlineImages ?? []).map((img, i) => ({ id: `inline-${i}`, imageUrl: img.imageUrl, altText: img.altText })),
   ];
+
+  // Listen for inline image click events dispatched by ProseContent
+  useEffect(() => {
+    function handler(e: Event) {
+      const idx = (e as CustomEvent<{ index: number }>).detail.index;
+      setActiveIndex(idx);
+    }
+    window.addEventListener("j2:open-lightbox", handler);
+    return () => window.removeEventListener("j2:open-lightbox", handler);
+  }, []);
 
   // Thumbnail indices are offset by 1 when a featured image is present
   const thumbOffset = featuredImageUrl ? 1 : 0;

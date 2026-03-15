@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 
 function getWordCount(value: string): number {
@@ -48,6 +49,12 @@ function MenuButton({
 function EditorMenuBar({ editor }: { editor: Editor | null }) {
   const [linkDraft, setLinkDraft] = useState("");
   const [showLinkInput, setShowLinkInput] = useState(false);
+  const [showImagePanel, setShowImagePanel] = useState(false);
+  const [imageDraftAlt, setImageDraftAlt] = useState("");
+  const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const setLink = useCallback(() => {
     if (!editor) {
@@ -71,6 +78,47 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
 
     setShowLinkInput(false);
   }, [editor, linkDraft]);
+
+  const openImageUpload = useCallback(() => {
+    setUploadError(null);
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor) return;
+    // Reset so same file can be re-selected
+    e.target.value = "";
+
+    setIsUploadingImage(true);
+    setUploadError(null);
+
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/admin/uploads/images", { method: "POST", body });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Upload failed");
+      }
+      const data = await res.json() as { imageUrl: string };
+      setPendingImageUrl(data.imageUrl);
+      setImageDraftAlt("");
+      setShowImagePanel(true);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, [editor]);
+
+  const insertImage = useCallback(() => {
+    if (!editor || !pendingImageUrl) return;
+    editor.chain().focus().setImage({ src: pendingImageUrl, alt: imageDraftAlt.trim() }).run();
+    setShowImagePanel(false);
+    setPendingImageUrl(null);
+    setImageDraftAlt("");
+  }, [editor, pendingImageUrl, imageDraftAlt]);
 
   if (!editor) {
     return null;
@@ -123,6 +171,9 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
           <MenuButton active={editor.isActive("link")} onClick={setLink} title="Link">
             Link
           </MenuButton>
+          <MenuButton disabled={isUploadingImage} onClick={openImageUpload} title="Insert image">
+            {isUploadingImage ? "Uploading…" : "Image"}
+          </MenuButton>
           <MenuButton disabled={!editor.can().chain().focus().undo().run()} onClick={() => editor.chain().focus().undo().run()} title="Undo">
             Undo
           </MenuButton>
@@ -131,6 +182,19 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
           </MenuButton>
         </div>
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+        type="file"
+      />
+
+      {uploadError ? (
+        <p className="mt-2 text-xs text-red-500">{uploadError}</p>
+      ) : null}
 
       {showLinkInput ? (
         <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
@@ -146,6 +210,36 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
           <button className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]" onClick={() => setShowLinkInput(false)} type="button">
             Cancel
           </button>
+        </div>
+      ) : null}
+
+      {showImagePanel && pendingImageUrl ? (
+        <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
+          {/* Preview */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img alt="preview" className="h-16 w-24 rounded-md object-cover" src={pendingImageUrl} />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <input
+              autoFocus
+              className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              onChange={(e) => setImageDraftAlt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") insertImage(); }}
+              placeholder="Alt text (optional)"
+              value={imageDraftAlt}
+            />
+            <div className="flex gap-2">
+              <button className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-white" onClick={insertImage} type="button">
+                Insert image
+              </button>
+              <button
+                className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
+                onClick={() => { setShowImagePanel(false); setPendingImageUrl(null); }}
+                type="button"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
@@ -165,6 +259,11 @@ export function PostRichTextEditor({ content, inputName }: { content: string; in
       openOnClick: false,
       HTMLAttributes: {
         class: "text-[var(--primary)] underline hover:text-[var(--primary-light)] transition-colors",
+      },
+    }),
+    Image.configure({
+      HTMLAttributes: {
+        class: "rounded-xl my-4 max-w-full",
       },
     }),
     Placeholder.configure({

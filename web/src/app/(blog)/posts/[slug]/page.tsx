@@ -9,6 +9,7 @@ import { Comments } from "@/components/blog/comments";
 import { CopyLinkButton } from "@/components/blog/copy-link-button";
 import { PostGallery } from "@/components/blog/post-gallery";
 import { PostMap } from "@/components/blog/post-map";
+import { ProseContent } from "@/components/blog/prose-content";
 import { ReadingProgressBar } from "@/components/blog/reading-progress-bar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { htmlToPlainText, processHeadings, sanitizeRichTextHtml } from "@/lib/content";
@@ -71,6 +72,23 @@ export default async function PostPage({ params }: PostPageProps) {
     getRelatedPosts(post, 3),
     getSeriesNavForPost(post.id),
   ]);
+
+  // Extract <img> tags from prose HTML so they can be included in the gallery lightbox.
+  // Each inline image gets a data-gallery-idx attribute pointing to its slot in allImages
+  // (offset = 1 featured + post_images.length).
+  const galleryOffset = (post.imageUrl ? 1 : 0) + post.images.length;
+  type InlineImage = { imageUrl: string; altText: string | null };
+  const inlineImages: InlineImage[] = [];
+  const proseHtml = safeDescription.replace(/<img\b([^>]*)>/gi, (match, attrs: string) => {
+    const srcMatch = /src="([^"]*)"/.exec(attrs);
+    if (!srcMatch) return match;
+    const altMatch = /alt="([^"]*)"/.exec(attrs);
+    const idx = galleryOffset + inlineImages.length;
+    inlineImages.push({ imageUrl: srcMatch[1], altText: altMatch?.[1] ?? null });
+    // Insert data-gallery-idx before the closing >
+    return `<img${attrs} data-gallery-idx="${idx}">`;
+  });
+
   const hasLocation =
     post.locationLat !== null &&
     post.locationLng !== null &&
@@ -120,6 +138,7 @@ export default async function PostPage({ params }: PostPageProps) {
             <PostGallery
               featuredImageUrl={post.imageUrl}
               images={post.images}
+              inlineImages={inlineImages.length > 0 ? inlineImages : undefined}
               postTitle={post.title}
             />
           ) : null}
@@ -172,9 +191,9 @@ export default async function PostPage({ params }: PostPageProps) {
             <div className="mx-auto max-w-[68ch]">
               {seriesNav ? <SeriesNav nav={seriesNav} /> : null}
               {headings.length >= 2 ? <TableOfContents headings={headings} /> : null}
-              <div
+              <ProseContent
                 className="prose-content text-[1.0625rem] leading-[1.85]"
-                dangerouslySetInnerHTML={{ __html: safeDescription }}
+                html={proseHtml}
               />
             </div>
           </div>
