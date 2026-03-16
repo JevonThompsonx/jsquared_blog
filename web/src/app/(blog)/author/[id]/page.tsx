@@ -222,7 +222,7 @@ export default async function AuthorProfilePage({ params }: { params: Promise<{ 
           <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Read the adventures</h2>
           <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">Browse the latest stories from J²Adventures.</p>
           <Link
-            className="mt-4 inline-block rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+            className="btn-primary mt-4 inline-block rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"
             href="/"
           >
             Browse stories →

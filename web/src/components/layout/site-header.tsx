@@ -110,7 +110,7 @@ export function SiteHeader() {
         <MoonIcon />
       </span>
       <span
-        className={`absolute inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg transition-all duration-300 ${
+        className={`absolute inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition-all duration-300 ${
           mode === "light" ? "translate-x-0" : "translate-x-[2.55rem]"
         }`}
       >

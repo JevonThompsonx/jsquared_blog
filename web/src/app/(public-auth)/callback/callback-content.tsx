@@ -92,7 +92,7 @@ export function CallbackContent() {
   if (state === "success") {
     return (
       <div className="w-full max-w-sm text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xl">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] text-xl">
           ✓
         </div>
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">You&apos;re in</h1>
@@ -107,7 +107,7 @@ export function CallbackContent() {
         <h1 className="text-xl font-semibold text-red-800">Verification failed</h1>
         <p className="mt-3 text-sm leading-7 text-red-700">{errorMessage ?? "Something went wrong. The link may have expired."}</p>
         <Link
-          className="mt-6 inline-block rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white"
+          className="mt-6 inline-block rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)]"
           href="/login"
         >
           Back to sign in

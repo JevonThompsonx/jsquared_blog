@@ -150,13 +150,13 @@ export function HomeFeed({ initialPosts, initialSearch = "" }: { initialPosts: B
           actions={
             <>
               <Link
-                className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5"
+                className="btn-primary rounded-full px-5 py-2 text-sm font-bold shadow-sm transition-transform hover:-translate-y-0.5"
                 href="/"
               >
                 Browse all stories
               </Link>
               <Link
-                className="rounded-full border border-[var(--border)] px-5 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--primary)]"
+                className="rounded-full border border-[var(--primary)] bg-[var(--accent-soft)] px-5 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:border-transparent hover:[background-color:var(--btn-bg)] hover:[color:var(--btn-text)]"
                 href="/map"
               >
                 Explore the map

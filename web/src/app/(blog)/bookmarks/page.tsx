@@ -82,7 +82,7 @@ export default function BookmarksPage() {
             <p className="text-lg font-bold text-[var(--text-primary)]">Sign in to see your saved posts</p>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">Bookmark any post and it will show up here.</p>
             <Link
-              className="mt-6 inline-block rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+              className="btn-primary mt-6 inline-block rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"
               href="/login?redirectTo=/bookmarks"
             >
               Sign in
@@ -93,7 +93,7 @@ export default function BookmarksPage() {
             <p className="text-lg font-bold text-[var(--text-primary)]">No saved posts yet</p>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">Hit the bookmark button on any post to save it here.</p>
             <Link
-              className="mt-6 inline-block rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+              className="btn-primary mt-6 inline-block rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"
               href="/"
             >
               Browse stories →

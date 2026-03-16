@@ -118,7 +118,7 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
                 </a>
               ) : null}
               <a
-                className="mt-1 inline-block rounded-full bg-[var(--primary)] px-3 py-1 text-[0.7rem] font-bold text-white"
+                className="btn-primary mt-1 inline-block rounded-full px-3 py-1 text-[0.7rem] font-bold"
                 href={getPostHref(activePin)}
               >
                 Read story →

@@ -236,6 +236,16 @@ export async function listPublishedPostRecordsByCategory(
     .limit(limit);
 }
 
+export async function countPublishedPostsByCategory(category: string): Promise<number> {
+  const db = getDb();
+  const rows = await db
+    .select({ n: count() })
+    .from(posts)
+    .innerJoin(categories, eq(posts.categoryId, categories.id))
+    .where(and(eq(posts.status, "published"), eq(categories.name, category)));
+  return Number(rows[0]?.n ?? 0);
+}
+
 export async function listPublishedPostRecordsByTagSlug(
   tagSlug: string,
   limit: number,
@@ -269,6 +279,17 @@ export async function listPublishedPostRecordsByTagSlug(
     .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
     .offset(offset)
     .limit(limit);
+}
+
+export async function countPublishedPostsByTagSlug(tagSlug: string): Promise<number> {
+  const db = getDb();
+  const rows = await db
+    .select({ n: count() })
+    .from(posts)
+    .innerJoin(postTags, eq(postTags.postId, posts.id))
+    .innerJoin(tags, eq(postTags.tagId, tags.id))
+    .where(and(eq(posts.status, "published"), eq(tags.slug, tagSlug)));
+  return Number(rows[0]?.n ?? 0);
 }
 
 export async function listImagesForPost(postId: string): Promise<PublishedPostImageRecord[]> {

@@ -46,6 +46,12 @@ export function AdminDashboard({
           <a className="rounded-full bg-[var(--accent-strong)] px-4 py-2 text-sm font-semibold text-white" href="/admin/posts/new">
             Create new post
           </a>
+          <Link
+            className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            href="/admin/tags"
+          >
+            Manage tags
+          </Link>
         </div>
       </section>
 

@@ -125,7 +125,7 @@ export default async function PostPage({ params }: PostPageProps) {
             {!isAdmin ? <BookmarkButton postId={post.id} /> : null}
             {isAdmin ? (
               <Link
-                className="rounded-full border border-[var(--primary)] px-3 py-1 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-white"
+                className="rounded-full border border-[var(--primary)] px-3 py-1 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-[var(--on-primary)]"
                 href={`/admin/posts/${post.id}/edit`}
               >
                 Edit post
@@ -239,7 +239,7 @@ export default async function PostPage({ params }: PostPageProps) {
               <div className="flex shrink-0 flex-wrap items-center gap-3 self-start sm:self-auto">
                 <CopyLinkButton url={canonicalUrl} />
                 <Link
-                  className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+                  className="btn-primary rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"
                   href="/"
                 >
                   More stories →

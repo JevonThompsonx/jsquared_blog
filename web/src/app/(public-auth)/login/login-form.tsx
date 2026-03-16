@@ -102,7 +102,7 @@ export function LoginForm() {
           ) : null}
 
           <button
-            className="mt-1 rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="mt-1 rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)] disabled:opacity-60"
             disabled={loading || !email || !password}
             type="submit"
           >

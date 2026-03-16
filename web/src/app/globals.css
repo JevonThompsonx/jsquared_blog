@@ -8,6 +8,9 @@
   --card-bg: #fcf8f1;
   --primary: #6f865b;
   --primary-light: #93a780;
+  --on-primary: #ffffff;
+  --btn-bg: #3d5427;
+  --btn-text: #c8eb75;
   --border: #d8d0c1;
   --spinner: #6f865b;
   --text-shadow: none;
@@ -86,6 +89,12 @@ body {
 .theme-root {
   color: var(--foreground);
   background: var(--background);
+}
+
+/* Primary CTA button — bg and text use explicit CSS vars so they beat inherited foreground */
+.btn-primary {
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
 }
 
 .search-input {

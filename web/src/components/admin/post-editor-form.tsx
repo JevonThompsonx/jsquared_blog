@@ -54,7 +54,7 @@ export function PostEditorForm({
               Preview live post
             </a>
           ) : null}
-          <button className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[var(--primary-light)]" type="submit">
+          <button className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--on-primary)] shadow-md transition-colors hover:bg-[var(--primary-light)]" type="submit">
             {buttonLabel}
           </button>
         </div>

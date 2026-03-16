@@ -468,7 +468,7 @@ export function AccountSettings() {
               value={displayName}
             />
             <button
-              className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+              className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
               disabled={nameStatus === "saving" || !displayName.trim()}
               type="submit"
             >
@@ -536,7 +536,7 @@ export function AccountSettings() {
                 value={avatarUrl.startsWith("j2:") ? "" : avatarUrl}
               />
               <button
-                className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+                className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
                 disabled={avatarStatus === "saving" || uploadingAvatar}
                 type="submit"
               >
@@ -560,7 +560,7 @@ export function AccountSettings() {
           Use the theme toggle in the header to change mode or look, then save your preference here.
         </p>
         <button
-          className="rounded-lg bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+          className="rounded-lg bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
           disabled={themeStatus === "saving"}
           onClick={() => void handleSaveTheme()}
           type="button"
@@ -591,7 +591,7 @@ export function AccountSettings() {
               value={newEmail}
             />
             <button
-              className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+              className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
               disabled={emailStatus === "saving" || !newEmail.trim()}
               type="submit"
             >
@@ -651,7 +651,7 @@ export function AccountSettings() {
           </div>
 
           <button
-            className="w-full rounded-lg bg-[var(--primary)] py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+            className="w-full rounded-lg bg-[var(--primary)] py-2 text-sm font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
             disabled={passwordStatus === "saving" || !currentPassword || !newPassword || !confirmPassword}
             type="submit"
           >

@@ -144,7 +144,7 @@ export default function AboutPage() {
             </div>
             <div className="flex shrink-0 flex-wrap gap-3">
               <Link
-                className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+                className="btn-primary rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"
                 href="/"
               >
                 Browse stories →

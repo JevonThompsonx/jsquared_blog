@@ -190,7 +190,7 @@ export function PostMediaManager({
             <p className="text-sm font-semibold text-[var(--foreground)]">Featured image</p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">Upload a strong lead image that represents the whole story and give it useful alt text.</p>
           </div>
-          <label className="inline-flex w-full cursor-pointer justify-center rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-[var(--primary-light)] sm:w-auto">
+          <label className="inline-flex w-full cursor-pointer justify-center rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] shadow-md hover:bg-[var(--primary-light)] sm:w-auto">
             Upload featured image
             <input
               className="hidden"

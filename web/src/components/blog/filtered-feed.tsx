@@ -82,7 +82,7 @@ export function FilteredFeed({ initialPosts, apiParams, emptyTitle, emptyDescrip
         <FeedbackPanel
           actions={
             <Link
-              className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5"
+              className="btn-primary rounded-full px-5 py-2 text-sm font-bold shadow-sm transition-transform hover:-translate-y-0.5"
               href="/"
             >
               Browse all stories

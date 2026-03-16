@@ -77,7 +77,7 @@ export function SignupForm() {
     return (
       <div className="w-full max-w-sm">
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-8 shadow-xl text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xl">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] text-xl">
             ✓
           </div>
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">Check your email</h1>
@@ -85,7 +85,7 @@ export function SignupForm() {
             We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then come back to sign in.
           </p>
           <Link
-            className="mt-6 inline-block rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white"
+            className="mt-6 inline-block rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)]"
             href="/login"
           >
             Back to sign in
@@ -163,7 +163,7 @@ export function SignupForm() {
           ) : null}
 
           <button
-            className="mt-1 rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="mt-1 rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)] disabled:opacity-60"
             disabled={loading || !email || !password || !confirm}
             type="submit"
           >

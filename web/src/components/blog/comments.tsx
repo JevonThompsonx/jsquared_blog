@@ -158,7 +158,7 @@ function CommentCard({
           />
           <div className="mt-2 flex justify-end">
             <button
-              className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] disabled:opacity-60"
               disabled={submittingReply || !replyContent.trim()}
               onClick={() => onSubmitReply(comment.id)}
               type="button"
@@ -349,7 +349,7 @@ export function Comments({ postId }: { postId: string }) {
               key={option}
               className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
                 sortBy === option
-                  ? "bg-[var(--primary)] text-white"
+                  ? "bg-[var(--primary)] text-[var(--on-primary)]"
                   : "border border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-secondary)]"
               }`}
               onClick={() => setSortBy(option)}
@@ -381,7 +381,7 @@ export function Comments({ postId }: { postId: string }) {
               {signingOut ? "Signing out…" : "Sign out"}
             </button>
             <button
-              className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)] disabled:opacity-60"
               disabled={submitting || !newComment.trim()}
               type="submit"
             >
@@ -402,7 +402,7 @@ export function Comments({ postId }: { postId: string }) {
               Sign in
             </Link>
             <Link
-              className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)]"
               href={{ pathname: "/signup", query: { redirectTo: pathname ?? "/" } }}
             >
               Create account

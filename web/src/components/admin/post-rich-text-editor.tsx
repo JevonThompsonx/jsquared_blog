@@ -34,7 +34,7 @@ function MenuButton({
     <button
       aria-pressed={active}
       className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
-        active ? "bg-[var(--primary)] text-white" : "bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
+        active ? "bg-[var(--primary)] text-[var(--on-primary)]" : "bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
       } disabled:cursor-not-allowed disabled:opacity-50`}
       disabled={disabled}
       onClick={onClick}
@@ -204,7 +204,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
             placeholder="https://example.com"
             value={linkDraft}
           />
-          <button className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-white" onClick={applyLink} type="button">
+          <button className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]" onClick={applyLink} type="button">
             Apply link
           </button>
           <button className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]" onClick={() => setShowLinkInput(false)} type="button">
@@ -228,7 +228,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
               value={imageDraftAlt}
             />
             <div className="flex gap-2">
-              <button className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-white" onClick={insertImage} type="button">
+              <button className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]" onClick={insertImage} type="button">
                 Insert image
               </button>
               <button
