@@ -4,17 +4,23 @@ import { ComboboxInput } from "@/components/admin/combobox-input";
 import { LocationAutocomplete } from "@/components/admin/location-autocomplete";
 import { PostMediaManager } from "@/components/admin/post-media-manager";
 import { PostRichTextEditor } from "@/components/admin/post-rich-text-editor";
+import { SeriesSelector } from "@/components/admin/series-selector";
+import { TagMultiSelect } from "@/components/admin/tag-multi-select";
+
+type AdminTag = { id: string; name: string; slug: string };
 
 export function PostEditorForm({
   mode,
   categories,
   allSeries,
+  allTags,
   post,
   action,
 }: {
   mode: "create" | "edit";
   categories: AdminCategoryRecord[];
   allSeries: SeriesRecord[];
+  allTags: AdminTag[];
   post?: AdminEditablePostRecord | null;
   action: (formData: FormData) => void | Promise<void>;
 }) {
@@ -23,7 +29,6 @@ export function PostEditorForm({
   const scheduledValue = post?.scheduledPublishTime
     ? new Date(post.scheduledPublishTime).toISOString().slice(0, 16)
     : "";
-  const tagValue = post?.tags.map((tag) => tag.name).join(", ") ?? "";
   const tagCount = post?.tags.length ?? 0;
   const galleryCount = post?.galleryImages.length ?? 0;
   const galleryEntriesValue = JSON.stringify(
@@ -86,11 +91,14 @@ export function PostEditorForm({
             <span className="mt-2 block text-xs text-[var(--text-secondary)]">This powers cards, previews, and search context. Aim for one vivid sentence rather than a paragraph.</span>
           </label>
 
-          <label className="block">
+          <div>
             <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Tags</span>
-            <input className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50" defaultValue={tagValue} name="tagNames" placeholder="hiking, camping, waterfalls" />
+            <TagMultiSelect
+              allTags={allTags}
+              defaultTagNames={post?.tags.map((t) => t.name) ?? []}
+            />
             <span className="mt-2 block text-xs text-[var(--text-secondary)]">Use a few discovery-friendly tags that reflect place, activity, or season.</span>
-          </label>
+          </div>
 
           <label className="block">
             <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Story body</span>
@@ -146,30 +154,13 @@ export function PostEditorForm({
 
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Series</p>
-            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Group this post into a named series. Type an existing series name or a new one — it will be created automatically.</p>
-            <div className="mt-5 space-y-4">
-              <div>
-                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Series name</span>
-                <ComboboxInput
-                  defaultValue={post?.seriesTitle ?? ""}
-                  name="seriesTitle"
-                  options={allSeries.map((s) => ({ id: s.id, label: s.title }))}
-                  placeholder="e.g. Pacific Crest Trail"
-                />
-                <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">Leave blank to remove this post from any series.</span>
-              </div>
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Part number</span>
-                <input
-                  className="mt-1 block w-32 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
-                  defaultValue={post?.seriesOrder ?? ""}
-                  min="1"
-                  name="seriesOrder"
-                  placeholder="1"
-                  type="number"
-                />
-                <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">Controls the reading order within the series.</span>
-              </label>
+            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Group this post into a named series. Selecting an existing series auto-fills the next available part number.</p>
+            <div className="mt-5">
+              <SeriesSelector
+                allSeries={allSeries.map((s) => ({ id: s.id, label: s.title }))}
+                defaultSeriesOrder={post?.seriesOrder ?? null}
+                defaultSeriesTitle={post?.seriesTitle ?? null}
+              />
             </div>
           </section>
 

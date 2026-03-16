@@ -164,3 +164,8 @@ export async function listAdminCategories(): Promise<AdminCategoryRecord[]> {
   const db = getDb();
   return db.select({ id: categories.id, name: categories.name, slug: categories.slug }).from(categories).orderBy(categories.name);
 }
+
+export async function listAllAdminTags(): Promise<Array<{ id: string; name: string; slug: string }>> {
+  const db = getDb();
+  return db.select({ id: tags.id, name: tags.name, slug: tags.slug }).from(tags).orderBy(tags.name);
+}

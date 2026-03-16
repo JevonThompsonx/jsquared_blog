@@ -7,11 +7,13 @@ type Option = { id: string; label: string };
 export function ComboboxInput({
   defaultValue,
   name,
+  onValueChange,
   options,
   placeholder,
 }: {
   defaultValue?: string;
   name: string;
+  onValueChange?: (value: string) => void;
   options: Option[];
   placeholder?: string;
 }) {
@@ -42,6 +44,7 @@ export function ComboboxInput({
         name={name}
         onChange={(e) => {
           setValue(e.target.value);
+          onValueChange?.(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
@@ -59,6 +62,7 @@ export function ComboboxInput({
                 onMouseDown={(e) => {
                   e.preventDefault(); // prevent blur before selection
                   setValue(option.label);
+                  onValueChange?.(option.label);
                   setOpen(false);
                 }}
                 type="button"
