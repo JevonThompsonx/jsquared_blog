@@ -246,10 +246,38 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
   );
 }
 
-export function PostRichTextEditor({ content, inputName }: { content: string; inputName: string }) {
-  const [html, setHtml] = useState(content);
-  const wordCount = getWordCount(html);
-  const readingMinutes = Math.max(1, Math.ceil(wordCount / 220));
+/**
+ * Parse stored contentJson into a value Tiptap can consume.
+ * - Tiptap JSON  → JSON object (passed directly)
+ * - legacy-html  → HTML string (Tiptap parses it on load; saved back as native JSON)
+ * - anything else → empty paragraph
+ */
+function parseTiptapInitContent(contentJson: string): string | Record<string, unknown> {
+  if (!contentJson) return "<p></p>";
+  try {
+    const parsed = JSON.parse(contentJson) as { type?: string; html?: string };
+    if (parsed.type === "legacy-html" && typeof parsed.html === "string") return parsed.html;
+    if (parsed.type === "doc") return parsed as Record<string, unknown>;
+  } catch { /* fall through */ }
+  return "<p></p>";
+}
+
+const EMPTY_DOC = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+
+export function PostRichTextEditor({ contentJson, inputName }: { contentJson: string; inputName: string }) {
+  // tiptapJson holds the JSON string that will be submitted via the hidden input.
+  // Initialise to contentJson if it's already native Tiptap JSON, otherwise use an
+  // empty doc placeholder (overwritten by onCreate once the editor mounts).
+  const [tiptapJson, setTiptapJson] = useState<string>(() => {
+    if (!contentJson) return EMPTY_DOC;
+    try {
+      const parsed = JSON.parse(contentJson) as { type?: string };
+      if (parsed.type === "doc") return contentJson;
+    } catch { /* fall through */ }
+    return EMPTY_DOC;
+  });
+
+  const initContent = parseTiptapInitContent(contentJson);
   const extensions = [
     StarterKit.configure({
       heading: { levels: [2, 3] },
@@ -273,12 +301,22 @@ export function PostRichTextEditor({ content, inputName }: { content: string; in
 
   const editor = useEditor({
     extensions,
-    content,
-    onUpdate: ({ editor: currentEditor }) => {
-      setHtml(currentEditor.getHTML());
+    content: initContent,
+    onCreate: ({ editor: e }) => {
+      // Capture native Tiptap JSON on mount (important for legacy-HTML posts being
+      // viewed without any edits — ensures the hidden input always has valid JSON).
+      setTiptapJson(JSON.stringify(e.getJSON()));
+    },
+    onUpdate: ({ editor: e }) => {
+      setTiptapJson(JSON.stringify(e.getJSON()));
     },
     immediatelyRender: false,
   });
+
+  // Derive word count from the live editor on each render (re-renders are triggered
+  // by setTiptapJson above, so the count stays fresh without a separate HTML state).
+  const wordCount = getWordCount(editor?.getHTML() ?? "");
+  const readingMinutes = Math.max(1, Math.ceil(wordCount / 220));
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm">
@@ -297,7 +335,7 @@ export function PostRichTextEditor({ content, inputName }: { content: string; in
         <span>Tip: the strongest travel posts alternate scene-setting paragraphs with subheads, quotes, and image breaks.</span>
         <span>Links open in a new tab automatically.</span>
       </div>
-      <input name={inputName} type="hidden" value={html} />
+      <input name={inputName} type="hidden" value={tiptapJson} />
     </div>
   );
 }

@@ -13,7 +13,7 @@ export const adminPostFormSchema = z
     featuredImageUrl: z.string().trim().optional().default(""),
     featuredImageAlt: z.string().trim().optional().default(""),
     galleryEntries: z.string().trim().optional().default("[]"),
-    contentHtml: z.string().trim().min(1, "Content is required"),
+    contentJson: z.string().trim().min(1, "Content is required"),
     seriesTitle: z.string().trim().optional().default(""),
     seriesOrder: z.preprocess(
       (val) => (val === "" || val == null ? undefined : Number(val)),

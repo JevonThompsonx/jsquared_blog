@@ -1,6 +1,7 @@
 import "server-only";
 
 import { renderTiptapJson } from "@/lib/content";
+import { cdnImageUrl } from "@/lib/cloudinary/transform";
 import {
   getPublishedPostRecordBySlug,
   listAllPublishedPostRecords,
@@ -47,7 +48,7 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     title: post.title,
     description: renderTiptapJson(post.contentJson) ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null),
     excerpt: post.excerpt,
-    imageUrl: post.imageUrl,
+    imageUrl: cdnImageUrl(post.imageUrl),
     category: post.category ?? null,
     createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
     status: "published" as const,
@@ -93,7 +94,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
 
   const images: BlogImage[] = imageRows.map((image) => ({
     id: image.id,
-    imageUrl: image.imageUrl,
+    imageUrl: cdnImageUrl(image.imageUrl) ?? image.imageUrl,
     altText: image.altText ?? null,
     sortOrder: image.sortOrder,
   }));
@@ -104,7 +105,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     title: post.title,
     description: renderTiptapJson(post.contentJson) ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null),
     excerpt: post.excerpt,
-    imageUrl: post.imageUrl,
+    imageUrl: cdnImageUrl(post.imageUrl),
     category: post.category ?? null,
     createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
     status: "published",

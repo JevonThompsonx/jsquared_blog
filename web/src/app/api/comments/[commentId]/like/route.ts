@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerEnv } from "@/lib/env";
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { commentExists, toggleCommentLikeRecord } from "@/server/dal/comments";
 
@@ -39,6 +40,11 @@ async function getRequestSupabaseUser(request: Request) {
 
 export async function POST(request: Request, context: { params: Promise<{ commentId: string }> }) {
   const { commentId } = await context.params;
+
+  // 30 like toggles per minute per IP (generous to allow rapid clicking)
+  const rl = checkRateLimit(`like:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.allowed) return tooManyRequests(rl);
+
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

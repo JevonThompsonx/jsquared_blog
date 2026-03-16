@@ -176,7 +176,7 @@ export function SiteHeader() {
           ) : null}
 
           {isAdminSignedIn ? (
-            <Link className="hidden text-sm font-semibold text-[var(--accent)] xl:inline-flex hover:underline" href="/admin">
+            <Link className="max-w-[10rem] truncate text-sm font-semibold text-[var(--accent)] hover:underline" href="/admin">
               {adminSession?.user?.githubLogin ?? adminSession?.user?.email ?? "Admin"}
             </Link>
           ) : null}

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
 import { Lora } from "next/font/google";
 
 import { AppProviders } from "@/components/providers/app-providers";
@@ -37,7 +36,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={lora.variable}>
       <body>
         <AppProviders>{children}</AppProviders>
-        <Analytics />
       </body>
     </html>
   );

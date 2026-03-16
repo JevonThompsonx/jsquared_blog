@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerEnv } from "@/lib/env";
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
 import { canCommentOnPost, createCommentRecord, listCommentsForPost } from "@/server/dal/comments";
 import { createCommentSchema, commentSortSchema } from "@/server/forms/comments";
@@ -54,6 +55,11 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
 
 export async function POST(request: Request, context: { params: Promise<{ postId: string }> }) {
   const { postId } = await context.params;
+
+  // 5 new comments per minute per IP
+  const rl = checkRateLimit(`comment:${getClientIp(request)}`, 5, 60_000);
+  if (!rl.allowed) return tooManyRequests(rl);
+
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

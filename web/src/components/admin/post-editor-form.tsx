@@ -1,9 +1,9 @@
-import { getEditableHtmlFromContent } from "@/lib/content";
 import type { AdminCategoryRecord, AdminEditablePostRecord } from "@/server/dal/admin-posts";
 import type { SeriesRecord } from "@/server/dal/series";
-import { PostRichTextEditor } from "@/components/admin/post-rich-text-editor";
-import { PostMediaManager } from "@/components/admin/post-media-manager";
+import { ComboboxInput } from "@/components/admin/combobox-input";
 import { LocationAutocomplete } from "@/components/admin/location-autocomplete";
+import { PostMediaManager } from "@/components/admin/post-media-manager";
+import { PostRichTextEditor } from "@/components/admin/post-rich-text-editor";
 
 export function PostEditorForm({
   mode,
@@ -94,7 +94,7 @@ export function PostEditorForm({
 
           <label className="block">
             <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Story body</span>
-            <PostRichTextEditor content={getEditableHtmlFromContent(post?.contentJson ?? "<p></p>")} inputName="contentHtml" />
+            <PostRichTextEditor contentJson={post?.contentJson ?? ""} inputName="contentJson" />
           </label>
         </div>
 
@@ -133,37 +133,31 @@ export function PostEditorForm({
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Categorization</p>
             <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Use a category that helps readers browse by trip type, then support it with tags for the finer details.</p>
-            <label className="mt-5 block">
+            <div className="mt-5">
               <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Category</span>
-              <input className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50" defaultValue={post?.category ?? ""} list="admin-categories" name="categoryName" placeholder="Start typing a category" />
-              <datalist id="admin-categories">
-                {categories.map((category) => (
-                  <option key={category.id} value={category.name} />
-                ))}
-              </datalist>
-            </label>
+              <ComboboxInput
+                defaultValue={post?.category ?? ""}
+                name="categoryName"
+                options={categories.map((c) => ({ id: c.id, label: c.name }))}
+                placeholder="Start typing or pick a category"
+              />
+            </div>
           </section>
 
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Series</p>
             <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Group this post into a named series. Type an existing series name or a new one — it will be created automatically.</p>
             <div className="mt-5 space-y-4">
-              <label className="block">
+              <div>
                 <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Series name</span>
-                <input
-                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                <ComboboxInput
                   defaultValue={post?.seriesTitle ?? ""}
-                  list="admin-series"
                   name="seriesTitle"
+                  options={allSeries.map((s) => ({ id: s.id, label: s.title }))}
                   placeholder="e.g. Pacific Crest Trail"
                 />
-                <datalist id="admin-series">
-                  {allSeries.map((s) => (
-                    <option key={s.id} value={s.title} />
-                  ))}
-                </datalist>
                 <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">Leave blank to remove this post from any series.</span>
-              </label>
+              </div>
               <label className="block">
                 <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Part number</span>
                 <input

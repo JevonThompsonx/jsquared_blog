@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
 import { ensureSeriesId } from "@/server/dal/series";
 import { requireAdminSession } from "@/lib/auth/session";
-import { buildLegacyHtmlPayload, htmlToPlainText } from "@/lib/content";
+import { htmlToPlainText, renderTiptapJson } from "@/lib/content";
 import { getDb } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 import { adminPostFormSchema } from "@/server/forms/admin-post-form";
@@ -80,7 +80,7 @@ function parseFormData(formData: FormData) {
     featuredImageUrl: formData.get("featuredImageUrl"),
     featuredImageAlt: formData.get("featuredImageAlt"),
     galleryEntries: formData.get("galleryEntries"),
-    contentHtml: formData.get("contentHtml"),
+    contentJson: formData.get("contentJson"),
     seriesTitle: formData.get("seriesTitle"),
     seriesOrder: formData.get("seriesOrder"),
     locationName: formData.get("locationName"),
@@ -313,8 +313,8 @@ export async function createAdminPostAction(formData: FormData) {
     id: postId,
     title: values.title,
     slug,
-    contentJson: buildLegacyHtmlPayload(values.contentHtml),
-    excerpt: values.excerpt || htmlToPlainText(values.contentHtml).slice(0, 280) || null,
+    contentJson: values.contentJson,
+    excerpt: values.excerpt || htmlToPlainText(renderTiptapJson(values.contentJson) ?? "").slice(0, 280) || null,
     status: values.status,
     layoutType: values.layoutType,
     publishedAt,
@@ -367,8 +367,8 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
     .set({
       title: values.title,
       slug,
-      contentJson: buildLegacyHtmlPayload(values.contentHtml),
-      excerpt: values.excerpt || htmlToPlainText(values.contentHtml).slice(0, 280) || null,
+      contentJson: values.contentJson,
+      excerpt: values.excerpt || htmlToPlainText(renderTiptapJson(values.contentJson) ?? "").slice(0, 280) || null,
       status: values.status,
       layoutType: values.layoutType,
       publishedAt: values.status === "published" ? now : null,

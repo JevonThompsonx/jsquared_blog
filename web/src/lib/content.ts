@@ -127,30 +127,6 @@ export function renderTiptapJson(contentJson: string | null | undefined): string
   }
 }
 
-export function buildLegacyHtmlPayload(html: string | null | undefined): string {
-  return JSON.stringify({
-    type: "legacy-html",
-    html: sanitizeRichTextHtml(html),
-  });
-}
-
-export function getEditableHtmlFromContent(contentJson: string | null | undefined): string {
-  if (!contentJson) {
-    return "<p></p>";
-  }
-
-  try {
-    const parsed = JSON.parse(contentJson) as { type?: string; html?: string };
-    if (parsed.type === "legacy-html" && typeof parsed.html === "string") {
-      return parsed.html;
-    }
-  } catch {
-    // Fall through to rendered HTML.
-  }
-
-  return renderTiptapJson(contentJson) ?? "<p></p>";
-}
-
 export function sanitizeRichTextHtml(html: string | null | undefined): string {
   if (!html) {
     return "<p>This story is still being migrated.</p>";
