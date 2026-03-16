@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { Lora } from "next/font/google";
 
 import { AppProviders } from "@/components/providers/app-providers";
 
 import "./globals.css";
+
+const lora = Lora({
+  subsets: ["latin"],
+  variable: "--font-lora",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://jsquaredadventures.com"),
@@ -26,9 +34,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={lora.variable}>
       <body>
         <AppProviders>{children}</AppProviders>
+        <Analytics />
       </body>
     </html>
   );

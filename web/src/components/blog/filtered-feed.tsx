@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import type { BlogPost } from "@/types/blog";
 import { HomePostCard } from "@/components/blog/home-post-card";
@@ -78,7 +79,19 @@ export function FilteredFeed({ initialPosts, apiParams, emptyTitle, emptyDescrip
   if (posts.length === 0 && !isLoadingMore) {
     return (
       <main className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <FeedbackPanel description={emptyDescription} eyebrow="Nothing here yet" title={emptyTitle} />
+        <FeedbackPanel
+          actions={
+            <Link
+              className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5"
+              href="/"
+            >
+              Browse all stories
+            </Link>
+          }
+          description={emptyDescription}
+          eyebrow="Nothing here yet"
+          title={emptyTitle}
+        />
       </main>
     );
   }

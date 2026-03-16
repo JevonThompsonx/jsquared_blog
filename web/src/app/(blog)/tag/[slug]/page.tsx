@@ -18,9 +18,10 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
   if (!tag) {
     return {};
   }
+  const description = tag.description ?? `Explore all adventures tagged "${tag.name}" on J²Adventures.`;
   return {
     title: `${tag.name} – J²Adventures`,
-    description: `Explore all adventures tagged "${tag.name}" on J²Adventures.`,
+    description,
   };
 }
 
@@ -41,6 +42,9 @@ export default async function TagPage({ params }: TagPageProps) {
       <div className="container mx-auto px-4 pb-4 pt-28 sm:px-6 lg:px-8">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Tag</p>
         <h1 className="mt-1 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">{tag.name}</h1>
+        {tag.description ? (
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)]">{tag.description}</p>
+        ) : null}
       </div>
       <FilteredFeed
         apiParams={{ tag: slug }}

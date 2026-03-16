@@ -10,6 +10,21 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   const search = resolvedSearchParams?.search ?? "";
   const posts = await listPublishedPosts(20, 0, search);
 
+  if (search) {
+    return (
+      <main style={{ background: "var(--background)" }}>
+        <SiteHeader />
+        <div className="container mx-auto px-4 pb-2 pt-28 sm:px-6 lg:px-8">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Search results</p>
+          <h1 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+            Results for &ldquo;{search}&rdquo;
+          </h1>
+        </div>
+        <HomeFeed key={`feed:${search.trim().toLowerCase()}`} initialPosts={posts} initialSearch={search} />
+      </main>
+    );
+  }
+
   return (
     <main style={{ background: "var(--background)" }}>
       <SiteHeader />
@@ -45,13 +60,11 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
       </div>
 
       <div className="main-content main-content-visible" id="stories">
-        {!search && (
-          <div className="container mx-auto px-4 pt-8 pb-2 sm:px-6 lg:px-8">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Latest adventures</p>
-            <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Stories from the trail</h2>
-          </div>
-        )}
-        <HomeFeed key={`feed:${search.trim().toLowerCase()}`} initialPosts={posts} initialSearch={search} />
+        <div className="container mx-auto px-4 pt-8 pb-2 sm:px-6 lg:px-8">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Latest adventures</p>
+          <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Stories from the trail</h2>
+        </div>
+        <HomeFeed key="feed:home" initialPosts={posts} initialSearch="" />
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import NextImage from "next/image";
 
 import type { BlogImage } from "@/types/blog";
 
@@ -148,14 +148,16 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
       {featuredImageUrl ? (
         <button
           aria-label={allImages.length > 1 ? `View all ${allImages.length} photos` : "View full size"}
-          className="group relative block w-full cursor-zoom-in overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset"
+          className="group relative block aspect-video w-full cursor-zoom-in overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset"
           onClick={() => setActiveIndex(0)}
           type="button"
         >
-          <img
+          <NextImage
             alt={postTitle}
-            className="aspect-video w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
-            loading="eager"
+            className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
+            fill
+            priority
+            sizes="100vw"
             src={featuredImageUrl}
           />
           <div className="absolute inset-0 flex items-end justify-end bg-black/0 transition-colors duration-300 group-hover:bg-black/10">
@@ -178,10 +180,12 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
               onClick={() => setActiveIndex(i + thumbOffset)}
               type="button"
             >
-              <img
+              <NextImage
                 alt={image.altText ?? `${postTitle} — photo ${i + 1}`}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                className="object-cover transition-transform duration-300 group-hover:scale-110"
+                fill
                 loading="lazy"
+                sizes="(max-width: 640px) 25vw, (max-width: 1024px) 20vw, 15vw"
                 src={image.imageUrl}
               />
               <div className="absolute inset-0 rounded-lg bg-black/0 transition-colors duration-200 group-hover:bg-black/15" />
@@ -240,6 +244,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
               className="lightbox-img-enter flex max-h-full flex-col items-center"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 alt={active.altText ?? postTitle}
                 className="max-h-full max-w-full rounded-xl object-contain shadow-2xl"
@@ -287,11 +292,13 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
                     onClick={() => setActiveIndex(i)}
                     type="button"
                   >
-                    <img
+                    <NextImage
                       alt={img.altText ?? `Photo ${i + 1}`}
-                      className="h-14 w-20 object-cover"
+                      className="object-cover"
+                      height={56}
                       loading="lazy"
                       src={img.imageUrl}
+                      width={80}
                     />
                   </button>
                 ))}

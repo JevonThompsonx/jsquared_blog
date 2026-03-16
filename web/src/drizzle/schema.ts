@@ -108,6 +108,7 @@ export const tags = sqliteTable("tags", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  description: text("description"),
 });
 
 export const postTags = sqliteTable(

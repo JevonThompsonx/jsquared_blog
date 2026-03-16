@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import Link from "next/link";
+
 import type { BlogPost } from "@/types/blog";
 import { HomePostCard } from "@/components/blog/home-post-card";
 import { FeedbackPanel } from "@/components/ui/feedback-panel";
@@ -145,7 +147,23 @@ export function HomeFeed({ initialPosts, initialSearch = "" }: { initialPosts: B
     return (
       <main className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <FeedbackPanel
-          description="Try a category, a place name, or a tag from one of your posts. Search works best when it feels like browsing a travel journal rather than filtering a database."
+          actions={
+            <>
+              <Link
+                className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5"
+                href="/"
+              >
+                Browse all stories
+              </Link>
+              <Link
+                className="rounded-full border border-[var(--border)] px-5 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--primary)]"
+                href="/map"
+              >
+                Explore the map
+              </Link>
+            </>
+          }
+          description="Try a shorter term, a place name, or a tag. Search looks at titles, categories, tags, and excerpts."
           eyebrow="No matches"
           title={`No adventures match "${initialSearch}".`}
         />

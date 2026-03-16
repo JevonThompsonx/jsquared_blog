@@ -162,7 +162,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
             Code
           </MenuButton>
           <MenuButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal rule">
-            Rule
+            Bar
           </MenuButton>
         </div>
 

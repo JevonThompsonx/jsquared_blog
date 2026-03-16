@@ -4,6 +4,7 @@ import { renderTiptapJson } from "@/lib/content";
 import {
   getPublishedPostRecordBySlug,
   listAllPublishedPostRecords,
+  listCommentCountsByPostIds,
   listImagesForPost,
   listPublishedPostRecords,
   listPublishedPostRecordsByCategory,
@@ -28,7 +29,10 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
   }
 
   const postIds = postRows.map((post) => post.id);
-  const tagRows = await listTagsByPostIds(postIds);
+  const [tagRows, commentCounts] = await Promise.all([
+    listTagsByPostIds(postIds),
+    listCommentCountsByPostIds(postIds),
+  ]);
 
   const tagsByPostId = new Map<string, BlogTag[]>();
   for (const row of tagRows) {
@@ -56,6 +60,7 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    commentCount: commentCounts.get(post.id) ?? 0,
   }));
 }
 
@@ -116,6 +121,8 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    commentCount: 0,
+    authorId: post.authorId,
   };
 }
 

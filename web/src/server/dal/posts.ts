@@ -1,14 +1,15 @@
 import "server-only";
 
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
+import { categories, comments, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
 
 export type TagRecord = {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
 };
 
 export type PublishedPostRecord = {
@@ -27,6 +28,7 @@ export type PublishedPostRecord = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  authorId?: string;
 };
 
 export type PublishedPostTagRecord = {
@@ -120,6 +122,21 @@ export async function listTagsByPostIds(postIds: string[]): Promise<PublishedPos
     .where(inArray(postTags.postId, postIds));
 }
 
+export async function listCommentCountsByPostIds(postIds: string[]): Promise<Map<string, number>> {
+  if (postIds.length === 0) {
+    return new Map();
+  }
+
+  const db = getDb();
+  const rows = await db
+    .select({ postId: comments.postId, commentCount: count(comments.id) })
+    .from(comments)
+    .where(inArray(comments.postId, postIds))
+    .groupBy(comments.postId);
+
+  return new Map(rows.map((row) => [row.postId, row.commentCount]));
+}
+
 const POST_DETAIL_SELECT = {
   id: posts.id,
   slug: posts.slug,
@@ -136,6 +153,7 @@ const POST_DETAIL_SELECT = {
   locationLng: posts.locationLng,
   locationZoom: posts.locationZoom,
   iovanderUrl: posts.iovanderUrl,
+  authorId: posts.authorId,
 } as const;
 
 export async function getPublishedPostRecordBySlug(slug: string): Promise<PublishedPostRecord | null> {
@@ -178,7 +196,7 @@ export async function listTagsForPost(postId: string): Promise<PublishedPostTagR
 export async function getTagBySlug(slug: string): Promise<TagRecord | null> {
   const db = getDb();
   const rows = await db
-    .select({ id: tags.id, name: tags.name, slug: tags.slug })
+    .select({ id: tags.id, name: tags.name, slug: tags.slug, description: tags.description })
     .from(tags)
     .where(eq(tags.slug, slug))
     .limit(1);

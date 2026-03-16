@@ -1,9 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AuthorCard } from "@/components/blog/author-card";
 import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { Comments } from "@/components/blog/comments";
 import { CopyLinkButton } from "@/components/blog/copy-link-button";
@@ -21,6 +23,7 @@ import { getPublicEnv } from "@/lib/env";
 import { getPublishedPostBySlug, getRelatedPosts } from "@/server/queries/posts";
 import { getSeriesNavForPost } from "@/server/dal/series";
 import { SeriesNav } from "@/components/blog/series-nav";
+import { getPublicAuthorProfileById } from "@/server/dal/profiles";
 
 type PostPageProps = {
   params: Promise<{ slug: string }>;
@@ -68,9 +71,10 @@ export default async function PostPage({ params }: PostPageProps) {
   const { html: safeDescription, headings } = processHeadings(sanitized);
   const readingTime = Math.max(1, Math.ceil(htmlToPlainText(post.description).split(/\s+/).filter(Boolean).length / 220));
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
-  const [relatedPosts, seriesNav] = await Promise.all([
+  const [relatedPosts, seriesNav, authorProfile] = await Promise.all([
     getRelatedPosts(post, 3),
     getSeriesNavForPost(post.id),
+    post.authorId ? getPublicAuthorProfileById(post.authorId) : Promise.resolve(null),
   ]);
 
   // Extract <img> tags from prose HTML so they can be included in the gallery lightbox.
@@ -212,6 +216,13 @@ export default async function PostPage({ params }: PostPageProps) {
             </div>
           ) : null}
 
+          {/* Author bio */}
+          {authorProfile ? (
+            <div className="border-t border-[var(--border)] px-5 py-8 sm:px-10">
+              <AuthorCard author={authorProfile} />
+            </div>
+          ) : null}
+
           {/* Comments */}
           <div className="border-t border-[var(--border)] px-5 pb-10 sm:px-10">
             <Comments postId={post.id} />
@@ -258,13 +269,16 @@ export default async function PostPage({ params }: PostPageProps) {
                 href={getPostHref(relatedPost)}
               >
                 {relatedPost.imageUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    alt={relatedPost.title}
-                    className="aspect-[5/3] w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                    src={relatedPost.imageUrl}
-                  />
+                  <div className="relative aspect-[5/3] w-full overflow-hidden">
+                    <Image
+                      alt={relatedPost.title}
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      fill
+                      loading="lazy"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      src={relatedPost.imageUrl}
+                    />
+                  </div>
                 ) : (
                   <div className="aspect-[5/3] w-full bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />
                 )}

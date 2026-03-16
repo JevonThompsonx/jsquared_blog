@@ -59,10 +59,10 @@ export function TableOfContents({ headings }: { headings: TocHeading[] }) {
             return (
               <li key={h.id} style={{ paddingLeft: `${(h.level - 2) * 1}rem` }}>
                 <a
-                  className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm leading-snug transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold leading-snug transition-colors ${
                     isActive
-                      ? "font-semibold text-[var(--primary)]"
-                      : "text-[var(--text-secondary)] hover:bg-[var(--card-bg)] hover:text-[var(--text-primary)]"
+                      ? "text-[var(--primary)]"
+                      : "text-[var(--text-primary)] opacity-75 hover:bg-[var(--card-bg)] hover:opacity-100"
                   }`}
                   href={`#${h.id}`}
                   onClick={(e) => {
