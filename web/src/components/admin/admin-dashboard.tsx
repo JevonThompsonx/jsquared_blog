@@ -296,15 +296,15 @@ export function AdminDashboard({
             Back to site
           </Link>
         </div>
-        <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,2fr)_auto] xl:items-start">
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.9fr)_repeat(3,minmax(10rem,12rem))]">
+        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,2fr)_auto] lg:items-start">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.9fr)_repeat(3,minmax(9rem,11rem))] xl:grid-cols-[minmax(0,1.9fr)_repeat(3,minmax(10rem,12rem))]">
             <input
               type="search"
               placeholder="Search posts..."
               aria-label="Search posts"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="min-w-0 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm transition-shadow sm:col-span-2 xl:col-span-1 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50"
+              className="min-w-0 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm transition-shadow sm:col-span-2 lg:col-span-1 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50"
             />
             <ThemeSelect
               ariaLabel="Filter posts by status"
@@ -316,7 +316,7 @@ export function AdminDashboard({
                 { label: "Draft", value: "draft" },
                 { label: "Scheduled", value: "scheduled" },
               ]}
-              className="w-full xl:w-[140px]"
+              className="w-full lg:w-[130px] xl:w-[140px]"
             />
             <ThemeSelect
               ariaLabel="Filter posts by category"
@@ -326,7 +326,7 @@ export function AdminDashboard({
                 { label: "All Categories", value: "all" },
                 ...categories.map((cat) => ({ label: cat.name, value: cat.slug })),
               ]}
-              className="w-full xl:w-[160px]"
+              className="w-full lg:w-[150px] xl:w-[160px]"
             />
             <ThemeSelect
               ariaLabel="Sort posts"
@@ -339,10 +339,10 @@ export function AdminDashboard({
                 { label: "Recently updated", value: "updated-desc" },
                 { label: "Recently published", value: "published-desc" },
               ]}
-              className="w-full xl:w-[180px]"
+              className="w-full lg:w-[170px] xl:w-[180px]"
             />
           </div>
-          <div className="flex flex-wrap gap-3 xl:justify-end">
+          <div className="flex flex-wrap gap-3 lg:justify-end">
             <Link
               className="rounded-full bg-[var(--accent-strong)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] shadow-sm transition-colors hover:bg-[var(--primary)]"
               href="/admin/posts/new"

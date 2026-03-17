@@ -107,9 +107,9 @@ Everything below is additive — the app is live and stable.
 | 4.5 | Reading time estimate | Sonnet | `web/src/lib/content.ts`, `web/src/components/blog/` | TODO |
 | 4.6 | Newsletter signup (Resend + simple form) | Sonnet + Gemini | `web/src/components/blog/newsletter-signup.tsx`, `web/src/app/api/newsletter/` | TODO |
 | 4.7 | Post view counter (privacy-respecting) | Sonnet | `web/src/server/dal/posts.ts`, schema migration | TODO |
-| 4.8 | Admin desktop layout expansion | Gemini Low | `web/src/app/admin/page.tsx`, `web/src/components/admin/admin-dashboard.tsx`, related admin pages | IN PROGRESS |
+| 4.8 | Admin desktop layout expansion | Gemini Low | `web/src/app/admin/page.tsx`, `web/src/components/admin/admin-dashboard.tsx`, related admin pages | DONE |
 
-**Exit criteria**: Admin has moderation tools. Readers can subscribe to updates. Structured data validates in Google Rich Results test.
+**Exit criteria**: Admin has moderation tools. Readers can subscribe to updates. Structured data validates in Google Rich Results test. Admin wide-screen updates are confirmed in a real browser on target breakpoints.
 
 ---
 

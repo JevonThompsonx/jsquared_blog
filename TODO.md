@@ -177,8 +177,8 @@
 | ~~Clone post~~ | ✅ Done — dashboard and editor both clone into a new draft edit page with `?cloned=1` success messaging |
 | ~~Alt text warnings in editor~~ | ✅ Done — backend-driven non-blocking warnings render in the rich text editor with thumbnails and reset when the warning set changes |
 | ~~Admin dashboard pagination polish~~ | ✅ Done — page jump, page-size controls, and a custom themed select are now in place on the dashboard. |
-| Admin page width expansion | In progress — dashboard rows/pagination, post editor sidebar, tags page, and moderation route now use wider shells and roomier desktop composition. Remaining work is browser QA plus consistency review on any future admin subpages. |
-| Comment moderation UI | In progress — admin moderation route, optimistic updates, summary stats, themed thread cards, and an inline themed delete-confirmation pattern are live. Remaining work is browser QA and any small polish issues found there. |
+| ~~Admin page width expansion~~ | ✅ Done — widened admin surfaces were browser-QA'd at tablet/laptop/wide-desktop widths; dashboard toolbar layout was tightened at `lg`, and tags/moderation held up without further fixes. |
+| Comment moderation UI | In progress — admin moderation route, optimistic updates, summary stats, themed thread cards, and a keyboard-friendlier inline themed delete-confirmation pattern are live. Browser QA passed for the current layout; remaining work is broader test coverage and any future polish tied to new moderation features. |
 | Blog post JSON-LD validation | In progress — structured data now renders from `web/src/app/(blog)/posts/[slug]/head.tsx`; still needs deployed Rich Results validation before this can be treated as complete. |
 
 ### Backend & Infrastructure
@@ -193,7 +193,7 @@
 | ~~Tiptap JSON migration~~ | ✅ Done — admin editor now writes native Tiptap JSON; `renderTiptapJson()` backward-compat reads both formats; legacy write path removed entirely |
 | ~~HTTP security headers~~ | ✅ Done — baseline CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy now ship from `web/next.config.ts`; validate CSP against production integrations if a runtime violation appears. |
 | ~~Comment moderation backend~~ | ✅ Done — schema adds `visibility` / `is_flagged` / moderation metadata, admin routes expose moderation + admin comment reads, public reads preserve threads with placeholders, and replies are blocked on non-visible parents. |
-| Integration + E2E tests | Baseline Vitest + Playwright smoke coverage exists, and admin smoke coverage now supports filter/clone/preview with `E2E_ADMIN_STORAGE_STATE`; expand authenticated flows and wire them into CI. |
+| Integration + E2E tests | Baseline Vitest + Playwright smoke coverage exists, and admin smoke coverage now covers dashboard filtering/navigation plus tags/moderation page presence when `E2E_ADMIN_STORAGE_STATE` is available. Keep expanding authenticated flows and wire them into CI, especially moderation actions with a stable `E2E_ADMIN_POST_ID`. |
 
 ### Frontend & UX
 | Task | Notes |

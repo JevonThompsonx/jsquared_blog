@@ -11,9 +11,9 @@ and `shared/` stacks have already been removed.
 The authoritative status tracker is `docs/nextjs-cutover-checklist.md`.
 
 Latest work pushed Phase 4 in two directions:
-- **4.1 comment moderation** now has an admin moderation UI with optimistic updates, inline action errors, route validation, and theme-safe status treatments
-- **4.8 admin desktop layout expansion** has advanced with wider post editor/moderation shells, a roomier editor grid, better dashboard action/pagination composition, and more readable tags-page spacing, but real browser QA is still the primary remaining gap
-- **4.4 structured data** is partially landed in `web/src/app/(blog)/posts/[slug]/head.tsx`; local build is good, but deployed rich-results validation is still outstanding
+- **4.1 comment moderation** now has an admin moderation UI with optimistic updates, inline action errors, route validation, theme-safe status treatments, and a keyboard-friendlier inline delete confirmation
+- **4.8 admin desktop layout expansion** is now browser-QA'd on `/admin`, `/admin/tags`, and `/admin/posts/[postId]/comments`; the main follow-up fix was tightening dashboard toolbar composition so the laptop layout holds together cleanly
+- **4.4 structured data** is implemented in `web/src/app/(blog)/posts/[slug]/head.tsx`; local build is good, but deployed rich-results validation is still outstanding before it should be treated as fully done
 
 ---
 
@@ -30,6 +30,8 @@ Latest work pushed Phase 4 in two directions:
 - **Admin**: GitHub OAuth, dashboard, create/edit post, Cloudinary image upload,
   gallery, focal points, alt text, series, location with autocomplete, iOverlander URL
 - **Admin moderation**: `/admin/posts/[postId]/comments` route with hide/unhide/delete/flag controls, optimistic updates, and loading state
+- **Admin layout hardening**: dashboard, tags, and moderation views now use broader shells and improved intermediate-width wrapping/composition
+- **Admin browser QA**: widened admin surfaces were manually checked at tablet, laptop, and wide desktop widths; tags and moderation held up cleanly, and the dashboard toolbar was refined based on the observed laptop/tablet wrap behavior
 - **Public auth**: Supabase login, signup, email callback — all native in Next.js
 - **Account settings** (`/account`): display name, avatar URL, theme preference
   save/restore, email change, password change, sign out
@@ -72,8 +74,10 @@ Latest work pushed Phase 4 in two directions:
 
 - Expand authenticated Playwright coverage for admin flows beyond the current smoke path
 - Finish the remaining UX polish tasks tracked in `docs/PLAN.md` Phase 3, especially browser-level QA
-- Continue PLAN `4.8` with browser QA across the widened admin views/components and keep future admin surfaces aligned with the broader shell
+- Keep future admin surfaces aligned with the broader shell now that PLAN `4.8` is complete, and prefer real browser or Playwright verification over speculative layout polishing
 - Validate PLAN `4.4` on a deployed post URL with Google Rich Results Test before marking structured data complete
+- Expand Playwright coverage around the verified admin surfaces so future layout regressions are caught earlier
+- Treat Rich Results validation as deployment-blocked while the project remains local-only; local checks can confirm JSON-LD presence, but not Google's real crawler/test acceptance
 - Keep `TODO.md` as the practical working backlog and `docs/PLAN.md` as the phase-level roadmap
 
 ---

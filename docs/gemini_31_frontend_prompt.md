@@ -12,7 +12,7 @@ The app is live and stable. We are in Phase 4.
 
 - **PLAN 4.1** ✅ — admin comment moderation UI is done and validated.
 - **PLAN 4.4** ✅ in code — BlogPosting JSON-LD now renders from `web/src/app/(blog)/posts/[slug]/head.tsx` for published posts only.
-- **PLAN 4.8** 🔄 — admin desktop layout expansion is close, but real browser QA is still missing.
+- **PLAN 4.8** ✅ — admin desktop layout expansion is complete and browser-QA'd.
 
 Recent follow-up already completed:
 - `web/src/components/admin/admin-dashboard.tsx`
@@ -31,6 +31,7 @@ Recent follow-up already completed:
 - `web/src/components/admin/admin-comment-card.tsx`
   - clearer hidden/deleted treatment
   - better reply hierarchy and focus states
+- additional responsive hardening: safer wrapping in the inline delete-confirm row and slightly stronger deleted-state readability
 - `web/src/app/admin/posts/[postId]/comments/page.tsx`
   - wider moderation shell and helper copy
 - `web/src/app/admin/posts/[postId]/comments/loading.tsx`
@@ -38,40 +39,32 @@ Recent follow-up already completed:
 
 ---
 
-## Task 1 — Finish PLAN 4.8 with real browser QA
+## Task 1 — Preserve the verified admin layouts when doing future frontend work
 
-Do a manual browser QA pass and fix only what you actually find.
+PLAN `4.8` is done. The widened admin views were checked in a browser and only one final dashboard toolbar breakpoint change was needed.
 
-### Required widths
-
-- tablet: `768px`
-- laptop: `1280px`
-- wide desktop: `1536px+`
-
-### QA targets
-
+Verified surfaces:
 - `/admin`
-  - toolbar filter wrapping at laptop widths
-  - action pill wrapping in post rows at narrower desktop widths
-  - pagination composition at XL
 - `/admin/tags`
-  - textarea/button alignment at tablet and XL
-  - readability when descriptions are longer
 - `/admin/posts/[postId]/comments`
-  - summary cards at tablet widths
-  - reply indentation balance
-  - sort refresh treatment
-  - hidden/deleted card readability
 
-### Fix rules
+Verified widths:
+- `768px`
+- `1280px`
+- `1536px+`
 
-- Small, surgical changes only.
-- Do not rewrite whole components.
-- Do not create new admin pages.
-- CSS variables only — no hardcoded color values.
-- Preserve the current moderation logic and API contract.
+What proved stable:
+- tags page textarea/button alignment
+- moderation summary cards and reply indentation
+- inline delete confirmation layout at tablet width
 
-When these surfaces look solid in the browser, PLAN 4.8 is effectively done.
+What changed from real QA:
+- `web/src/components/admin/admin-dashboard.tsx` now starts the compact 4-column filter row at `lg` so search + filters stay balanced on laptop widths
+
+For future admin UI changes:
+- preserve this layout baseline
+- prefer real browser checks over speculative layout rewrites
+- keep fixes small and local if a regression appears
 
 ---
 
@@ -156,3 +149,5 @@ When done, report:
 - what you changed to fix them
 - whether the inline delete confirmation needed any additional polish
 - whether `bun run lint`, `bunx tsc --noEmit`, and `bun run build` passed
+
+If you are asked to revisit these admin surfaces later, treat current layout behavior as the baseline and report only newly observed regressions.

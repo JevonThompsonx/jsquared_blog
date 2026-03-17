@@ -30,6 +30,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] GitHub admin auth exists in Next.js
 - [x] Admin dashboard exists in Next.js
 - [x] Admin dashboard filters use theme-aware custom selects
+- [x] Widened admin dashboard, tags, and moderation layouts have manual browser QA at tablet/laptop/wide-desktop widths
 - [x] Native create post flow exists in Next.js
 - [x] Native edit post flow exists in Next.js
 - [x] Cloudinary upload flow exists in Next.js
@@ -137,10 +138,10 @@ Supabase shared email (free tier) confirmed working. Custom SMTP not yet configu
 - [x] Related posts cards with image thumbnails
 - [x] "Keep exploring" CTA with accent gradient background
 - [x] Post page scroll target and map focus behavior improved for navigation
-- [x] JSON-LD blog posting structured data present on post detail pages
+- [~] JSON-LD blog posting structured data present on post detail pages; deployed Rich Results validation still pending before it should be treated as fully closed
 
 ## Recommended Next Steps
 
 1. Decommission the legacy Cloudflare Worker in the Cloudflare dashboard
 2. Remove old Cloudflare Workers environment variables and build settings from the dashboard
-3. Keep expanding automated coverage for authenticated admin flows and remaining UX polish tasks
+3. Keep expanding automated coverage for authenticated admin flows and remaining UX polish tasks, especially Playwright verification for the already browser-checked widened admin layouts

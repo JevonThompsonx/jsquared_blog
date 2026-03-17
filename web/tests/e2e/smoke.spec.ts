@@ -6,8 +6,15 @@ import { expect, test } from "@playwright/test";
 
 const adminStorageState = process.env.E2E_ADMIN_STORAGE_STATE;
 
+const adminPostId = process.env.E2E_ADMIN_POST_ID;
+
 if (adminStorageState) {
   test.use({ storageState: adminStorageState });
+}
+
+async function selectThemeOption(page: import("@playwright/test").Page, ariaLabel: string, optionText: string) {
+  await page.getByLabel(ariaLabel).click();
+  await page.getByRole("option", { name: optionText, exact: true }).click();
 }
 
 test.describe("public pages smoke tests", () => {
@@ -61,9 +68,9 @@ test.describe("public pages smoke tests", () => {
 
   test("category page loads", async ({ page }) => {
     await page.goto("/category/Travel");
-    // Either shows posts or a no-results message — either way the page renders
-    await expect(page.locator("main")).toBeVisible();
     await expect(page.locator("header")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Travel", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Filtered stories feed" })).toBeVisible();
   });
 
   test("search page is accessible", async ({ page }) => {
@@ -80,8 +87,9 @@ test.describe("public pages smoke tests", () => {
 
   test("admin redirects to GitHub sign-in when unauthenticated", async ({ page }) => {
     await page.goto("/admin");
-    // Should redirect to GitHub OAuth or a sign-in page
-    await expect(page).toHaveURL(/github\.com\/login|\/api\/auth\/signin/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/admin(?:\?.*)?$/, { timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Editorial control center" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
   });
 
 });
@@ -125,5 +133,56 @@ test.describe("authenticated admin smoke tests", () => {
     await previewPage.waitForLoadState("domcontentloaded");
     await expect(previewPage).toHaveURL(/\/preview\//, { timeout: 15_000 });
     await expect(previewPage.getByText("Preview Mode")).toBeVisible();
+  });
+
+  test("admin dashboard filters and navigation stay usable", async ({ page }) => {
+    await page.goto("/admin");
+
+    await expect(page.getByText("Editorial workspace")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Manage tags" })).toBeVisible();
+    await expect(page.getByLabel("Search posts")).toBeVisible();
+
+    await selectThemeOption(page, "Filter posts by status", "Published");
+    await page.waitForURL((url) => url.searchParams.get("status") === "published", { timeout: 10_000 });
+
+    await selectThemeOption(page, "Sort posts", "Recently updated");
+    await page.waitForURL((url) => url.searchParams.get("sort") === "updated-desc", { timeout: 10_000 });
+
+    const rows = page.getByTestId("admin-post-row");
+    await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+    await expect(rows.first().getByRole("link", { name: "Moderate comments" })).toBeVisible();
+  });
+
+  test("admin tags page renders editing controls", async ({ page }) => {
+    await page.goto("/admin/tags");
+
+    await expect(page.getByRole("heading", { name: "Manage Tags" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Dashboard/ })).toBeVisible();
+
+    const textareas = page.locator('textarea[name="description"]');
+    await expect(textareas.first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Save" }).first()).toBeVisible();
+  });
+
+  test("admin moderation page shows summary cards and inline delete confirmation", async ({ page }) => {
+    test.skip(!adminPostId, "Set E2E_ADMIN_POST_ID to run moderation smoke tests.");
+
+    await page.goto(`/admin/posts/${adminPostId}/comments`);
+
+    await expect(page.getByText("Moderation tools")).toBeVisible();
+    await expect(page.getByText("Thread review")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Newest" })).toBeVisible();
+    await expect(page.getByText("Threads")).toBeVisible();
+    await expect(page.getByText("Flagged")).toBeVisible();
+    await expect(page.getByText("Hidden")).toBeVisible();
+    await expect(page.getByText("Deleted")).toBeVisible();
+
+    const deleteButton = page.getByRole("button", { name: /^Delete$/ }).first();
+    await expect(deleteButton).toBeVisible({ timeout: 15_000 });
+    await deleteButton.click();
+
+    await expect(page.getByText("Permanently delete?")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete" }).last()).toBeVisible();
   });
 });

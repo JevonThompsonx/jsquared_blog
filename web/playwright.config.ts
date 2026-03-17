@@ -8,6 +8,13 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
 
+  webServer: {
+    command: "bun run dev",
+    url: baseURL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
+
   use: {
     baseURL,
     screenshot: "only-on-failure",
