@@ -152,6 +152,10 @@ export const comments = sqliteTable("comments", {
   authorId: text("author_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   parentId: text("parent_id"),
+  visibility: text("visibility", { enum: ["visible", "hidden", "deleted"] }).notNull().default("visible"),
+  isFlagged: integer("is_flagged", { mode: "boolean" }).notNull().default(false),
+  moderatedAt: integer("moderated_at", { mode: "timestamp_ms" }),
+  moderatedByUserId: text("moderated_by_user_id").references(() => users.id),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });

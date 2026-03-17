@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
 
 import type { BlogImage } from "@/types/blog";
+import { cdnBlurDataUrl } from "@/lib/cloudinary/transform";
 
 type GalleryImage = {
   id: string;
@@ -159,6 +160,8 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
             priority
             sizes="100vw"
             src={featuredImageUrl}
+            placeholder={cdnBlurDataUrl(featuredImageUrl) ? "blur" : "empty"}
+            blurDataURL={cdnBlurDataUrl(featuredImageUrl)}
           />
           <div className="absolute inset-0 flex items-end justify-end bg-black/0 transition-colors duration-300 group-hover:bg-black/10">
             <div className="m-3 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
@@ -187,6 +190,8 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
                 loading="lazy"
                 sizes="(max-width: 640px) 25vw, (max-width: 1024px) 20vw, 15vw"
                 src={image.imageUrl}
+                placeholder={cdnBlurDataUrl(image.imageUrl) ? "blur" : "empty"}
+                blurDataURL={cdnBlurDataUrl(image.imageUrl)}
               />
               <div className="absolute inset-0 rounded-lg bg-black/0 transition-colors duration-200 group-hover:bg-black/15" />
             </button>
@@ -299,6 +304,8 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
                       loading="lazy"
                       src={img.imageUrl}
                       width={80}
+                      placeholder={cdnBlurDataUrl(img.imageUrl) ? "blur" : "empty"}
+                      blurDataURL={cdnBlurDataUrl(img.imageUrl)}
                     />
                   </button>
                 ))}

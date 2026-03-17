@@ -29,11 +29,13 @@ export function TableOfContents({ headings }: { headings: TocHeading[] }) {
 
   return (
     <nav
+      id="table-of-contents"
       aria-label="Table of contents"
       className="mb-8 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--accent-soft)]"
     >
       <button
-        className="flex w-full items-center justify-between px-5 py-3.5 text-left"
+        aria-expanded={isOpen}
+        className="flex w-full items-center justify-between px-5 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
         onClick={() => setIsOpen((o) => !o)}
         type="button"
       >

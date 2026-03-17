@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 ## Model Allocation
 
@@ -73,20 +73,20 @@ Everything below is additive — the app is live and stable.
 
 | # | Task | Owner | Files Touched | Status |
 |---|------|-------|--------------|--------|
-| 3.1 | Core Web Vitals audit + fix (LCP, CLS, INP) | Opus (audit) → Gemini (fix) | Various components | TODO |
-| 3.2 | WCAG AA accessibility audit + fix | Opus (audit) → Gemini (fix) | Various components | TODO |
-| 3.3 | Image lazy loading + blur placeholders | Gemini Low | `web/src/components/blog/home-post-card.tsx`, `web/src/components/blog/post-gallery.tsx` | TODO |
+| 3.1 | Core Web Vitals audit + fix (LCP, CLS, INP) | Opus (audit) → Gemini (fix) | Various components | IN PROGRESS |
+| 3.2 | WCAG AA accessibility audit + fix | Opus (audit) → Gemini (fix) | Various components | IN PROGRESS |
+| 3.3 | Image lazy loading + blur placeholders | Gemini Low | `web/src/components/blog/home-post-card.tsx`, `web/src/components/blog/post-gallery.tsx` | DONE |
 | 3.4 | Skeleton loading states for all async content | Gemini Low | `web/src/app/**/loading.tsx` | DONE |
 | 3.5 | Mobile nav UX improvements | Gemini Low | `web/src/components/layout/site-header.tsx` | TODO |
-| 3.6 | Search improvements (debounce, highlight, empty state) | Gemini Low | `web/src/app/(blog)/search/` | TODO |
+| 3.6 | Search improvements (debounce, highlight, empty state) | Gemini Low | `web/src/app/(blog)/search/` | IN PROGRESS |
 | 3.7 | Reduced motion support (`prefers-reduced-motion`) | Gemini Low | `web/src/app/globals.css` | DONE |
 | 3.8 | Print stylesheet | Gemini Low | `web/src/app/globals.css` | DONE |
 | 3.9 | Social share buttons (native Web Share API + fallbacks) | Gemini Low | `web/src/components/blog/share-buttons.tsx` | DONE |
-| 3.10 | Related posts algorithm improvement | Sonnet | `web/src/server/queries/posts.ts` | TODO |
-| 3.11 | Admin dropdown dark mode fix — replace native `<select>` with styled custom dropdown | Gemini Low | `web/src/components/ui/theme-select.tsx` (new), `web/src/components/admin/admin-dashboard.tsx` | TODO |
-| 3.12 | Season-year date display — show "Spring 2026" instead of "December 15, 2024" | Sonnet (utility) → Gemini (component) | `web/src/lib/utils.ts`, `web/src/components/blog/post-date.tsx`, `web/tests/unit/utils.test.ts` | TODO |
-| 3.13 | Post page scroll/focus — prioritize featured image > ToC > post top, prevent map focus-grab | Gemini Low | `web/src/components/blog/post-map.tsx`, `web/src/app/(blog)/posts/[slug]/page.tsx`, `web/src/components/blog/scroll-to-content.tsx` (new) | TODO |
-| 3.14 | Season-year grouped feed — group posts under "Spring 2026" headers in home/filtered feeds | Sonnet (grouping util) → Gemini (UI) | `web/src/lib/utils.ts`, `web/src/components/blog/home-feed.tsx`, `web/src/components/blog/filtered-feed.tsx`, `web/tests/unit/utils.test.ts` | TODO |
+| 3.10 | Related posts algorithm improvement | Sonnet | `web/src/server/queries/posts.ts` | DONE |
+| 3.11 | Admin dropdown dark mode fix — replace native `<select>` with styled custom dropdown | Gemini Low | `web/src/components/ui/theme-select.tsx` (new), `web/src/components/admin/admin-dashboard.tsx` | DONE |
+| 3.12 | Season-year date display — show "Spring 2026" instead of "December 15, 2024" | Sonnet (utility) → Gemini (component) | `web/src/lib/utils.ts`, `web/src/components/blog/post-date.tsx`, `web/tests/unit/utils.test.ts` | DONE |
+| 3.13 | Post page scroll/focus — prioritize featured image > ToC > post top, prevent map focus-grab | Gemini Low | `web/src/components/blog/post-map.tsx`, `web/src/app/(blog)/posts/[slug]/page.tsx`, `web/src/components/blog/scroll-to-content.tsx` (new) | DONE |
+| 3.14 | Season-year grouped feed — group posts under "Spring 2026" headers in home/filtered feeds | Sonnet (grouping util) → Gemini (UI) | `web/src/lib/utils.ts`, `web/src/components/blog/home-feed.tsx`, `web/src/components/blog/filtered-feed.tsx`, `web/tests/unit/utils.test.ts` | DONE |
 
 **Exit criteria**: Lighthouse Performance > 90, Accessibility > 95 on key pages. No WCAG AA violations.
 
@@ -100,13 +100,14 @@ Everything below is additive — the app is live and stable.
 
 | # | Task | Owner | Files Touched | Status |
 |---|------|-------|--------------|--------|
-| 4.1 | Comment moderation tools (admin flag/hide/delete) | Sonnet + Gemini | `web/src/app/admin/`, `web/src/server/dal/comments.ts` | TODO |
+| 4.1 | Comment moderation tools (admin flag/hide/delete) | Sonnet + Gemini | `web/src/app/admin/`, `web/src/server/dal/comments.ts`, `web/src/app/api/admin/comments/moderate/route.ts` | DONE |
 | 4.2 | Email notification on new comment (Resend) | Sonnet | `web/src/lib/email/`, `web/src/app/api/posts/[postId]/comments/route.ts` | TODO |
 | 4.3 | RSS per category/tag | Sonnet | `web/src/app/feed.xml/route.ts` | TODO |
-| 4.4 | Structured data (JSON-LD for BlogPosting) | Gemini Low | `web/src/app/(blog)/posts/[slug]/page.tsx` | TODO |
+| 4.4 | Structured data (JSON-LD for BlogPosting) | Gemini Low | `web/src/app/(blog)/posts/[slug]/head.tsx`, `web/src/app/(blog)/posts/[slug]/page.tsx` | IN PROGRESS |
 | 4.5 | Reading time estimate | Sonnet | `web/src/lib/content.ts`, `web/src/components/blog/` | TODO |
 | 4.6 | Newsletter signup (Resend + simple form) | Sonnet + Gemini | `web/src/components/blog/newsletter-signup.tsx`, `web/src/app/api/newsletter/` | TODO |
 | 4.7 | Post view counter (privacy-respecting) | Sonnet | `web/src/server/dal/posts.ts`, schema migration | TODO |
+| 4.8 | Admin desktop layout expansion | Gemini Low | `web/src/app/admin/page.tsx`, `web/src/components/admin/admin-dashboard.tsx`, related admin pages | IN PROGRESS |
 
 **Exit criteria**: Admin has moderation tools. Readers can subscribe to updates. Structured data validates in Google Rich Results test.
 

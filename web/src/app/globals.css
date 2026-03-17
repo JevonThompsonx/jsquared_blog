@@ -63,7 +63,12 @@
   --overlay-chip-text: #f7f0e6;
   --card-image-filter: saturate(0.96) contrast(0.98);
 
-  /* Warning and Error colors */
+  /* Status colors */
+  --color-info: #0f766e;
+  --color-info-text: #115e59;
+  --color-info-soft-bg: #ecfeff;
+  --color-info-soft-border: #67e8f9;
+
   --color-warning: #b45309; /* amber-700 */
   --color-warning-text: #78350f; /* amber-900 */
   --color-warning-soft-bg: #fffbeb; /* amber-50 */
@@ -89,7 +94,12 @@
   --input-border: #2d382e;
   --input-text: #e2e8e0;
 
-  /* Dark mode warning and error overrides */
+  /* Dark mode status overrides */
+  --color-info: #67e8f9;
+  --color-info-text: #cffafe;
+  --color-info-soft-bg: #083344;
+  --color-info-soft-border: #155e75;
+
   --color-warning: #fcd34d; /* amber-300 */
   --color-warning-text: #fef3c7; /* amber-100 */
   --color-warning-soft-bg: #451a03; /* amber-950 */
@@ -325,6 +335,15 @@ body {
   backdrop-filter: blur(10px);
 }
 
+.hero-overline {
+  margin: 0;
+  color: rgba(249, 243, 232, 0.82);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
 .hero-secondary-link {
   display: inline-flex;
   align-items: center;
@@ -421,6 +440,11 @@ body {
   .hero-kicker {
     font-size: 0.66rem;
     letter-spacing: 0.14em;
+  }
+
+  .hero-overline {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
   }
 
   .landing-title {

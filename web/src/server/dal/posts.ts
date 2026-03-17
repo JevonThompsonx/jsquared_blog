@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { categories, comments, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
@@ -110,6 +110,41 @@ export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
     .where(eq(posts.status, "published"))
     .orderBy(desc(posts.publishedAt), desc(posts.createdAt));
+}
+
+export async function listRecentPublishedPostRecords(limit: number, excludePostId?: string): Promise<PublishedPostRecord[]> {
+  const db = getDb();
+  const whereClause = excludePostId
+    ? and(eq(posts.status, "published"), ne(posts.id, excludePostId))
+    : eq(posts.status, "published");
+
+  return db
+    .select({
+      id: posts.id,
+      slug: posts.slug,
+      title: posts.title,
+      excerpt: posts.excerpt,
+      contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
+      category: categories.name,
+      imageUrl: mediaAssets.secureUrl,
+      layoutType: posts.layoutType,
+      createdAt: posts.createdAt,
+      publishedAt: posts.publishedAt,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
+    })
+    .from(posts)
+    .leftJoin(categories, eq(posts.categoryId, categories.id))
+    .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
+    .where(whereClause)
+    .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
+    .limit(limit);
 }
 
 export async function listTagsByPostIds(postIds: string[]): Promise<PublishedPostTagRecord[]> {
@@ -296,6 +331,51 @@ export async function listPublishedPostRecordsByTagSlug(
     .where(and(eq(posts.status, "published"), eq(tags.slug, tagSlug)))
     .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
     .offset(offset)
+    .limit(limit);
+}
+
+export async function listPublishedPostRecordsByTagSlugs(
+  tagSlugs: string[],
+  limit: number,
+  excludePostId?: string,
+): Promise<PublishedPostRecord[]> {
+  if (tagSlugs.length === 0) {
+    return [];
+  }
+
+  const db = getDb();
+  const whereClause = excludePostId
+    ? and(eq(posts.status, "published"), inArray(tags.slug, tagSlugs), ne(posts.id, excludePostId))
+    : and(eq(posts.status, "published"), inArray(tags.slug, tagSlugs));
+
+  return db
+    .selectDistinct({
+      id: posts.id,
+      slug: posts.slug,
+      title: posts.title,
+      excerpt: posts.excerpt,
+      contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
+      category: categories.name,
+      imageUrl: mediaAssets.secureUrl,
+      layoutType: posts.layoutType,
+      createdAt: posts.createdAt,
+      publishedAt: posts.publishedAt,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
+    })
+    .from(posts)
+    .innerJoin(postTags, eq(postTags.postId, posts.id))
+    .innerJoin(tags, eq(postTags.tagId, tags.id))
+    .leftJoin(categories, eq(posts.categoryId, categories.id))
+    .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
+    .where(whereClause)
+    .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
     .limit(limit);
 }
 

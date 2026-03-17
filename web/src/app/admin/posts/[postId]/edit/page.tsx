@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { PostEditorForm } from "@/components/admin/post-editor-form";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -19,7 +19,7 @@ export default async function EditAdminPostPage({
 }) {
   const session = await requireAdminSession();
   if (!session) {
-    return null;
+    redirect("/admin");
   }
 
   const { postId } = await params;
@@ -38,7 +38,7 @@ export default async function EditAdminPostPage({
   return (
     <main className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <SiteHeader />
-      <section className="container mx-auto mt-8 max-w-6xl sm:mt-10">
+      <section className="container mx-auto mt-8 max-w-[min(92rem,calc(100vw-2rem))] sm:mt-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Native editor</p>
@@ -57,13 +57,13 @@ export default async function EditAdminPostPage({
         </div>
 
         {resolvedSearchParams?.saved ? (
-          <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div className="mb-6 rounded-2xl border border-[var(--color-success-soft-border)] bg-[var(--color-success-soft-bg)] px-4 py-3 text-sm text-[var(--color-success-text)]">
             Post saved successfully.
           </div>
         ) : null}
 
         {resolvedSearchParams?.cloned ? (
-          <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div className="mb-6 rounded-2xl border border-[var(--color-success-soft-border)] bg-[var(--color-success-soft-bg)] px-4 py-3 text-sm text-[var(--color-success-text)]">
             Draft clone created successfully.
           </div>
         ) : null}

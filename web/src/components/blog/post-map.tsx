@@ -69,12 +69,17 @@ export function PostMap({ locationName, lat, lng, zoom, iovanderUrl, apiKey }: P
       </div>
 
       {/* Fixed-height container observed by IntersectionObserver */}
-      <div ref={containerRef} style={{ height: 320 }}>
+      <div ref={containerRef} style={{ height: 320 }} tabIndex={-1}>
         {shouldRender ? (
           <Map
             initialViewState={{ latitude: lat, longitude: lng, zoom }}
             mapStyle={mapStyle}
             style={{ height: "100%", width: "100%" }}
+            onLoad={(e) => {
+              window.requestAnimationFrame(() => {
+                e.target.getCanvas().blur();
+              });
+            }}
           >
             <NavigationControl position="top-right" />
             <Marker

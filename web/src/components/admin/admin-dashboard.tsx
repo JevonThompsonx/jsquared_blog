@@ -14,6 +14,7 @@ import {
 import { formatPublishedDate, getPostHref } from "@/lib/utils";
 import type { AdminPostRecord, AdminPostListResult, AdminCategoryRecord } from "@/server/dal/admin-posts";
 import type { PostPublishResult } from "@/server/posts/publish";
+import { ThemeSelect } from "@/components/ui/theme-select";
 
 function getStatusStyles(status: AdminPostRecord["status"]) {
   switch (status) {
@@ -26,18 +27,9 @@ function getStatusStyles(status: AdminPostRecord["status"]) {
   }
 }
 
-function getDashboardPath(params: URLSearchParams): string {
+function getDashboardRoute(params: URLSearchParams): "/admin" | `/admin?${string}` {
   const query = params.toString();
   return query ? `/admin?${query}` : "/admin";
-}
-
-function navigateToDashboard(path: string, mode: "push" | "replace" = "push"): void {
-  if (mode === "replace") {
-    window.location.replace(path);
-    return;
-  }
-
-  window.location.assign(path);
 }
 
 function formatBulkResultMessage(result: PostPublishResult): string {
@@ -136,7 +128,7 @@ export function AdminDashboard({
         params.delete("query");
       }
       params.delete("page");
-      navigateToDashboard(getDashboardPath(params), "replace");
+      router.replace(getDashboardRoute(params));
     }, 300);
 
     return () => window.clearTimeout(timer);
@@ -191,7 +183,7 @@ export function AdminDashboard({
       params.delete("page");
     }
 
-    navigateToDashboard(getDashboardPath(params));
+    router.push(getDashboardRoute(params));
   };
 
   const handlePageJump = () => {
@@ -304,71 +296,70 @@ export function AdminDashboard({
             Back to site
           </Link>
         </div>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
+        <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,2fr)_auto] xl:items-start">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.9fr)_repeat(3,minmax(10rem,12rem))]">
             <input
               type="search"
               placeholder="Search posts..."
               aria-label="Search posts"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="min-w-0 flex-1 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+              className="min-w-0 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm transition-shadow sm:col-span-2 xl:col-span-1 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50"
             />
-            <select
-              aria-label="Filter posts by status"
+            <ThemeSelect
+              ariaLabel="Filter posts by status"
               value={activeStatus}
-              onChange={(e) => updateFilters({ status: e.target.value })}
-              className="rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
-            >
-              <option value="all">All Status</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
-            </select>
-            <select
-              aria-label="Filter posts by category"
+              onChange={(value) => updateFilters({ status: value })}
+              options={[
+                { label: "All Status", value: "all" },
+                { label: "Published", value: "published" },
+                { label: "Draft", value: "draft" },
+                { label: "Scheduled", value: "scheduled" },
+              ]}
+              className="w-full xl:w-[140px]"
+            />
+            <ThemeSelect
+              ariaLabel="Filter posts by category"
               value={activeCategory}
-              onChange={(e) => updateFilters({ category: e.target.value })}
-              className="rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.slug}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Sort posts"
+              onChange={(value) => updateFilters({ category: value })}
+              options={[
+                { label: "All Categories", value: "all" },
+                ...categories.map((cat) => ({ label: cat.name, value: cat.slug })),
+              ]}
+              className="w-full xl:w-[160px]"
+            />
+            <ThemeSelect
+              ariaLabel="Sort posts"
               value={activeSort}
-              onChange={(e) => updateFilters({ sort: e.target.value })}
-              className="rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
-            >
-              <option value="created-desc">Newest first</option>
-              <option value="created-asc">Oldest first</option>
-              <option value="title-asc">Title A-Z</option>
-              <option value="updated-desc">Recently updated</option>
-              <option value="published-desc">Recently published</option>
-            </select>
+              onChange={(value) => updateFilters({ sort: value })}
+              options={[
+                { label: "Newest first", value: "created-desc" },
+                { label: "Oldest first", value: "created-asc" },
+                { label: "Title A-Z", value: "title-asc" },
+                { label: "Recently updated", value: "updated-desc" },
+                { label: "Recently published", value: "published-desc" },
+              ]}
+              className="w-full xl:w-[180px]"
+            />
           </div>
-          <Link
-            className="rounded-full bg-[var(--accent-strong)] px-4 py-2 text-sm font-semibold text-white"
-            href="/admin/posts/new"
-          >
-            Create new post
-          </Link>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Link
-            className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            href="/admin/tags"
-          >
-            Manage tags
-          </Link>
+          <div className="flex flex-wrap gap-3 xl:justify-end">
+            <Link
+              className="rounded-full bg-[var(--accent-strong)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] shadow-sm transition-colors hover:bg-[var(--primary)]"
+              href="/admin/posts/new"
+            >
+              Create new post
+            </Link>
+            <Link
+              className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              href="/admin/tags"
+            >
+              Manage tags
+            </Link>
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Total posts", counts.total],
           ["Published", counts.published],
@@ -382,7 +373,7 @@ export function AdminDashboard({
         ))}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,2.3fr)_minmax(22rem,0.95fr)]">
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -459,14 +450,14 @@ export function AdminDashboard({
                   </span>
                 </div>
 
-                 {posts.map((post: AdminPostRecord) => (
-                   <article
-                     key={post.id}
-                     className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5"
-                     data-post-id={post.id}
-                     data-post-status={post.status}
-                     data-testid="admin-post-row"
-                   >
+                  {posts.map((post: AdminPostRecord) => (
+                  <article
+                      key={post.id}
+                      className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5 lg:p-6"
+                      data-post-id={post.id}
+                      data-post-status={post.status}
+                      data-testid="admin-post-row"
+                    >
                     <div className="pt-1">
                       <input
                         type="checkbox"
@@ -509,8 +500,10 @@ export function AdminDashboard({
                           </p>
                         </div>
                       </div>
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--muted)]">
-                        <div className="flex flex-wrap gap-4">
+                      <div className="mt-4 grid gap-4 border-t border-[var(--border)] pt-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                        <div className="space-y-2 text-sm text-[var(--muted)]">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Publishing timeline</p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-2">
                           {post.publishedAt ? (
                             <span>
                               Published {formatPublishedDate(post.publishedAt.toISOString())}
@@ -521,40 +514,47 @@ export function AdminDashboard({
                               Scheduled {formatPublishedDate(post.scheduledPublishTime.toISOString())}
                             </span>
                           ) : null}
+                          </div>
                         </div>
-                        <div className="flex w-full flex-wrap gap-4 sm:w-auto">
-                           <button
-                             type="button"
-                             onClick={() => handleClone(post.id)}
-                             disabled={isPending}
-                             data-testid="admin-post-clone"
-                             className="font-semibold text-[var(--accent)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
-                           >
-                            Clone
-                          </button>
-                          <Link
-                            className="font-semibold text-[var(--accent)]"
-                            href={`/admin/posts/${post.id}/edit`}
-                          >
-                            Edit
-                          </Link>
-                          {post.status === "published" ? (
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end pt-3 xl:pt-0">
+                            <button
+                               type="button"
+                               onClick={() => handleClone(post.id)}
+                              disabled={isPending}
+                              data-testid="admin-post-clone"
+                               className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                             >
+                              Clone
+                            </button>
                             <Link
-                              className="font-semibold text-[var(--accent)]"
-                              href={getPostHref({ id: post.id, title: post.title, slug: post.slug })}
+                              className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                              href={`/admin/posts/${post.id}/edit`}
                             >
-                              View live
+                              Edit
+                            </Link>
+                            <Link
+                              className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                              href={`/admin/posts/${post.id}/comments`}
+                            >
+                              Moderate comments
+                           </Link>
+                           {post.status === "published" ? (
+                             <Link
+                                className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                                href={getPostHref({ id: post.id, title: post.title, slug: post.slug })}
+                              >
+                                View live
                             </Link>
                           ) : (
                             <button
                               type="button"
-                              onClick={() => handlePreview(post.id)}
-                              disabled={isPending}
-                              data-testid="admin-post-preview"
-                              className="font-semibold text-[var(--accent)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
-                            >
-                              Preview
-                            </button>
+                               onClick={() => handlePreview(post.id)}
+                               disabled={isPending}
+                               data-testid="admin-post-preview"
+                                className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                              >
+                                Preview
+                              </button>
                           )}
                         </div>
                       </div>
@@ -562,7 +562,7 @@ export function AdminDashboard({
                   </article>
                 ))}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                <div className="flex flex-col gap-5 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 text-sm text-[var(--text-secondary)] 2xl:flex-row 2xl:flex-wrap 2xl:items-center 2xl:justify-between">
                   <div className="flex flex-wrap items-center gap-3">
                     <span>
                       Page {page} of {totalPages}
@@ -593,7 +593,7 @@ export function AdminDashboard({
                       ))}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 2xl:justify-end">
                     <div className="flex items-center gap-2 rounded-full border border-[var(--border)] px-2 py-1">
                       <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]" htmlFor="admin-page-jump">
                         Jump

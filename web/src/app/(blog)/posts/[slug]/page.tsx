@@ -25,6 +25,7 @@ import { getPublishedPostBySlug, getRelatedPosts } from "@/server/queries/posts"
 import { getSeriesNavForPost } from "@/server/dal/series";
 import { SeriesNav } from "@/components/blog/series-nav";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
+import { ScrollToContent } from "@/components/blog/scroll-to-content";
 
 type PostPageProps = {
   params: Promise<{ slug: string }>;
@@ -94,23 +95,31 @@ export default async function PostPage({ params }: PostPageProps) {
     return `<img${attrs} data-gallery-idx="${idx}">`;
   });
 
-  const hasLocation =
+  const locationData =
     post.locationLat !== null &&
     post.locationLng !== null &&
-    NEXT_PUBLIC_STADIA_MAPS_API_KEY;
+    NEXT_PUBLIC_STADIA_MAPS_API_KEY
+      ? {
+          apiKey: NEXT_PUBLIC_STADIA_MAPS_API_KEY,
+          lat: post.locationLat,
+          lng: post.locationLng,
+          zoom: post.locationZoom ?? 10,
+          locationName: post.locationName ?? "",
+        }
+      : null;
   const hasMedia = post.imageUrl || post.images.length > 0;
 
   const canonicalUrl = getCanonicalPostUrl(post);
 
   return (
     <main className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
-      <ReadingProgressBar />
-      <SiteHeader />
+        <ScrollToContent hasFeaturedImage={Boolean(post.imageUrl)} />
+        <ReadingProgressBar />
+        <SiteHeader />
 
-      <div className="container mx-auto mt-4 max-w-4xl px-4 sm:mt-6 sm:px-6 lg:px-8">
-
-        {/* Breadcrumb + admin edit */}
-        <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="container mx-auto mt-4 max-w-4xl px-4 sm:mt-6 sm:px-6 lg:px-8">
+          {/* Breadcrumb + admin edit */}
+          <div className="mb-4 flex items-center justify-between gap-4">
           <nav className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm text-[var(--text-secondary)]">
             <Link className="font-medium text-[var(--accent)] hover:underline" href="/">Home</Link>
             <span className="text-[var(--border)]">/</span>
@@ -133,10 +142,10 @@ export default async function PostPage({ params }: PostPageProps) {
               </Link>
             ) : null}
           </div>
-        </div>
+          </div>
 
-        {/* Article card */}
-        <article className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-2xl">
+          {/* Article card */}
+          <article id="article-top" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-2xl">
 
           {/* Hero image + gallery — full-width at top of card */}
           {hasMedia ? (
@@ -204,15 +213,15 @@ export default async function PostPage({ params }: PostPageProps) {
           </div>
 
           {/* Location map */}
-          {hasLocation ? (
+          {locationData ? (
             <div className="border-t border-[var(--border)] px-5 py-8 sm:px-10">
               <PostMap
-                apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY!}
+                apiKey={locationData.apiKey}
                 iovanderUrl={post.iovanderUrl}
-                lat={post.locationLat!}
-                lng={post.locationLng!}
-                locationName={post.locationName ?? ""}
-                zoom={post.locationZoom ?? 10}
+                lat={locationData.lat}
+                lng={locationData.lng}
+                locationName={locationData.locationName}
+                zoom={locationData.zoom}
               />
             </div>
           ) : null}
@@ -250,53 +259,53 @@ export default async function PostPage({ params }: PostPageProps) {
             </div>
           </div>
 
-        </article>
-      </div>
+          </article>
+        </div>
 
-      {/* Related posts */}
-      {relatedPosts.length > 0 ? (
-        <section className="container mx-auto mt-12 max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-6 flex items-end justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Related stories</p>
-              <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Keep the trail going</h2>
+        {/* Related posts */}
+        {relatedPosts.length > 0 ? (
+          <section className="container mx-auto mt-12 max-w-4xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-6 flex items-end justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Related stories</p>
+                <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Keep the trail going</h2>
+              </div>
+              <Link className="text-sm font-semibold text-[var(--accent)] hover:underline" href="/">All stories →</Link>
             </div>
-            <Link className="text-sm font-semibold text-[var(--accent)] hover:underline" href="/">All stories →</Link>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {relatedPosts.map((relatedPost) => (
-              <Link
-                key={relatedPost.id}
-                className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-                href={getPostHref(relatedPost)}
-              >
-                {relatedPost.imageUrl ? (
-                  <div className="relative aspect-[5/3] w-full overflow-hidden">
-                    <Image
-                      alt={relatedPost.title}
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      fill
-                      loading="lazy"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      src={relatedPost.imageUrl}
-                    />
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedPosts.map((relatedPost) => (
+                <Link
+                  key={relatedPost.id}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  href={getPostHref(relatedPost)}
+                >
+                  {relatedPost.imageUrl ? (
+                    <div className="relative aspect-[5/3] w-full overflow-hidden">
+                      <Image
+                        alt={relatedPost.title}
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        fill
+                        loading="lazy"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        src={relatedPost.imageUrl}
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-[5/3] w-full bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />
+                  )}
+                  <div className="flex flex-col p-5">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent)]">{relatedPost.category ?? "Adventure"}</p>
+                    <h3 className="mt-2 text-balance text-base font-bold leading-snug text-[var(--text-primary)] sm:text-lg">{relatedPost.title}</h3>
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      {htmlToPlainText(relatedPost.excerpt ?? relatedPost.description ?? "").slice(0, 120)}
+                    </p>
+                    <span className="mt-4 text-xs font-bold uppercase tracking-[0.1em] text-[var(--accent)]">Read story →</span>
                   </div>
-                ) : (
-                  <div className="aspect-[5/3] w-full bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />
-                )}
-                <div className="flex flex-col p-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent)]">{relatedPost.category ?? "Adventure"}</p>
-                  <h3 className="mt-2 text-balance text-base font-bold leading-snug text-[var(--text-primary)] sm:text-lg">{relatedPost.title}</h3>
-                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-                    {htmlToPlainText(relatedPost.excerpt ?? relatedPost.description ?? "").slice(0, 120)}
-                  </p>
-                  <span className="mt-4 text-xs font-bold uppercase tracking-[0.1em] text-[var(--accent)]">Read story →</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </main>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </main>
   );
 }

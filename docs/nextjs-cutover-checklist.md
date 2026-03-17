@@ -18,6 +18,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] Sitemap exists in `web/`
 - [x] RSS exists in `web/` — all published posts, updated description
 - [x] Homepage cards and responsive layout are in good shape
+- [x] Home and filtered feeds group posts under season-year sections
 - [x] Reads are Turso-only — legacy fallback removed from `web/src/server/queries/posts.ts`
 - [x] Post cards are clickable (overlay link pattern, no nested `<a>`)
 - [x] Post detail renders with bullet/numbered list styles
@@ -28,6 +29,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 
 - [x] GitHub admin auth exists in Next.js
 - [x] Admin dashboard exists in Next.js
+- [x] Admin dashboard filters use theme-aware custom selects
 - [x] Native create post flow exists in Next.js
 - [x] Native edit post flow exists in Next.js
 - [x] Cloudinary upload flow exists in Next.js
@@ -49,6 +51,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] Hero section mobile title font size fixed — `clamp(1.8rem, 7.5vw, 2.6rem)` prevents overflow at narrow widths
 - [x] Avatar: preset icons (`j2:*`), file upload via Cloudinary, URL fallback, initials fallback
 - [x] Theme preference auto-applied on any page when signed in (`UserThemeSync` component — no longer requires visiting /account)
+- [x] Search results and empty states are polished; homepage card titles/excerpts highlight search matches
 
 ## Social / Community Features
 
@@ -70,6 +73,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] All server DAL files import `"server-only"`
 - [x] Zod validation present at all API trust boundaries
 - [x] Auth checked before DB in all server actions
+- [x] Baseline security headers ship from `web/next.config.ts`
 
 ## Legacy Removal Readiness
 
@@ -132,6 +136,8 @@ Supabase shared email (free tier) confirmed working. Custom SMTP not yet configu
 - [x] Prose width constrained to `68ch` for comfortable reading
 - [x] Related posts cards with image thumbnails
 - [x] "Keep exploring" CTA with accent gradient background
+- [x] Post page scroll target and map focus behavior improved for navigation
+- [x] JSON-LD blog posting structured data present on post detail pages
 
 ## Recommended Next Steps
 

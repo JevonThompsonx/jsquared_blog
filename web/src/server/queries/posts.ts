@@ -2,6 +2,7 @@ import "server-only";
 
 import { renderTiptapJson } from "@/lib/content";
 import { cdnImageUrl } from "@/lib/cloudinary/transform";
+import { rankRelatedPosts } from "@/lib/related-posts";
 import {
   getAnyPostRecordById,
   getPublishedPostRecordBySlug,
@@ -10,7 +11,9 @@ import {
   listImagesForPost,
   listPublishedPostRecords,
   listPublishedPostRecordsByCategory,
+  listPublishedPostRecordsByTagSlugs,
   listPublishedPostRecordsByTagSlug,
+  listRecentPublishedPostRecords,
   listTagsByPostIds,
   listTagsForPost,
   type PublishedPostRecord,
@@ -209,26 +212,27 @@ export async function getPostForPreview(id: string): Promise<BlogPost | null> {
 }
 
 export async function getRelatedPosts(post: BlogPost, limit = 3): Promise<BlogPost[]> {
-  const all = await listAllPublishedPosts();
-  const currentTagSlugs = new Set(post.tags.map((t) => t.slug));
-  const currentDate = new Date(post.createdAt).getTime();
+  const currentTagSlugs = post.tags.map((tag) => tag.slug);
+  const emptyRecordsPromise: Promise<PublishedPostRecord[]> = Promise.resolve([]);
+  const [categoryRows, tagRows, recentRows] = await Promise.all([
+    post.category
+      ? listPublishedPostRecordsByCategory(post.category, 12, 0)
+      : emptyRecordsPromise,
+    currentTagSlugs.length > 0
+      ? listPublishedPostRecordsByTagSlugs(currentTagSlugs, 18, post.id)
+      : emptyRecordsPromise,
+    listRecentPublishedPostRecords(18, post.id),
+  ]);
 
-  const scored = all
-    .filter((p) => p.slug !== post.slug)
-    .map((p) => {
-      let score = 0;
-      // Same category: strong signal
-      if (post.category && p.category === post.category) score += 3;
-      // Each shared tag: medium signal
-      for (const tag of p.tags) {
-        if (currentTagSlugs.has(tag.slug)) score += 2;
-      }
-      // Published within 90 days of this post: slight recency proximity boost
-      const daysDiff = Math.abs(new Date(p.createdAt).getTime() - currentDate) / (1000 * 60 * 60 * 24);
-      if (daysDiff <= 90) score += 1;
-      return { post: p, score };
-    })
-    .sort((a, b) => b.score - a.score || new Date(b.post.createdAt).getTime() - new Date(a.post.createdAt).getTime());
+  const candidateRecordMap = new Map<string, PublishedPostRecord>();
 
-  return scored.slice(0, limit).map((s) => s.post);
+  for (const record of [...categoryRows, ...tagRows, ...recentRows]) {
+    if (record.id !== post.id && record.slug !== post.slug && !candidateRecordMap.has(record.id)) {
+      candidateRecordMap.set(record.id, record);
+    }
+  }
+
+  const candidates = await withTags(Array.from(candidateRecordMap.values()));
+
+  return rankRelatedPosts(post, candidates, limit);
 }

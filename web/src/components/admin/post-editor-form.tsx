@@ -138,12 +138,12 @@ export function PostEditorForm({
       </div>
 
       {(previewError || cloneError) && (
-        <div className="rounded-lg border border-[var(--color-error)] bg-[var(--color-error-soft)] p-4 text-sm text-[var(--color-error)]">
+        <div className="rounded-lg border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] p-4 text-sm text-[var(--color-error-text)]">
           {previewError || cloneError}
         </div>
       )}
 
-      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,2.15fr)_minmax(24rem,1fr)]">
         <div className="space-y-6 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Core details</p>
@@ -188,7 +188,7 @@ export function PostEditorForm({
           </label>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 xl:sticky xl:top-44 xl:self-start">
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Publishing</p>
             <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Decide whether the post should go live immediately, stay in progress, or wait for a future release window.</p>
@@ -281,7 +281,7 @@ export function PostEditorForm({
             </div>
           </section>
 
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 text-[var(--text-secondary)]">
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 text-[var(--text-secondary)] xl:p-5">
             Publishing checklist: title, slug, excerpt, featured image, alt text, category, tags, body content, and either a publish date or scheduled time.
           </div>
 

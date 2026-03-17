@@ -18,11 +18,14 @@ export default async function AdminTagsPage() {
     <main className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
-      <section className="container mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
+      <section className="container mx-auto max-w-[min(92rem,calc(100vw-2rem))]">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Admin</p>
             <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)]">Manage Tags</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
+              Keep tag descriptions crisp and browse-friendly so archive pages feel curated instead of auto-generated.
+            </p>
           </div>
           <Link
             className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
@@ -40,21 +43,26 @@ export default async function AdminTagsPage() {
           ) : (
             <ul className="divide-y divide-[var(--border)]">
               {tagsList.map((tag) => (
-                <li key={tag.id} className="px-5 py-5 sm:px-7">
+                <li key={tag.id} className="px-5 py-5 sm:px-7 lg:px-8">
                   <div className="flex items-start gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-[var(--text-primary)]">{tag.name}</span>
-                        <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
+                    <div className="grid w-full gap-4 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:items-start xl:gap-6">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 xl:gap-3">
+                          <span className="font-semibold text-[var(--text-primary)]">{tag.name}</span>
+                          <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
                           {tag.postCount} {tag.postCount === 1 ? "post" : "posts"}
-                        </span>
-                        <span className="text-xs text-[var(--text-secondary)]">/tag/{tag.slug}</span>
+                          </span>
+                          <span className="text-xs text-[var(--text-secondary)]">/tag/{tag.slug}</span>
+                        </div>
+                        <p className="mt-3 max-w-sm text-sm leading-7 text-[var(--text-secondary)]">
+                          This copy appears in the tag header and should help readers understand what kind of stories they will find in the archive.
+                        </p>
                       </div>
 
-                      <form action={updateTagDescriptionAction} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <form action={updateTagDescriptionAction} className="flex w-full flex-col gap-3 md:flex-row md:items-start">
                         <input name="tagId" type="hidden" value={tag.id} />
                         <textarea
-                          className="min-h-[60px] flex-1 resize-y rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                          className="min-h-[96px] flex-1 resize-y rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-3 text-sm leading-6 text-[var(--input-text)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
                           defaultValue={tag.description ?? ""}
                           maxLength={500}
                           name="description"
@@ -62,7 +70,7 @@ export default async function AdminTagsPage() {
                           rows={2}
                         />
                         <button
-                          className="btn-primary shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90 sm:self-end"
+                          className="btn-primary shrink-0 self-stretch rounded-lg px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90 md:self-auto xl:self-start"
                           type="submit"
                         >
                           Save

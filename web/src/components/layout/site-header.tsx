@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -82,8 +82,60 @@ export function SiteHeader() {
   const { data: adminSession } = useSession();
   const isAdminSignedIn = Boolean(adminSession?.user?.id);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [publicSession, setPublicSession] = useState<Session | null>(null);
+  const searchDebounceRef = useRef<number | null>(null);
+  const currentSearch = searchParams?.get("search") ?? "";
+
+  function navigateToSearch(value: string, mode: "push" | "replace") {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    const trimmedValue = value.trim();
+
+    if (trimmedValue) {
+      params.set("search", trimmedValue);
+    } else {
+      params.delete("search");
+    }
+
+    const nextUrl: "/" | `/?${string}` = params.toString() ? `/?${params.toString()}` : "/";
+
+    if (mode === "replace") {
+      router.replace(nextUrl);
+      return;
+    }
+
+    router.push(nextUrl);
+  }
+
+  function clearPendingSearchNavigation() {
+    if (searchDebounceRef.current !== null) {
+      window.clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+  }
+
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const submittedValue = formData.get("search");
+    clearPendingSearchNavigation();
+    navigateToSearch(typeof submittedValue === "string" ? submittedValue : "", "push");
+  }
+
+  function handleSearchChange(value: string) {
+    clearPendingSearchNavigation();
+
+    searchDebounceRef.current = window.setTimeout(() => {
+      if (value !== currentSearch && (pathname === "/" || value.trim())) {
+        navigateToSearch(value, "replace");
+      }
+      searchDebounceRef.current = null;
+    }, 300);
+  }
+
+  useEffect(() => clearPendingSearchNavigation, []);
 
   const supabase = useMemo(() => {
     try {
@@ -144,12 +196,14 @@ export function SiteHeader() {
             </Link>
           </nav>
 
-          <form action="/" className="relative">
+          <form action="/" className="relative" onSubmit={handleSearchSubmit}>
             <input
               aria-label="Search stories"
               className="search-input w-40 rounded-full border py-2 pl-4 pr-9 text-sm transition-[width] duration-200 focus:w-52 lg:w-52 lg:focus:w-64"
-              defaultValue=""
+              defaultValue={currentSearch}
+              key={`desktop-search:${pathname}:${currentSearch}`}
               name="search"
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search stories…"
               type="search"
             />
@@ -205,14 +259,16 @@ export function SiteHeader() {
 
       {/* Mobile dropdown */}
       {isMenuOpen ? (
-        <div className="navbar-mobile-menu border-t border-[var(--border)] bg-[var(--card-bg)] px-4 pb-5 pt-4 md:hidden">
+        <div className="navbar-mobile-menu max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-[var(--border)] bg-[var(--card-bg)] px-4 pb-5 pt-4 md:hidden">
           {/* Search */}
-          <form action="/" className="relative">
+          <form action="/" className="relative" onSubmit={handleSearchSubmit}>
             <input
               aria-label="Search stories"
               className="search-input w-full rounded-full border py-2.5 pl-4 pr-10 text-sm"
-              defaultValue=""
+              defaultValue={currentSearch}
+              key={`mobile-search:${pathname}:${currentSearch}`}
               name="search"
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search stories…"
               type="search"
             />

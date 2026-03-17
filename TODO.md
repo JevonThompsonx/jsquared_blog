@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 15, 2026 (session 9) | **Stack**: Next.js 15 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 17, 2026 | **Stack**: Next.js 15 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -123,6 +123,7 @@
 - [x] Like / unlike comments
 - [x] Delete own comment
 - [x] Nested replies (one level deep)
+- [x] Backend comment moderation contract — admin hide / unhide / delete / flag / unflag routes and DAL, moderation metadata on comments, public placeholders for moderated comments
 
 ### Draft & Scheduling
 - [x] Draft / published / scheduled post status
@@ -156,6 +157,9 @@
 | ~~Print-friendly styles~~ | ✅ Done — `@media print` hides nav/buttons, resets backgrounds to white, shows link URLs, sets prose to 11pt |
 | ~~Reduced-motion support~~ | ✅ Done — `@media (prefers-reduced-motion: reduce)` collapses all transitions/animations to 0.01ms; disables lightbox fade |
 | Add a seasonal post slot for the homepage - think whimsy |
+|Remove Spring field notes from homepage|
+|Remove Mud on the boots, green on the horizon. from homepage. Put J²Adventures there and remove J²Adventures travel journal from homepage |
+|Remove Fresh trails, thawing camps, and the first stretch of the year when the map starts calling again from homepage|
 ### Discovery & Navigation
 | Feature | Notes |
 |---------|-------|
@@ -172,7 +176,10 @@
 | ~~Post preview (draft)~~ | ✅ Done — drafts and scheduled posts open via expiring `/preview/[id]?token=...` links; published posts keep live links |
 | ~~Clone post~~ | ✅ Done — dashboard and editor both clone into a new draft edit page with `?cloned=1` success messaging |
 | ~~Alt text warnings in editor~~ | ✅ Done — backend-driven non-blocking warnings render in the rich text editor with thumbnails and reset when the warning set changes |
-| Admin dashboard pagination polish | Add richer page controls beyond Previous/Next; page jump and page-size controls are now in place, but a custom themed select is still open in `docs/PLAN.md` task 3.11. |
+| ~~Admin dashboard pagination polish~~ | ✅ Done — page jump, page-size controls, and a custom themed select are now in place on the dashboard. |
+| Admin page width expansion | In progress — dashboard rows/pagination, post editor sidebar, tags page, and moderation route now use wider shells and roomier desktop composition. Remaining work is browser QA plus consistency review on any future admin subpages. |
+| Comment moderation UI | In progress — admin moderation route, optimistic updates, summary stats, themed thread cards, and an inline themed delete-confirmation pattern are live. Remaining work is browser QA and any small polish issues found there. |
+| Blog post JSON-LD validation | In progress — structured data now renders from `web/src/app/(blog)/posts/[slug]/head.tsx`; still needs deployed Rich Results validation before this can be treated as complete. |
 
 ### Backend & Infrastructure
 | Task | Notes |
@@ -180,11 +187,12 @@
 | ~~Rate limiting on public API routes~~ | ✅ Done — `src/lib/rate-limit.ts` sliding-window in-process limiter; 5/min comments, 30/min likes, 20/min bookmarks per IP; X-RateLimit-* headers on 429. Note: per-instance only — upgrade to Upstash Redis for distributed limiting at scale. |
 | ~~Cloudinary WebP delivery~~ | ✅ Done — `cdnImageUrl()` in `src/lib/cloudinary/transform.ts` inserts `f_auto,q_auto` after `/upload/`; applied to all `imageUrl` fields in `queries/posts.ts` (feed, post detail, gallery images) |
 | Required env var validation | All server env vars currently use `.optional()` — production-critical vars (`TURSO_DATABASE_URL`, `AUTH_SECRET`, etc.) should throw loudly when unset. |
-| DB indexes for posts table | Explicitly add indexes on `posts.slug`, `posts.status`, `posts.published_at`, `posts.author_id` in Drizzle schema (currently only implicit). |
-| `getRelatedPosts` performance | Current implementation loads all published posts to score; fine at current scale but should be memoized or replaced with a DB-side scoring query before the post count grows large. |
+| ~~DB indexes for posts table~~ | ✅ Done — indexes already exist in `web/src/drizzle/schema.ts` and in the initial migration `web/drizzle/0000_broken_mole_man.sql`; no new migration needed. |
+| ~~`getRelatedPosts` performance~~ | ✅ Done — related posts now score against targeted category/tag/recent candidate sets instead of loading the full published corpus. |
 | ~~Sentry error tracking~~ | ✅ Done — Sentry integration is present; verify production alert routing separately if needed. |
 | ~~Tiptap JSON migration~~ | ✅ Done — admin editor now writes native Tiptap JSON; `renderTiptapJson()` backward-compat reads both formats; legacy write path removed entirely |
-| HTTP security headers | No CSP, HSTS, X-Frame-Options, or Permissions-Policy headers configured. Add via `next.config.ts` `headers()` export or `vercel.json`. Prevents clickjacking and XSS escalation paths. |
+| ~~HTTP security headers~~ | ✅ Done — baseline CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy now ship from `web/next.config.ts`; validate CSP against production integrations if a runtime violation appears. |
+| ~~Comment moderation backend~~ | ✅ Done — schema adds `visibility` / `is_flagged` / moderation metadata, admin routes expose moderation + admin comment reads, public reads preserve threads with placeholders, and replies are blocked on non-visible parents. |
 | Integration + E2E tests | Baseline Vitest + Playwright smoke coverage exists, and admin smoke coverage now supports filter/clone/preview with `E2E_ADMIN_STORAGE_STATE`; expand authenticated flows and wire them into CI. |
 
 ### Frontend & UX

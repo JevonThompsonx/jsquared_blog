@@ -4,18 +4,21 @@ import Link from "next/link";
 import type { BlogPost } from "@/types/blog";
 import { getPostHref, htmlToPlainText } from "@/lib/utils";
 import { PostDate } from "@/components/blog/post-date";
+import { cdnBlurDataUrl } from "@/lib/cloudinary/transform";
 
 export function PostCard({ post }: { post: BlogPost }) {
   return (
     <article className="group overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card-bg)] shadow-xl transition-transform duration-300 hover:-translate-y-1">
       {post.imageUrl ? (
-        <div className="relative aspect-[4/3] overflow-hidden">
+        <div className="relative aspect-[4/3] overflow-hidden bg-[var(--accent-soft)]">
           <Image
             alt={post.title}
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
             src={post.imageUrl}
+            placeholder={cdnBlurDataUrl(post.imageUrl) ? "blur" : "empty"}
+            blurDataURL={cdnBlurDataUrl(post.imageUrl)}
           />
         </div>
       ) : null}

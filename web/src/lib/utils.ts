@@ -1,6 +1,47 @@
 import { htmlToPlainText } from "@/lib/content";
 import type { BlogPost } from "@/types/blog";
 
+const SEASON_LABELS = ["Winter", "Spring", "Summer", "Fall"] as const;
+
+type SeasonIndex = 0 | 1 | 2 | 3;
+
+export type SeasonPostGroup = {
+  key: string;
+  label: string;
+  posts: BlogPost[];
+};
+
+function getUtcDateParts(dateString: string): { year: number; month: number } {
+  const date = new Date(dateString);
+
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth(),
+  };
+}
+
+function getSeasonParts(dateString: string): { year: number; seasonIndex: SeasonIndex } {
+  const { year, month } = getUtcDateParts(dateString);
+
+  if (month === 11) {
+    return { year: year + 1, seasonIndex: 0 };
+  }
+
+  if (month <= 1) {
+    return { year, seasonIndex: 0 };
+  }
+
+  if (month <= 4) {
+    return { year, seasonIndex: 1 };
+  }
+
+  if (month <= 7) {
+    return { year, seasonIndex: 2 };
+  }
+
+  return { year, seasonIndex: 3 };
+}
+
 export function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -79,6 +120,44 @@ export function formatRelativeDate(value: string): string {
   if (absDays < 30) return rtf.format(Math.round(diffDays / 7), "week");
   if (absDays < 365) return rtf.format(Math.round(diffDays / 30), "month");
   return rtf.format(Math.round(diffDays / 365), "year");
+}
+
+export function formatSeasonYear(dateString: string): string {
+  const { year, seasonIndex } = getSeasonParts(dateString);
+
+  return `${SEASON_LABELS[seasonIndex]} ${year}`;
+}
+
+export function getSeasonKey(dateString: string): string {
+  const { year, seasonIndex } = getSeasonParts(dateString);
+
+  return `${year}-${seasonIndex + 1}`;
+}
+
+export function getSeasonLabel(dateString: string): string {
+  return formatSeasonYear(dateString);
+}
+
+export function groupPostsBySeason(posts: BlogPost[]): SeasonPostGroup[] {
+  const groups = new Map<string, SeasonPostGroup>();
+
+  for (const post of posts) {
+    const key = getSeasonKey(post.createdAt);
+    const existingGroup = groups.get(key);
+
+    if (existingGroup) {
+      existingGroup.posts.push(post);
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      label: getSeasonLabel(post.createdAt),
+      posts: [post],
+    });
+  }
+
+  return Array.from(groups.values());
 }
 
 export function escapeXml(value: string): string {

@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AdminAuthButton } from "@/components/auth/admin-auth-button";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -44,7 +42,7 @@ export default async function AdminPage({
     <main className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
-      <section className="container mx-auto max-w-4xl rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
+      <section className="container mx-auto max-w-[min(92rem,calc(100vw-2rem))] rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8 lg:p-10">
         <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Admin access</p>
         <h1 className="mt-4 text-3xl font-semibold text-[var(--foreground)] sm:text-4xl">Editorial control center</h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)]">
@@ -58,7 +56,7 @@ export default async function AdminPage({
         ) : null}
 
         {resolvedSearchParams?.error ? (
-          <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mt-6 rounded-2xl border border-[var(--color-warning-soft-border)] bg-[var(--color-warning-soft-bg)] px-4 py-3 text-sm text-[var(--color-warning-text)]">
             Sign-in was denied. Make sure your numeric GitHub account ID is included in `AUTH_ADMIN_GITHUB_IDS`.
           </div>
         ) : null}
