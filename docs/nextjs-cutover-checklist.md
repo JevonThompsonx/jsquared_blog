@@ -135,6 +135,6 @@ Supabase shared email (free tier) confirmed working. Custom SMTP not yet configu
 
 ## Recommended Next Steps
 
-1. Pause Nextcloud sync → manually delete `client/` and `server/` → resume sync
-2. Decommission Cloudflare Worker in the Cloudflare dashboard
-3. Remove old Cloudflare Workers environment variables from the dashboard
+1. Decommission the legacy Cloudflare Worker in the Cloudflare dashboard
+2. Remove old Cloudflare Workers environment variables and build settings from the dashboard
+3. Keep expanding automated coverage for authenticated admin flows and remaining UX polish tasks

@@ -55,6 +55,32 @@ function formatBulkResultMessage(result: PostPublishResult): string {
   return parts.join(" ");
 }
 
+function clampPageNumber(value: number, totalPages: number): number {
+  return Math.min(Math.max(value, 1), totalPages);
+}
+
+function parsePageJumpValue(value: string, totalPages: number): number | null {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const parsedValue = Number.parseInt(trimmedValue, 10);
+  if (!Number.isFinite(parsedValue)) {
+    return null;
+  }
+
+  return clampPageNumber(parsedValue, totalPages);
+}
+
+function getVisiblePageNumbers(page: number, totalPages: number): number[] {
+  const pageNumbers = new Set<number>([1, totalPages, page - 1, page, page + 1]);
+
+  return Array.from(pageNumbers)
+    .filter((value) => value >= 1 && value <= totalPages)
+    .sort((left, right) => left - right);
+}
+
 export function AdminDashboard({
   session,
   counts,
@@ -72,6 +98,7 @@ export function AdminDashboard({
   const [isPending, startTransition] = useTransition();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(postsResult.filters.query);
+  const [pageJumpInput, setPageJumpInput] = useState(String(postsResult.page));
 
   const posts = postsResult.posts;
   const { page, totalPages, totalCount } = postsResult;
@@ -85,6 +112,10 @@ export function AdminDashboard({
   useEffect(() => {
     setSearchInput(activeQuery);
   }, [activeQuery]);
+
+  useEffect(() => {
+    setPageJumpInput(String(page));
+  }, [page]);
 
   useEffect(() => {
     setSelectedPostIds(new Set());
@@ -122,6 +153,7 @@ export function AdminDashboard({
   const hasDrafts = selectedPosts.some((post) => post.status === "draft");
   const hasPublished = selectedPosts.some((post) => post.status === "published");
   const hasScheduled = selectedPosts.some((post) => post.status === "scheduled");
+  const visiblePageNumbers = useMemo(() => getVisiblePageNumbers(page, totalPages), [page, totalPages]);
 
   const togglePost = (id: string) => {
     const next = new Set(selectedPostIds);
@@ -160,6 +192,16 @@ export function AdminDashboard({
     }
 
     navigateToDashboard(getDashboardPath(params));
+  };
+
+  const handlePageJump = () => {
+    const nextPage = parsePageJumpValue(pageJumpInput, totalPages);
+    if (!nextPage || nextPage === page) {
+      setPageJumpInput(String(page));
+      return;
+    }
+
+    updateFilters({ page: nextPage });
   };
 
   const handleBulkPublish = () => {
@@ -267,11 +309,13 @@ export function AdminDashboard({
             <input
               type="search"
               placeholder="Search posts..."
+              aria-label="Search posts"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="min-w-0 flex-1 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
             />
             <select
+              aria-label="Filter posts by status"
               value={activeStatus}
               onChange={(e) => updateFilters({ status: e.target.value })}
               className="rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
@@ -282,6 +326,7 @@ export function AdminDashboard({
               <option value="scheduled">Scheduled</option>
             </select>
             <select
+              aria-label="Filter posts by category"
               value={activeCategory}
               onChange={(e) => updateFilters({ category: e.target.value })}
               className="rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
@@ -294,6 +339,7 @@ export function AdminDashboard({
               ))}
             </select>
             <select
+              aria-label="Sort posts"
               value={activeSort}
               onChange={(e) => updateFilters({ sort: e.target.value })}
               className="rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
@@ -413,8 +459,14 @@ export function AdminDashboard({
                   </span>
                 </div>
 
-                {posts.map((post: AdminPostRecord) => (
-                  <article key={post.id} className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
+                 {posts.map((post: AdminPostRecord) => (
+                   <article
+                     key={post.id}
+                     className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5"
+                     data-post-id={post.id}
+                     data-post-status={post.status}
+                     data-testid="admin-post-row"
+                   >
                     <div className="pt-1">
                       <input
                         type="checkbox"
@@ -442,9 +494,9 @@ export function AdminDashboard({
                               </span>
                             ) : null}
                           </div>
-                          <h4 className="mt-3 text-lg font-semibold text-[var(--foreground)] sm:text-xl">
-                            {post.title}
-                          </h4>
+                           <h4 className="mt-3 text-lg font-semibold text-[var(--foreground)] sm:text-xl" data-testid="admin-post-title">
+                             {post.title}
+                           </h4>
                           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                             {post.excerpt ||
                               "This post is synced into Turso and ready for native admin tooling."}
@@ -471,12 +523,13 @@ export function AdminDashboard({
                           ) : null}
                         </div>
                         <div className="flex w-full flex-wrap gap-4 sm:w-auto">
-                          <button
-                            type="button"
-                            onClick={() => handleClone(post.id)}
-                            disabled={isPending}
-                            className="font-semibold text-[var(--accent)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
-                          >
+                           <button
+                             type="button"
+                             onClick={() => handleClone(post.id)}
+                             disabled={isPending}
+                             data-testid="admin-post-clone"
+                             className="font-semibold text-[var(--accent)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
+                           >
                             Clone
                           </button>
                           <Link
@@ -497,6 +550,7 @@ export function AdminDashboard({
                               type="button"
                               onClick={() => handlePreview(post.id)}
                               disabled={isPending}
+                              data-testid="admin-post-preview"
                               className="font-semibold text-[var(--accent)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
                             >
                               Preview
@@ -509,10 +563,88 @@ export function AdminDashboard({
                 ))}
 
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-                  <span>
-                    Page {page} of {totalPages}
-                  </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span>
+                      Page {page} of {totalPages}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {visiblePageNumbers.map((pageNumber, index) => (
+                        <div key={pageNumber} className="flex items-center gap-2">
+                          {index > 0 && visiblePageNumbers[index - 1] !== pageNumber - 1 ? (
+                            <span aria-hidden="true" className="text-[var(--muted)]">
+                              ...
+                            </span>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => updateFilters({ page: pageNumber })}
+                            disabled={pageNumber === page}
+                            className={`rounded-full border px-3 py-1.5 font-semibold transition-colors ${
+                              pageNumber === page
+                                ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--on-primary)]"
+                                : "border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--accent-soft)]"
+                            } disabled:cursor-default disabled:opacity-100`}
+                            aria-current={pageNumber === page ? "page" : undefined}
+                            aria-label={`Go to page ${pageNumber}`}
+                          >
+                            {pageNumber}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-full border border-[var(--border)] px-2 py-1">
+                      <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]" htmlFor="admin-page-jump">
+                        Jump
+                      </label>
+                      <input
+                        id="admin-page-jump"
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        inputMode="numeric"
+                        value={pageJumpInput}
+                        onChange={(event) => setPageJumpInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            handlePageJump();
+                          }
+                        }}
+                        className="w-16 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-center text-sm text-[var(--foreground)]"
+                        aria-label="Jump to page"
+                      />
+                      <button
+                        type="button"
+                        onClick={handlePageJump}
+                        className="rounded-full border border-[var(--border)] px-3 py-1.5 font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)]"
+                      >
+                        Go
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1 rounded-full border border-[var(--border)] p-1">
+                      {[12, 24, 48].map((size) => {
+                        const isActiveSize = postsResult.pageSize === size;
+
+                        return (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => updateFilters({ pageSize: size, page: 1 })}
+                            className={`rounded-full px-3 py-1.5 font-semibold transition-colors ${
+                              isActiveSize
+                                ? "bg-[var(--primary)] text-[var(--on-primary)]"
+                                : "text-[var(--foreground)] hover:bg-[var(--accent-soft)]"
+                            }`}
+                            aria-pressed={isActiveSize}
+                            aria-label={`Show ${size} posts per page`}
+                          >
+                            {size}/page
+                          </button>
+                        );
+                      })}
+                    </div>
                     <button
                       type="button"
                       onClick={() => updateFilters({ page: page - 1 })}
@@ -558,7 +690,10 @@ export function AdminDashboard({
       </section>
 
       {toastMessage ? (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--foreground)] px-5 py-3 text-[var(--background)] shadow-2xl">
+        <div
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--foreground)] px-5 py-3 text-[var(--background)] shadow-2xl"
+          role="status"
+        >
           <span className="text-sm font-medium">{toastMessage}</span>
           <button
             type="button"

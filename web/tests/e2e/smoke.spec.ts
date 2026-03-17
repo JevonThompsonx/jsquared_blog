@@ -4,6 +4,12 @@ import { expect, test } from "@playwright/test";
 // Set E2E_BASE_URL to target a specific environment, otherwise defaults to
 // http://localhost:3000 (local dev server must be running).
 
+const adminStorageState = process.env.E2E_ADMIN_STORAGE_STATE;
+
+if (adminStorageState) {
+  test.use({ storageState: adminStorageState });
+}
+
 test.describe("public pages smoke tests", () => {
 
   test("homepage loads with post feed", async ({ page }) => {
@@ -78,4 +84,46 @@ test.describe("public pages smoke tests", () => {
     await expect(page).toHaveURL(/github\.com\/login|\/api\/auth\/signin/, { timeout: 10_000 });
   });
 
+});
+
+test.describe("authenticated admin smoke tests", () => {
+  test.skip(!adminStorageState, "Set E2E_ADMIN_STORAGE_STATE to run admin smoke tests.");
+
+  test("admin can filter, clone, and preview a post", async ({ page }) => {
+    await page.goto("/admin");
+
+    const postRows = page.getByTestId("admin-post-row");
+    await expect(postRows.first()).toBeVisible({ timeout: 15_000 });
+
+    const firstPostRow = postRows.first();
+    const firstPostTitle = (await firstPostRow.getByTestId("admin-post-title").textContent())?.trim() ?? "";
+    expect(firstPostTitle.length).toBeGreaterThan(0);
+
+    const searchQuery = firstPostTitle.slice(0, Math.min(12, firstPostTitle.length));
+    await page.getByLabel("Search posts").fill(searchQuery);
+    await page.waitForURL((url) => url.searchParams.get("search") === searchQuery, { timeout: 10_000 });
+    await expect(page.getByTestId("admin-post-row").first().getByTestId("admin-post-title")).toContainText(searchQuery);
+
+    const filteredFirstRow = page.getByTestId("admin-post-row").first();
+    const filteredStatus = await filteredFirstRow.getAttribute("data-post-status");
+    if (filteredStatus) {
+      await page.getByLabel("Filter posts by status").selectOption(filteredStatus);
+      await page.waitForURL((url) => url.searchParams.get("status") === filteredStatus, { timeout: 10_000 });
+      await expect(page.getByTestId("admin-post-row").first()).toHaveAttribute("data-post-status", filteredStatus);
+    }
+
+    await filteredFirstRow.getByTestId("admin-post-clone").click();
+    await page.waitForURL(/\/admin\/posts\/.*\/edit\?cloned=1/, { timeout: 15_000 });
+    await expect(page.getByText("Draft clone created successfully.")).toBeVisible();
+
+    const previewButton = page.getByRole("button", { name: "Preview" });
+    await expect(previewButton).toBeVisible();
+    const popupPromise = page.waitForEvent("popup");
+    await previewButton.click();
+    const previewPage = await popupPromise;
+
+    await previewPage.waitForLoadState("domcontentloaded");
+    await expect(previewPage).toHaveURL(/\/preview\//, { timeout: 15_000 });
+    await expect(previewPage.getByText("Preview Mode")).toBeVisible();
+  });
 });

@@ -143,7 +143,6 @@
 ### Maintenance
 | Task | Notes |
 |------|-------|
-| Update CI/CD workflow | `.github/workflows/ci.yml` still references legacy `client/`, `shared/`, `build:shared` targets. Needs rewrite for `web/`-only monorepo. |
 | Custom SMTP for Supabase | Optional — shared email is working. Configure Resend or similar for reliability at scale. |
 | Decommission Cloudflare Worker | Delete in dashboard when legacy stack is fully retired. |
 
@@ -156,7 +155,7 @@
 | ~~Inline images in gallery lightbox~~ | ✅ Done — inline `<img>` tags in post prose are extracted server-side, assigned gallery indices, and included in the lightbox filmstrip; clicking any prose image opens the lightbox at that slide |
 | ~~Print-friendly styles~~ | ✅ Done — `@media print` hides nav/buttons, resets backgrounds to white, shows link URLs, sets prose to 11pt |
 | ~~Reduced-motion support~~ | ✅ Done — `@media (prefers-reduced-motion: reduce)` collapses all transitions/animations to 0.01ms; disables lightbox fade |
-| Add a seasonal post slit for the homepage - think whimsy |
+| Add a seasonal post slot for the homepage - think whimsy |
 ### Discovery & Navigation
 | Feature | Notes |
 |---------|-------|
@@ -169,8 +168,11 @@
 ### Admin Quality of Life
 | Feature | Notes |
 |---------|-------|
-| Bulk publish / unpublish | Checkbox selection on admin dashboard post list |
-| Post preview (draft) | Preview a draft at a shareable but unlisted URL before publishing |
+| ~~Bulk publish / unpublish~~ | ✅ Done — dashboard selection toolbar supports bulk publish/unpublish with updated/unchanged/missing feedback and clears page-local selection when result sets change |
+| ~~Post preview (draft)~~ | ✅ Done — drafts and scheduled posts open via expiring `/preview/[id]?token=...` links; published posts keep live links |
+| ~~Clone post~~ | ✅ Done — dashboard and editor both clone into a new draft edit page with `?cloned=1` success messaging |
+| ~~Alt text warnings in editor~~ | ✅ Done — backend-driven non-blocking warnings render in the rich text editor with thumbnails and reset when the warning set changes |
+| Admin dashboard pagination polish | Add richer page controls beyond Previous/Next; page jump and page-size controls are now in place, but a custom themed select is still open in `docs/PLAN.md` task 3.11. |
 
 ### Backend & Infrastructure
 | Task | Notes |
@@ -180,10 +182,10 @@
 | Required env var validation | All server env vars currently use `.optional()` — production-critical vars (`TURSO_DATABASE_URL`, `AUTH_SECRET`, etc.) should throw loudly when unset. |
 | DB indexes for posts table | Explicitly add indexes on `posts.slug`, `posts.status`, `posts.published_at`, `posts.author_id` in Drizzle schema (currently only implicit). |
 | `getRelatedPosts` performance | Current implementation loads all published posts to score; fine at current scale but should be memoized or replaced with a DB-side scoring query before the post count grows large. |
-| Sentry error tracking | No error monitoring in production. Add Sentry for exception capture and alerting. |
+| ~~Sentry error tracking~~ | ✅ Done — Sentry integration is present; verify production alert routing separately if needed. |
 | ~~Tiptap JSON migration~~ | ✅ Done — admin editor now writes native Tiptap JSON; `renderTiptapJson()` backward-compat reads both formats; legacy write path removed entirely |
 | HTTP security headers | No CSP, HSTS, X-Frame-Options, or Permissions-Policy headers configured. Add via `next.config.ts` `headers()` export or `vercel.json`. Prevents clickjacking and XSS escalation paths. |
-| Integration + E2E tests | Only `web/tests/unit/env.test.ts` exists. No API route tests or user-flow (Playwright/Cypress) tests. Critical paths (auth, comment post, admin save) are fully untested in CI. |
+| Integration + E2E tests | Baseline Vitest + Playwright smoke coverage exists, and admin smoke coverage now supports filter/clone/preview with `E2E_ADMIN_STORAGE_STATE`; expand authenticated flows and wire them into CI. |
 
 ### Frontend & UX
 | Task | Notes |

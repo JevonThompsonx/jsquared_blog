@@ -1,13 +1,12 @@
 # J²Adventures – Next.js Port Handoff
 
-Last updated: 2026-03-15
+Last updated: 2026-03-17
 
 ## Where we are
 
-The Next.js `web/` app is **feature-complete and smoke-tested**. All reading flows, admin
-auth, and SEO are confirmed working. The only remaining step before retiring the legacy
-stack is completing the public auth/comment manual flows and then deleting `client/`,
-`server/`, and `shared/`.
+The Next.js `web/` app is the active production codebase. Core reading, admin,
+public auth, comments, and SEO flows are in place, and the legacy `client/`, `server/`,
+and `shared/` stacks have already been removed.
 
 The authoritative status tracker is `docs/nextjs-cutover-checklist.md`.
 
@@ -48,29 +47,19 @@ The authoritative status tracker is `docs/nextjs-cutover-checklist.md`.
 
 ---
 
-## What is left before the legacy can be retired
+## What is left
 
-### 1. Complete manual smoke test  `[~]`
+### 1. Operational cleanup  `[~]`
 
-Reading/SEO/admin flows are confirmed. Still pending (require a real signed-in public user):
+- Decommission the legacy Cloudflare Worker in the dashboard
+- Remove any no-longer-used Cloudflare environment variables and build settings
+- Optionally configure custom SMTP for Supabase if shared email deliverability becomes a concern
 
-- Signup email delivery (check spam, or configure custom SMTP in Supabase dashboard)
-- Login → `redirectTo` redirect
-- Account settings: display name save, theme persist, email/password change
-- Post a comment, like/unlike, delete own comment
+### 2. Quality-of-life follow-up  `[~]`
 
-### 2. Delete legacy code  `[ ]`
-
-When the full smoke test passes:
-
-1. Delete `client/` directory
-2. Delete `server/` directory
-3. Delete `shared/` directory
-4. Remove `client`, `server`, `shared` workspace entries from root `package.json`
-5. Remove `bun.lockb` and re-lock with only `web/`
-6. Decommission the Cloudflare Worker in the dashboard
-7. Update Cloudflare Pages build settings to point to `web/`
-8. Remove old environment variables from Cloudflare Workers dashboard
+- Expand authenticated Playwright coverage for admin flows beyond the current smoke path
+- Finish the remaining UX polish tasks tracked in `docs/PLAN.md` Phase 3
+- Keep `TODO.md` as the practical working backlog and `docs/PLAN.md` as the phase-level roadmap
 
 ---
 

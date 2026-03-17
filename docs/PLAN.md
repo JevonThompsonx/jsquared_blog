@@ -53,13 +53,13 @@ Everything below is additive — the app is live and stable.
 
 | # | Task | Owner | Files Touched | Status |
 |---|------|-------|--------------|--------|
-| 2.1 | Bulk publish/unpublish on admin dashboard | Sonnet (action) + Gemini (UI) | `web/src/app/admin/actions.ts`, `web/src/components/admin/admin-dashboard.tsx` | TODO |
-| 2.2 | Post preview at unlisted URL (`/preview/[id]`) | Sonnet (route) + Gemini (page) | `web/src/app/(blog)/preview/[id]/page.tsx`, `web/src/server/dal/posts.ts` | TODO |
-| 2.3 | Canonical Tiptap JSON storage (replace HTML payload) | Sonnet | `web/src/server/dal/admin-posts.ts`, `web/src/lib/content.ts` | TODO |
-| 2.4 | Admin post list: search, filter by status/category | Gemini Low | `web/src/components/admin/admin-dashboard.tsx` | TODO |
-| 2.5 | Scheduled post auto-publish cron (Vercel Cron) | Sonnet | `web/src/app/api/cron/publish-scheduled/route.ts`, `vercel.json` | TODO |
-| 2.6 | Post duplication ("Clone post" button) | Sonnet (action) + Gemini (UI) | `web/src/app/admin/actions.ts` | TODO |
-| 2.7 | Image alt text validation warning in editor | Gemini Low | `web/src/components/admin/post-media-manager.tsx` | TODO |
+| 2.1 | Bulk publish/unpublish on admin dashboard | Sonnet (action) + Gemini (UI) | `web/src/app/admin/actions.ts`, `web/src/components/admin/admin-dashboard.tsx` | DONE |
+| 2.2 | Post preview at unlisted URL (`/preview/[id]`) | Sonnet (route) + Gemini (page) | `web/src/app/(blog)/preview/[id]/page.tsx`, `web/src/server/posts/preview.ts` | DONE |
+| 2.3 | Canonical Tiptap JSON storage (replace HTML payload) | Sonnet | `web/src/server/dal/admin-posts.ts`, `web/src/lib/content.ts` | DONE |
+| 2.4 | Admin post list: search, filter by status/category | Gemini Low | `web/src/components/admin/admin-dashboard.tsx` | DONE |
+| 2.5 | Scheduled post auto-publish cron (Vercel Cron) | Sonnet | `web/src/app/api/cron/publish-scheduled/route.ts`, `web/vercel.json` | DONE |
+| 2.6 | Post duplication ("Clone post" button) | Sonnet (action) + Gemini (UI) | `web/src/app/admin/actions.ts`, `web/src/components/admin/post-editor-form.tsx` | DONE |
+| 2.7 | Image alt text validation warning in editor | Gemini Low | `web/src/components/admin/post-rich-text-editor.tsx` | DONE |
 
 **Exit criteria**: Admin can bulk-manage posts, preview drafts, and scheduled posts auto-publish.
 
