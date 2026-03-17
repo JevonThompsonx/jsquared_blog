@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 
 import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
+import { listTagsForPost } from "@/server/dal/posts";
 import { ensureSeriesId } from "@/server/dal/series";
 import { requireAdminSession } from "@/lib/auth/session";
 import { htmlToPlainText, renderTiptapJson } from "@/lib/content";
@@ -404,4 +406,160 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   revalidatePath("/admin");
   revalidatePath(`/posts/${slug}`);
   redirect((`/admin/posts/${postId}/edit?saved=1`) as never);
+}
+
+const bulkUpdatePostStatusSchema = z.object({
+  postIds: z.array(z.string().min(1)).min(1).max(100),
+  status: z.enum(["published", "draft"]),
+});
+
+export async function bulkUpdatePostStatusAction(
+  postIds: string[],
+  status: "published" | "draft",
+): Promise<{ updatedCount: number }> {
+  await ensureAdmin();
+
+  const { postIds: validPostIds, status: validStatus } = bulkUpdatePostStatusSchema.parse({
+    postIds,
+    status,
+  });
+
+  const db = getDb();
+  const now = new Date();
+
+  const existing = await db
+    .select({ id: posts.id, slug: posts.slug, publishedAt: posts.publishedAt })
+    .from(posts)
+    .where(inArray(posts.id, validPostIds));
+
+  if (validStatus === "published") {
+    const alreadyPublished = existing.filter((p) => p.publishedAt !== null);
+    const notYetPublished = existing.filter((p) => p.publishedAt === null);
+
+    if (alreadyPublished.length > 0) {
+      await db
+        .update(posts)
+        .set({ status: "published", scheduledPublishTime: null, updatedAt: now })
+        .where(inArray(posts.id, alreadyPublished.map((p) => p.id)));
+    }
+
+    if (notYetPublished.length > 0) {
+      await db
+        .update(posts)
+        .set({ status: "published", publishedAt: now, scheduledPublishTime: null, updatedAt: now })
+        .where(inArray(posts.id, notYetPublished.map((p) => p.id)));
+    }
+  } else {
+    await db
+      .update(posts)
+      .set({ status: "draft", publishedAt: null, scheduledPublishTime: null, updatedAt: now })
+      .where(inArray(posts.id, validPostIds));
+  }
+
+  for (const post of existing) {
+    revalidatePath(`/posts/${post.slug}`);
+  }
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  return { updatedCount: existing.length };
+}
+
+const bulkPostIdsSchema = z.object({
+  postIds: z.array(z.string().min(1)).min(1).max(50),
+});
+
+export async function bulkPublishPosts(postIds: string[]): Promise<{ updated: number }> {
+  await ensureAdmin();
+
+  const { postIds: validPostIds } = bulkPostIdsSchema.parse({ postIds });
+  const db = getDb();
+  const now = new Date();
+
+  const result = await db
+    .update(posts)
+    .set({ status: "published", publishedAt: now, scheduledPublishTime: null, updatedAt: now })
+    .where(and(inArray(posts.id, validPostIds), eq(posts.status, "draft")));
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  return { updated: result.rowsAffected ?? validPostIds.length };
+}
+
+export async function bulkUnpublishPosts(postIds: string[]): Promise<{ updated: number }> {
+  await ensureAdmin();
+
+  const { postIds: validPostIds } = bulkPostIdsSchema.parse({ postIds });
+  const db = getDb();
+  const now = new Date();
+
+  const result = await db
+    .update(posts)
+    .set({ status: "draft", publishedAt: null, scheduledPublishTime: null, updatedAt: now })
+    .where(inArray(posts.id, validPostIds));
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  return { updated: result.rowsAffected ?? validPostIds.length };
+}
+
+const clonePostSchema = z.object({
+  postId: z.string().min(1),
+});
+
+export async function clonePost(postId: string): Promise<{ postId: string; slug: string }> {
+  await ensureAdmin();
+
+  const { postId: validPostId } = clonePostSchema.parse({ postId });
+  const db = getDb();
+
+  const source = await db.query.posts.findFirst({
+    where: eq(posts.id, validPostId),
+  });
+
+  if (!source) {
+    throw new Error(`Post ${validPostId} not found`);
+  }
+
+  const tagRows = await listTagsForPost(validPostId);
+
+  const newId = crypto.randomUUID();
+  const newSlug = `${source.slug}-copy-${Date.now()}`;
+  const now = new Date();
+
+  await db.insert(posts).values({
+    id: newId,
+    title: `Copy of ${source.title}`,
+    slug: newSlug,
+    contentJson: source.contentJson,
+    excerpt: source.excerpt,
+    status: "draft",
+    layoutType: source.layoutType,
+    publishedAt: null,
+    scheduledPublishTime: null,
+    authorId: source.authorId,
+    categoryId: source.categoryId,
+    seriesId: null,
+    seriesOrder: null,
+    featuredImageId: source.featuredImageId,
+    externalGalleryUrl: source.externalGalleryUrl,
+    externalGalleryLabel: source.externalGalleryLabel,
+    locationName: source.locationName,
+    locationLat: source.locationLat,
+    locationLng: source.locationLng,
+    locationZoom: source.locationZoom,
+    iovanderUrl: source.iovanderUrl,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  for (const tag of tagRows) {
+    await db.insert(postTags).values({ postId: newId, tagId: tag.tagId }).onConflictDoNothing();
+  }
+
+  revalidatePath("/admin");
+
+  return { postId: newId, slug: newSlug };
 }

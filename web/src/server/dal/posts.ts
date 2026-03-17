@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { categories, comments, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
@@ -290,6 +290,113 @@ export async function countPublishedPostsByTagSlug(tagSlug: string): Promise<num
     .innerJoin(tags, eq(postTags.tagId, tags.id))
     .where(and(eq(posts.status, "published"), eq(tags.slug, tagSlug)));
   return Number(rows[0]?.n ?? 0);
+}
+
+export type AnyStatusPostRecord = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  contentJson: string;
+  status: "draft" | "published" | "scheduled";
+  scheduledPublishTime: Date | null;
+  category: string | null;
+  imageUrl: string | null;
+  layoutType: "standard" | "split-horizontal" | "split-vertical" | "hover" | null;
+  createdAt: Date;
+  publishedAt: Date | null;
+  locationName: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationZoom: number | null;
+  iovanderUrl: string | null;
+  authorId: string;
+};
+
+export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRecord | null> {
+  const db = getDb();
+
+  const rows = await db
+    .select({
+      id: posts.id,
+      slug: posts.slug,
+      title: posts.title,
+      excerpt: posts.excerpt,
+      contentJson: posts.contentJson,
+      status: posts.status,
+      scheduledPublishTime: posts.scheduledPublishTime,
+      category: categories.name,
+      imageUrl: mediaAssets.secureUrl,
+      layoutType: posts.layoutType,
+      createdAt: posts.createdAt,
+      publishedAt: posts.publishedAt,
+      locationName: posts.locationName,
+      locationLat: posts.locationLat,
+      locationLng: posts.locationLng,
+      locationZoom: posts.locationZoom,
+      iovanderUrl: posts.iovanderUrl,
+      authorId: posts.authorId,
+    })
+    .from(posts)
+    .leftJoin(categories, eq(posts.categoryId, categories.id))
+    .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
+    .where(eq(posts.id, id))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+/**
+ * Finds all scheduled posts whose scheduledPublishTime has passed, transitions them to
+ * published (setting publishedAt = scheduledPublishTime), and returns the published post IDs.
+ * Intended to be called from the Vercel Cron route only.
+ */
+export async function publishDueScheduledPosts(): Promise<string[]> {
+  const db = getDb();
+  const now = new Date();
+
+  const due = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(
+      and(
+        eq(posts.status, "scheduled"),
+        lte(posts.scheduledPublishTime, now),
+      ),
+    );
+
+  if (due.length === 0) return [];
+
+  const ids = due.map((p) => p.id);
+
+  await db
+    .update(posts)
+    .set({
+      status: "published",
+      // Use the originally scheduled time as publishedAt so post ordering is accurate
+      publishedAt: sql`${posts.scheduledPublishTime}`,
+      scheduledPublishTime: null,
+      updatedAt: now,
+    })
+    .where(inArray(posts.id, ids));
+
+  return ids;
+}
+
+export async function schedulePost(postId: string, scheduledAt: Date): Promise<void> {
+  const db = getDb();
+  await db
+    .update(posts)
+    .set({ status: "scheduled", scheduledPublishTime: scheduledAt, updatedAt: new Date() })
+    .where(eq(posts.id, postId));
+}
+
+export async function unschedulePost(postId: string): Promise<void> {
+  const db = getDb();
+  await db
+    .update(posts)
+    .set({ status: "draft", scheduledPublishTime: null, updatedAt: new Date() })
+    .where(eq(posts.id, postId));
 }
 
 export async function listImagesForPost(postId: string): Promise<PublishedPostImageRecord[]> {
