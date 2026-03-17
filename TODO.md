@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 14, 2026 | **Stack**: Next.js 15 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 15, 2026 (session 9) | **Stack**: Next.js 15 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -13,6 +13,8 @@
 | Public Auth | Supabase Auth | Working |
 | Admin Auth | Auth.js + GitHub OAuth | Working |
 | Image Storage | Cloudinary | Working |
+| Map Tiles | Stadia Maps (Outdoors) + MapLibre GL | Working |
+| Geocoding | Nominatim (OSM, server-side on save) | Working |
 | Deployment | Vercel | Live |
 
 ---
@@ -40,17 +42,63 @@
 - [x] RSS feed (`/feed.xml`)
 - [x] Search (URL query param, server-side)
 - [x] `/settings` → `/account` redirect
+- [x] Table of contents — auto-generated from h2–h4, scroll-tracked active section, collapsible
+- [x] Date formatting toggle — click any date to switch absolute ↔ relative; preference persisted to localStorage; default absolute
+- [x] Series/collections pages (`/series/[slug]`) — ordered post list with part badges
+- [x] Print-friendly styles — `@media print` hides nav/buttons, resets backgrounds, shows URLs
+- [x] Reduced-motion support — `prefers-reduced-motion` kills all transitions/animations
+- [x] Lora serif heading font — applied to hero title and prose h2/h3/h4 via `next/font/google`
+- [x] `next/image` throughout — all `<img>` tags replaced with `next/image` (WebP, CDN, srcset)
+- [x] Skeleton loading + `loading.tsx` — pulse skeletons while feed route fetches data
+- [x] Comment counts on post cards — shown in card footer when count > 0
+- [x] Author bio card on post detail — avatar, display name, bio, link to author profile
+- [x] Dark mode text fix — `.theme-root { color: var(--foreground) }` ensures inherited text reads dark-mode vars
+- [x] Tag descriptions — `description` column on `tags` table (migration 0004); shown on `/tag/[slug]` header; used in metadata
+- [x] Empty search state — action buttons ("Browse all stories", "Explore the map") on zero-result search; same pattern in `FilteredFeed` for category/tag pages
+- [x] Button contrast (`--btn-bg` / `--btn-text`) — dedicated CSS vars for CTA buttons; deep forest + lime in light mode, lime + dark in dark mode; `.btn-primary` class in globals.css overrides cascade layer issues
+- [x] Tag description admin UI — `/admin/tags` page lists all tags with post counts and inline description editor; "Manage tags" link on admin dashboard
+- [x] Tag & category page redesign — rich hero header with icon badge, post count, description (tags); consistent layout across both `/tag/[slug]` and `/category/[cat]` pages
+- [x] Category-specific SVG icons — each category slug (hiking, van-life, international, gear, camping, road-trips) maps to a distinct inline SVG icon on the category hero; icon badge scales + border highlights on hover
+- [x] Category/tag kicker chip hover — `.post-card-kicker` and `.card-overlay-kicker` gain pill background + accent color on hover; negative-margin trick prevents layout shift
+
+### Gallery & Media
+- [x] Featured image + gallery with focal points and alt text
+- [x] Full-screen lightbox with filmstrip thumbnails, SVG nav icons, fade animation, counter top bar
+- [x] Keyboard navigation (arrow keys + Esc) and mobile swipe gestures
 
 ### Admin Experience
 - [x] GitHub OAuth admin login
 - [x] Admin dashboard with post list
-- [x] Create post (Tiptap editor, status, scheduling, category, tags, images)
-- [x] Edit post
+- [x] Create/edit post — Tiptap editor, status, scheduling, category, tags, images, series, location
 - [x] Cloudinary image upload (editorial images)
-- [x] Featured image + gallery with focal points and alt text
 - [x] "Edit post" button on post detail when admin is signed in
 - [x] Admin username in navbar links to `/admin`
-- [x] "Sign in" link hidden when admin is signed in
+- [x] Series management — `SeriesSelector` client component: `ComboboxInput` dropdown of existing series; fetches taken part numbers from `/api/admin/series/[seriesId]/part-numbers` on series change; auto-fills next available number; amber conflict warning + clickable shortcuts when chosen number is taken; `isFirstFetch` ref guard preserves existing post's part number on edit-page load
+- [x] `ComboboxInput` — reusable client combobox: dropdown filters from static list, × clear button (onMouseDown + preventDefault to avoid blur race), `onValueChange` callback
+- [x] `TagMultiSelect` — selected tags as primary-colored pills with × remove; text input with Enter/comma/Add button for new tags; unselected existing tags as outline pills (click to toggle); new-tag indicator; hidden `<input name="tagNames">` for form submission
+- [x] Location field with Nominatim autocomplete — free-text ("Portland, OR", "California"); geocoded on save
+- [x] iOverlander URL field — stored and rendered as a button on post detail + map popup
+- [x] Inline image insertion in Tiptap editor — "Image" toolbar button; Cloudinary upload; alt text panel; inserted at cursor
+- [x] Tiptap JSON storage — admin editor writes native `{type:"doc",...}` JSON; `renderTiptapJson()` handles both new format and legacy `{type:"legacy-html"}` payloads for backward-compatible reads; legacy wrapper entirely removed from write path
+- [x] `web/scripts/seed-series-categories.ts` — idempotent seed script for 5 test series + 6 categories (uses `onConflictDoNothing`)
+
+### Map View
+- [x] MapLibre GL JS + Stadia Maps (Outdoors) — open source, no vendor lock-in
+- [x] Post detail map — embedded below prose, above comments; shows location pin + name + iOverlander link
+- [x] World map (`/map`) — all published posts with locations as clickable pins; popup shows thumbnail, title, category, date, link
+- [x] Map starts centered on United States (zoom 3.5)
+- [x] Geocoding via Nominatim on admin save — auto zoom based on result type (country/region/city/precise)
+- [x] Map nav link in site header (desktop + mobile)
+- [x] Graceful fallback when `NEXT_PUBLIC_STADIA_MAPS_API_KEY` is unset
+- [x] Map clustering — nearby pins auto-group when zoomed out via MapLibre GeoJSON source (`cluster: true`); click cluster zooms in; three green shades scale with count
+- [x] Map filter by category — category pill buttons above map; filters pins and the post list below; resets popup on switch
+
+### Post Series
+- [x] `series` table (id, title, slug, description, created_at)
+- [x] `series_id`, `series_order` columns on posts
+- [x] `SeriesNav` component on post detail — "Part X of Y", prev/next post links
+- [x] `/series/[slug]` public page — ordered list with part badges and thumbnails
+- [x] Admin editor series section — datalist of existing series, auto-creates new ones
 
 ### Public User Experience
 - [x] Supabase signup with duplicate-email detection
@@ -59,6 +107,8 @@
 - [x] Account settings page (`/account`): display name, avatar, theme, email, password, sign out
 - [x] Avatar: preset icons (`j2:*`), file upload (Cloudinary), URL input, initials fallback
 - [x] Theme preference saved to DB + auto-applied on any page when signed in (`UserThemeSync`)
+- [x] Post bookmarks — toggle, `/bookmarks` saved-posts page, "Saved" nav link when signed in
+- [x] Author profiles (`/author/[id]`) — profile card, stats, comment activity feed
 
 ### Theme System
 - [x] Light/dark mode toggle
@@ -73,7 +123,6 @@
 - [x] Like / unlike comments
 - [x] Delete own comment
 - [x] Nested replies (one level deep)
-- [x] Reply to any comment from own or other accounts
 
 ### Draft & Scheduling
 - [x] Draft / published / scheduled post status
@@ -91,41 +140,60 @@
 
 ## In Progress / Next Up
 
-### High Priority
+### Maintenance
+| Task | Notes |
+|------|-------|
+| Update CI/CD workflow | `.github/workflows/ci.yml` still references legacy `client/`, `shared/`, `build:shared` targets. Needs rewrite for `web/`-only monorepo. |
+| Custom SMTP for Supabase | Optional — shared email is working. Configure Resend or similar for reliability at scale. |
+| Decommission Cloudflare Worker | Delete in dashboard when legacy stack is fully retired. |
 
+### Reading Experience Enhancements
 | Feature | Notes |
 |---------|-------|
-| Legacy deletion | ✅ Done — `client/`, `server/`, `shared/` deleted. Decommission Cloudflare Worker in dashboard when ready. |
-| Custom SMTP for Supabase | Optional — shared email is working. Configure a provider (Resend etc.) for reliability at scale. |
-
-### Medium Priority
-
+| ~~Reading progress bar~~ | ✅ Done — 3px `var(--primary)` bar fixed at top of viewport, passive scroll listener, aria-hidden |
+| ~~Copy link button~~ | ✅ Done — chain icon + "Copy link" in post footer; 2s "Copied!" feedback; clipboard API with execCommand fallback |
+| ~~Smart related posts~~ | ✅ Done — scores by category (+3), shared tags (+2 each), publish date proximity (+1); tie-broken by recency |
+| ~~Inline images in gallery lightbox~~ | ✅ Done — inline `<img>` tags in post prose are extracted server-side, assigned gallery indices, and included in the lightbox filmstrip; clicking any prose image opens the lightbox at that slide |
+| ~~Print-friendly styles~~ | ✅ Done — `@media print` hides nav/buttons, resets backgrounds to white, shows link URLs, sets prose to 11pt |
+| ~~Reduced-motion support~~ | ✅ Done — `@media (prefers-reduced-motion: reduce)` collapses all transitions/animations to 0.01ms; disables lightbox fade |
+| Add a seasonal post slit for the homepage - think whimsy |
+### Discovery & Navigation
 | Feature | Notes |
 |---------|-------|
-| ~~Public author profiles~~ | ✅ Done — `/author/[id]` with profile card, stats, comment activity feed. Author names in comments link to profile. |
-| ~~About page~~ | ✅ Done — editorial layout with photo placeholders, two-col bios, CTA. Nav link added. |
-| Post bookmarks/favorites | Let readers save posts |
+| ~~Tag descriptions~~ | ✅ Done — `description` column added (migration 0004); shown as subtitle on `/tag/[slug]`; editable via `/admin/tags` |
+| ~~Map clustering~~ | ✅ Done — GeoJSON source `cluster: true`; circles scale with count; click to expand |
+| ~~Map filter by category~~ | ✅ Done — category pill buttons filter map pins + post list below |
+| ~~Comment count on post cards~~ | ✅ Done — speech-bubble icon + count shown in card footer when `commentCount > 0`; fetched in parallel via `listCommentCountsByPostIds` |
+| ~~Empty search state~~ | ✅ Done — "Browse all stories" + "Explore the map" action buttons on zero-result search in `HomeFeed`; "Browse all stories" in `FilteredFeed` (category/tag pages) |
 
-### Lower Priority
-
+### Admin Quality of Life
 | Feature | Notes |
 |---------|-------|
-| Map view | Add location field to posts, render on a map |
-| Post series/collections | Group related posts |
-| Newsletter integration | Mailchimp / ConvertKit |
-| Post analytics | View counts, popular posts |
-| Table of contents | For long posts |
-| Full-screen gallery | Full-screen image gallery mode |
-| Date formatting options | Relative vs absolute toggle |
+| Bulk publish / unpublish | Checkbox selection on admin dashboard post list |
+| Post preview (draft) | Preview a draft at a shareable but unlisted URL before publishing |
 
----
+### Backend & Infrastructure
+| Task | Notes |
+|------|-------|
+| ~~Rate limiting on public API routes~~ | ✅ Done — `src/lib/rate-limit.ts` sliding-window in-process limiter; 5/min comments, 30/min likes, 20/min bookmarks per IP; X-RateLimit-* headers on 429. Note: per-instance only — upgrade to Upstash Redis for distributed limiting at scale. |
+| ~~Cloudinary WebP delivery~~ | ✅ Done — `cdnImageUrl()` in `src/lib/cloudinary/transform.ts` inserts `f_auto,q_auto` after `/upload/`; applied to all `imageUrl` fields in `queries/posts.ts` (feed, post detail, gallery images) |
+| Required env var validation | All server env vars currently use `.optional()` — production-critical vars (`TURSO_DATABASE_URL`, `AUTH_SECRET`, etc.) should throw loudly when unset. |
+| DB indexes for posts table | Explicitly add indexes on `posts.slug`, `posts.status`, `posts.published_at`, `posts.author_id` in Drizzle schema (currently only implicit). |
+| `getRelatedPosts` performance | Current implementation loads all published posts to score; fine at current scale but should be memoized or replaced with a DB-side scoring query before the post count grows large. |
+| Sentry error tracking | No error monitoring in production. Add Sentry for exception capture and alerting. |
+| ~~Tiptap JSON migration~~ | ✅ Done — admin editor now writes native Tiptap JSON; `renderTiptapJson()` backward-compat reads both formats; legacy write path removed entirely |
+| HTTP security headers | No CSP, HSTS, X-Frame-Options, or Permissions-Policy headers configured. Add via `next.config.ts` `headers()` export or `vercel.json`. Prevents clickjacking and XSS escalation paths. |
+| Integration + E2E tests | Only `web/tests/unit/env.test.ts` exists. No API route tests or user-flow (Playwright/Cypress) tests. Critical paths (auth, comment post, admin save) are fully untested in CI. |
 
-## Quick Wins (< 1 hour each)
-
-- [x] "Continue reading" indicator for truncated post excerpts (conditional → with arrow)
-- [x] Keyboard navigation for image gallery (arrow keys + Esc)
-- [x] Swipe gestures for image gallery on mobile (lightbox swipe + scroll lock fix)
-- [x] Pull-to-refresh on homepage (mobile)
+### Frontend & UX
+| Task | Notes |
+|------|-------|
+| ~~`next/image` for gallery images~~ | ✅ Done — hero, thumbnails, and filmstrip converted; lightbox main `<img>` intentionally kept plain for `max-height` constraint |
+| ~~Skeleton loading states~~ | ✅ Done — `PostCardSkeleton` + `loading.tsx` in `(blog)/`; pulse animation matches real card dimensions |
+| ~~`loading.tsx` for feed~~ | ✅ Done — included in skeleton loading work above |
+| ~~Author bio on post detail~~ | ✅ Done — `AuthorCard` component; fetched in parallel with related posts; shows avatar/initials, name, bio, links to `/author/[id]` |
+| ~~Analytics integration~~ | Removed — not needed |
+| ~~Custom heading font~~ | ✅ Done — Lora serif via `next/font/google` applied to `.landing-title` and `.prose-content h2/h3/h4` |
 
 ---
 
@@ -137,27 +205,44 @@
 users              id, primary_email, role, created_at, updated_at
 profiles           user_id (FK), display_name, avatar_url, bio, theme_preference
 auth_accounts      id, user_id (FK), provider, provider_user_id, provider_email
+series             id, title, slug, description, created_at
 posts              id, title, slug, content_json, excerpt, status, layout_type,
                    published_at, scheduled_publish_time, author_id (FK),
-                   category_id (FK), featured_image_id (FK)
+                   category_id (FK), series_id (FK), series_order,
+                   featured_image_id (FK),
+                   location_name, location_lat, location_lng, location_zoom,
+                   ioverlander_url
 post_images        id, post_id (FK), media_asset_id (FK), sort_order, focal_x, focal_y, caption
 media_assets       id, owner_user_id (FK), provider, public_id, secure_url, format, alt_text
 categories         id, name, slug, description
-tags               id, name, slug
+tags               id, name, slug, description
 post_tags          post_id (FK), tag_id (FK) [PK composite]
 comments           id, post_id (FK), author_id (FK), content, parent_id, created_at, updated_at
 comment_likes      comment_id (FK), user_id (FK) [PK composite]
+post_bookmarks     post_id (FK), user_id (FK), created_at [PK composite]
 ```
+
+> **Future DB consideration**: A separate `locations` table could support reusable spots across multiple posts, bounding box columns for region-level locations, and clustering metadata. Not needed yet.
+
+### Applied Migrations
+| File | Description |
+|------|-------------|
+| `0000_broken_mole_man.sql` | Initial schema |
+| `0001_post_bookmarks.sql` | `post_bookmarks` table |
+| `0002_series.sql` | `series` table + `series_id`/`series_order` on posts |
+| `0003_location.sql` | `location_*` + `ioverlander_url` columns on posts |
+| `0004_tag_description.sql` | `description` column on `tags` |
 
 ### Key Directories
 
 ```
 web/src/app/           Next.js app router pages and API routes
-web/src/components/    React components (blog/, layout/, theme/, providers/, ui/)
+web/src/components/    React components (blog/, layout/, theme/, providers/, admin/)
 web/src/server/        Server-only DAL + queries + forms + auth
 web/src/lib/           Shared utilities (db, auth, cloudinary, supabase, env)
-web/src/drizzle/       Drizzle schema and migrations
+web/src/drizzle/       Drizzle schema
 web/drizzle/           Migration SQL files
+web/scripts/           One-off scripts (migrate, import, seed-locations)
 ```
 
 ---
@@ -166,11 +251,13 @@ web/drizzle/           Migration SQL files
 
 ```bash
 cd web
-bun run dev            # Start dev server at localhost:3000
-bun run build          # Production build
-bun run lint           # ESLint
-bun run db:generate    # Generate Drizzle migrations
-bun run db:migrate     # Apply migrations to Turso
+bun run dev                        # Start dev server at localhost:3000
+bun run build                      # Production build
+bun run lint                       # ESLint
+bun run db:generate                # Generate Drizzle migrations after schema changes
+bun run db:migrate                 # Apply migrations to Turso
+bun run ./scripts/seed-locations          # Seed location data onto existing posts (dev only)
+bun run ./scripts/seed-series-categories  # Seed test series + categories (dev only, idempotent)
 ```
 
 ## Deployment

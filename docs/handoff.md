@@ -1,6 +1,6 @@
 # J²Adventures – Next.js Port Handoff
 
-Last updated: 2026-03-14
+Last updated: 2026-03-15
 
 ## Where we are
 
@@ -24,12 +24,21 @@ The authoritative status tracker is `docs/nextjs-cutover-checklist.md`.
 - **Slug normalization**: slugs with spaces (e.g. "post post") resolve to slugified URLs
 - **`/settings` redirect**: redirects to `/account`
 - **Admin**: GitHub OAuth, dashboard, create/edit post, Cloudinary image upload,
-  gallery, focal points, alt text
+  gallery, focal points, alt text, series, location with autocomplete, iOverlander URL
 - **Public auth**: Supabase login, signup, email callback — all native in Next.js
 - **Account settings** (`/account`): display name, avatar URL, theme preference
   save/restore, email change, password change, sign out
-- **Comments**: list, post, delete, like/unlike — Turso-backed
+- **Comments**: list, post, delete, like/unlike, nested replies — Turso-backed
+- **Post bookmarks**: toggle button, `/bookmarks` saved-posts page, "Saved" nav link
+- **Author profiles**: `/author/[id]` with profile card, stats, comment activity
 - **Theme**: Moss & Linen / Lichen Light, sun/moon toggle, reliable post-mount sync
+- **Table of contents**: auto-generated from h2–h4, scroll-tracked, collapsible
+- **Gallery lightbox**: filmstrip thumbnails, fade animation, keyboard + swipe nav
+- **Date toggle**: click any date to switch absolute ↔ relative; localStorage persisted
+- **Post series**: `series` table, `SeriesNav` on post detail, `/series/[slug]` public page
+- **Map view**: MapLibre GL + Stadia Maps Outdoors style; post detail embedded map;
+  `/map` world map with all located posts as pins; Nominatim geocoding on save;
+  iOverlander URL support; location autocomplete in admin editor
 - **Legacy reads removed**: `web/src/server/queries/posts.ts` is Turso-only
 - **Dead legacy code removed**: `getLegacyApiBaseUrl`, `legacy-posts.ts` schema,
   `LEGACY_API_BASE_URL` env var references
@@ -113,7 +122,12 @@ once `client/` and `server/` are deleted. For production (Vercel), set all vars 
 | Drizzle schema | `web/src/drizzle/schema.ts` |
 | Supabase server helper | `web/src/lib/supabase/server.ts` |
 | Admin session helper | `web/src/lib/auth/session.ts` |
-| URL helpers (typed routes) | `web/src/lib/utils.ts` — `getPostHref`, `getCategoryHref`, `getTagHref` |
+| URL helpers (typed routes) | `web/src/lib/utils.ts` — `getPostHref`, `getCategoryHref`, `getTagHref`, `getSeriesHref`, `getMapHref` |
+| Series DAL | `web/src/server/dal/series.ts` |
+| Post map (single post) | `web/src/components/blog/post-map.tsx` |
+| World map (all posts) | `web/src/components/blog/world-map.tsx` |
+| Map page | `web/src/app/(blog)/map/page.tsx` |
+| Location autocomplete | `web/src/components/admin/location-autocomplete.tsx` |
 | Deployment guide | `docs/deployment.md` |
 
 ---

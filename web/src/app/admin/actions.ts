@@ -186,21 +186,23 @@ async function syncTagsForPost(postId: string, tagNames: string[]) {
   await db.delete(postTags).where(eq(postTags.postId, postId));
 
   for (const tagName of tagNames) {
-    const tagId = `tag-${slugify(tagName)}`;
-    await db
-      .insert(tags)
-      .values({
-        id: tagId,
-        name: tagName,
-        slug: slugify(tagName),
-      })
-      .onConflictDoUpdate({
-        target: tags.id,
-        set: {
-          name: tagName,
-          slug: slugify(tagName),
-        },
-      });
+    const slug = slugify(tagName);
+
+    // Look up by slug first — legacy data may have a tag with the same slug but a different ID,
+    // and onConflictDoUpdate on `id` alone would hit the unique constraint on `slug`.
+    const existing = await db.query.tags.findFirst({
+      where: eq(tags.slug, slug),
+      columns: { id: true },
+    });
+
+    const tagId = existing?.id ?? `tag-${slug}`;
+
+    if (!existing) {
+      await db
+        .insert(tags)
+        .values({ id: tagId, name: tagName, slug })
+        .onConflictDoNothing();
+    }
 
     await db.insert(postTags).values({ postId, tagId }).onConflictDoNothing();
   }
@@ -353,7 +355,8 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   const authorId = await ensureAdmin();
   const values = parseFormData(formData);
   const db = getDb();
-  const [categoryId, seriesId, geo] = await Promise.all([
+  const [existingPost, categoryId, seriesId, geo] = await Promise.all([
+    db.query.posts.findFirst({ where: eq(posts.id, postId), columns: { publishedAt: true } }),
     ensureCategoryId(values.categoryName),
     ensureSeriesId(values.seriesTitle ?? ""),
     values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
@@ -361,6 +364,9 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   const slug = slugify(values.slug.trim() || values.title);
   const now = new Date();
   const scheduledPublishTime = normalizeScheduledTimestamp(values.scheduledPublishTime, values.status);
+  // Preserve the original publishedAt when re-saving an already-published post.
+  // Only stamp "now" on the first transition to published.
+  const publishedAt = values.status === "published" ? (existingPost?.publishedAt ?? now) : null;
 
   await db
     .update(posts)
@@ -371,7 +377,7 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
       excerpt: values.excerpt || htmlToPlainText(renderTiptapJson(values.contentJson) ?? "").slice(0, 280) || null,
       status: values.status,
       layoutType: values.layoutType,
-      publishedAt: values.status === "published" ? now : null,
+      publishedAt,
       scheduledPublishTime,
       categoryId,
       seriesId,

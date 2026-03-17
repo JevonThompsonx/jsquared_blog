@@ -10,7 +10,22 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(cmd.exe /c \"rmdir /s /q client && rmdir /s /q server && rmdir /s /q shared\")",
       "Bash(powershell -Command \"Remove-Item -Recurse -Force ''c:\\\\Users\\\\Jevon\\\\Nextcloud\\\\Projects\\\\jsquared_blog\\\\client'' -ErrorAction Stop; Write-Host ''client deleted''\")",
-      "Bash(ls -la \"c:\\\\Users\\\\Jevon\\\\Nextcloud\\\\Projects\\\\jsquared_blog\\\\web\\\\drizzle\"\" 2>/dev/null || echo \"web/drizzle does not exist \")"
+      "Bash(ls -la \"c:\\\\Users\\\\Jevon\\\\Nextcloud\\\\Projects\\\\jsquared_blog\\\\web\\\\drizzle\"\" 2>/dev/null || echo \"web/drizzle does not exist \")",
+      "Bash(bun add:*)",
+      "Bash(bun -e \":*)",
+      "Bash(xargs sed:*)",
+      "Bash(find /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -path */vis.gl* -maxdepth 3 -type d)",
+      "Bash(find /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -name package.json -path *vis.gl/react-maplibre*)",
+      "Bash(find /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -path *vis.gl* -name *.d.ts)",
+      "Bash(node -e \"require.resolve\\(''@vis.gl/react-maplibre''\\)\")",
+      "Bash(find /c/Users/Jevon/AppData/Local/pnpm/store -name *.d.ts -path *react-maplibre*)",
+      "Bash(node -e \"const m = require\\(''./node_modules/react-map-gl/dist/maplibre.cjs''\\); console.log\\(Object.keys\\(m\\).filter\\(k => k.toLowerCase\\(\\).includes\\(''map''\\) || k.toLowerCase\\(\\).includes\\(''source''\\) || k.toLowerCase\\(\\).includes\\(''layer''\\)\\).slice\\(0,40\\)\\)\")",
+      "Bash(node -e \"const m = require\\(''./node_modules/react-map-gl/dist/maplibre.cjs''\\); console.log\\(Object.keys\\(m\\)\\)\")",
+      "Bash(grep -v \"//\")",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const m = require\\(''@vis.gl/react-maplibre''\\); console.log\\(Object.keys\\(m\\)\\)\")",
+      "Bash(python3 -c \":*)",
+      "Bash(find /c/Users/Jevon/AppData/Local/pnpm/store/v10 -name *.d.ts)"
     ]
   }
 }

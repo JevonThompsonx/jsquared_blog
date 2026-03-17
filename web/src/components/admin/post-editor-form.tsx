@@ -29,6 +29,10 @@ export function PostEditorForm({
   const scheduledValue = post?.scheduledPublishTime
     ? new Date(post.scheduledPublishTime).toISOString().slice(0, 16)
     : "";
+  // If a post is flagged "scheduled" but has no time set (e.g. imported legacy data),
+  // fall back to "draft" so the form doesn't immediately submit an invalid payload.
+  const defaultStatus =
+    post?.status === "scheduled" && !scheduledValue ? "draft" : (post?.status ?? "draft");
   const tagCount = post?.tags.length ?? 0;
   const galleryCount = post?.galleryImages.length ?? 0;
   const galleryEntriesValue = JSON.stringify(
@@ -48,7 +52,7 @@ export function PostEditorForm({
           <p className="mt-1 text-sm text-[var(--text-secondary)]">Save often, review your schedule, and make sure every uploaded image has strong alt text.</p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
             <span className="rounded-full border border-[var(--border)] px-3 py-1">{modeLabel}</span>
-            <span className="rounded-full border border-[var(--border)] px-3 py-1">{post?.status ?? "draft"}</span>
+            <span className="rounded-full border border-[var(--border)] px-3 py-1">{defaultStatus}</span>
             <span className="rounded-full border border-[var(--border)] px-3 py-1">{tagCount} tag{tagCount === 1 ? "" : "s"}</span>
             <span className="rounded-full border border-[var(--border)] px-3 py-1">{galleryCount} gallery image{galleryCount === 1 ? "" : "s"}</span>
           </div>
@@ -114,7 +118,7 @@ export function PostEditorForm({
             <div className="mt-5 space-y-5">
               <label className="block">
                 <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Status</span>
-                <select className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50" defaultValue={post?.status ?? "draft"} name="status">
+                <select className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50" defaultValue={defaultStatus} name="status">
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                   <option value="scheduled">Scheduled</option>

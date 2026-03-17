@@ -1,6 +1,6 @@
 # J²Adventures — Next.js Production Deployment
 
-Last updated: 2026-03-14
+Last updated: 2026-03-15
 
 ## Overview
 
@@ -51,6 +51,12 @@ Set all of these in the Vercel project dashboard under **Settings → Environmen
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+
+### Map (Stadia Maps)
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_STADIA_MAPS_API_KEY` | Stadia Maps API key — get a free key at stadiamaps.com (200K credits/month free, no card required). Used for the `/map` page and per-post embedded maps. Map degrades gracefully if unset. |
 
 ### Site
 
