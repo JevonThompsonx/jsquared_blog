@@ -16,9 +16,6 @@ function getCandidateEnvPaths(): string[] {
     path.join(workspaceRoot, ".env.local"),
     path.join(workspaceRoot, ".env"),
     path.join(workspaceRoot, ".dev.vars"),
-    path.join(workspaceRoot, "server", ".env.local"),
-    path.join(workspaceRoot, "server", ".env"),
-    path.join(workspaceRoot, "server", ".dev.vars"),
   ];
 }
 

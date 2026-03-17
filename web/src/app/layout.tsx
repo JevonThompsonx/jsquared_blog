@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Lora } from "next/font/google";
+import Script from "next/script";
 
 import { AppProviders } from "@/components/providers/app-providers";
 
@@ -36,6 +37,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={lora.variable}>
       <body>
         <AppProviders>{children}</AppProviders>
+        {process.env.NODE_ENV === "production" ? (
+          <Script
+            data-domain="jsquaredadventures.com"
+            defer
+            src="https://plausible.io/js/script.js"
+            strategy="afterInteractive"
+          />
+        ) : null}
       </body>
     </html>
   );

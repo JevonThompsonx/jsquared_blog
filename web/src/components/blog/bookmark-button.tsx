@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
@@ -37,7 +38,9 @@ export function BookmarkButton({ postId }: { postId: string }) {
 
   useEffect(() => {
     if (!supabase) {
-      setState("unauthenticated");
+      flushSync(() => {
+        setState("unauthenticated");
+      });
       return;
     }
 

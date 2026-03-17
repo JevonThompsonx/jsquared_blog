@@ -20,7 +20,7 @@ export type BlogPost = {
   imageUrl: string | null;
   category: string | null;
   createdAt: string;
-  status?: "draft" | "published" | "scheduled";
+  status: "draft" | "published" | "scheduled";
   layoutType?: "standard" | "split-horizontal" | "split-vertical" | "hover";
   tags: BlogTag[];
   images: BlogImage[];

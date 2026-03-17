@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@libsql/client": "0.17.0",
+    "@sentry/nextjs": "^10.43.0",
     "@supabase/supabase-js": "2.99.1",
     "@tiptap/extension-image": "^3.20.2",
     "@tiptap/extension-link": "3.20.1",
@@ -23,6 +24,8 @@
     "@tiptap/react": "3.20.1",
     "@tiptap/starter-kit": "3.20.1",
     "@types/jsdom": "^28.0.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^2.0.1",
     "browser-image-compression": "2.0.2",
     "clsx": "2.1.1",

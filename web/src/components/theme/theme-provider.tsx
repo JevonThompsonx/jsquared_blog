@@ -54,6 +54,39 @@ function writeThemeCookie(mode: ThemeMode, lightLook: ThemeLook, darkLook: Theme
   const value = JSON.stringify({ mode, lightLook, darkLook });
   document.cookie = `${THEME_COOKIE}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; SameSite=Lax`;
 }
+
+function readStoredThemePreference(): { mode: ThemeMode; lightLook: ThemeLook; darkLook: ThemeLook } {
+  if (typeof window === "undefined") {
+    return { mode: "light", lightLook: "sage", darkLook: "lichen" };
+  }
+
+  let storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as ThemeMode | null;
+  let storedLightLook = window.localStorage.getItem(LIGHT_LOOK_STORAGE_KEY) as ThemeLook | null;
+  let storedDarkLook = window.localStorage.getItem(DARK_LOOK_STORAGE_KEY) as ThemeLook | null;
+
+  if (!storedMode || !storedLightLook || !storedDarkLook) {
+    const cookie = readThemeCookie();
+    if (!storedMode && cookie.mode) {
+      storedMode = cookie.mode;
+      window.localStorage.setItem(MODE_STORAGE_KEY, cookie.mode);
+    }
+    if (!storedLightLook && cookie.lightLook) {
+      storedLightLook = cookie.lightLook;
+      window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, cookie.lightLook);
+    }
+    if (!storedDarkLook && cookie.darkLook) {
+      storedDarkLook = cookie.darkLook;
+      window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, cookie.darkLook);
+    }
+  }
+
+  return {
+    mode: storedMode === "dark" ? "dark" : "light",
+    lightLook: storedLightLook && LOOK_ORDER.includes(storedLightLook) ? storedLightLook : "sage",
+    darkLook: storedDarkLook && LOOK_ORDER.includes(storedDarkLook) ? storedDarkLook : "lichen",
+  };
+}
+
 /** Returns true if localStorage already has a saved theme mode — used by UserThemeSync. */
 export function hasStoredThemePreference(): boolean {
   if (typeof window === "undefined") return false;
@@ -99,6 +132,7 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--accent": "#7c9557",
       "--accent-strong": "#557468",
       "--accent-soft": "rgba(124, 149, 87, 0.12)",
+      "--primary-soft": "rgba(124, 149, 87, 0.12)",
       "--shadow": "0 18px 42px rgba(68, 72, 58, 0.11)",
       "--ring": "rgba(124, 149, 87, 0.18)",
       "--header-bg": "rgba(253, 248, 239, 0.76)",
@@ -160,6 +194,7 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--accent": "#9aae58",
       "--accent-strong": "#5f877b",
       "--accent-soft": "rgba(154, 174, 88, 0.14)",
+      "--primary-soft": "rgba(154, 174, 88, 0.12)",
       "--shadow": "0 18px 42px rgba(78, 85, 62, 0.13)",
       "--ring": "rgba(154, 174, 88, 0.22)",
       "--header-bg": "rgba(255, 250, 241, 0.76)",
@@ -223,6 +258,7 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--accent": "#b9ce84",
       "--accent-strong": "#8fb3ab",
       "--accent-soft": "rgba(185, 206, 132, 0.14)",
+      "--primary-soft": "rgba(185, 206, 132, 0.15)",
       "--shadow": "0 20px 48px rgba(0, 0, 0, 0.30)",
       "--ring": "rgba(185, 206, 132, 0.22)",
       "--header-bg": "rgba(25, 35, 29, 0.82)",
@@ -284,6 +320,7 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--accent": "#c9db7e",
       "--accent-strong": "#9dc9be",
       "--accent-soft": "rgba(201, 219, 126, 0.14)",
+      "--primary-soft": "rgba(201, 219, 126, 0.15)",
       "--shadow": "0 20px 48px rgba(0, 0, 0, 0.30)",
       "--ring": "rgba(201, 219, 126, 0.24)",
       "--header-bg": "rgba(26, 36, 29, 0.82)",
@@ -334,37 +371,9 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
     () => false,
   );
 
-  const [modeState, setModeState] = useState<ThemeMode>("light");
-  const [lightLookState, setLightLookState] = useState<ThemeLook>("sage");
-  const [darkLookState, setDarkLookState] = useState<ThemeLook>("lichen");
-
-  // Sync React state from storage once after mount. localStorage is primary;
-  // cookie is a cross-session fallback (e.g. after clearing localStorage).
-  useEffect(() => {
-    let storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as ThemeMode | null;
-    let storedLightLook = window.localStorage.getItem(LIGHT_LOOK_STORAGE_KEY) as ThemeLook | null;
-    let storedDarkLook = window.localStorage.getItem(DARK_LOOK_STORAGE_KEY) as ThemeLook | null;
-
-    if (!storedMode || !storedLightLook || !storedDarkLook) {
-      const cookie = readThemeCookie();
-      if (!storedMode && cookie.mode) {
-        storedMode = cookie.mode;
-        window.localStorage.setItem(MODE_STORAGE_KEY, cookie.mode);
-      }
-      if (!storedLightLook && cookie.lightLook) {
-        storedLightLook = cookie.lightLook;
-        window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, cookie.lightLook);
-      }
-      if (!storedDarkLook && cookie.darkLook) {
-        storedDarkLook = cookie.darkLook;
-        window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, cookie.darkLook);
-      }
-    }
-
-    if (storedMode === "light" || storedMode === "dark") setModeState(storedMode);
-    if (storedLightLook && LOOK_ORDER.includes(storedLightLook)) setLightLookState(storedLightLook);
-    if (storedDarkLook && LOOK_ORDER.includes(storedDarkLook)) setDarkLookState(storedDarkLook);
-  }, []);
+  const [modeState, setModeState] = useState<ThemeMode>(() => readStoredThemePreference().mode);
+  const [lightLookState, setLightLookState] = useState<ThemeLook>(() => readStoredThemePreference().lightLook);
+  const [darkLookState, setDarkLookState] = useState<ThemeLook>(() => readStoredThemePreference().darkLook);
 
   const mode = useMemo<ThemeMode>(() => {
     if (!hydrated) {

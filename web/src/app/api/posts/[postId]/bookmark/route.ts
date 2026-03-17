@@ -20,7 +20,7 @@ export async function POST(request: Request, context: { params: Promise<{ postId
   const { postId } = await context.params;
 
   // 20 bookmark toggles per minute per IP
-  const rl = checkRateLimit(`bookmark:${getClientIp(request)}`, 20, 60_000);
+  const rl = await checkRateLimit(`bookmark:${getClientIp(request)}`, 20, 60_000);
   if (!rl.allowed) return tooManyRequests(rl);
 
   const supabaseUser = await getRequestSupabaseUser(request);

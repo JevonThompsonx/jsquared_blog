@@ -47,6 +47,10 @@ export function getMapHref(): "/map" {
   return "/map";
 }
 
+export function getPreviewHref(postId: string): `/preview/${string}` {
+  return `/preview/${postId}`;
+}
+
 export function getPostIdFromSlug(slug: string): number | null {
   const match = slug.match(/^(\d+)/);
   if (!match) {

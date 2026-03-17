@@ -9,6 +9,7 @@ import { AuthorCard } from "@/components/blog/author-card";
 import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { Comments } from "@/components/blog/comments";
 import { CopyLinkButton } from "@/components/blog/copy-link-button";
+import { ShareButtons } from "@/components/blog/share-buttons";
 import { PostGallery } from "@/components/blog/post-gallery";
 import { PostMap } from "@/components/blog/post-map";
 import { ProseContent } from "@/components/blog/prose-content";
@@ -237,6 +238,7 @@ export default async function PostPage({ params }: PostPageProps) {
                 <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">Every story leads to the next. Pick up where this one left off.</p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-3 self-start sm:self-auto">
+                <ShareButtons title={post.title} url={canonicalUrl} />
                 <CopyLinkButton url={canonicalUrl} />
                 <Link
                   className="btn-primary rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"

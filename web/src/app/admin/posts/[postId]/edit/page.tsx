@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getAdminEditablePostById, listAdminCategories, listAllAdminTags } from "@/server/dal/admin-posts";
 import { listAllSeries } from "@/server/dal/series";
+import { getPostHref } from "@/lib/utils";
 
 import { updateAdminPostAction } from "../../../actions";
 
@@ -14,7 +15,7 @@ export default async function EditAdminPostPage({
   searchParams,
 }: {
   params: Promise<{ postId: string }>;
-  searchParams?: Promise<{ saved?: string }>;
+  searchParams?: Promise<{ saved?: string; cloned?: string }>;
 }) {
   const session = await requireAdminSession();
   if (!session) {
@@ -44,10 +45,12 @@ export default async function EditAdminPostPage({
             <h1 className="mt-2 text-3xl font-semibold text-[var(--foreground)] sm:text-4xl">Edit post</h1>
           </div>
           <div className="flex flex-wrap gap-3">
-            <a className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]" href={`/posts/${post.slug}`}>
-              Open public post
-            </a>
-            <Link className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]" href="/admin">
+            {post.status === "published" ? (
+              <Link className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]" href={getPostHref({ id: post.id, title: post.title, slug: post.slug })}>
+                View live
+              </Link>
+            ) : null}
+            <Link className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]" href="/admin">
               Back to dashboard
             </Link>
           </div>
@@ -56,6 +59,12 @@ export default async function EditAdminPostPage({
         {resolvedSearchParams?.saved ? (
           <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             Post saved successfully.
+          </div>
+        ) : null}
+
+        {resolvedSearchParams?.cloned ? (
+          <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Draft clone created successfully.
           </div>
         ) : null}
 

@@ -163,13 +163,13 @@ export function PostMediaManager({
       </div>
 
       {uploadError ? (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-4 py-3 text-sm text-[var(--color-error-text)]">
           {uploadError}
         </div>
       ) : null}
 
       {uploadSuccess ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-lg border border-[var(--color-success-soft-border)] bg-[var(--color-success-soft-bg)] px-4 py-3 text-sm text-[var(--color-success-text)]">
           {uploadSuccess}
         </div>
       ) : null}
@@ -212,14 +212,14 @@ export function PostMediaManager({
             <label className="block text-sm font-semibold text-[var(--foreground)]">
               Featured image alt text
               <input
-                className="mt-2 block w-full rounded-md border-[var(--border)] bg-white px-3 py-2 text-[var(--text-primary)] shadow-sm"
+                className="mt-2 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm"
                 onChange={(event) => setFeaturedImageAlt(event.target.value)}
                 placeholder="Describe the featured image"
                 value={featuredImageAlt}
               />
             </label>
-            {!featuredImageAlt.trim() ? <p className="text-xs text-amber-700">Add alt text before publishing so the hero image has context for screen readers.</p> : null}
-            <button className="text-sm font-semibold text-red-600" onClick={() => { setFeaturedImageUrl(""); setFeaturedImageAlt(""); }} type="button">
+            {!featuredImageAlt.trim() ? <p className="text-xs text-[var(--color-warning)]">Add alt text before publishing so the hero image has context for screen readers.</p> : null}
+            <button className="text-sm font-semibold text-[var(--color-error)]" onClick={() => { setFeaturedImageUrl(""); setFeaturedImageAlt(""); }} type="button">
               Remove featured image
             </button>
           </div>
@@ -236,7 +236,7 @@ export function PostMediaManager({
             <p className="text-sm font-semibold text-[var(--foreground)]">Gallery images</p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">Upload supporting images, adjust the focal point, and order them in the sequence you want readers to experience.</p>
           </div>
-          <label className="inline-flex w-full cursor-pointer justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-white sm:w-auto">
+          <label className="inline-flex w-full cursor-pointer justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--background)] sm:w-auto">
             Upload gallery images
             <input
               className="hidden"
@@ -261,14 +261,14 @@ export function PostMediaManager({
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">Image {index + 1}</span>
-                    {!entry.altText.trim() ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Alt text needed</span> : null}
+                    {!entry.altText.trim() ? <span className="rounded-full bg-[var(--color-warning-soft-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--color-warning)]">Alt text needed</span> : null}
                   </div>
                 </div>
                 <div className="space-y-3">
                   <label className="block text-sm font-semibold text-[var(--foreground)]">
                     Alt text
                     <input
-                      className="mt-2 block w-full rounded-md border-[var(--border)] bg-white px-3 py-2 text-[var(--text-primary)] shadow-sm"
+                      className="mt-2 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm"
                       onChange={(event) => updateGalleryEntry(index, { altText: event.target.value })}
                       placeholder="Describe what matters in this image"
                       value={entry.altText}
@@ -306,7 +306,7 @@ export function PostMediaManager({
                       Move down
                     </button>
                     <button
-                      className="rounded-full border border-red-200 px-3 py-1.5 text-sm font-semibold text-red-600"
+                      className="rounded-full border border-[var(--color-error-soft-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-error)]"
                       onClick={() => setGalleryEntries((currentEntries) => currentEntries.filter((_, currentIndex) => currentIndex !== index))}
                       type="button"
                     >

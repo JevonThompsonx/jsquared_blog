@@ -1,11 +1,15 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
+import NextImage from "next/image";
+
+import { validatePostContentWarningsAction } from "@/app/admin/actions";
+import type { TiptapImageAltWarning } from "@/lib/content";
 
 function getWordCount(value: string): number {
   return value
@@ -96,15 +100,15 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch("/api/admin/uploads/images", { method: "POST", body });
-      if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Upload failed");
-      }
-      const data = await res.json() as { imageUrl: string };
-      setPendingImageUrl(data.imageUrl);
-      setImageDraftAlt("");
-      setShowImagePanel(true);
+    const res = await fetch("/api/admin/uploads/images", { method: "POST", body });
+    if (!res.ok) {
+      const data = await res.json() as { error?: string };
+      throw new Error(data.error ?? "Upload failed");
+    }
+    const data = await res.json() as { imageUrl: string; publicId: string };
+    setPendingImageUrl(data.imageUrl);
+    setImageDraftAlt("");
+    setShowImagePanel(true);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -193,7 +197,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
       />
 
       {uploadError ? (
-        <p className="mt-2 text-xs text-red-500">{uploadError}</p>
+        <p className="mt-2 text-xs text-[var(--color-error)]">{uploadError}</p>
       ) : null}
 
       {showLinkInput ? (
@@ -255,7 +259,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
 function parseTiptapInitContent(contentJson: string): string | Record<string, unknown> {
   if (!contentJson) return "<p></p>";
   try {
-    const parsed = JSON.parse(contentJson) as { type?: string; html?: string };
+    const parsed = JSON.parse(contentJson) as { type?: string; html?: string }; // parsing stored JSON content — shape validated by conditional checks below
     if (parsed.type === "legacy-html" && typeof parsed.html === "string") return parsed.html;
     if (parsed.type === "doc") return parsed as Record<string, unknown>;
   } catch { /* fall through */ }
@@ -264,10 +268,8 @@ function parseTiptapInitContent(contentJson: string): string | Record<string, un
 
 const EMPTY_DOC = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
 
-export function PostRichTextEditor({ contentJson, inputName }: { contentJson: string; inputName: string }) {
+export function PostRichTextEditor({ contentJson, inputName, excerpt }: { contentJson: string; inputName: string; excerpt?: string | null }) {
   // tiptapJson holds the JSON string that will be submitted via the hidden input.
-  // Initialise to contentJson if it's already native Tiptap JSON, otherwise use an
-  // empty doc placeholder (overwritten by onCreate once the editor mounts).
   const [tiptapJson, setTiptapJson] = useState<string>(() => {
     if (!contentJson) return EMPTY_DOC;
     try {
@@ -276,6 +278,9 @@ export function PostRichTextEditor({ contentJson, inputName }: { contentJson: st
     } catch { /* fall through */ }
     return EMPTY_DOC;
   });
+
+  const [backendWarnings, setBackendWarnings] = useState<TiptapImageAltWarning[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
 
   const initContent = parseTiptapInitContent(contentJson);
   const extensions = [
@@ -303,8 +308,6 @@ export function PostRichTextEditor({ contentJson, inputName }: { contentJson: st
     extensions,
     content: initContent,
     onCreate: ({ editor: e }) => {
-      // Capture native Tiptap JSON on mount (important for legacy-HTML posts being
-      // viewed without any edits — ensures the hidden input always has valid JSON).
       setTiptapJson(JSON.stringify(e.getJSON()));
     },
     onUpdate: ({ editor: e }) => {
@@ -313,29 +316,109 @@ export function PostRichTextEditor({ contentJson, inputName }: { contentJson: st
     immediatelyRender: false,
   });
 
-  // Derive word count from the live editor on each render (re-renders are triggered
-  // by setTiptapJson above, so the count stays fresh without a separate HTML state).
+  // Debounced backend validation
+  useEffect(() => {
+    if (!tiptapJson) return;
+    
+    const timer = setTimeout(async () => {
+      setIsValidating(true);
+      try {
+        const result = await validatePostContentWarningsAction(tiptapJson, excerpt);
+        setBackendWarnings(result.warnings);
+      } catch (err) {
+        console.error("Failed to validate content:", err);
+      } finally {
+        setIsValidating(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [tiptapJson, excerpt]);
+
+  // Derive word count
   const wordCount = getWordCount(editor?.getHTML() ?? "");
   const readingMinutes = Math.max(1, Math.ceil(wordCount / 220));
+  const missingAltCount = backendWarnings.length;
+
+  const [warningsDismissed, setWarningsDismissed] = useState(false);
+  const warningSignature = useMemo(
+    () => backendWarnings.map((warning) => `${warning.code}:${warning.path.join("-")}:${warning.imageSrc ?? ""}`).join("|"),
+    [backendWarnings],
+  );
+
+  useEffect(() => {
+    setWarningsDismissed(false);
+  }, [warningSignature]);
+
+  const showWarnings = backendWarnings.length > 0 && !warningsDismissed;
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm">
-      <EditorMenuBar editor={editor} />
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-xs leading-6 text-[var(--text-secondary)]">
-        <p>Use headings for structure, keep paragraphs short, and add links inline without leaving the editor.</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-[var(--border)] px-3 py-1">{wordCount} words</span>
-          <span className="rounded-full border border-[var(--border)] px-3 py-1">~{readingMinutes} min read</span>
+    <div className="space-y-3">
+      {showWarnings && (
+        <div className="rounded-lg border border-[var(--color-warning-soft-border)] bg-[var(--color-warning-soft-bg)] px-4 py-3 text-sm text-[var(--color-warning-text)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="font-semibold">
+                {missingAltCount === 1
+                  ? "1 image still needs alt text before publishing."
+                  : `${missingAltCount} images still need alt text before publishing.`}
+              </p>
+              {backendWarnings.map((w, i) => (
+                <div key={`${w.code}-${w.path.join("-")}-${i}`} className="flex items-start gap-3 rounded-md bg-[var(--card-bg)] px-3 py-2">
+                  <span className="text-lg">!</span>
+                  {w.imageSrc ? (
+                    <NextImage
+                      src={w.imageSrc}
+                      alt="Image missing alt text"
+                      width={64}
+                      height={48}
+                      className="h-12 w-16 rounded-md object-cover"
+                    />
+                  ) : null}
+                  <div className="flex flex-col">
+                    <span>{w.message}</span>
+                    {w.imageSrc ? (
+                      <span className="text-[0.7rem] opacity-70 break-all">{w.imageSrc}</span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setWarningsDismissed(true)}
+              className="text-[var(--color-warning)] hover:text-[var(--color-warning-text)] transition-colors"
+              aria-label="Dismiss warning"
+            >
+              ×
+            </button>
+          </div>
         </div>
+      )}
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm">
+        <EditorMenuBar editor={editor} />
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-xs leading-6 text-[var(--text-secondary)]">
+          <p>Use headings for structure, keep paragraphs short, and add links inline without leaving the editor.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {isValidating && <span className="animate-pulse text-[var(--accent)]">Validating...</span>}
+            {missingAltCount > 0 ? (
+              <span className="rounded-full border border-[var(--color-warning-soft-border)] px-3 py-1 text-[var(--color-warning-text)]">
+                {missingAltCount} alt warning{missingAltCount === 1 ? "" : "s"}
+              </span>
+            ) : null}
+            <span className="rounded-full border border-[var(--border)] px-3 py-1">{wordCount} words</span>
+            <span className="rounded-full border border-[var(--border)] px-3 py-1">~{readingMinutes} min read</span>
+          </div>
+        </div>
+        <div className="min-h-[20rem] px-4 py-4 text-sm text-[var(--text-primary)] sm:min-h-[24rem]">
+          <EditorContent editor={editor} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-[var(--border)] bg-[var(--background)] px-4 py-3 text-xs leading-6 text-[var(--text-secondary)]">
+          <span>Tip: the strongest travel posts alternate scene-setting paragraphs with subheads, quotes, and image breaks.</span>
+          <span>Links open in a new tab automatically.</span>
+        </div>
+        <input name={inputName} type="hidden" value={tiptapJson} />
       </div>
-      <div className="min-h-[20rem] px-4 py-4 text-sm text-[var(--text-primary)] sm:min-h-[24rem]">
-        <EditorContent editor={editor} />
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-[var(--border)] bg-[var(--background)] px-4 py-3 text-xs leading-6 text-[var(--text-secondary)]">
-        <span>Tip: the strongest travel posts alternate scene-setting paragraphs with subheads, quotes, and image breaks.</span>
-        <span>Links open in a new tab automatically.</span>
-      </div>
-      <input name={inputName} type="hidden" value={tiptapJson} />
     </div>
   );
 }

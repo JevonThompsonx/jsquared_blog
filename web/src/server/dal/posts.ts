@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { categories, comments, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
@@ -18,6 +18,9 @@ export type PublishedPostRecord = {
   title: string;
   excerpt: string | null;
   contentJson: string;
+  contentFormat: "tiptap-json" | "legacy-html";
+  contentHtml: string | null;
+  contentPlainText: string | null;
   category: string | null;
   imageUrl: string | null;
   layoutType: "standard" | "split-horizontal" | "split-vertical" | "hover" | null;
@@ -55,6 +58,9 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
       title: posts.title,
       excerpt: posts.excerpt,
       contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
       category: categories.name,
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
@@ -85,6 +91,9 @@ export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord
       title: posts.title,
       excerpt: posts.excerpt,
       contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
       category: categories.name,
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
@@ -143,6 +152,9 @@ const POST_DETAIL_SELECT = {
   title: posts.title,
   excerpt: posts.excerpt,
   contentJson: posts.contentJson,
+  contentFormat: posts.contentFormat,
+  contentHtml: posts.contentHtml,
+  contentPlainText: posts.contentPlainText,
   category: categories.name,
   imageUrl: mediaAssets.secureUrl,
   layoutType: posts.layoutType,
@@ -216,6 +228,9 @@ export async function listPublishedPostRecordsByCategory(
       title: posts.title,
       excerpt: posts.excerpt,
       contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
       category: categories.name,
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
@@ -259,6 +274,9 @@ export async function listPublishedPostRecordsByTagSlug(
       title: posts.title,
       excerpt: posts.excerpt,
       contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
       category: categories.name,
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
@@ -298,6 +316,9 @@ export type AnyStatusPostRecord = {
   title: string;
   excerpt: string | null;
   contentJson: string;
+  contentFormat: "tiptap-json" | "legacy-html";
+  contentHtml: string | null;
+  contentPlainText: string | null;
   status: "draft" | "published" | "scheduled";
   scheduledPublishTime: Date | null;
   category: string | null;
@@ -323,6 +344,9 @@ export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRec
       title: posts.title,
       excerpt: posts.excerpt,
       contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
       status: posts.status,
       scheduledPublishTime: posts.scheduledPublishTime,
       category: categories.name,
@@ -344,43 +368,6 @@ export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRec
     .limit(1);
 
   return rows[0] ?? null;
-}
-
-/**
- * Finds all scheduled posts whose scheduledPublishTime has passed, transitions them to
- * published (setting publishedAt = scheduledPublishTime), and returns the published post IDs.
- * Intended to be called from the Vercel Cron route only.
- */
-export async function publishDueScheduledPosts(): Promise<string[]> {
-  const db = getDb();
-  const now = new Date();
-
-  const due = await db
-    .select({ id: posts.id })
-    .from(posts)
-    .where(
-      and(
-        eq(posts.status, "scheduled"),
-        lte(posts.scheduledPublishTime, now),
-      ),
-    );
-
-  if (due.length === 0) return [];
-
-  const ids = due.map((p) => p.id);
-
-  await db
-    .update(posts)
-    .set({
-      status: "published",
-      // Use the originally scheduled time as publishedAt so post ordering is accurate
-      publishedAt: sql`${posts.scheduledPublishTime}`,
-      scheduledPublishTime: null,
-      updatedAt: now,
-    })
-    .where(inArray(posts.id, ids));
-
-  return ids;
 }
 
 export async function schedulePost(postId: string, scheduledAt: Date): Promise<void> {

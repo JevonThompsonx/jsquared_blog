@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 
 import { FeedbackPanel } from "@/components/ui/feedback-panel";
+import { captureException } from "@/lib/sentry";
 
-export default function ErrorPage({ reset }: { reset: () => void }) {
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    captureException(error);
+  }, [error]);
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col items-start justify-center px-4 py-14 text-[var(--foreground)] sm:px-6 sm:py-16">
       <FeedbackPanel

@@ -52,8 +52,33 @@ function CloseIcon() {
   );
 }
 
-export function SiteHeader() {
+function ThemeToggle() {
   const { mode, toggleMode } = useNextTheme();
+
+  return (
+    <button
+      aria-label={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
+      className="relative inline-flex h-10 w-[4.9rem] shrink-0 items-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-1 shadow-sm transition-all duration-300 hover:border-[var(--primary)] focus:outline-none"
+      onClick={toggleMode}
+      title={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
+      type="button"
+    >
+      <span className="flex w-full items-center justify-between px-1.5 text-[var(--text-secondary)] opacity-70">
+        <SunIcon />
+        <MoonIcon />
+      </span>
+      <span
+        className={`absolute inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition-all duration-300 ${
+          mode === "light" ? "translate-x-0" : "translate-x-[2.55rem]"
+        }`}
+      >
+        {mode === "light" ? <SunIcon /> : <MoonIcon />}
+      </span>
+    </button>
+  );
+}
+
+export function SiteHeader() {
   const { data: adminSession } = useSession();
   const isAdminSignedIn = Boolean(adminSession?.user?.id);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -92,32 +117,11 @@ export function SiteHeader() {
 
   // Close menu on route change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMenuOpen(false);
   }, [pathname]);
 
   const isPublicSignedIn = Boolean(publicSession?.user);
-
-  const ThemeToggle = () => (
-    <button
-      aria-label={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
-      className="relative inline-flex h-10 w-[4.9rem] shrink-0 items-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-1 shadow-sm transition-all duration-300 hover:border-[var(--primary)] focus:outline-none"
-      onClick={toggleMode}
-      title={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
-      type="button"
-    >
-      <span className="flex w-full items-center justify-between px-1.5 text-[var(--text-secondary)] opacity-70">
-        <SunIcon />
-        <MoonIcon />
-      </span>
-      <span
-        className={`absolute inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition-all duration-300 ${
-          mode === "light" ? "translate-x-0" : "translate-x-[2.55rem]"
-        }`}
-      >
-        {mode === "light" ? <SunIcon /> : <MoonIcon />}
-      </span>
-    </button>
-  );
 
   return (
     <header className="navbar-landing">

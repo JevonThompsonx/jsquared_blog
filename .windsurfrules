@@ -1,0 +1,107 @@
+# J²Adventures Blog — Windsurf Cascade Rules
+
+## Project Context
+
+Travel blog at jsquaredadventures.com. Active code is in `web/`. Next.js 15 App Router on Vercel.
+
+**Stack**: Next.js 15 (App Router, Turbopack), Turso (SQLite + Drizzle ORM), Supabase Auth (public), Auth.js + GitHub (admin), Cloudinary (images), TailwindCSS 4, Tiptap (rich text).
+
+**Key files to read first**: `CLAUDE.md` (full architecture), `AGENTS.md` (multi-model roles), `docs/PLAN.md` (roadmap)
+
+## Your Role (Cascade)
+
+You handle **UI components, styling, client-side logic, and scripts**. The backend (API routes, DAL, server actions, schemas) is handled separately via Claude Code. Do NOT modify files in `web/src/server/`, `web/src/drizzle/`, or `web/src/lib/` unless explicitly asked.
+
+### Your Directories
+- `web/src/components/` — UI components (your primary workspace)
+- `web/src/app/**/page.tsx` — Page components (layout and rendering)
+- `web/src/app/**/loading.tsx` — Loading states
+- `web/src/app/globals.css` — Global styles and theme variables
+- `scripts/` — Automation scripts (Python/terminal)
+
+### Off-Limits (Backend Territory)
+- `web/src/server/` — DAL, queries, auth logic
+- `web/src/drizzle/` — Database schema
+- `web/src/lib/` — Shared utilities, auth, DB, Cloudinary server-side
+- `web/src/app/api/` — API routes
+- `web/src/app/admin/actions.ts` — Server actions
+- `CLAUDE.md`, `AGENTS.md` — Managed by Claude Opus
+
+## Non-Negotiable Rules
+
+1. **Strict TypeScript**: No `any`, no `as` type assertions, no `!` non-null assertions.
+2. **Server Components by default**: Only add `"use client"` when browser APIs, hooks, or interactivity are required.
+3. **TailwindCSS 4**: Utilities are inside `@layer`. CSS in `globals.css` outside `@layer` beats Tailwind on the same element. For button/CTA styles fighting inherited text color, use a dedicated class in `globals.css` outside `@layer`.
+4. **`next/image` for all images**: Never use raw `<img>` tags.
+5. **Typed route helpers**: Dynamic `Link` hrefs must use `getPostHref()`, `getCategoryHref()`, `getTagHref()`, `getSeriesHref()`, `getMapHref()` from `web/src/lib/utils.ts`.
+6. **After adding new routes**: Run `bun run build` from `web/` to regenerate `.next/types/link.d.ts`.
+7. **Accessibility**: WCAG AA minimum. Semantic HTML, proper ARIA labels, keyboard navigation, 4.5:1 color contrast.
+8. **No hardcoded secrets**: Never put API keys or tokens in component files.
+9. **Zod validation is UX-only on client**: Server-side validation is the security boundary (handled by backend).
+
+## Auth System (Do Not Merge)
+
+Two completely separate auth systems:
+- **Supabase Auth** → public users (login, signup, comments, profiles, account settings)
+- **Auth.js + GitHub** → admin only (post CRUD, media upload, dashboard)
+
+Admin users cannot access `/account`. Public users cannot access `/admin`. Routes explicitly choose which auth they depend on.
+
+## Theme System
+
+Two dimensions: **mode** (`light` | `dark`) × **look** (`sage` | `lichen`). CSS variables defined per combination in `globals.css`. Theme state: React state → localStorage (primary) → `j2_theme` cookie → DB `profiles.theme_preference`.
+
+## Avatar Types
+
+1. **Preset icons** — stored as `j2:mountain`, `j2:compass`, etc.
+2. **Uploaded image** — Cloudinary URL
+3. **Initials fallback** — rendered from `displayName` when `avatarUrl` is null
+
+## Component Conventions
+
+- Components in `web/src/components/` organized by domain: `blog/`, `admin/`, `layout/`, `theme/`, `ui/`, `auth/`, `providers/`
+- Loading skeletons use the existing `PostCardSkeleton` pattern
+- Infinite scroll feeds use the `HomeFeed`/`FilteredFeed` pattern
+- Gallery lightbox: filmstrip thumbnails, keyboard nav (← → Esc), swipe gestures
+
+## Self-Check: Common Mistakes to Avoid
+
+Before committing, scan your own output for these patterns:
+
+| Check | Bad | Good |
+|---|---|---|
+| Types | `any`, untyped props, missing return types | Fully typed with explicit interfaces |
+| Colors | `bg-green-500`, `text-gray-700` | `bg-[var(--color-primary)]` or CSS var classes |
+| Routes | `href="/posts/slug"` | `href={getPostHref(slug)}` from `lib/utils.ts` |
+| Images | `<img src="...">` | `<Image src="..." alt="..." />` from `next/image` |
+| Client | `"use client"` on everything | Only when hooks/events/browser APIs are needed |
+| Loading | Only happy path built | `loading.tsx` skeleton + error boundary |
+| Dark mode | Only tested in light | Must work in all 4 combos: light×sage, light×lichen, dark×sage, dark×lichen |
+| Assertions | `as SomeType`, `value!` | Proper null checks, `satisfies`, narrowing |
+
+If you catch yourself using any "Bad" pattern, fix it before committing.
+
+## Escalation
+
+If you hit a backend problem (missing API, wrong data shape, auth issue):
+1. Do NOT modify files in `web/src/server/`, `web/src/drizzle/`, or `web/src/lib/`
+2. Create `docs/context/<issue>-escalation.md` describing the problem
+3. Commit and report to the user — the backend agent will handle it
+
+## Before Every Commit
+
+```bash
+cd web
+bun run lint          # ESLint — zero warnings
+bunx tsc --noEmit     # TypeScript — zero errors
+bun run build         # Must pass
+```
+
+## Commands
+
+```bash
+cd web
+bun run dev           # Dev server at localhost:3000
+bun run build         # Production build
+bun run lint          # ESLint
+```

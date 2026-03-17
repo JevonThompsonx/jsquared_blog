@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import { useState } from "react";
 import { formatPublishedDate, formatRelativeDate } from "@/lib/utils";
 
 const STORAGE_KEY = "j2_date_format";
 
+function getInitialFormat(): "absolute" | "relative" {
+  if (typeof window === "undefined") {
+    return "absolute";
+  }
+
+  return window.localStorage.getItem(STORAGE_KEY) === "relative" ? "relative" : "absolute";
+}
+
 export function PostDate({ dateString, className }: { dateString: string; className?: string }) {
   // Default to "absolute" — matches SSR output to avoid hydration mismatch
-  const [format, setFormat] = useState<"absolute" | "relative">("absolute");
-
-  useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) === "relative") {
-      setFormat("relative");
-    }
-  }, []);
+  const [format, setFormat] = useState<"absolute" | "relative">(getInitialFormat);
 
   function toggle() {
     const next = format === "absolute" ? "relative" : "absolute";

@@ -35,9 +35,11 @@ export function HomeFeed({ initialPosts, initialSearch = "" }: { initialPosts: B
   const searchTerm = initialSearch.trim().toLowerCase();
 
   // Keep refs in sync with state
-  isRefreshingRef.current = isRefreshing;
-  pullDistanceRef.current = pullDistance;
-  initialSearchRef.current = initialSearch;
+  useEffect(() => {
+    isRefreshingRef.current = isRefreshing;
+    pullDistanceRef.current = pullDistance;
+    initialSearchRef.current = initialSearch;
+  }, [isRefreshing, pullDistance, initialSearch]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

@@ -42,7 +42,7 @@ export async function POST(request: Request, context: { params: Promise<{ commen
   const { commentId } = await context.params;
 
   // 30 like toggles per minute per IP (generous to allow rapid clicking)
-  const rl = checkRateLimit(`like:${getClientIp(request)}`, 30, 60_000);
+  const rl = await checkRateLimit(`like:${getClientIp(request)}`, 30, 60_000);
   if (!rl.allowed) return tooManyRequests(rl);
 
   const supabaseUser = await getRequestSupabaseUser(request);

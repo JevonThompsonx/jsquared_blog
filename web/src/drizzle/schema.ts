@@ -64,6 +64,9 @@ export const posts = sqliteTable(
     title: text("title").notNull(),
     slug: text("slug").notNull().unique(),
     contentJson: text("content_json").notNull(),
+    contentFormat: text("content_format", { enum: ["tiptap-json", "legacy-html"] }).notNull().default("tiptap-json"),
+    contentHtml: text("content_html"),
+    contentPlainText: text("content_plain_text"),
     excerpt: text("excerpt"),
     status: text("status", { enum: ["draft", "published", "scheduled"] }).notNull().default("draft"),
     layoutType: text("layout_type", { enum: ["standard", "split-horizontal", "split-vertical", "hover"] }).default("standard"),
@@ -90,6 +93,27 @@ export const posts = sqliteTable(
     publishedAtIndex: index("posts_published_at_idx").on(table.publishedAt),
     authorIndex: index("posts_author_id_idx").on(table.authorId),
     seriesIndex: index("posts_series_id_idx").on(table.seriesId),
+    contentFormatIndex: index("posts_content_format_idx").on(table.contentFormat),
+  }),
+);
+
+export const postPreviewTokens = sqliteTable(
+  "post_preview_tokens",
+  {
+    id: text("id").primaryKey(),
+    tokenHash: text("token_hash").notNull().unique(),
+    postId: text("post_id").notNull().references(() => posts.id),
+    issuedByUserId: text("issued_by_user_id").notNull().references(() => users.id),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    tokenHashIndex: index("post_preview_tokens_token_hash_idx").on(table.tokenHash),
+    postIndex: index("post_preview_tokens_post_id_idx").on(table.postId),
+    issuedByIndex: index("post_preview_tokens_issued_by_user_id_idx").on(table.issuedByUserId),
+    expiresAtIndex: index("post_preview_tokens_expires_at_idx").on(table.expiresAt),
   }),
 );
 

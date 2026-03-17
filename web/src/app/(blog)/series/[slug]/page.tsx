@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { SiteHeader } from "@/components/layout/site-header";
@@ -81,12 +82,12 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
 
                     {/* Thumbnail */}
                     {post.imageUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
+                      <Image
                         alt={post.title}
                         className="hidden h-full w-32 shrink-0 object-cover sm:block"
-                        loading="lazy"
+                        height={96}
                         src={post.imageUrl}
+                        width={128}
                       />
                     ) : null}
                   </Link>

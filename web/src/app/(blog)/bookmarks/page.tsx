@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -34,7 +36,9 @@ export default function BookmarksPage() {
 
   useEffect(() => {
     if (!supabase) {
-      setStatus("unauthenticated");
+      flushSync(() => {
+        setStatus("unauthenticated");
+      });
       return;
     }
 
@@ -105,13 +109,15 @@ export default function BookmarksPage() {
               <article key={post.id} className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
                 <Link aria-label={`Read: ${post.title}`} className="absolute inset-0 z-[1]" href={getPostHref(post)} />
                 {post.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    alt={post.title}
-                    className="aspect-[5/3] w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                    src={post.imageUrl}
-                  />
+                  <div className="relative aspect-[5/3] w-full overflow-hidden">
+                    <Image
+                      alt={post.title}
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      fill
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                      src={post.imageUrl}
+                    />
+                  </div>
                 ) : (
                   <div className="aspect-[5/3] w-full bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />
                 )}

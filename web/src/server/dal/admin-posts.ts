@@ -1,9 +1,24 @@
 import "server-only";
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { z } from "zod";
 
 import { categories, mediaAssets, postImages, postTags, posts, series, tags } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
+
+const adminPostStatusSchema = z.enum(["draft", "published", "scheduled"]);
+const adminPostSortSchema = z.enum(["updated-desc", "created-desc", "created-asc", "published-desc", "title-asc"]);
+
+export const adminPostListFiltersSchema = z.object({
+  query: z.string().trim().max(120).optional().default(""),
+  category: z.string().trim().max(120).optional(),
+  status: adminPostStatusSchema.optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(24),
+  sort: adminPostSortSchema.optional().default("updated-desc"),
+});
+
+export type AdminPostListFilters = z.infer<typeof adminPostListFiltersSchema>;
 
 export type AdminPostRecord = {
   id: string;
@@ -14,6 +29,7 @@ export type AdminPostRecord = {
   category: string | null;
   imageUrl: string | null;
   createdAt: Date;
+  updatedAt: Date;
   publishedAt: Date | null;
   scheduledPublishTime: Date | null;
 };
@@ -22,6 +38,9 @@ export type AdminEditablePostRecord = AdminPostRecord & {
   categoryId: string | null;
   layoutType: "standard" | "split-horizontal" | "split-vertical" | "hover" | null;
   contentJson: string;
+  contentFormat: "tiptap-json" | "legacy-html";
+  contentHtml: string | null;
+  contentPlainText: string | null;
   featuredImageAlt: string | null;
   seriesId: string | null;
   seriesTitle: string | null;
@@ -48,27 +67,107 @@ export type AdminPostCounts = {
   scheduled: number;
 };
 
-export async function listAdminPostRecords(limit = 24): Promise<AdminPostRecord[]> {
-  const db = getDb();
+export type AdminPostListResult = {
+  posts: AdminPostRecord[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  filters: AdminPostListFilters;
+};
 
-  return db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      status: posts.status,
-      excerpt: posts.excerpt,
-      category: categories.name,
-      imageUrl: mediaAssets.secureUrl,
-      createdAt: posts.createdAt,
-      publishedAt: posts.publishedAt,
-      scheduledPublishTime: posts.scheduledPublishTime,
-    })
-    .from(posts)
-    .leftJoin(categories, eq(posts.categoryId, categories.id))
-    .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
-    .orderBy(desc(posts.updatedAt), desc(posts.createdAt))
-    .limit(limit);
+function buildAdminPostWhere(filters: AdminPostListFilters) {
+  const clauses = [];
+
+  if (filters.status) {
+    clauses.push(eq(posts.status, filters.status));
+  }
+
+  if (filters.category) {
+    clauses.push(or(eq(categories.slug, filters.category), eq(categories.name, filters.category)));
+  }
+
+  if (filters.query) {
+    const pattern = `%${filters.query.replace(/[%_]/g, "")}%`;
+    clauses.push(
+      or(
+        like(posts.title, pattern),
+        like(posts.slug, pattern),
+        like(posts.excerpt, pattern),
+        like(categories.name, pattern),
+      ),
+    );
+  }
+
+  if (clauses.length === 0) {
+    return undefined;
+  }
+
+  return and(...clauses);
+}
+
+function getAdminPostOrder(sort: AdminPostListFilters["sort"]) {
+  switch (sort) {
+    case "created-desc":
+      return [desc(posts.createdAt), desc(posts.updatedAt)];
+    case "created-asc":
+      return [asc(posts.createdAt), asc(posts.updatedAt)];
+    case "published-desc":
+      return [desc(posts.publishedAt), desc(posts.updatedAt)];
+    case "title-asc":
+      return [asc(posts.title), desc(posts.updatedAt)];
+    case "updated-desc":
+    default:
+      return [desc(posts.updatedAt), desc(posts.createdAt)];
+  }
+}
+
+export async function listAdminPostRecords(rawFilters?: Partial<AdminPostListFilters>): Promise<AdminPostListResult> {
+  const filters = adminPostListFiltersSchema.parse(rawFilters ?? {});
+  const db = getDb();
+  const where = buildAdminPostWhere(filters);
+  const offset = (filters.page - 1) * filters.pageSize;
+
+  const [rows, countRows] = await Promise.all([
+    db
+      .select({
+        id: posts.id,
+        slug: posts.slug,
+        title: posts.title,
+        status: posts.status,
+        excerpt: posts.excerpt,
+        category: categories.name,
+        imageUrl: mediaAssets.secureUrl,
+        createdAt: posts.createdAt,
+        updatedAt: posts.updatedAt,
+        publishedAt: posts.publishedAt,
+        scheduledPublishTime: posts.scheduledPublishTime,
+      })
+      .from(posts)
+      .leftJoin(categories, eq(posts.categoryId, categories.id))
+      .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
+      .where(where)
+      .orderBy(...getAdminPostOrder(filters.sort))
+      .offset(offset)
+      .limit(filters.pageSize),
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(posts)
+      .leftJoin(categories, eq(posts.categoryId, categories.id))
+      .where(where),
+  ]);
+
+  const totalCount = Number(countRows[0]?.total ?? 0);
+  const totalPages = Math.max(1, Math.ceil(totalCount / filters.pageSize));
+
+  return {
+    posts: rows,
+    totalCount,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    totalPages,
+    filters,
+  };
 }
 
 export async function getAdminPostCounts(): Promise<AdminPostCounts> {
@@ -105,10 +204,14 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       imageUrl: mediaAssets.secureUrl,
       featuredImageAlt: mediaAssets.altText,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       scheduledPublishTime: posts.scheduledPublishTime,
       layoutType: posts.layoutType,
       contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
       seriesId: posts.seriesId,
       seriesTitle: series.title,
       seriesOrder: posts.seriesOrder,
@@ -147,6 +250,9 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
   return {
     ...post,
     featuredImageAlt: post.featuredImageAlt ?? null,
+    contentFormat: post.contentFormat,
+    contentHtml: post.contentHtml ?? null,
+    contentPlainText: post.contentPlainText ?? null,
     seriesId: post.seriesId ?? null,
     seriesTitle: post.seriesTitle ?? null,
     seriesOrder: post.seriesOrder ?? null,
@@ -158,6 +264,26 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
     tags: postTagRows,
     galleryImages: galleryRows,
   };
+}
+
+export async function getAdminPostsByIds(postIds: string[]): Promise<Array<Pick<AdminPostRecord, "id" | "slug" | "title" | "status" | "publishedAt" | "scheduledPublishTime">>> {
+  const ids = [...new Set(postIds)];
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const db = getDb();
+  return db
+    .select({
+      id: posts.id,
+      slug: posts.slug,
+      title: posts.title,
+      status: posts.status,
+      publishedAt: posts.publishedAt,
+      scheduledPublishTime: posts.scheduledPublishTime,
+    })
+    .from(posts)
+    .where(inArray(posts.id, ids));
 }
 
 export async function listAdminCategories(): Promise<AdminCategoryRecord[]> {

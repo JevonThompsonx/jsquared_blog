@@ -1,5 +1,12 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { AdminCategoryRecord, AdminEditablePostRecord } from "@/server/dal/admin-posts";
 import type { SeriesRecord } from "@/server/dal/series";
+import { getPostHref } from "@/lib/utils";
+import { clonePost, createPostPreviewLinkAction } from "@/app/admin/actions";
 import { ComboboxInput } from "@/components/admin/combobox-input";
 import { LocationAutocomplete } from "@/components/admin/location-autocomplete";
 import { PostMediaManager } from "@/components/admin/post-media-manager";
@@ -8,6 +15,11 @@ import { SeriesSelector } from "@/components/admin/series-selector";
 import { TagMultiSelect } from "@/components/admin/tag-multi-select";
 
 type AdminTag = { id: string; name: string; slug: string };
+
+function formatDateTimeLocal(value: Date): string {
+  const offset = value.getTimezoneOffset();
+  return new Date(value.getTime() - offset * 60 * 1000).toISOString().slice(0, 16);
+}
 
 export function PostEditorForm({
   mode,
@@ -24,10 +36,43 @@ export function PostEditorForm({
   post?: AdminEditablePostRecord | null;
   action: (formData: FormData) => void | Promise<void>;
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [cloneError, setCloneError] = useState<string | null>(null);
+
+  const handlePreview = () => {
+    if (!post?.id) return;
+    setPreviewError(null);
+    startTransition(async () => {
+      try {
+        const result = await createPostPreviewLinkAction(post.id);
+        window.open(result.previewPath, "_blank", "noopener,noreferrer");
+      } catch (err) {
+        setPreviewError(err instanceof Error ? err.message : "Failed to create preview");
+      }
+    });
+  };
+
+  const handleClone = () => {
+    if (!post?.id) return;
+    if (!confirm("Clone this post as a new draft?")) return;
+    setCloneError(null);
+    startTransition(async () => {
+      try {
+        const result = await clonePost(post.id);
+        router.push(`/admin/posts/${result.postId}/edit?cloned=1`);
+      } catch (err) {
+        setCloneError(err instanceof Error ? err.message : "Failed to clone post");
+      }
+    });
+  };
+
   const buttonLabel = mode === "create" ? "Create post" : "Save changes";
   const modeLabel = mode === "create" ? "New story" : "Editing story";
+  const browserOffsetMinutes = new Date().getTimezoneOffset().toString();
   const scheduledValue = post?.scheduledPublishTime
-    ? new Date(post.scheduledPublishTime).toISOString().slice(0, 16)
+    ? formatDateTimeLocal(new Date(post.scheduledPublishTime))
     : "";
   // If a post is flagged "scheduled" but has no time set (e.g. imported legacy data),
   // fall back to "draft" so the form doesn't immediately submit an invalid payload.
@@ -46,6 +91,7 @@ export function PostEditorForm({
 
   return (
     <form action={action} className="space-y-8">
+      <input name="scheduledPublishOffsetMinutes" type="hidden" value={browserOffsetMinutes} />
       <div className="sticky top-24 z-20 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-4 shadow-lg sm:px-5">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editor actions</p>
@@ -58,16 +104,44 @@ export function PostEditorForm({
           </div>
         </div>
         <div className="flex w-full flex-wrap gap-3 sm:w-auto">
-          {post?.slug ? (
-            <a className="rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold text-[var(--text-primary)] sm:text-left" href={`/posts/${post.slug}`}>
-              Preview live post
-            </a>
+          {post?.id ? (
+            <>
+              <button
+                type="button"
+                onClick={handleClone}
+                disabled={isPending}
+                className="rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] disabled:opacity-50"
+              >
+                Clone draft
+              </button>
+              {post.status !== "published" ? (
+                <button
+                  type="button"
+                  onClick={handlePreview}
+                  disabled={isPending}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] disabled:opacity-50"
+                >
+                  {isPending ? "Generating..." : "Preview"}
+                </button>
+              ) : null}
+            </>
+          ) : null}
+          {post?.slug && post?.status === "published" ? (
+            <Link className="rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] sm:text-left" href={getPostHref({ id: post.id, title: post.title, slug: post.slug })}>
+              View live
+            </Link>
           ) : null}
           <button className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--on-primary)] shadow-md transition-colors hover:bg-[var(--primary-light)]" type="submit">
             {buttonLabel}
           </button>
         </div>
       </div>
+
+      {(previewError || cloneError) && (
+        <div className="rounded-lg border border-[var(--color-error)] bg-[var(--color-error-soft)] p-4 text-sm text-[var(--color-error)]">
+          {previewError || cloneError}
+        </div>
+      )}
 
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
@@ -106,7 +180,11 @@ export function PostEditorForm({
 
           <label className="block">
             <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Story body</span>
-            <PostRichTextEditor contentJson={post?.contentJson ?? ""} inputName="contentJson" />
+            <PostRichTextEditor 
+              contentJson={post?.contentJson ?? ""} 
+              inputName="contentJson" 
+              excerpt={post?.excerpt}
+            />
           </label>
         </div>
 
@@ -170,7 +248,7 @@ export function PostEditorForm({
 
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Location</p>
-            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Add a location for this post. Be as specific or broad as you like — "Portland, Oregon", "California", or "Pacific Northwest" all work. Coordinates are geocoded automatically on save.</p>
+            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Add a location for this post. Be as specific or broad as you like — &quot;Portland, Oregon&quot;, &quot;California&quot;, or &quot;Pacific Northwest&quot; all work. Coordinates are geocoded automatically on save.</p>
             <div className="mt-5 space-y-4">
               <div>
                 <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Location name</span>

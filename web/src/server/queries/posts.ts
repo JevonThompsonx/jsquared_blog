@@ -3,6 +3,7 @@ import "server-only";
 import { renderTiptapJson } from "@/lib/content";
 import { cdnImageUrl } from "@/lib/cloudinary/transform";
 import {
+  getAnyPostRecordById,
   getPublishedPostRecordBySlug,
   listAllPublishedPostRecords,
   listCommentCountsByPostIds,
@@ -15,6 +16,14 @@ import {
   type PublishedPostRecord,
 } from "@/server/dal/posts";
 import type { BlogImage, BlogPost, BlogTag } from "@/types/blog";
+
+function getRenderedPostDescription(post: Pick<PublishedPostRecord, "contentFormat" | "contentHtml" | "contentJson" | "excerpt">): string | null {
+  if (post.contentFormat === "tiptap-json") {
+    return post.contentHtml ?? renderTiptapJson(post.contentJson) ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null);
+  }
+
+  return renderTiptapJson(post.contentJson) ?? post.contentHtml ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null);
+}
 
 function timestampToIso(value: Date | number | null): string {
   if (value instanceof Date) {
@@ -46,16 +55,16 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     id: post.id,
     slug: post.slug,
     title: post.title,
-    description: renderTiptapJson(post.contentJson) ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null),
+    description: getRenderedPostDescription(post),
     excerpt: post.excerpt,
     imageUrl: cdnImageUrl(post.imageUrl),
     category: post.category ?? null,
     createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
-    status: "published" as const,
+    status: "published",
     layoutType: post.layoutType ?? "standard",
     tags: tagsByPostId.get(post.id) ?? [],
     images: [],
-    source: "turso" as const,
+    source: "turso",
     locationName: post.locationName ?? null,
     locationLat: post.locationLat ?? null,
     locationLng: post.locationLng ?? null,
@@ -103,7 +112,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     id: post.id,
     slug: post.slug,
     title: post.title,
-    description: renderTiptapJson(post.contentJson) ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null),
+    description: getRenderedPostDescription(post),
     excerpt: post.excerpt,
     imageUrl: cdnImageUrl(post.imageUrl),
     category: post.category ?? null,
@@ -151,6 +160,52 @@ export async function listPublishedPostsByTagSlug(tagSlug: string, limit = 12, o
 
 export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | null> {
   return getPublishedPostFromTursoBySlug(slug);
+}
+
+export async function getPostForPreview(id: string): Promise<BlogPost | null> {
+  const post = await getAnyPostRecordById(id);
+  if (!post) {
+    return null;
+  }
+
+  const [tagRows, imageRows] = await Promise.all([
+    listTagsForPost(post.id),
+    listImagesForPost(post.id),
+  ]);
+
+  const images: BlogImage[] = imageRows.map((image) => ({
+    id: image.id,
+    imageUrl: cdnImageUrl(image.imageUrl) ?? image.imageUrl,
+    altText: image.altText ?? null,
+    sortOrder: image.sortOrder,
+  }));
+
+  return {
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    description: getRenderedPostDescription(post),
+    excerpt: post.excerpt,
+    imageUrl: cdnImageUrl(post.imageUrl),
+    category: post.category ?? null,
+    createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
+    status: post.status,
+    layoutType: post.layoutType ?? "standard",
+    tags: tagRows.map((tag) => ({
+      id: tag.tagId,
+      name: tag.name,
+      slug: tag.slug,
+    })),
+    images,
+    source: "turso",
+    locationName: post.locationName ?? null,
+    locationLat: post.locationLat ?? null,
+    locationLng: post.locationLng ?? null,
+    locationZoom: post.locationZoom ?? null,
+    iovanderUrl: post.iovanderUrl ?? null,
+    commentCount: 0,
+    authorId: post.authorId,
+  };
 }
 
 export async function getRelatedPosts(post: BlogPost, limit = 3): Promise<BlogPost[]> {

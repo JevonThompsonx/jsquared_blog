@@ -57,7 +57,7 @@ export async function POST(request: Request, context: { params: Promise<{ postId
   const { postId } = await context.params;
 
   // 5 new comments per minute per IP
-  const rl = checkRateLimit(`comment:${getClientIp(request)}`, 5, 60_000);
+  const rl = await checkRateLimit(`comment:${getClientIp(request)}`, 5, 60_000);
   if (!rl.allowed) return tooManyRequests(rl);
 
   const supabaseUser = await getRequestSupabaseUser(request);

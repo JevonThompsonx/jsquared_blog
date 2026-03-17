@@ -8,8 +8,11 @@ on:
 
 jobs:
   ci:
-    name: Type-check, lint & build
+    name: Lint, type-check, test & build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
 
     steps:
       - name: Checkout
@@ -23,37 +26,22 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Build shared first — client and server depend on its compiled output
-      - name: Build shared
-        run: bun run build:shared
+      - name: Lint
+        run: bun run lint
 
-      # Type-check the full monorepo using TypeScript project references
       - name: Type-check
-        run: bun x tsc --build
+        run: bunx tsc --noEmit
 
-      # Client lint (ESLint is only configured for the client right now)
-      - name: Lint client
-        run: cd client && bun run lint
+      - name: Test
+        run: bun run test
 
-      # Run schema/unit tests in the shared package
-      - name: Test shared
-        run: cd shared && bun run test
-
-      # Build client (Vite) — catches any bundler-level errors
-      - name: Build client
-        run: bun run build:client
+      - name: Build
+        run: bun run build
         env:
-          # Stub values so Vite doesn't fail on missing env vars during CI build.
-          # These are NOT real credentials — the build-time check just verifies
-          # the vars are present, not their content.
-          VITE_SUPABASE_URL: https://placeholder.supabase.co
-          VITE_SUPABASE_ANON_KEY: placeholder_anon_key_for_ci_build_only
-
-      - name: Test web
-        run: bun run test:web
-
-      - name: Lint web
-        run: bun run lint:web
-
-      - name: Build web
-        run: bun run build:web
+          # NEXT_PUBLIC_ vars are embedded at build time — provide stubs so
+          # any component that references them doesn't produce undefined output.
+          # Server-side vars are skipped at build time via the NEXT_PHASE check
+          # in src/lib/env.ts — no stubs needed for those.
+          NEXT_PUBLIC_SITE_URL: https://jsquaredadventures.com
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder_anon_key_ci_only

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { parseCanonicalTiptapDocument } from "@/lib/content";
+
 export const adminPostFormSchema = z
   .object({
     title: z.string().trim().min(1, "Title is required"),
@@ -10,6 +12,7 @@ export const adminPostFormSchema = z
     status: z.enum(["draft", "published", "scheduled"]),
     layoutType: z.enum(["standard", "split-horizontal", "split-vertical", "hover"]),
     scheduledPublishTime: z.string().trim().optional().default(""),
+    scheduledPublishOffsetMinutes: z.string().trim().optional().default(""),
     featuredImageUrl: z.string().trim().optional().default(""),
     featuredImageAlt: z.string().trim().optional().default(""),
     galleryEntries: z.string().trim().optional().default("[]"),
@@ -23,6 +26,14 @@ export const adminPostFormSchema = z
     iovanderUrl: z.string().trim().optional().default(""),
   })
   .superRefine((value, ctx) => {
+    if (!parseCanonicalTiptapDocument(value.contentJson)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Content must be valid Tiptap JSON",
+        path: ["contentJson"],
+      });
+    }
+
     if (value.status === "scheduled") {
       if (!value.scheduledPublishTime) {
         ctx.addIssue({

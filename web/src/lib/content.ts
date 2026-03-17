@@ -1,14 +1,17 @@
 import DOMPurify from "isomorphic-dompurify";
+import { z } from "zod";
 
 const SANITIZE_OPTIONS = {
   USE_PROFILES: { html: true },
   ADD_ATTR: ["target", "rel"],
 };
 
-type TiptapMark = {
-  type?: string;
-  attrs?: Record<string, unknown>;
-};
+const tiptapMarkSchema = z.object({
+  type: z.string().optional(),
+  attrs: z.record(z.string(), z.unknown()).optional(),
+});
+
+type TiptapMark = z.infer<typeof tiptapMarkSchema>;
 
 type TiptapNode = {
   type?: string;
@@ -16,6 +19,33 @@ type TiptapNode = {
   attrs?: Record<string, unknown>;
   marks?: TiptapMark[];
   content?: TiptapNode[];
+};
+
+const tiptapNodeSchema: z.ZodType<TiptapNode> = z.lazy(() => z.object({
+  type: z.string().optional(),
+  text: z.string().optional(),
+  attrs: z.record(z.string(), z.unknown()).optional(),
+  marks: z.array(tiptapMarkSchema).optional(),
+  content: z.array(tiptapNodeSchema).optional(),
+}));
+
+export const tiptapDocumentSchema = z.object({
+  type: z.literal("doc"),
+  content: z.array(tiptapNodeSchema).optional().default([]),
+});
+
+const legacyHtmlContentSchema = z.object({
+  type: z.literal("legacy-html"),
+  html: z.string(),
+});
+
+export type TiptapDocument = z.infer<typeof tiptapDocumentSchema>;
+export type TiptapNodePath = number[];
+export type TiptapImageAltWarning = {
+  code: "missing-image-alt";
+  message: string;
+  path: TiptapNodePath;
+  imageSrc: string | null;
 };
 
 function escapeHtml(value: string): string {
@@ -27,6 +57,10 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function safeJsonParse(value: string): unknown {
+  return JSON.parse(value) as unknown;
+}
+
 function sanitizeHref(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -34,6 +68,19 @@ function sanitizeHref(value: unknown): string | null {
 
   const trimmed = value.trim();
   if (/^(https?:|mailto:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
+}
+
+function sanitizeImageSrc(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
   }
 
@@ -82,9 +129,8 @@ function renderTiptapNode(node: TiptapNode): string {
     case "text":
       return applyMarks(escapeHtml(node.text ?? ""), node.marks);
     case "heading": {
-      const level = typeof node.attrs?.level === "number" && node.attrs.level >= 1 && node.attrs.level <= 6
-        ? node.attrs.level
-        : 2;
+      const rawLevel = node.attrs?.level;
+      const level = typeof rawLevel === "number" && rawLevel >= 1 && rawLevel <= 6 ? rawLevel : 2;
       return `<h${level}>${renderChildren(node.content)}</h${level}>`;
     }
     case "bulletList":
@@ -101,9 +147,96 @@ function renderTiptapNode(node: TiptapNode): string {
       return "<br />";
     case "horizontalRule":
       return "<hr />";
+    case "image": {
+      const src = sanitizeImageSrc(node.attrs?.src);
+      if (!src) {
+        return "";
+      }
+
+      const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
+      const title = typeof node.attrs?.title === "string" ? node.attrs.title.trim() : "";
+      const titleAttribute = title ? ` title="${escapeHtml(title)}"` : "";
+      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${titleAttribute} />`;
+    }
     default:
       return renderChildren(node.content);
   }
+}
+
+export function createEmptyTiptapDocument(): TiptapDocument {
+  return {
+    type: "doc",
+    content: [{ type: "paragraph" }],
+  };
+}
+
+export function parseCanonicalTiptapDocument(contentJson: string | null | undefined): TiptapDocument | null {
+  if (!contentJson) {
+    return null;
+  }
+
+  try {
+    return tiptapDocumentSchema.parse(safeJsonParse(contentJson));
+  } catch {
+    return null;
+  }
+}
+
+export function isLegacyHtmlContent(contentJson: string | null | undefined): boolean {
+  if (!contentJson) {
+    return false;
+  }
+
+  try {
+    return legacyHtmlContentSchema.safeParse(safeJsonParse(contentJson)).success;
+  } catch {
+    return false;
+  }
+}
+
+export function deriveExcerptFromContent(contentJson: string, maxLength = 280): string | null {
+  const renderedHtml = renderTiptapJson(contentJson);
+  const plainText = htmlToPlainText(renderedHtml);
+  if (!plainText) {
+    return null;
+  }
+
+  return plainText.slice(0, maxLength) || null;
+}
+
+function collectImageAltWarnings(node: TiptapNode, path: number[], warnings: TiptapImageAltWarning[]): void {
+  if (node.type === "image") {
+    const rawAlt = node.attrs?.alt;
+    const alt = typeof rawAlt === "string" ? rawAlt.trim() : "";
+    const rawSrc = node.attrs?.src;
+    const imageSrc = typeof rawSrc === "string" && rawSrc.trim() ? rawSrc.trim() : null;
+
+    if (!alt) {
+      warnings.push({
+        code: "missing-image-alt",
+        message: "Add alt text to every inline image before publishing.",
+        path,
+        imageSrc,
+      });
+    }
+  }
+
+  node.content?.forEach((child, index) => {
+    collectImageAltWarnings(child, [...path, index], warnings);
+  });
+}
+
+export function getTiptapImageAltWarnings(content: string | TiptapDocument): TiptapImageAltWarning[] {
+  const document = typeof content === "string" ? parseCanonicalTiptapDocument(content) : content;
+  if (!document) {
+    return [];
+  }
+
+  const warnings: TiptapImageAltWarning[] = [];
+  document.content.forEach((node, index) => {
+    collectImageAltWarnings(node, [index], warnings);
+  });
+  return warnings;
 }
 
 export function renderTiptapJson(contentJson: string | null | undefined): string | null {
@@ -112,16 +245,18 @@ export function renderTiptapJson(contentJson: string | null | undefined): string
   }
 
   try {
-    const parsed = JSON.parse(contentJson) as TiptapNode | { type?: string; html?: string };
-    if (parsed && parsed.type === "legacy-html" && "html" in parsed && typeof parsed.html === "string") {
-      return sanitizeRichTextHtml(parsed.html);
+    const parsed = safeJsonParse(contentJson);
+    const legacyContent = legacyHtmlContentSchema.safeParse(parsed);
+    if (legacyContent.success) {
+      return sanitizeRichTextHtml(legacyContent.data.html);
     }
 
-    if (!parsed || parsed.type !== "doc") {
+    const canonicalContent = tiptapDocumentSchema.safeParse(parsed);
+    if (!canonicalContent.success) {
       return null;
     }
 
-    return sanitizeRichTextHtml(renderTiptapNode(parsed));
+    return sanitizeRichTextHtml(renderTiptapNode(canonicalContent.data));
   } catch {
     return null;
   }
@@ -153,10 +288,6 @@ function slugifyHeading(text: string): string {
     .replace(/^-|-$/g, "");
 }
 
-/**
- * Adds `id` attributes to h2–h4 headings in sanitized HTML and returns
- * both the modified HTML and the extracted headings for TOC rendering.
- */
 export function processHeadings(html: string): { html: string; headings: TocHeading[] } {
   const headings: TocHeading[] = [];
   const seen = new Map<string, number>();
@@ -164,7 +295,7 @@ export function processHeadings(html: string): { html: string; headings: TocHead
   const processedHtml = html.replace(
     /<h([2-4])([^>]*)>([\s\S]*?)<\/h\1>/gi,
     (_, levelStr, attrs: string, inner: string) => {
-      const level = parseInt(levelStr, 10);
+      const level = Number.parseInt(levelStr, 10);
       const text = inner
         .replace(/<[^>]+>/g, "")
         .replace(/&amp;/g, "&")
