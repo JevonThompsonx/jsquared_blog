@@ -1,46 +1,18 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
-import { getServerEnv } from "@/lib/env";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
-import { canCommentOnPost, createCommentRecord, listCommentsForPost } from "@/server/dal/comments";
-import { createCommentSchema, commentSortSchema } from "@/server/forms/comments";
+import { canCommentOnPost, canReplyToComment, createCommentRecord, listCommentsForPost } from "@/server/dal/comments";
+import { createCommentSchema, commentSortSchema, postCommentsParamsSchema } from "@/server/forms/comments";
 
-async function getRequestSupabaseUser(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
+export async function GET(request: Request, context: { params: Promise<{ postId: string }> }): Promise<NextResponse> {
+  const paramsParse = postCommentsParamsSchema.safeParse(await context.params);
+  if (!paramsParse.success) {
+    return NextResponse.json({ error: "Invalid post id" }, { status: 400 });
   }
 
-  const token = authHeader.slice("Bearer ".length).trim();
-  if (!token) {
-    return null;
-  }
-
-  const env = getServerEnv();
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-    return null;
-  }
-
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  const result = await supabase.auth.getUser();
-  return result.data.user ?? null;
-}
-
-export async function GET(request: Request, context: { params: Promise<{ postId: string }> }) {
-  const { postId } = await context.params;
+  const { postId } = paramsParse.data;
   const url = new URL(request.url);
   const sortParse = commentSortSchema.safeParse(url.searchParams.get("sort") ?? "likes");
   if (!sortParse.success) {
@@ -53,8 +25,13 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
   return NextResponse.json({ comments });
 }
 
-export async function POST(request: Request, context: { params: Promise<{ postId: string }> }) {
-  const { postId } = await context.params;
+export async function POST(request: Request, context: { params: Promise<{ postId: string }> }): Promise<NextResponse> {
+  const paramsParse = postCommentsParamsSchema.safeParse(await context.params);
+  if (!paramsParse.success) {
+    return NextResponse.json({ error: "Invalid post id" }, { status: 400 });
+  }
+
+  const { postId } = paramsParse.data;
 
   // 5 new comments per minute per IP
   const rl = await checkRateLimit(`comment:${getClientIp(request)}`, 5, 60_000);
@@ -79,6 +56,13 @@ export async function POST(request: Request, context: { params: Promise<{ postId
   const parse = createCommentSchema.safeParse(payload);
   if (!parse.success) {
     return NextResponse.json({ error: parse.error.flatten().fieldErrors }, { status: 400 });
+  }
+
+  if (parse.data.parentId) {
+    const canReply = await canReplyToComment(postId, parse.data.parentId);
+    if (!canReply) {
+      return NextResponse.json({ error: "Parent comment not found" }, { status: 404 });
+    }
   }
 
   const publicUser = await ensurePublicAppUser(supabaseUser);
