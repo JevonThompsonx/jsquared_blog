@@ -1,6 +1,6 @@
 # J²Adventures Blog
 
-A full-stack travel blog application built with React, Hono, and Supabase. Features include infinite scroll, rich text editing, image galleries, comments, tags, post scheduling, and user profiles.
+A travel blog platform built around the live Next.js app in `web/`. It supports rich publishing, maps, galleries, comments, public accounts, GitHub-based admin tooling, and production SEO for `jsquaredadventures.com`.
 
 **Live Site**: [jsquaredadventures.com](https://jsquaredadventures.com)
 
@@ -10,13 +10,16 @@ A full-stack travel blog application built with React, Hono, and Supabase. Featu
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | React 19 + Vite + TailwindCSS 4 |
-| **Backend** | Hono (Cloudflare Worker) |
-| **Database** | Supabase PostgreSQL |
-| **Auth** | Supabase Auth |
-| **Storage** | Supabase Storage (WebP conversion) |
-| **Deployment** | Cloudflare Pages (frontend) + Workers (backend) |
-| **Runtime** | Bun (local development) |
+| **App** | Next.js 16 App Router |
+| **Language** | TypeScript (`strict: true`) |
+| **Database** | Turso / libSQL + Drizzle ORM |
+| **Public Auth** | Supabase Auth |
+| **Admin Auth** | Auth.js + GitHub OAuth |
+| **Storage** | Cloudinary |
+| **Styling** | TailwindCSS 4 + CSS variables |
+| **Testing** | Vitest + Playwright |
+| **Deployment** | Vercel |
+| **Runtime / package manager** | Bun |
 
 ---
 
@@ -24,12 +27,12 @@ A full-stack travel blog application built with React, Hono, and Supabase. Featu
 
 ```
 jsquared_blog/
-├── client/          # React frontend (Vite)
-├── server/          # Hono backend API (Cloudflare Worker)
-├── shared/          # Shared TypeScript types
-├── CLAUDE.md        # AI assistant guidance (comprehensive)
-├── TODO.md          # Feature tracker & roadmap
-└── docs/            # Additional documentation
+├── web/             # Active Next.js application
+├── docs/            # Plans, handoffs, deployment, workflow notes
+├── CLAUDE.md        # Architecture + repo guidance
+├── AGENTS.md        # Multi-model ownership + coordination
+├── TODO.md          # Practical backlog / tracker
+└── prompt.md        # Master project prompt / guardrails
 ```
 
 ---
@@ -37,8 +40,11 @@ jsquared_blog/
 ## Quick Start
 
 ### Prerequisites
-- [Bun](https://bun.sh/docs/installation) installed
-- Supabase project with credentials
+- [Bun](https://bun.sh/docs/installation)
+- Turso database credentials
+- Supabase project credentials
+- Cloudinary credentials
+- GitHub OAuth app for admin auth
 
 ### 1. Install Dependencies
 ```bash
@@ -47,48 +53,44 @@ bun install
 
 ### 2. Configure Environment Variables
 
-**Client** (`client/.env`):
-```
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+Create `web/.env` (or `web/.env.local`) with the variables documented in `web/src/lib/env.ts` and `docs/deployment.md`.
 
-**Server** (`server/.dev.vars`) - **DO NOT use quotes around values**:
-```
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
+Typical local setup includes:
 
-# Optional: For local scheduled post testing
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-DEV_MODE=true
+```bash
+TURSO_DATABASE_URL=...
+TURSO_AUTH_TOKEN=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+AUTH_SECRET=...
+AUTH_GITHUB_ID=...
+AUTH_GITHUB_SECRET=...
+AUTH_ADMIN_GITHUB_IDS=...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+NEXT_PUBLIC_STADIA_MAPS_API_KEY=...
 ```
 
 ### 3. Run Development Server
 ```bash
+cd web
 bun run dev
 ```
 
-This starts:
-- Frontend on `http://localhost:5173`
-- Backend on `http://127.0.0.1:8787`
-- Shared types in watch mode
+App runs at `http://localhost:3000`.
 
-### Local Scheduled Post Testing
+### Optional: Capture admin Playwright state
 
-The Cloudflare cron job only runs in production. For local testing:
+To run authenticated admin smoke tests locally without signing in every run:
 
 ```bash
-# Check environment variables are loaded
-curl http://127.0.0.1:8787/api/test/env
-
-# View scheduled posts and their timing
-curl http://127.0.0.1:8787/api/test/scheduled-posts
-
-# Manually trigger publish for due posts
-curl http://127.0.0.1:8787/api/test/cron
+cd web
+bun run e2e:capture-admin-state
 ```
 
-**Note:** Test endpoints require `DEV_MODE=true` in `.dev.vars`. Posts are also auto-published when someone visits `/api/posts` or `/api/posts/:id`.
+This writes `web/playwright/.auth/admin.json`, which `bun run test:e2e` will use automatically.
 
 ---
 
@@ -98,17 +100,18 @@ curl http://127.0.0.1:8787/api/test/cron
 - Rich text editor (Tiptap) with full formatting
 - Multiple images per post with carousel gallery
 - Focal point editor for image positioning
-- Automatic WebP conversion (85% quality)
+- Cloudinary-backed optimized image delivery (`f_auto,q_auto`)
 - Draft/Published/Scheduled post status
 - Tags system with autocomplete
-- 15 predefined categories + custom
+- Categories, tags, series, location metadata, and previews
 
 ### User Experience
 - Infinite scroll with Intersection Observer
 - Server-side search (title, description, category)
-- Four theme options (dark/light variants)
+- Seasonal homepage hero and grouped feed sections
+- Theme preferences across light/dark mode and look variants
 - Responsive grid layouts (1-4 columns)
-- Back to top button, breadcrumbs, loading skeletons
+- Breadcrumbs, loading skeletons, reading progress, and print/reduced-motion support
 
 ### User Profiles
 - Display name and avatar customization
@@ -121,6 +124,7 @@ curl http://127.0.0.1:8787/api/test/cron
 - Share buttons (copy link)
 - Reading time estimates
 - Related posts suggestions
+- Bookmarks and author profile pages
 
 ### SEO
 - Dynamic sitemap.xml
@@ -134,29 +138,22 @@ curl http://127.0.0.1:8787/api/test/cron
 ## Development Commands
 
 ```bash
-# Full stack development
+cd web
+
 bun run dev
+bun run lint
+bunx tsc --noEmit
+bun run test
+bun run test:e2e
+bun run build
 
-# Individual services
-cd client && bun run dev          # Frontend only
-bunx wrangler dev --config server/wrangler.toml  # Backend only
-cd shared && bun run dev          # Types watch mode
+# Drizzle / Turso
+bun run db:generate
+bun run db:migrate
 
-# Build
-bun run build                     # Full monorepo (tsc --build)
-
-# Lint
-cd client && bun run lint         # Client ESLint
-cd server && bun run lint         # Server ESLint
-
-# Tests (shared package — Zod schema validation)
-cd shared && bun test src
-
-# Database seeding
-cd server && bun run seed         # Add starter posts
-
-# Deploy backend
-cd server && bunx wrangler deploy
+# Helpers
+bun run e2e:capture-admin-state
+bun run ./scripts/seed-series-categories.ts
 ```
 
 ---
@@ -182,55 +179,33 @@ server/migrations/APPLY_ALL_MIGRATIONS.sql
 
 ## Deployment
 
-### Backend (Cloudflare Workers)
-```bash
-cd server
-wrangler login
-wrangler secret put SUPABASE_URL
-wrangler secret put SUPABASE_ANON_KEY
-wrangler deploy
-```
-
-### Frontend (Cloudflare Pages)
-1. Connect GitHub repository in Cloudflare Pages
-2. Build settings:
-   - Build command: `bun run build`
-   - Output directory: `client/dist`
-3. Environment variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+The live app deploys from `web/` to Vercel. See `docs/deployment.md` for the full environment-variable checklist, cutover cleanup, and dashboard notes.
 
 ---
 
-## API Endpoints
+## Key Routes / Endpoints
 
 ```
-GET  /api/posts                    # Paginated posts (?limit, ?offset, ?search, ?status)
-GET  /api/posts/:id                # Single post with images and tags
-POST /api/posts                    # Create post (admin)
-PUT  /api/posts/:id                # Update post (admin)
-DELETE /api/posts/:id              # Delete post (admin)
+GET  /                            # Homepage / feed
+GET  /posts/[slug]                # Published post detail
+GET  /preview/[id]?token=...      # Admin / token preview
+GET  /map                         # World map of posts
+GET  /category/[category]         # Category feed
+GET  /tag/[slug]                  # Tag feed
 
-GET  /api/posts/:id/images         # Get images for a post
-POST /api/posts/:id/images         # Upload images (admin)
+GET  /api/posts                   # Paginated published posts
+POST /api/posts/[postId]/comments # Add comment (public auth)
+POST /api/comments/[commentId]/like
+GET  /api/bookmarks
 
-GET  /api/posts/:id/comments       # Comments (?sort=likes|newest|oldest)
-POST /api/posts/:id/comments       # Add comment (authenticated)
-POST /api/comments/:id/like        # Toggle like (authenticated)
-DELETE /api/comments/:id           # Delete comment (owner only)
+GET  /api/admin/posts
+POST /api/admin/posts/clone
+POST /api/admin/posts/preview
+POST /api/admin/comments/moderate
+POST /api/admin/uploads/images
 
-GET  /api/tags                     # All available tags
-POST /api/tags                     # Create tag (admin)
-PUT  /api/posts/:id/tags           # Update post tags (admin)
-GET  /api/tags/:slug/posts         # Get posts by tag (?limit, ?offset)
-
-POST /api/admin/reassign-layouts   # Shuffle post layouts (admin)
-POST /api/admin/publish-scheduled  # Publish past-due scheduled posts (admin)
-
-GET  /api/authors/:username        # Author profile with posts
-
-GET  /sitemap.xml                  # Dynamic sitemap
-GET  /feed.xml                     # RSS feed
+GET  /sitemap.xml
+GET  /feed.xml
 ```
 
 ---
@@ -239,19 +214,15 @@ GET  /feed.xml                     # RSS feed
 
 | Check | Tool | Command |
 |-------|------|---------|
-| Type-check | TypeScript project references | `bun x tsc --build` |
-| Lint (client) | ESLint + typescript-eslint | `cd client && bun run lint` |
-| Lint (server) | ESLint + typescript-eslint | `cd server && bun run lint` |
-| Tests | Bun native test runner | `cd shared && bun test src` |
+| Type-check | TypeScript | `cd web && bunx tsc --noEmit` |
+| Lint | ESLint | `cd web && bun run lint` |
+| Unit tests | Vitest | `cd web && bun run test` |
+| E2E smoke | Playwright | `cd web && bun run test:e2e` |
 | CI | GitHub Actions | Auto-runs on PR / push to `main` |
 
-**CI pipeline** (`.github/workflows/ci.yml`) runs on every PR: build shared → type-check → lint → test → build client.
+**Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.
 
-**Input validation** uses [Zod](https://zod.dev) schemas defined in `shared/src/schemas/` — the same schemas are used by both the server (route validation) and client (form validation) for end-to-end type safety.
-
-**Security headers** — every API response includes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and related headers via Hono's `secureHeaders` middleware.
-
-**CORS** — the API only accepts requests from `jsquaredadventures.com` (and `localhost:5173` in development).
+**Security headers** ship from `web/next.config.ts`.
 
 ---
 
@@ -260,10 +231,11 @@ GET  /feed.xml                     # RSS feed
 | Document | Purpose |
 |----------|---------|
 | [CLAUDE.md](./CLAUDE.md) | Complete technical reference |
+| [AGENTS.md](./AGENTS.md) | Model ownership and coordination |
 | [TODO.md](./TODO.md) | Feature tracker & roadmap |
-| [docs/TESTING.md](./docs/TESTING.md) | Testing guide for features |
-| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Detailed deployment guide |
-| [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | Current status + recent fixes |
+| [docs/handoff.md](./docs/handoff.md) | Current verified status and open work |
+| [docs/PLAN.md](./docs/PLAN.md) | Phase/task plan |
+| [docs/deployment.md](./docs/deployment.md) | Deployment and dashboard notes |
 
 ---
 

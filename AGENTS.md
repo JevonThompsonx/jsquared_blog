@@ -4,7 +4,7 @@ This file is read by all AI coding assistants (Claude Code, Windsurf Cascade, et
 
 ## Project Summary
 
-J²Adventures is a travel blog at jsquaredadventures.com. The active codebase is `web/` — a Next.js 15 App Router app deployed on Vercel with Turso (SQLite/Drizzle), Supabase Auth (public), Auth.js+GitHub (admin), Cloudinary (images), and TailwindCSS 4.
+J²Adventures is a travel blog at jsquaredadventures.com. The active codebase is `web/` — a Next.js 16 App Router app deployed on Vercel with Turso (SQLite/Drizzle), Supabase Auth (public), Auth.js+GitHub (admin), Cloudinary (images), and TailwindCSS 4.
 
 **Key docs**: [CLAUDE.md](CLAUDE.md) (full architecture), [docs/PLAN.md](docs/PLAN.md) (roadmap), [docs/handoff.md](docs/handoff.md) (status)
 
@@ -25,7 +25,7 @@ J²Adventures is a travel blog at jsquaredadventures.com. The active codebase is
 - No `any`, `as`, or `!` — strict TypeScript
 - Turso migration files use `--> statement-breakpoint` delimiter (not semicolons)
 
-### Gemini 3 Pro — Frontend Engineer (Windsurf Cascade)
+### Gemini 3 Flash — Frontend Engineer (Windsurf Cascade)
 **Owns**: UI components, styling, client-side interactivity, loading states
 **Key directories**: `web/src/components/`, `web/src/app/**/page.tsx`, `web/src/app/**/loading.tsx`, `web/src/app/globals.css`
 **Rules**:
@@ -36,8 +36,8 @@ J²Adventures is a travel blog at jsquaredadventures.com. The active codebase is
 - Use `next/image` for all images
 - Accessibility: WCAG AA minimum, semantic HTML, ARIA labels, keyboard nav
 
-### GPT-5.3 Codex — Data & Scripts (Windsurf Cascade)
-**Owns**: Python scripts, data migrations, terminal tooling, one-off automations
+### GPT-5.4 — Review, Tests, and Automation (OpenCode / Copilot)
+**Owns**: Review passes, targeted backend/frontend fixes, test coverage follow-up, terminal tooling, one-off automations
 **Rules**: Keep scripts in `scripts/` directory. Document usage in script header comments.
 
 ## File Ownership Boundaries

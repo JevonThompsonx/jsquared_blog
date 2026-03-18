@@ -52,7 +52,9 @@ function CloseIcon() {
   );
 }
 
-function ThemeToggle() {
+import { MobileNav } from "./mobile-nav";
+
+export function ThemeToggle() {
   const { mode, toggleMode } = useNextTheme();
 
   return (
@@ -81,7 +83,6 @@ function ThemeToggle() {
 export function SiteHeader() {
   const { data: adminSession } = useSession();
   const isAdminSignedIn = Boolean(adminSession?.user?.id);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -167,12 +168,6 @@ export function SiteHeader() {
     };
   }, [supabase]);
 
-  // Close menu on route change
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsMenuOpen(false);
-  }, [pathname]);
-
   const isPublicSignedIn = Boolean(publicSession?.user);
 
   return (
@@ -240,118 +235,16 @@ export function SiteHeader() {
           ) : null}
         </div>
 
-        {/* Mobile: theme toggle + menu button */}
-        <div className="flex items-center gap-2 md:hidden">
-          <ThemeToggle />
-
-          <button
-            aria-expanded={isMenuOpen}
-            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-            className="nav-link-pill flex h-10 min-w-[2.6rem] items-center justify-center gap-2 px-3 text-sm"
-            onClick={() => setIsMenuOpen((v) => !v)}
-            type="button"
-          >
-            {isMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
-            <span className="hidden xs:inline">{isMenuOpen ? "Close" : "Menu"}</span>
-          </button>
-        </div>
+        {/* Mobile Nav */}
+        <MobileNav
+          adminSession={adminSession}
+          currentSearch={currentSearch}
+          onSearchChange={handleSearchChange}
+          onSearchSubmit={handleSearchSubmit}
+          publicSession={publicSession}
+          ThemeToggle={ThemeToggle}
+        />
       </div>
-
-      {/* Mobile dropdown */}
-      {isMenuOpen ? (
-        <div className="navbar-mobile-menu max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-[var(--border)] bg-[var(--card-bg)] px-4 pb-5 pt-4 md:hidden">
-          {/* Search */}
-          <form action="/" className="relative" onSubmit={handleSearchSubmit}>
-            <input
-              aria-label="Search stories"
-              className="search-input w-full rounded-full border py-2.5 pl-4 pr-10 text-sm"
-              defaultValue={currentSearch}
-              key={`mobile-search:${pathname}:${currentSearch}`}
-              name="search"
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search stories…"
-              type="search"
-            />
-            <button
-              aria-label="Search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-              type="submit"
-            >
-              <SearchIcon />
-            </button>
-          </form>
-
-          {/* Links */}
-          <nav className="mt-4 flex flex-col gap-0.5">
-            <Link
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
-              href="/"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Home
-            </Link>
-            <Link
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
-              href="/map"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Map
-            </Link>
-            <Link
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
-              href="/about"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              About
-            </Link>
-
-            {isAdminSignedIn ? (
-              <>
-                <Link
-                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
-                  href="/admin"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Admin dashboard
-                </Link>
-                <p className="px-3 pt-0.5 text-xs text-[var(--text-secondary)]">
-                  {adminSession?.user?.githubLogin ?? adminSession?.user?.email ?? "Admin"}
-                </p>
-              </>
-            ) : null}
-
-            {isPublicSignedIn ? (
-              <>
-                <Link
-                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
-                  href="/bookmarks"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Saved posts
-                </Link>
-                <Link
-                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
-                  href="/account"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Account settings
-                </Link>
-                <p className="px-3 pt-0.5 text-xs text-[var(--text-secondary)]">
-                  {publicSession?.user?.email ?? "reader"}
-                </p>
-              </>
-            ) : !isAdminSignedIn ? (
-              <Link
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
-                href={{ pathname: "/login", query: { redirectTo: pathname ?? "/" } }}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Sign in
-              </Link>
-            ) : null}
-          </nav>
-        </div>
-      ) : null}
     </header>
   );
 }

@@ -1,21 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  adminTest,
+  configuredAdminPostId,
+  getAdminStorageStateHint,
+  hasAdminStorageState,
+  openAdminCommentsPage,
+  selectThemeOption,
+} from "./helpers/admin";
+
 // These tests run against a live server (local dev or production).
 // Set E2E_BASE_URL to target a specific environment, otherwise defaults to
 // http://localhost:3000 (local dev server must be running).
 
-const adminStorageState = process.env.E2E_ADMIN_STORAGE_STATE;
-
-const adminPostId = process.env.E2E_ADMIN_POST_ID;
-
-if (adminStorageState) {
-  test.use({ storageState: adminStorageState });
-}
-
-async function selectThemeOption(page: import("@playwright/test").Page, ariaLabel: string, optionText: string) {
-  await page.getByLabel(ariaLabel).click();
-  await page.getByRole("option", { name: optionText, exact: true }).click();
-}
+const statusOptionLabels: Record<"published" | "draft" | "scheduled", string> = {
+  published: "Published",
+  draft: "Draft",
+  scheduled: "Scheduled",
+};
 
 test.describe("public pages smoke tests", () => {
 
@@ -94,10 +96,10 @@ test.describe("public pages smoke tests", () => {
 
 });
 
-test.describe("authenticated admin smoke tests", () => {
-  test.skip(!adminStorageState, "Set E2E_ADMIN_STORAGE_STATE to run admin smoke tests.");
+adminTest.describe("authenticated admin smoke tests", () => {
+  adminTest.skip(!hasAdminStorageState, getAdminStorageStateHint());
 
-  test("admin can filter, clone, and preview a post", async ({ page }) => {
+  adminTest("admin can filter, clone, and preview a post", async ({ page }) => {
     await page.goto("/admin");
 
     const postRows = page.getByTestId("admin-post-row");
@@ -114,8 +116,8 @@ test.describe("authenticated admin smoke tests", () => {
 
     const filteredFirstRow = page.getByTestId("admin-post-row").first();
     const filteredStatus = await filteredFirstRow.getAttribute("data-post-status");
-    if (filteredStatus) {
-      await page.getByLabel("Filter posts by status").selectOption(filteredStatus);
+    if (filteredStatus === "published" || filteredStatus === "draft" || filteredStatus === "scheduled") {
+      await selectThemeOption(page, "Filter posts by status", statusOptionLabels[filteredStatus]);
       await page.waitForURL((url) => url.searchParams.get("status") === filteredStatus, { timeout: 10_000 });
       await expect(page.getByTestId("admin-post-row").first()).toHaveAttribute("data-post-status", filteredStatus);
     }
@@ -135,7 +137,7 @@ test.describe("authenticated admin smoke tests", () => {
     await expect(previewPage.getByText("Preview Mode")).toBeVisible();
   });
 
-  test("admin dashboard filters and navigation stay usable", async ({ page }) => {
+  adminTest("admin dashboard filters and navigation stay usable", async ({ page }) => {
     await page.goto("/admin");
 
     await expect(page.getByText("Editorial workspace")).toBeVisible();
@@ -153,7 +155,7 @@ test.describe("authenticated admin smoke tests", () => {
     await expect(rows.first().getByRole("link", { name: "Moderate comments" })).toBeVisible();
   });
 
-  test("admin tags page renders editing controls", async ({ page }) => {
+  adminTest("admin tags page renders editing controls", async ({ page }) => {
     await page.goto("/admin/tags");
 
     await expect(page.getByRole("heading", { name: "Manage Tags" })).toBeVisible();
@@ -164,10 +166,8 @@ test.describe("authenticated admin smoke tests", () => {
     await expect(page.getByRole("button", { name: "Save" }).first()).toBeVisible();
   });
 
-  test("admin moderation page shows summary cards and inline delete confirmation", async ({ page }) => {
-    test.skip(!adminPostId, "Set E2E_ADMIN_POST_ID to run moderation smoke tests.");
-
-    await page.goto(`/admin/posts/${adminPostId}/comments`);
+  adminTest("admin moderation page shows summary cards and moderation states", async ({ page }) => {
+    const resolvedPostId = await openAdminCommentsPage(page);
 
     await expect(page.getByText("Moderation tools")).toBeVisible();
     await expect(page.getByText("Thread review")).toBeVisible();
@@ -176,6 +176,22 @@ test.describe("authenticated admin smoke tests", () => {
     await expect(page.getByText("Flagged")).toBeVisible();
     await expect(page.getByText("Hidden")).toBeVisible();
     await expect(page.getByText("Deleted")).toBeVisible();
+
+    if (configuredAdminPostId) {
+      expect(resolvedPostId).toBe(configuredAdminPostId);
+    }
+
+    await expect(
+      page.getByText("No comments have been posted on this story.").or(page.getByRole("button", { name: /^Delete$/ }).first()),
+    ).toBeVisible({ timeout: 15_000 });
+  });
+
+  adminTest("admin moderation page shows inline delete confirmation when comments exist", async ({ page }) => {
+    adminTest.skip(!configuredAdminPostId, "Set E2E_ADMIN_POST_ID to exercise inline delete confirmation on a post with comments.");
+
+    await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
+
+    await expect(page.getByText("Moderation tools")).toBeVisible();
 
     const deleteButton = page.getByRole("button", { name: /^Delete$/ }).first();
     await expect(deleteButton).toBeVisible({ timeout: 15_000 });

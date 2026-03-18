@@ -10,14 +10,14 @@ J²Adventures Blog is a travel blog application. The active codebase is the Next
 
 ## Active Tech Stack (`web/`)
 
-- **Framework**: Next.js 15 (App Router, Turbopack)
+- **Framework**: Next.js 16 (App Router, Turbopack)
 - **Runtime**: Node.js / Vercel
 - **Database**: Turso (SQLite via libSQL) + Drizzle ORM
 - **Public auth**: Supabase Auth (sign up, login, email callback)
 - **Admin auth**: Auth.js (next-auth v4) + GitHub OAuth
 - **Image hosting**: Cloudinary
 - **Styling**: TailwindCSS 4 + CSS custom properties (theme variables)
-- **Rich text**: Tiptap (transitional HTML payload stored in `content_json`)
+- **Rich text**: Tiptap JSON stored in `content_json` with backward-compatible `legacy-html` reads still supported
 
 ## Repository Structure
 
@@ -338,8 +338,8 @@ This codebase is worked on by multiple AI models. See `AGENTS.md` for full coord
 |---|---|---|
 | **Claude Opus 4.6** | Planning, architecture, code review, test strategy | Claude Code |
 | **Claude Sonnet 4.6** | Backend TS — server/, drizzle/, lib/, api/, actions.ts | Claude Code |
-| **Gemini 3 Pro** | UI components, styling, page layouts, client interactivity | Windsurf Cascade |
-| **GPT-5.3 Codex** | Python/data tasks, hard backend problems (escalation) | Windsurf Cascade |
+| **Gemini 3 Flash** | UI components, styling, page layouts, client interactivity | Windsurf Cascade |
+| **GPT-5.4** | Review passes, targeted backend/test work, scripts | OpenCode / Copilot |
 
 ### File Ownership
 - **Opus does NOT touch frontend files** (`components/`, `page.tsx`, `globals.css`) unless explicitly asked.

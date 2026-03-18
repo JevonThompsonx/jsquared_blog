@@ -25,6 +25,8 @@ function makePost(id: string, createdAt: string): BlogPost {
     imageUrl: null,
     category: null,
     createdAt,
+    updatedAt: createdAt,
+    publishedAt: createdAt,
     status: "published",
     tags: [],
     images: [],
@@ -35,6 +37,7 @@ function makePost(id: string, createdAt: string): BlogPost {
     locationZoom: null,
     iovanderUrl: null,
     commentCount: 0,
+    readingTimeMinutes: 3,
   };
 }
 

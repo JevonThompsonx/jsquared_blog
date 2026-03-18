@@ -5,17 +5,10 @@ import { getServerSession } from "next-auth";
 
 import { buildAdminAuthOptions } from "@/lib/auth/admin";
 
-export type AdminSession = Session & {
-  user?: Session["user"] & {
-    id?: string;
-    role?: "reader" | "author" | "admin";
-    githubLogin?: string;
-    avatarUrl?: string | null;
-  };
-};
+export type AdminSession = Session;
 
 export async function getAdminServerSession(): Promise<AdminSession | null> {
-  return getServerSession(buildAdminAuthOptions()) as Promise<AdminSession | null>;
+  return getServerSession(buildAdminAuthOptions());
 }
 
 export async function requireAdminSession(): Promise<AdminSession | null> {

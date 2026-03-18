@@ -13,7 +13,7 @@ import { SeriesNav } from "@/components/blog/series-nav";
 import { TableOfContents } from "@/components/blog/table-of-contents";
 import { PostDate } from "@/components/blog/post-date";
 import { SiteHeader } from "@/components/layout/site-header";
-import { htmlToPlainText, processHeadings, sanitizeRichTextHtml } from "@/lib/content";
+import { processHeadings, sanitizeRichTextHtml } from "@/lib/content";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getPublicEnv } from "@/lib/env";
 import { getCategoryHref, getTagHref } from "@/lib/utils";
@@ -52,7 +52,7 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
 
   const sanitized = sanitizeRichTextHtml(post.description);
   const { html: safeDescription, headings } = processHeadings(sanitized);
-  const readingTime = Math.max(1, Math.ceil(htmlToPlainText(post.description).split(/\s+/).filter(Boolean).length / 220));
+  const readingTime = post.readingTimeMinutes ?? 1;
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   const [seriesNav, authorProfile] = await Promise.all([
     getSeriesNavForPost(post.id),

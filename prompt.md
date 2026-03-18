@@ -36,8 +36,11 @@
 | **Domain** | `jsquaredadventures.com` |
 | **Purpose** | Travel blog platform with rich publishing, galleries, profiles, comments, tags, scheduling, and SEO |
 | **Owner** | Jevon |
-| **Current App** | React + Vite frontend, Hono worker backend, Supabase auth/database/storage |
-| **Rewrite Goal** | Move to a cleaner unified Next.js App Router architecture |
+| **Legacy App** | React + Vite frontend, Hono worker backend, Supabase auth/database/storage (retired) |
+| **Current App** | Next.js 16 App Router in `web/` with Turso, Supabase Auth, Auth.js admin, and Cloudinary |
+| **Current Focus** | Harden, polish, and extend the unified Next.js app now that the rewrite is live |
+
+The rewrite itself is complete. Treat the remaining sections as architecture guardrails and feature requirements for ongoing work inside `web/`.
 
 ---
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { renderTiptapJson } from "@/lib/content";
+import { getReadingTimeMinutes, renderTiptapJson } from "@/lib/content";
 import { cdnImageUrl } from "@/lib/cloudinary/transform";
 import { rankRelatedPosts } from "@/lib/related-posts";
 import {
@@ -36,6 +36,18 @@ function timestampToIso(value: Date | number | null): string {
   return new Date(value ?? Date.now()).toISOString();
 }
 
+function timestampToOptionalIso(value: Date | number | null): string | null {
+  if (value === null) {
+    return null;
+  }
+
+  return timestampToIso(value);
+}
+
+function getPostReadingTime(post: Pick<PublishedPostRecord, "contentFormat" | "contentHtml" | "contentJson" | "excerpt">): number {
+  return getReadingTimeMinutes(getRenderedPostDescription(post));
+}
+
 async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
   if (postRows.length === 0) {
     return [];
@@ -63,6 +75,8 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     imageUrl: cdnImageUrl(post.imageUrl),
     category: post.category ?? null,
     createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
+    updatedAt: timestampToIso(post.updatedAt),
+    publishedAt: timestampToOptionalIso(post.publishedAt),
     status: "published",
     layoutType: post.layoutType ?? "standard",
     tags: tagsByPostId.get(post.id) ?? [],
@@ -74,6 +88,7 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
     commentCount: commentCounts.get(post.id) ?? 0,
+    readingTimeMinutes: getPostReadingTime(post),
   }));
 }
 
@@ -120,6 +135,8 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     imageUrl: cdnImageUrl(post.imageUrl),
     category: post.category ?? null,
     createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
+    updatedAt: timestampToIso(post.updatedAt),
+    publishedAt: timestampToOptionalIso(post.publishedAt),
     status: "published",
     layoutType: post.layoutType ?? "standard",
     tags: tagRows.map((tag) => ({
@@ -136,6 +153,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     iovanderUrl: post.iovanderUrl ?? null,
     commentCount: 0,
     authorId: post.authorId,
+    readingTimeMinutes: getPostReadingTime(post),
   };
 }
 
@@ -192,6 +210,8 @@ export async function getPostForPreview(id: string): Promise<BlogPost | null> {
     imageUrl: cdnImageUrl(post.imageUrl),
     category: post.category ?? null,
     createdAt: timestampToIso(post.publishedAt ?? post.createdAt),
+    updatedAt: timestampToIso(post.updatedAt),
+    publishedAt: timestampToOptionalIso(post.publishedAt),
     status: post.status,
     layoutType: post.layoutType ?? "standard",
     tags: tagRows.map((tag) => ({
@@ -208,6 +228,7 @@ export async function getPostForPreview(id: string): Promise<BlogPost | null> {
     iovanderUrl: post.iovanderUrl ?? null,
     commentCount: 0,
     authorId: post.authorId,
+    readingTimeMinutes: getPostReadingTime(post),
   };
 }
 

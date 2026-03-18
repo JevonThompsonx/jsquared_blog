@@ -18,17 +18,17 @@ export const metadata: Metadata = {
     default: "J²Adventures",
     template: "%s | J²Adventures",
   },
-  description: "A staged migration of J²Adventures toward a unified Next.js architecture for stories, galleries, profiles, comments, scheduling, and SEO.",
+  description: "Travel stories, maps, camps, hikes, and photo-led field notes from J²Adventures.",
   openGraph: {
     title: "J²Adventures",
-    description: "Travel stories, photo-led publishing, and a staged move into a unified Next.js app.",
+    description: "Travel stories, maps, camps, hikes, and photo-led field notes from J²Adventures.",
     siteName: "J²Adventures",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "J²Adventures",
-    description: "Travel stories, photo-led publishing, and a staged move into a unified Next.js app.",
+    description: "Travel stories, maps, camps, hikes, and photo-led field notes from J²Adventures.",
   },
 };
 

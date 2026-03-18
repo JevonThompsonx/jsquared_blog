@@ -35,7 +35,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] Native edit post flow exists in Next.js
 - [x] Cloudinary upload flow exists in Next.js
 - [x] Featured image and gallery media UI exists in Next.js
-- [~] Content is still stored in transitional HTML payload form rather than full canonical Tiptap JSON workflow
+- [x] Canonical Tiptap JSON storage is live; legacy `legacy-html` reads remain only for backward-compatible rendering
 
 ## Public User Experience
 
@@ -70,7 +70,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] Legacy fallbacks removed from Next.js read path
 - [x] Next.js confirmed as sole source of truth for production reads and writes
 - [x] All dead legacy code removed from `web/src` (getLegacyApiBaseUrl, legacy-posts schema, etc.)
-- [x] All code passes strict TypeScript — no `any`, `as`, `!` violations
+- [~] Strict TypeScript quality gate passes (`lint`, `tsc`, `build`), but repo-wide cleanup of older `as` assertions is still in progress
 - [x] All server DAL files import `"server-only"`
 - [x] Zod validation present at all API trust boundaries
 - [x] Auth checked before DB in all server actions
@@ -90,7 +90,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] Root `package.json` cleaned (legacy workspaces, scripts, devDeps removed)
 - [x] Root `bun.lock` regenerated with only `web/` workspace
 
-## Smoke Test Results (2026-03-14)
+## Smoke Test Results (2026-03-17)
 
 ### Passed ✓
 - Homepage loads, infinite scroll works
@@ -109,6 +109,8 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - Cards clickable, category/tag chips still navigate correctly
 - Edit post button visible on post detail when admin signed in
 - Theme toggle works reliably
+- Public Playwright smoke suite passes locally against the Next.js app
+- Playwright no longer tries to boot a local dev server when `E2E_BASE_URL` targets a remote environment
 
 ### Passed ✓ (2026-03-15 — live auth session)
 - Signup email delivery confirmed working
@@ -116,6 +118,11 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - Account settings: display name save, theme persist, email/password change
 - Post a comment, like/unlike, delete own comment
 - Admin create/edit/delete post end-to-end
+
+### Env-gated admin smoke coverage
+- Authenticated admin smoke coverage exists for `/admin`, `/admin/tags`, and `/admin/posts/[postId]/comments`
+- These tests can use `E2E_ADMIN_STORAGE_STATE` or the fallback file `playwright/.auth/admin.json` generated via `bun run e2e:capture-admin-state`; inline delete-confirm moderation coverage still needs `E2E_ADMIN_POST_ID`
+- The admin smoke now uses the Radix custom select interaction instead of native `selectOption()`
 
 ### Known Issue — Login before email confirmation
 Users can sign in immediately after registering without clicking the confirmation link. This is likely a Supabase dashboard setting ("Enable email confirmations" toggle under Authentication → Email). Should be investigated and resolved before going fully public.
@@ -138,10 +145,10 @@ Supabase shared email (free tier) confirmed working. Custom SMTP not yet configu
 - [x] Related posts cards with image thumbnails
 - [x] "Keep exploring" CTA with accent gradient background
 - [x] Post page scroll target and map focus behavior improved for navigation
-- [~] JSON-LD blog posting structured data present on post detail pages; deployed Rich Results validation still pending before it should be treated as fully closed
+- [~] JSON-LD blog posting structured data present on post detail pages with published/updated timestamps and publisher metadata; deployed Rich Results validation still pending before it should be treated as fully closed
 
 ## Recommended Next Steps
 
 1. Decommission the legacy Cloudflare Worker in the Cloudflare dashboard
 2. Remove old Cloudflare Workers environment variables and build settings from the dashboard
-3. Keep expanding automated coverage for authenticated admin flows and remaining UX polish tasks, especially Playwright verification for the already browser-checked widened admin layouts
+3. Keep expanding automated coverage for authenticated admin flows and remaining UX polish tasks, especially CI-friendly admin Playwright coverage for the already browser-checked widened admin layouts

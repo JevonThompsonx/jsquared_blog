@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AdminCategoryRecord, AdminEditablePostRecord } from "@/server/dal/admin-posts";
@@ -40,6 +40,14 @@ export function PostEditorForm({
   const [isPending, startTransition] = useTransition();
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [cloneError, setCloneError] = useState<string | null>(null);
+  const [showCloneConfirm, setShowCloneConfirm] = useState(false);
+  const cloneCancelButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (showCloneConfirm) {
+      cloneCancelButtonRef.current?.focus();
+    }
+  }, [showCloneConfirm]);
 
   const handlePreview = () => {
     if (!post?.id) return;
@@ -56,8 +64,8 @@ export function PostEditorForm({
 
   const handleClone = () => {
     if (!post?.id) return;
-    if (!confirm("Clone this post as a new draft?")) return;
     setCloneError(null);
+    setShowCloneConfirm(false);
     startTransition(async () => {
       try {
         const result = await clonePost(post.id);
@@ -106,14 +114,46 @@ export function PostEditorForm({
         <div className="flex w-full flex-wrap gap-3 sm:w-auto">
           {post?.id ? (
             <>
-              <button
-                type="button"
-                onClick={handleClone}
-                disabled={isPending}
-                className="rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] disabled:opacity-50"
-              >
-                Clone draft
-              </button>
+              {showCloneConfirm ? (
+                <div
+                  className="flex flex-wrap items-center gap-2 rounded-full border border-[var(--color-warning-soft-border)] bg-[var(--color-warning-soft-bg)] px-3 py-2"
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setShowCloneConfirm(false);
+                    }
+                  }}
+                >
+                  <span className="text-xs font-semibold text-[var(--color-warning-text)]">Clone this post into a new draft?</span>
+                  <button
+                    ref={cloneCancelButtonRef}
+                    type="button"
+                    onClick={() => setShowCloneConfirm(false)}
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClone}
+                    disabled={isPending}
+                    className="rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-[var(--on-primary)] transition-colors hover:bg-[var(--primary-light)] disabled:opacity-50"
+                  >
+                    {isPending ? "Cloning..." : "Clone draft"}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCloneError(null);
+                    setShowCloneConfirm(true);
+                  }}
+                  disabled={isPending}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)] disabled:opacity-50"
+                >
+                  Clone draft
+                </button>
+              )}
               {post.status !== "published" ? (
                 <button
                   type="button"

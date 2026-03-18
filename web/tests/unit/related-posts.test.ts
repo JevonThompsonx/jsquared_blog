@@ -20,6 +20,8 @@ function makePost(
     imageUrl: null,
     category: options?.category ?? null,
     createdAt,
+    updatedAt: createdAt,
+    publishedAt: createdAt,
     status: "published",
     tags: options?.tags ?? [],
     images: [],
@@ -30,6 +32,7 @@ function makePost(
     locationZoom: null,
     iovanderUrl: null,
     commentCount: 0,
+    readingTimeMinutes: 3,
   };
 }
 

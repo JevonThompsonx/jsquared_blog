@@ -11,6 +11,16 @@ type GalleryEntry = {
   focalY: number;
 };
 
+function needsAltTextReview(value: string): boolean {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return true;
+  }
+
+  return /[_-]/.test(trimmedValue) || /\d{3,}/.test(trimmedValue) || /^(img|image|dsc|pxl|mvimg|photo|scan|screenshot)/i.test(trimmedValue);
+}
+
 function objectPositionFromFocalPoint(focalX: number, focalY: number): string {
   return `${focalX}% ${focalY}%`;
 }
@@ -52,7 +62,11 @@ export function PostMediaManager({
     () => JSON.stringify(galleryEntries.map((entry, index) => ({ ...entry, sortOrder: index }))),
     [galleryEntries],
   );
-  const missingGalleryAltCount = galleryEntries.filter((entry) => !entry.altText.trim()).length;
+  const galleryEntriesNeedingAltReview = galleryEntries.filter((entry) => needsAltTextReview(entry.altText)).length;
+  const featuredImageNeedsAltReview = featuredImageUrl ? needsAltTextReview(featuredImageAlt) : false;
+  const accessibilityStatusLabel = !featuredImageNeedsAltReview && galleryEntriesNeedingAltReview === 0
+    ? "Covered"
+    : "Needs review";
 
   function updateGalleryEntry(index: number, updates: Partial<GalleryEntry>) {
     setGalleryEntries((currentEntries) => currentEntries.map((entry, entryIndex) => (entryIndex === index ? { ...entry, ...updates } : entry)));
@@ -119,13 +133,13 @@ export function PostMediaManager({
 
         if (destination === "featured") {
           setFeaturedImageUrl(imageUrl);
-          setFeaturedImageAlt((currentAlt) => currentAlt || file.name.replace(/\.[^.]+$/, ""));
+          setFeaturedImageAlt("");
         } else {
           setGalleryEntries((currentEntries) => [
             ...currentEntries,
             {
               imageUrl,
-              altText: file.name.replace(/\.[^.]+$/, ""),
+              altText: "",
               focalX: 50,
               focalY: 50,
             },
@@ -157,7 +171,7 @@ export function PostMediaManager({
         </div>
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Accessibility</p>
-          <p className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{missingGalleryAltCount === 0 && featuredImageAlt.trim() ? "Covered" : "Needs review"}</p>
+          <p className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{accessibilityStatusLabel}</p>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">Every image should have alt text that adds context, not just file-name filler.</p>
         </div>
       </div>
@@ -218,7 +232,13 @@ export function PostMediaManager({
                 value={featuredImageAlt}
               />
             </label>
-            {!featuredImageAlt.trim() ? <p className="text-xs text-[var(--color-warning)]">Add alt text before publishing so the hero image has context for screen readers.</p> : null}
+            {featuredImageNeedsAltReview ? (
+              <p className="text-xs text-[var(--color-warning)]">
+                {featuredImageAlt.trim()
+                  ? "Replace the placeholder alt text before publishing so the hero image has real context for screen readers."
+                  : "Add alt text before publishing so the hero image has context for screen readers."}
+              </p>
+            ) : null}
             <button className="text-sm font-semibold text-[var(--color-error)]" onClick={() => { setFeaturedImageUrl(""); setFeaturedImageAlt(""); }} type="button">
               Remove featured image
             </button>
@@ -261,7 +281,11 @@ export function PostMediaManager({
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">Image {index + 1}</span>
-                    {!entry.altText.trim() ? <span className="rounded-full bg-[var(--color-warning-soft-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--color-warning)]">Alt text needed</span> : null}
+                    {needsAltTextReview(entry.altText) ? (
+                      <span className="rounded-full bg-[var(--color-warning-soft-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--color-warning)]">
+                        {entry.altText.trim() ? "Review alt text" : "Alt text needed"}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <div className="space-y-3">

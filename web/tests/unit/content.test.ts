@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { htmlToPlainText, processHeadings, renderTiptapJson } from "@/lib/content";
+import { getReadingTimeMinutes, getWordCount, htmlToPlainText, processHeadings, renderTiptapJson } from "@/lib/content";
 
 describe("htmlToPlainText", () => {
   it("strips HTML tags", () => {
@@ -25,6 +25,21 @@ describe("htmlToPlainText", () => {
 
   it("strips nested tags", () => {
     expect(htmlToPlainText("<p><strong>Bold</strong> and <em>italic</em></p>")).toBe("Bold and italic");
+  });
+});
+
+describe("reading helpers", () => {
+  it("counts words from sanitized html", () => {
+    expect(getWordCount("<p>Hello <strong>road trip</strong> crew</p>")).toBe(4);
+  });
+
+  it("returns at least one minute for empty content", () => {
+    expect(getReadingTimeMinutes("")).toBe(1);
+  });
+
+  it("rounds reading time up", () => {
+    const content = `<p>${Array.from({ length: 221 }, () => "trail").join(" ")}</p>`;
+    expect(getReadingTimeMinutes(content)).toBe(2);
   });
 });
 

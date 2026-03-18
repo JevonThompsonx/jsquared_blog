@@ -1,6 +1,6 @@
 # Multi-Model Workflow Guide
 
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 ## Overview
 
@@ -10,12 +10,12 @@ This project uses multiple AI models across two tools (Claude Code and Windsurf 
 
 ### Claude Code/Copilot (Terminal / VS Code Extension)
 - Reads: `CLAUDE.md` (auto-loaded), `AGENTS.md` (reference)
-- Models: Claude Opus 4.6 or GPT 5.4 (planning), Claude Sonnet 4.6 and GPT 5.4(backend)
+- Models: Claude Opus 4.6 or GPT-5.4 (planning), Claude Sonnet 4.6 and GPT-5.4 (backend/review)
 - Switch models: `/model opus` or `/model sonnet`
 
 ### Windsurf Cascade (IDE)
 - Reads: `.windsurfrules` (auto-loaded), `AGENTS.md` (reference)
-- Models: Gemini 3 Pro (frontend), GPT-5.3 Codex (scripts)
+- Models: Gemini 3 Flash (frontend), GPT-5.4 (scripts/review)
 - Configure model in Windsurf settings
 
 ## Workflow Patterns
@@ -23,12 +23,12 @@ This project uses multiple AI models across two tools (Claude Code and Windsurf 
 ### Pattern 1: New Feature (Backend + Frontend)
 
 ```
-1. Opus or GPT 5.4 plans the feature → updates docs/PLAN.md
-2. Sonnet or GPT 5.4 implements backend (API route, DAL, schema if needed)
-3. Sonnet or GPT 5.4 commits + runs `bun run build`
+1. Opus or GPT-5.4 plans the feature → updates docs/PLAN.md
+2. Sonnet or GPT-5.4 implements backend (API route, DAL, schema if needed)
+3. Sonnet or GPT-5.4 commits + runs `bun run build`
 4. Gemini implements frontend UI (components, pages)
 5. Gemini commits + runs `bun run build`
-6. Opus or GPT 5.4 reviews the full feature
+6. Opus or GPT-5.4 reviews the full feature
 ```
 
 **Example**: Adding bulk publish
@@ -50,12 +50,12 @@ Opus:   Reviews both commits
 ### Pattern 3: Schema Change
 
 ```
-1. Opus or GPT 5.4 writes ADR in docs/decisions/
-2. Sonnet or GPT 5.4 updates web/src/drizzle/schema.ts
+1. Opus or GPT-5.4 writes ADR in docs/decisions/
+2. Sonnet or GPT-5.4 updates web/src/drizzle/schema.ts
 3. Run: bun run db:generate
 4. Verify migration uses --> statement-breakpoint delimiters
 5. Run: bun run db:migrate
-6. Sonnet or GPT 5.4 updates DAL/queries
+6. Sonnet or GPT-5.4 updates DAL/queries
 7. Commit schema + migration + DAL together
 8. Gemini builds UI if needed
 ```
@@ -65,9 +65,9 @@ Opus:   Reviews both commits
 ```
 1. Identify which layer the bug is in
 2. Route to correct model:
-   - Server/data bug → Sonnet or GPT 5.4
+   - Server/data bug → Sonnet or GPT-5.4
    - UI/styling bug → Gemini
-   - Architecture issue → Opus or GPT 5.4
+   - Architecture issue → Opus or GPT-5.4
 3. Fix + test + commit
 ```
 
@@ -113,6 +113,15 @@ Before switching from one model to another:
 - [ ] If new API route: contract documented in a comment at the top of the route file
 - [ ] If new component: exports are clean and props are typed
 
+## Playwright admin setup
+
+For authenticated admin smoke coverage in `web/tests/e2e/smoke.spec.ts`:
+
+- Preferred local flow: run `bun run e2e:capture-admin-state` from `web/`
+- This writes a reusable Auth.js session to `web/playwright/.auth/admin.json`
+- Tests automatically use that file when `E2E_ADMIN_STORAGE_STATE` is not set
+- Use `E2E_ADMIN_POST_ID` only for the delete-confirm moderation path that must target a post with existing comments
+
 ## Quick Reference
 
 | I want to... | Use this model | In this tool |
@@ -120,11 +129,11 @@ Before switching from one model to another:
 | Plan a new feature | Opus | Claude Code (`/model opus`) |
 | Write an API route | Sonnet | Claude Code (`/model sonnet`) |
 | Write a DAL function | Sonnet | Claude Code |
-| Create a UI component | Gemini Low | Windsurf Cascade |
-| Fix a styling issue | Gemini Low | Windsurf Cascade |
-| Write a complex client hook | Gemini Low | Windsurf Cascade |
-| Debug a hard frontend issue | Gemini High | Windsurf Cascade |
-| Write a Python script | Codex Med | Windsurf Cascade |
+| Create a UI component | Gemini 3 Flash | Windsurf Cascade |
+| Fix a styling issue | Gemini 3 Flash | Windsurf Cascade |
+| Write a complex client hook | Gemini 3 Flash | Windsurf Cascade |
+| Debug a hard frontend issue | Gemini 3 Flash | Windsurf Cascade |
+| Write a Python script | GPT-5.4 | OpenCode / Copilot |
 | Update CLAUDE.md / AGENTS.md | Opus | Claude Code |
 | Write tests | Opus (strategy) → Sonnet (impl) | Claude Code |
 | Review architecture | Opus | Claude Code |

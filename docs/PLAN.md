@@ -8,11 +8,11 @@ Last updated: 2026-03-17
 |---|---|---|
 | Planning / Architecture / Tests / AGENTS.md | Claude Opus 4.6 | Claude Code |
 | TS Backend (API routes, DAL, server actions, DB) | Claude Sonnet 4.6 | Claude Code |
-| UI Components / Styling | Gemini 3 Pro Low | Windsurf Cascade |
-| Complex Frontend Logic | Gemini 3 Pro Low | Windsurf Cascade |
-| Hard Frontend Problems | Gemini 3 Pro High | Windsurf Cascade (rare) |
-| Python / Data / Terminal scripts | GPT-5.3 Codex Med | Windsurf Cascade |
-| Hard Backend Problems | GPT-5.3 Codex High | Windsurf Cascade (rare) |
+| UI Components / Styling | Gemini 3 Flash | Windsurf Cascade |
+| Complex Frontend Logic | Gemini 3 Flash | Windsurf Cascade |
+| Hard Frontend Problems | Gemini 3 Flash | Windsurf Cascade (rare) |
+| Python / Data / Terminal scripts | GPT-5.4 | OpenCode / Copilot |
+| Hard Backend Problems | GPT-5.4 | OpenCode / Copilot |
 
 ## Current State (Session 9 Baseline)
 
@@ -36,7 +36,7 @@ Everything below is additive — the app is live and stable.
 | 1.4 | Cloudinary WebP delivery (`f_auto,q_auto`) | Sonnet | `web/src/lib/cloudinary/transform.ts`, `web/src/app/api/bookmarks/route.ts`, `web/src/app/(blog)/series/[slug]/page.tsx` | DONE |
 | 1.5 | Upgrade rate limiting to Upstash Redis | Sonnet | `web/src/lib/rate-limit.ts` | DONE |
 | 1.6 | Sentry error monitoring integration | Sonnet | `web/next.config.ts`, `web/src/lib/sentry.ts`, `web/src/app/global-error.tsx` | DONE |
-| 1.7 | Plausible analytics integration | Gemini Low | `web/src/app/layout.tsx` | DONE |
+| 1.7 | Plausible analytics integration | Gemini 3 Flash | `web/src/app/layout.tsx` | DONE |
 | 1.8 | Custom SMTP for Supabase (Resend) | Sonnet | Supabase dashboard config, no code changes | TODO |
 | 1.9 | CI pipeline (GitHub Actions: lint, type-check, test, build) | Opus | `.github/workflows/ci.yml` | DONE |
 | 1.10 | Decommission Cloudflare Worker | Manual | Cloudflare dashboard | TODO |
@@ -49,17 +49,17 @@ Everything below is additive — the app is live and stable.
 
 **Goal**: Make the admin publishing experience faster and more reliable.
 
-**Primary models**: Claude Sonnet 4.6 (backend), Gemini 3 Pro Low (UI)
+**Primary models**: Claude Sonnet 4.6 (backend), Gemini 3 Flash (UI)
 
 | # | Task | Owner | Files Touched | Status |
 |---|------|-------|--------------|--------|
 | 2.1 | Bulk publish/unpublish on admin dashboard | Sonnet (action) + Gemini (UI) | `web/src/app/admin/actions.ts`, `web/src/components/admin/admin-dashboard.tsx` | DONE |
 | 2.2 | Post preview at unlisted URL (`/preview/[id]`) | Sonnet (route) + Gemini (page) | `web/src/app/(blog)/preview/[id]/page.tsx`, `web/src/server/posts/preview.ts` | DONE |
 | 2.3 | Canonical Tiptap JSON storage (replace HTML payload) | Sonnet | `web/src/server/dal/admin-posts.ts`, `web/src/lib/content.ts` | DONE |
-| 2.4 | Admin post list: search, filter by status/category | Gemini Low | `web/src/components/admin/admin-dashboard.tsx` | DONE |
+| 2.4 | Admin post list: search, filter by status/category | Gemini 3 Flash | `web/src/components/admin/admin-dashboard.tsx` | DONE |
 | 2.5 | Scheduled post auto-publish cron (Vercel Cron) | Sonnet | `web/src/app/api/cron/publish-scheduled/route.ts`, `web/vercel.json` | DONE |
 | 2.6 | Post duplication ("Clone post" button) | Sonnet (action) + Gemini (UI) | `web/src/app/admin/actions.ts`, `web/src/components/admin/post-editor-form.tsx` | DONE |
-| 2.7 | Image alt text validation warning in editor | Gemini Low | `web/src/components/admin/post-rich-text-editor.tsx` | DONE |
+| 2.7 | Image alt text validation warning in editor | Gemini 3 Flash | `web/src/components/admin/post-rich-text-editor.tsx` | DONE |
 
 **Exit criteria**: Admin can bulk-manage posts, preview drafts, and scheduled posts auto-publish.
 
@@ -69,23 +69,23 @@ Everything below is additive — the app is live and stable.
 
 **Goal**: Achieve excellent Core Web Vitals, accessibility, and mobile experience.
 
-**Primary models**: Gemini 3 Pro Low/High (frontend), Claude Opus 4.6 (audit/plan)
+**Primary models**: Gemini 3 Flash (frontend), Claude Opus 4.6 (audit/plan)
 
 | # | Task | Owner | Files Touched | Status |
 |---|------|-------|--------------|--------|
 | 3.1 | Core Web Vitals audit + fix (LCP, CLS, INP) | Opus (audit) → Gemini (fix) | Various components | IN PROGRESS |
 | 3.2 | WCAG AA accessibility audit + fix | Opus (audit) → Gemini (fix) | Various components | IN PROGRESS |
-| 3.3 | Image lazy loading + blur placeholders | Gemini Low | `web/src/components/blog/home-post-card.tsx`, `web/src/components/blog/post-gallery.tsx` | DONE |
-| 3.4 | Skeleton loading states for all async content | Gemini Low | `web/src/app/**/loading.tsx` | DONE |
-| 3.5 | Mobile nav UX improvements | Gemini Low | `web/src/components/layout/site-header.tsx` | TODO |
-| 3.6 | Search improvements (debounce, highlight, empty state) | Gemini Low | `web/src/app/(blog)/search/` | IN PROGRESS |
-| 3.7 | Reduced motion support (`prefers-reduced-motion`) | Gemini Low | `web/src/app/globals.css` | DONE |
-| 3.8 | Print stylesheet | Gemini Low | `web/src/app/globals.css` | DONE |
-| 3.9 | Social share buttons (native Web Share API + fallbacks) | Gemini Low | `web/src/components/blog/share-buttons.tsx` | DONE |
+| 3.3 | Image lazy loading + blur placeholders | Gemini 3 Flash | `web/src/components/blog/home-post-card.tsx`, `web/src/components/blog/post-gallery.tsx` | DONE |
+| 3.4 | Skeleton loading states for all async content | Gemini 3 Flash | `web/src/app/**/loading.tsx` | DONE |
+| 3.5 | Mobile nav UX improvements | Gemini 3 Flash | `web/src/components/layout/site-header.tsx` | TODO |
+| 3.6 | Search improvements (debounce, highlight, empty state) | Gemini 3 Flash | `web/src/app/(blog)/search/` | IN PROGRESS |
+| 3.7 | Reduced motion support (`prefers-reduced-motion`) | Gemini 3 Flash | `web/src/app/globals.css` | DONE |
+| 3.8 | Print stylesheet | Gemini 3 Flash | `web/src/app/globals.css` | DONE |
+| 3.9 | Social share buttons (native Web Share API + fallbacks) | Gemini 3 Flash | `web/src/components/blog/share-buttons.tsx` | DONE |
 | 3.10 | Related posts algorithm improvement | Sonnet | `web/src/server/queries/posts.ts` | DONE |
-| 3.11 | Admin dropdown dark mode fix — replace native `<select>` with styled custom dropdown | Gemini Low | `web/src/components/ui/theme-select.tsx` (new), `web/src/components/admin/admin-dashboard.tsx` | DONE |
+| 3.11 | Admin dropdown dark mode fix — replace native `<select>` with styled custom dropdown | Gemini 3 Flash | `web/src/components/ui/theme-select.tsx` (new), `web/src/components/admin/admin-dashboard.tsx` | DONE |
 | 3.12 | Season-year date display — show "Spring 2026" instead of "December 15, 2024" | Sonnet (utility) → Gemini (component) | `web/src/lib/utils.ts`, `web/src/components/blog/post-date.tsx`, `web/tests/unit/utils.test.ts` | DONE |
-| 3.13 | Post page scroll/focus — prioritize featured image > ToC > post top, prevent map focus-grab | Gemini Low | `web/src/components/blog/post-map.tsx`, `web/src/app/(blog)/posts/[slug]/page.tsx`, `web/src/components/blog/scroll-to-content.tsx` (new) | DONE |
+| 3.13 | Post page scroll/focus — prioritize featured image > ToC > post top, prevent map focus-grab | Gemini 3 Flash | `web/src/components/blog/post-map.tsx`, `web/src/app/(blog)/posts/[slug]/page.tsx`, `web/src/components/blog/scroll-to-content.tsx` (new) | DONE |
 | 3.14 | Season-year grouped feed — group posts under "Spring 2026" headers in home/filtered feeds | Sonnet (grouping util) → Gemini (UI) | `web/src/lib/utils.ts`, `web/src/components/blog/home-feed.tsx`, `web/src/components/blog/filtered-feed.tsx`, `web/tests/unit/utils.test.ts` | DONE |
 
 **Exit criteria**: Lighthouse Performance > 90, Accessibility > 95 on key pages. No WCAG AA violations.
@@ -96,18 +96,18 @@ Everything below is additive — the app is live and stable.
 
 **Goal**: Improve engagement, discoverability, and reader retention.
 
-**Primary models**: Claude Sonnet 4.6 (backend), Gemini 3 Pro Low (frontend)
+**Primary models**: Claude Sonnet 4.6 (backend), Gemini 3 Flash (frontend)
 
 | # | Task | Owner | Files Touched | Status |
 |---|------|-------|--------------|--------|
 | 4.1 | Comment moderation tools (admin flag/hide/delete) | Sonnet + Gemini | `web/src/app/admin/`, `web/src/server/dal/comments.ts`, `web/src/app/api/admin/comments/moderate/route.ts` | DONE |
 | 4.2 | Email notification on new comment (Resend) | Sonnet | `web/src/lib/email/`, `web/src/app/api/posts/[postId]/comments/route.ts` | TODO |
 | 4.3 | RSS per category/tag | Sonnet | `web/src/app/feed.xml/route.ts` | TODO |
-| 4.4 | Structured data (JSON-LD for BlogPosting) | Gemini Low | `web/src/app/(blog)/posts/[slug]/head.tsx`, `web/src/app/(blog)/posts/[slug]/page.tsx` | IN PROGRESS |
-| 4.5 | Reading time estimate | Sonnet | `web/src/lib/content.ts`, `web/src/components/blog/` | TODO |
+| 4.4 | Structured data (JSON-LD for BlogPosting) | Gemini 3 Flash | `web/src/app/(blog)/posts/[slug]/head.tsx`, `web/src/app/(blog)/posts/[slug]/page.tsx` | IN PROGRESS |
+| 4.5 | Reading time estimate | Sonnet | `web/src/lib/content.ts`, `web/src/server/queries/posts.ts`, `web/src/app/(blog)/posts/[slug]/page.tsx`, `web/src/app/(blog)/preview/[id]/page.tsx` | DONE |
 | 4.6 | Newsletter signup (Resend + simple form) | Sonnet + Gemini | `web/src/components/blog/newsletter-signup.tsx`, `web/src/app/api/newsletter/` | TODO |
 | 4.7 | Post view counter (privacy-respecting) | Sonnet | `web/src/server/dal/posts.ts`, schema migration | TODO |
-| 4.8 | Admin desktop layout expansion | Gemini Low | `web/src/app/admin/page.tsx`, `web/src/components/admin/admin-dashboard.tsx`, related admin pages | DONE |
+| 4.8 | Admin desktop layout expansion | Gemini 3 Flash | `web/src/app/admin/page.tsx`, `web/src/components/admin/admin-dashboard.tsx`, related admin pages | DONE |
 
 **Exit criteria**: Admin has moderation tools. Readers can subscribe to updates. Structured data validates in Google Rich Results test. Admin wide-screen updates are confirmed in a real browser on target breakpoints.
 

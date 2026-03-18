@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 17, 2026 | **Stack**: Next.js 15 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 17, 2026 | **Stack**: Next.js 16 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Component | Technology | Status |
 |-----------|------------|--------|
-| Frontend/Backend | Next.js 15 (App Router) | Live on Vercel |
+| Frontend/Backend | Next.js 16 (App Router) | Live on Vercel |
 | Database | Turso (SQLite / Drizzle ORM) | Configured |
 | Public Auth | Supabase Auth | Working |
 | Admin Auth | Auth.js + GitHub OAuth | Working |
@@ -22,10 +22,10 @@
 ## Completed Features
 
 ### Core Infrastructure
-- [x] Next.js 15 App Router with Turbopack
+- [x] Next.js 16 App Router with Turbopack
 - [x] Turso/libSQL + Drizzle ORM (sole DB)
 - [x] Two-auth-system architecture (Supabase public + Auth.js admin)
-- [x] TypeScript strict mode — no any/as/!
+- [x] TypeScript strict mode enabled — lint, `tsc`, and build pass; targeted assertion cleanup still continues outside the latest pass
 - [x] Zod validation at all API trust boundaries
 - [x] server-only imports in all DAL files
 
@@ -80,6 +80,8 @@
 - [x] iOverlander URL field — stored and rendered as a button on post detail + map popup
 - [x] Inline image insertion in Tiptap editor — "Image" toolbar button; Cloudinary upload; alt text panel; inserted at cursor
 - [x] Tiptap JSON storage — admin editor writes native `{type:"doc",...}` JSON; `renderTiptapJson()` handles both new format and legacy `{type:"legacy-html"}` payloads for backward-compatible reads; legacy wrapper entirely removed from write path
+- [x] Media manager alt-text review hardening — new featured/gallery uploads now start blank so accessibility status stays in review until real descriptive alt text is added
+- [x] Inline clone confirmation in editor — post editor clone action now uses a themed inline confirmation instead of browser `confirm()`
 - [x] `web/scripts/seed-series-categories.ts` — idempotent seed script for 5 test series + 6 categories (uses `onConflictDoNothing`)
 
 ### Map View
@@ -156,10 +158,7 @@
 | ~~Inline images in gallery lightbox~~ | ✅ Done — inline `<img>` tags in post prose are extracted server-side, assigned gallery indices, and included in the lightbox filmstrip; clicking any prose image opens the lightbox at that slide |
 | ~~Print-friendly styles~~ | ✅ Done — `@media print` hides nav/buttons, resets backgrounds to white, shows link URLs, sets prose to 11pt |
 | ~~Reduced-motion support~~ | ✅ Done — `@media (prefers-reduced-motion: reduce)` collapses all transitions/animations to 0.01ms; disables lightbox fade |
-| Add a seasonal post slot for the homepage - think whimsy |
-|Remove Spring field notes from homepage|
-|Remove Mud on the boots, green on the horizon. from homepage. Put J²Adventures there and remove J²Adventures travel journal from homepage |
-|Remove Fresh trails, thawing camps, and the first stretch of the year when the map starts calling again from homepage|
+| ~~Homepage seasonal hero cleanup~~ | ✅ Done — homepage hero now keeps `J²Adventures` as the constant title, removes the placeholder spring copy / redundant overline, and adds a more intentional seasonal note panel with light whimsy by season |
 ### Discovery & Navigation
 | Feature | Notes |
 |---------|-------|
@@ -179,21 +178,21 @@
 | ~~Admin dashboard pagination polish~~ | ✅ Done — page jump, page-size controls, and a custom themed select are now in place on the dashboard. |
 | ~~Admin page width expansion~~ | ✅ Done — widened admin surfaces were browser-QA'd at tablet/laptop/wide-desktop widths; dashboard toolbar layout was tightened at `lg`, and tags/moderation held up without further fixes. |
 | Comment moderation UI | In progress — admin moderation route, optimistic updates, summary stats, themed thread cards, and a keyboard-friendlier inline themed delete-confirmation pattern are live. Browser QA passed for the current layout; remaining work is broader test coverage and any future polish tied to new moderation features. |
-| Blog post JSON-LD validation | In progress — structured data now renders from `web/src/app/(blog)/posts/[slug]/head.tsx`; still needs deployed Rich Results validation before this can be treated as complete. |
+| Blog post JSON-LD validation | In progress — structured data now uses published/updated timestamps, publisher metadata, and full image arrays from `web/src/app/(blog)/posts/[slug]/head.tsx`; still needs deployed Rich Results validation before this can be treated as complete. |
 
 ### Backend & Infrastructure
 | Task | Notes |
 |------|-------|
-| ~~Rate limiting on public API routes~~ | ✅ Done — `src/lib/rate-limit.ts` sliding-window in-process limiter; 5/min comments, 30/min likes, 20/min bookmarks per IP; X-RateLimit-* headers on 429. Note: per-instance only — upgrade to Upstash Redis for distributed limiting at scale. |
+| ~~Rate limiting on public API routes~~ | ✅ Done — `src/lib/rate-limit.ts` uses Upstash Redis when configured and falls back to in-memory limits locally; 5/min comments, 30/min likes, 20/min bookmarks per IP; X-RateLimit-* headers on 429. |
 | ~~Cloudinary WebP delivery~~ | ✅ Done — `cdnImageUrl()` in `src/lib/cloudinary/transform.ts` inserts `f_auto,q_auto` after `/upload/`; applied to all `imageUrl` fields in `queries/posts.ts` (feed, post detail, gallery images) |
-| Required env var validation | All server env vars currently use `.optional()` — production-critical vars (`TURSO_DATABASE_URL`, `AUTH_SECRET`, etc.) should throw loudly when unset. |
+| ~~Required env var validation~~ | ✅ Done — `web/src/lib/env.ts` validates required server vars at startup and fails loudly outside the Next.js production-build analysis phase. |
 | ~~DB indexes for posts table~~ | ✅ Done — indexes already exist in `web/src/drizzle/schema.ts` and in the initial migration `web/drizzle/0000_broken_mole_man.sql`; no new migration needed. |
 | ~~`getRelatedPosts` performance~~ | ✅ Done — related posts now score against targeted category/tag/recent candidate sets instead of loading the full published corpus. |
 | ~~Sentry error tracking~~ | ✅ Done — Sentry integration is present; verify production alert routing separately if needed. |
 | ~~Tiptap JSON migration~~ | ✅ Done — admin editor now writes native Tiptap JSON; `renderTiptapJson()` backward-compat reads both formats; legacy write path removed entirely |
 | ~~HTTP security headers~~ | ✅ Done — baseline CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy now ship from `web/next.config.ts`; validate CSP against production integrations if a runtime violation appears. |
 | ~~Comment moderation backend~~ | ✅ Done — schema adds `visibility` / `is_flagged` / moderation metadata, admin routes expose moderation + admin comment reads, public reads preserve threads with placeholders, and replies are blocked on non-visible parents. |
-| Integration + E2E tests | Baseline Vitest + Playwright smoke coverage exists, and admin smoke coverage now covers dashboard filtering/navigation plus tags/moderation page presence when `E2E_ADMIN_STORAGE_STATE` is available. Keep expanding authenticated flows and wire them into CI, especially moderation actions with a stable `E2E_ADMIN_POST_ID`. |
+| Integration + E2E tests | Baseline Vitest + Playwright smoke coverage exists, the public smoke suite passes locally, Playwright now handles the custom admin select correctly, remote `E2E_BASE_URL` runs no longer boot an unnecessary local dev server, and authenticated smoke now supports a reusable `playwright/.auth/admin.json` fallback plus the `bun run e2e:capture-admin-state` helper. Keep expanding authenticated flows and wire them into CI, especially moderation actions with stable `E2E_ADMIN_STORAGE_STATE` and `E2E_ADMIN_POST_ID`. |
 
 ### Frontend & UX
 | Task | Notes |
@@ -202,7 +201,7 @@
 | ~~Skeleton loading states~~ | ✅ Done — `PostCardSkeleton` + `loading.tsx` in `(blog)/`; pulse animation matches real card dimensions |
 | ~~`loading.tsx` for feed~~ | ✅ Done — included in skeleton loading work above |
 | ~~Author bio on post detail~~ | ✅ Done — `AuthorCard` component; fetched in parallel with related posts; shows avatar/initials, name, bio, links to `/author/[id]` |
-| ~~Analytics integration~~ | Removed — not needed |
+| ~~Plausible analytics~~ | ✅ Done — the production layout loads the Plausible script from `web/src/app/layout.tsx`. |
 | ~~Custom heading font~~ | ✅ Done — Lora serif via `next/font/google` applied to `.landing-title` and `.prose-content h2/h3/h4` |
 
 ---

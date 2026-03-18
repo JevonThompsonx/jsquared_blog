@@ -25,6 +25,7 @@ export type PublishedPostRecord = {
   imageUrl: string | null;
   layoutType: "standard" | "split-horizontal" | "split-vertical" | "hover" | null;
   createdAt: Date;
+  updatedAt: Date;
   publishedAt: Date | null;
   locationName: string | null;
   locationLat: number | null;
@@ -65,6 +66,7 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       locationName: posts.locationName,
       locationLat: posts.locationLat,
@@ -98,6 +100,7 @@ export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       locationName: posts.locationName,
       locationLat: posts.locationLat,
@@ -132,6 +135,7 @@ export async function listRecentPublishedPostRecords(limit: number, excludePostI
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       locationName: posts.locationName,
       locationLat: posts.locationLat,
@@ -194,6 +198,7 @@ const POST_DETAIL_SELECT = {
   imageUrl: mediaAssets.secureUrl,
   layoutType: posts.layoutType,
   createdAt: posts.createdAt,
+  updatedAt: posts.updatedAt,
   publishedAt: posts.publishedAt,
   locationName: posts.locationName,
   locationLat: posts.locationLat,
@@ -270,6 +275,7 @@ export async function listPublishedPostRecordsByCategory(
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       locationName: posts.locationName,
       locationLat: posts.locationLat,
@@ -316,6 +322,7 @@ export async function listPublishedPostRecordsByTagSlug(
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       locationName: posts.locationName,
       locationLat: posts.locationLat,
@@ -362,6 +369,7 @@ export async function listPublishedPostRecordsByTagSlugs(
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       locationName: posts.locationName,
       locationLat: posts.locationLat,
@@ -405,6 +413,7 @@ export type AnyStatusPostRecord = {
   imageUrl: string | null;
   layoutType: "standard" | "split-horizontal" | "split-vertical" | "hover" | null;
   createdAt: Date;
+  updatedAt: Date;
   publishedAt: Date | null;
   locationName: string | null;
   locationLat: number | null;
@@ -433,6 +442,7 @@ export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRec
       imageUrl: mediaAssets.secureUrl,
       layoutType: posts.layoutType,
       createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       locationName: posts.locationName,
       locationLat: posts.locationLat,

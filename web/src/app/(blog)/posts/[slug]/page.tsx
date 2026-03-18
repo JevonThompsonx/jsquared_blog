@@ -71,7 +71,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const isAdmin = adminSession?.user?.role === "admin";
   const sanitized = sanitizeRichTextHtml(post.description);
   const { html: safeDescription, headings } = processHeadings(sanitized);
-  const readingTime = Math.max(1, Math.ceil(htmlToPlainText(post.description).split(/\s+/).filter(Boolean).length / 220));
+  const readingTime = post.readingTimeMinutes ?? 1;
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   const [relatedPosts, seriesNav, authorProfile] = await Promise.all([
     getRelatedPosts(post, 3),

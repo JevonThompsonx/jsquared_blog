@@ -277,6 +277,23 @@ export function htmlToPlainText(html: string | null | undefined): string {
     .trim();
 }
 
+export function getWordCount(html: string | null | undefined): number {
+  const plainText = htmlToPlainText(html);
+
+  if (!plainText) {
+    return 0;
+  }
+
+  return plainText.split(/\s+/).filter(Boolean).length;
+}
+
+export function getReadingTimeMinutes(html: string | null | undefined, wordsPerMinute = 220): number {
+  const safeWordsPerMinute = Number.isFinite(wordsPerMinute) && wordsPerMinute > 0 ? wordsPerMinute : 220;
+  const wordCount = getWordCount(html);
+
+  return Math.max(1, Math.ceil(wordCount / safeWordsPerMinute));
+}
+
 export type TocHeading = { id: string; text: string; level: number };
 
 function slugifyHeading(text: string): string {

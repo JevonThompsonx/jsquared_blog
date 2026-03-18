@@ -20,6 +20,8 @@ export type BlogPost = {
   imageUrl: string | null;
   category: string | null;
   createdAt: string;
+  updatedAt?: string;
+  publishedAt?: string | null;
   status: "draft" | "published" | "scheduled";
   layoutType?: "standard" | "split-horizontal" | "split-vertical" | "hover";
   tags: BlogTag[];
@@ -32,4 +34,5 @@ export type BlogPost = {
   iovanderUrl: string | null;
   commentCount: number;
   authorId?: string;
+  readingTimeMinutes?: number;
 };

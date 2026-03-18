@@ -21,22 +21,31 @@ export default async function Head({ params }: PostHeadProps) {
 
   const authorProfile = post.authorId ? await getPublicAuthorProfileById(post.authorId) : null;
   const canonicalUrl = getCanonicalPostUrl(post);
+  const articlePublishedAt = post.publishedAt ?? post.createdAt;
+  const articleModifiedAt = post.updatedAt ?? articlePublishedAt;
+  const imageUrls = [post.imageUrl, ...post.images.map((image) => image.imageUrl)].filter(
+    (value): value is string => Boolean(value),
+  );
   const jsonLd = serializeJsonLd({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
     description: htmlToPlainText(post.excerpt ?? post.description).slice(0, 160),
-    datePublished: post.createdAt,
-    dateModified: post.createdAt,
+    datePublished: articlePublishedAt,
+    dateModified: articleModifiedAt,
     author: {
       "@type": "Person",
       name: authorProfile?.displayName ?? "J²Adventures",
     },
-    image: post.imageUrl ?? undefined,
+    image: imageUrls.length > 0 ? imageUrls : undefined,
     url: canonicalUrl,
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": canonicalUrl,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "J²Adventures",
     },
   });
 
