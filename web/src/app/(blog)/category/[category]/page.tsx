@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
+import { getCategoryFeedHref } from "@/lib/utils";
 import { countPublishedPostsByCategory } from "@/server/dal/posts";
 import { listPublishedPostsByCategory } from "@/server/queries/posts";
 
@@ -18,6 +19,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   return {
     title: `${label} – J²Adventures`,
     description: `Explore all ${label} adventures on J²Adventures.`,
+    alternates: {
+      types: {
+        "application/rss+xml": `https://jsquaredadventures.com${getCategoryFeedHref(label)}`,
+      },
+    },
   };
 }
 

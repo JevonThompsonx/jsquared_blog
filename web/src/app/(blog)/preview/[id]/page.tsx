@@ -52,7 +52,7 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
 
   const sanitized = sanitizeRichTextHtml(post.description);
   const { html: safeDescription, headings } = processHeadings(sanitized);
-  const readingTime = post.readingTimeMinutes ?? 1;
+  const readingTime = Math.max(1, post.readingTimeMinutes ?? 0);
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   const [seriesNav, authorProfile] = await Promise.all([
     getSeriesNavForPost(post.id),
@@ -165,6 +165,8 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
               <PostDate className="tabular-nums" dateString={post.createdAt} />
               <span className="text-[var(--border)]">·</span>
               <span>{readingTime} min read</span>
+              <span className="text-[var(--border)]">·</span>
+              <span>{post.viewCount ?? 0} views</span>
             </div>
 
             <h1 className="mt-3 text-balance text-3xl font-bold leading-[1.1] tracking-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">

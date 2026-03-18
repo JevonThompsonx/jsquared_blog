@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 17, 2026 | **Stack**: Next.js 16 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 18, 2026 | **Stack**: Next.js 16 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -31,6 +31,7 @@
 
 ### Reading Experience
 - [x] Homepage/feed with infinite scroll
+- [x] Mobile nav drawer polish — Radix dialog-based mobile navigation with search, focus-trap behavior, account/admin links, and click-to-close navigation
 - [x] Post detail pages with full content rendering
 - [x] Bullet/numbered list styles in post content
 - [x] Category pages (`/category/:slug`) with infinite scroll
@@ -241,6 +242,8 @@ post_bookmarks     post_id (FK), user_id (FK), created_at [PK composite]
 | `0002_series.sql` | `series` table + `series_id`/`series_order` on posts |
 | `0003_location.sql` | `location_*` + `ioverlander_url` columns on posts |
 | `0004_tag_description.sql` | `description` column on `tags` |
+| `0005_post_content_and_preview_tokens.sql` | canonical content fields + preview token support |
+| `0006_comment_moderation.sql` | comment moderation columns and indexes |
 
 ### Key Directories
 
@@ -251,7 +254,7 @@ web/src/server/        Server-only DAL + queries + forms + auth
 web/src/lib/           Shared utilities (db, auth, cloudinary, supabase, env)
 web/src/drizzle/       Drizzle schema
 web/drizzle/           Migration SQL files
-web/scripts/           One-off scripts (migrate, import, seed-locations)
+web/scripts/           One-off scripts (migrate, import, admin auth capture, seed helpers)
 ```
 
 ---
@@ -263,10 +266,15 @@ cd web
 bun run dev                        # Start dev server at localhost:3000
 bun run build                      # Production build
 bun run lint                       # ESLint
+bunx tsc --noEmit                  # TypeScript type-check
+bun run test                       # Vitest unit tests
+bun run test:e2e                   # Playwright smoke tests
 bun run db:generate                # Generate Drizzle migrations after schema changes
 bun run db:migrate                 # Apply migrations to Turso
+bun run e2e:capture-admin-state    # Capture reusable admin Playwright session
 bun run ./scripts/seed-locations          # Seed location data onto existing posts (dev only)
 bun run ./scripts/seed-series-categories  # Seed test series + categories (dev only, idempotent)
+bun run ./scripts/seed-rich-content       # Seed richer editorial content for local QA
 ```
 
 ## Deployment

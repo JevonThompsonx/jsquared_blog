@@ -9,17 +9,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import NextImage from "next/image";
 
 import { validatePostContentWarningsAction } from "@/app/admin/actions";
-import type { TiptapImageAltWarning } from "@/lib/content";
-
-function getWordCount(value: string): number {
-  return value
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .length;
-}
+import { getReadingTimeMinutes, getWordCount, type TiptapImageAltWarning } from "@/lib/content";
 
 function MenuButton({
   active,
@@ -337,7 +327,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
 
   // Derive word count
   const wordCount = getWordCount(editor?.getHTML() ?? "");
-  const readingMinutes = Math.max(1, Math.ceil(wordCount / 220));
+  const readingMinutes = Math.max(1, getReadingTimeMinutes(editor?.getHTML() ?? ""));
   const missingAltCount = backendWarnings.length;
 
   const [warningsDismissed, setWarningsDismissed] = useState(false);

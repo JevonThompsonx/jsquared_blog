@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import { HomeFeed } from "@/components/blog/home-feed";
@@ -64,7 +65,7 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
 
   if (search) {
     return (
-      <main style={{ background: "var(--background)" }}>
+      <main id="main-content" style={{ background: "var(--background)" }}>
         <SiteHeader />
         <div className="container mx-auto px-4 pb-2 pt-28 sm:px-6 lg:px-8">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Search results</p>
@@ -80,16 +81,19 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   const seasonalHero = getSeasonalHero();
 
   return (
-    <main style={{ background: "var(--background)" }}>
+    <main id="main-content" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
-        <div
-          className="landing-page transition-[background-image] duration-1000"
-          style={{
-          backgroundImage: seasonalHero.backgroundImage,
-          }}
-        >
-          <div className="hero-shell">
+        <div className="landing-page relative overflow-hidden">
+          <Image
+            alt="Hero background"
+            className="object-cover transition-opacity duration-1000"
+            fill
+            priority
+            src={seasonalHero.backgroundImage.replace(/^url\('(.+)'\)$/, "$1")}
+            sizes="100vw"
+          />
+          <div className="hero-shell relative z-10">
             <div className="welcome-text backdrop-blur-sm">
               <span className="hero-kicker">{seasonalHero.kicker}</span>
               <h1 className="landing-title drop-shadow-lg">{seasonalHero.title}</h1>
@@ -112,10 +116,10 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
               </div>
             </div>
           </div>
-        <div className="scroll-indicator">
-          <div className="arrow-down"></div>
+          <div className="scroll-indicator">
+            <div className="arrow-down"></div>
+          </div>
         </div>
-      </div>
 
       <div className="main-content main-content-visible" id="stories">
         <div className="container mx-auto px-4 pt-8 pb-2 sm:px-6 lg:px-8">

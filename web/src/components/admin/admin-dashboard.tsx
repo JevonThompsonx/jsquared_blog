@@ -338,6 +338,7 @@ export function AdminDashboard({
                 { label: "Title A-Z", value: "title-asc" },
                 { label: "Recently updated", value: "updated-desc" },
                 { label: "Recently published", value: "published-desc" },
+                { label: "Most viewed", value: "views-desc" },
               ]}
               className="w-full lg:w-[170px] xl:w-[180px]"
             />
@@ -514,6 +515,7 @@ export function AdminDashboard({
                               Scheduled {formatPublishedDate(post.scheduledPublishTime.toISOString())}
                             </span>
                           ) : null}
+                          <span>{post.viewCount} views</span>
                           </div>
                         </div>
                         <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end pt-3 xl:pt-0">

@@ -9,7 +9,7 @@ export const adminPostListSearchParamsSchema = z.object({
   status: z.enum(["all", "draft", "published", "scheduled"]).optional(),
   page: z.string().trim().optional(),
   pageSize: z.string().trim().optional(),
-  sort: z.enum(["updated-desc", "created-desc", "created-asc", "published-desc", "title-asc", "newest", "oldest", "title"]).optional(),
+  sort: z.enum(["updated-desc", "created-desc", "created-asc", "published-desc", "title-asc", "views-desc", "newest", "oldest", "title"]).optional(),
 });
 
 function normalizeStatus(status: string | undefined): "draft" | "published" | "scheduled" | undefined {
@@ -20,7 +20,7 @@ function normalizeStatus(status: string | undefined): "draft" | "published" | "s
   return z.enum(["draft", "published", "scheduled"]).parse(status);
 }
 
-function normalizeSort(sort: string | undefined): "updated-desc" | "created-desc" | "created-asc" | "published-desc" | "title-asc" | undefined {
+function normalizeSort(sort: string | undefined): "updated-desc" | "created-desc" | "created-asc" | "published-desc" | "title-asc" | "views-desc" | undefined {
   switch (sort) {
     case "newest":
       return "created-desc";
@@ -33,6 +33,7 @@ function normalizeSort(sort: string | undefined): "updated-desc" | "created-desc
     case "created-asc":
     case "published-desc":
     case "title-asc":
+    case "views-desc":
       return sort;
     default:
       return undefined;

@@ -14,6 +14,7 @@ import { PostGallery } from "@/components/blog/post-gallery";
 import { PostMap } from "@/components/blog/post-map";
 import { ProseContent } from "@/components/blog/prose-content";
 import { ReadingProgressBar } from "@/components/blog/reading-progress-bar";
+import { PostViewTracker } from "@/components/blog/post-view-tracker";
 import { SiteHeader } from "@/components/layout/site-header";
 import { htmlToPlainText, processHeadings, sanitizeRichTextHtml } from "@/lib/content";
 import { TableOfContents } from "@/components/blog/table-of-contents";
@@ -26,6 +27,7 @@ import { getSeriesNavForPost } from "@/server/dal/series";
 import { SeriesNav } from "@/components/blog/series-nav";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
 import { ScrollToContent } from "@/components/blog/scroll-to-content";
+import Head from "./head";
 
 type PostPageProps = {
   params: Promise<{ slug: string }>;
@@ -71,7 +73,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const isAdmin = adminSession?.user?.role === "admin";
   const sanitized = sanitizeRichTextHtml(post.description);
   const { html: safeDescription, headings } = processHeadings(sanitized);
-  const readingTime = post.readingTimeMinutes ?? 1;
+  const readingTime = Math.max(1, post.readingTimeMinutes ?? 0);
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   const [relatedPosts, seriesNav, authorProfile] = await Promise.all([
     getRelatedPosts(post, 3),
@@ -112,7 +114,9 @@ export default async function PostPage({ params }: PostPageProps) {
   const canonicalUrl = getCanonicalPostUrl(post);
 
   return (
-    <main className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+        <PostViewTracker postId={post.id} />
+        <Head params={params} />
         <ScrollToContent hasFeaturedImage={Boolean(post.imageUrl)} />
         <ReadingProgressBar />
         <SiteHeader />
@@ -174,6 +178,8 @@ export default async function PostPage({ params }: PostPageProps) {
               <PostDate className="tabular-nums" dateString={post.createdAt} />
               <span className="text-[var(--border)]">·</span>
               <span>{readingTime} min read</span>
+              <span className="text-[var(--border)]">·</span>
+              <span>{post.viewCount ?? 0} views</span>
             </div>
 
             {/* Title */}

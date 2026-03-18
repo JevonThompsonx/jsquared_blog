@@ -6,24 +6,45 @@
 
 ## Current state
 
-The app is live and stable. We are in Phase 4.
+The app is live and stable at `jsquaredadventures.com`. We are in Phase 4, wrapping up polish and growth features.
 
-- PLAN `4.1` admin moderation UI is done.
-- PLAN `4.8` widened admin layouts are done and browser-QA'd.
-- PLAN `4.4` JSON-LD is implemented in code but still needs deployed validation.
-- The homepage seasonal hero cleanup is now done; treat the current hero as the new baseline, not a placeholder.
+**Done items — treat as baselines, do not rewrite:**
 
-## Frontend baseline you should preserve
+- PLAN `4.1` admin moderation UI — fully done with optimistic updates, summary stats, themed thread cards, and inline delete confirmation.
+- PLAN `4.8` widened admin layouts — done and browser-QA'd at 768px, 1280px, 1536px+.
+- PLAN `3.5` mobile nav UX — Radix dialog-based mobile drawer with search/account/admin parity and click-to-close.
+- PLAN `4.5` reading time — shared helpers power post pages, previews, and editor estimates.
+- PLAN `3.7` reduced-motion support — done.
+- PLAN `3.8` print stylesheet — done.
+- PLAN `3.9` social share buttons — done (copy link with clipboard API).
+- PLAN `3.11` admin dropdown dark mode fix — done (custom `ThemeSelect` component).
+- PLAN `3.12` season-year date display — done.
+- PLAN `3.13` post page scroll/focus — done.
+- PLAN `3.14` season-year grouped feed — done.
+- Comment counts on post cards — done.
+- Homepage seasonal hero cleanup — done. `J²Adventures` is the constant title, seasonal note panel adds whimsy.
+- Empty search state — done with action buttons.
+- Tag & category page redesign — done with rich hero headers, icons, descriptions.
+- Author bio card on post detail — done.
+- Skeleton loading states and `loading.tsx` — done.
+- Table of contents — done with scroll tracking.
+- Lora serif heading font — done.
+
+**In progress — these are YOUR tasks this session:**
+
+- PLAN `3.1` Core Web Vitals audit + fix (IN PROGRESS)
+- PLAN `3.2` WCAG AA accessibility audit + fix (IN PROGRESS)
+- PLAN `3.6` Search improvements (IN PROGRESS)
+- PLAN `4.4` JSON-LD validation (code is done — deployed validation still needed)
+
+## Frontend baseline you must preserve
 
 Verified admin surfaces:
 - `/admin`
 - `/admin/tags`
 - `/admin/posts/[postId]/comments`
 
-Verified widths:
-- `768px`
-- `1280px`
-- `1536px+`
+Verified widths: `768px`, `1280px`, `1536px+`
 
 Already-stable behaviors:
 - admin dashboard filters/pagination layout
@@ -31,59 +52,79 @@ Already-stable behaviors:
 - moderation summary cards and reply indentation
 - inline delete confirmation on moderation cards
 - inline clone confirmation in the post editor
+- mobile nav drawer behavior (search, account, close-on-click)
+- homepage seasonal hero layout
+- season-year grouped feed headers
 
-## Important frontend behavior added in the latest pass
+## Session tasks — do these in order
 
-- `web/src/components/admin/post-media-manager.tsx`
-  - new uploads no longer inherit filename alt text
-  - accessibility status stays in review until real descriptive alt text is present
-- `web/src/components/admin/post-editor-form.tsx`
-  - clone now uses an inline themed confirmation instead of browser `confirm()`
-- `web/src/app/layout.tsx`
-  - site metadata copy now reflects the live travel site rather than the migration story
-- `web/src/app/(blog)/page.tsx` + `web/src/app/globals.css`
-  - homepage hero now keeps `J²Adventures` as the constant title
-  - placeholder spring copy is gone
-  - a seasonal note panel adds the whimsical slot from `TODO.md`
+### Task 1: Search improvements (PLAN 3.6)
 
-Preserve these unless real browser QA proves they need refinement.
+The search page currently works with `?search=` URL query params and server-side search. Add these improvements:
 
-## Best next frontend work
+1. **Debounced input** — add a client-side search input component with a 300ms debounce before updating the URL params. Use `useRouter().replace()` with the new search param to avoid stacking history entries. The input should show a loading indicator during the debounce/fetch.
+2. **Search result highlighting** — highlight the matching search terms in post card titles and excerpts on the search results page. Use a `<mark>` element with appropriate CSS styling (use CSS variables, not hardcoded colors). Do not use `dangerouslySetInnerHTML` — split text by match and render React elements.
+3. **Improved empty state** — the empty state already exists with "Browse all stories" and "Explore the map" buttons. Make sure the search input itself is prominent and focused. Add a "Try searching for:" section with 3–4 suggested search terms as clickable chips that populate the search input.
 
-### 1. Keep admin polish grounded in real QA
+Files to touch:
+- Create `web/src/components/blog/search-input.tsx` (new `"use client"` component)
+- `web/src/app/(blog)/page.tsx` or search route — integrate the search input
+- `web/src/components/blog/home-post-card.tsx` — add optional highlight prop for title/excerpt
+- `web/src/app/globals.css` — `mark` element styling using CSS variables
 
-If you touch the verified admin surfaces:
-- prefer browser evidence over speculative rewrites
-- keep fixes surgical
-- preserve the current layout baseline unless you observe a regression
+### Task 2: Core Web Vitals cleanup (PLAN 3.1)
 
-### 2. Keep image accessibility honest
+Run a Lighthouse audit on the homepage and a post detail page in the browser. Fix the issues you find. Common areas to address:
 
-If you extend the media manager or editor:
-- do not auto-mark filename-derived alt text as acceptable
-- keep warnings/review states visible until the content is actually descriptive
+1. **LCP (Largest Contentful Paint)** — ensure the hero image or first post card image has `priority` set on the `next/image` tag. Only the above-the-fold image should have `priority={true}`.
+2. **CLS (Cumulative Layout Shift)** — ensure all `next/image` tags have explicit `width` and `height` or use `fill` with a sized container. Check that skeleton loaders match the dimensions of loaded content. Verify the reading progress bar doesn't cause layout shift.
+3. **INP (Interaction to Next Paint)** — defer non-critical JavaScript. Make sure scroll handlers use `{ passive: true }`. Check that comment like/bookmark toggle handlers are fast (they should be — they're optimistic).
 
-### 3. Good frontend pickup areas now
+Files likely touched:
+- `web/src/components/blog/home-post-card.tsx` — image priority for first card
+- `web/src/components/blog/post-gallery.tsx` — image sizing
+- `web/src/app/(blog)/posts/[slug]/page.tsx` — above-the-fold image priority
+- `web/src/components/blog/reading-progress.tsx` — passive scroll listener check
 
-- mobile nav UX/a11y follow-up from PLAN `3.5`
-- accessibility/CWV cleanup based on real audits, not speculative redesigns
-- admin editor/browser QA once authenticated Playwright state is available locally
+### Task 3: WCAG AA accessibility pass (PLAN 3.2)
+
+Run the browser's accessibility audit (Lighthouse Accessibility or axe DevTools). Fix what you find. Key areas:
+
+1. **Color contrast** — verify all text/background combos meet 4.5:1 for normal text and 3:1 for large text across all 4 theme combos (light×sage, light×lichen, dark×sage, dark×lichen). Fix with CSS variable adjustments in `globals.css` if needed.
+2. **Focus indicators** — ensure every interactive element has a visible `:focus-visible` outline. Check buttons, links, dropdowns, and form inputs.
+3. **ARIA labels** — audit all icon-only buttons (theme toggle, search, menu toggle, map controls, etc.) for `aria-label`. Add missing ones.
+4. **Skip navigation** — add a "Skip to main content" link as the first focusable element in the layout if one doesn't exist yet.
+5. **Form labels** — ensure all form inputs have associated `<label>` elements or `aria-label`.
+6. **Semantic HTML** — verify heading hierarchy (single `<h1>` per page, no skipped levels). Check `<nav>`, `<main>`, `<article>`, `<section>` usage.
+
+Files likely touched:
+- `web/src/app/globals.css` — contrast fixes, focus styles, skip-nav styles
+- `web/src/app/layout.tsx` — skip-nav link
+- `web/src/components/layout/site-header.tsx` — ARIA labels
+- `web/src/components/blog/*.tsx` — various ARIA additions
+- `web/src/components/theme/theme-toggle.tsx` — ARIA
+
+### Task 4: JSON-LD final check (PLAN 4.4)
+
+The JSON-LD structured data is already implemented in `web/src/app/(blog)/posts/[slug]/head.tsx`. Your job:
+
+1. Verify the JSON-LD script tag renders correctly by viewing a published post page source in the browser.
+2. Ensure `@type: "BlogPosting"` includes: `headline`, `datePublished`, `dateModified`, `author`, `publisher`, `image`, `description`, `mainEntityOfPage`.
+3. Do NOT move the structured data out of `head.tsx`.
+4. Do NOT claim Rich Results validation is done — that requires checking a deployed URL in the Google Rich Results Test tool, which is a manual step.
+
+No code changes needed unless you find issues in the rendered output.
 
 ## Constraints
 
-- Server Components by default; use `"use client"` only when needed.
+- Server Components by default; use `"use client"` only when hooks/interactivity are needed.
 - No `any`, `as`, or `!` in new work.
-- CSS variables only for color/theming.
-- Use `next/image` where the component pattern supports it.
-- Use typed route helpers for dynamic links.
-- Meet WCAG AA minimum: semantics, keyboard access, focus-visible states, ARIA where needed.
-- Do not modify backend files unless a tiny frontend-supporting type/helper import is unavoidable.
-
-## JSON-LD note
-
-- Do not move structured data back into the page body.
-- The source of truth is `web/src/app/(blog)/posts/[slug]/head.tsx`.
-- Do not mark Rich Results validation done from local-only checks.
+- CSS variables only for color/theming — no hardcoded color values.
+- Use `next/image` for all images.
+- Use typed route helpers for dynamic links: `getPostHref()`, `getCategoryHref()`, `getTagHref()`, `getSeriesHref()`, `getMapHref()` from `web/src/lib/utils.ts`.
+- Meet WCAG AA minimum: semantic HTML, keyboard access, focus-visible states, ARIA where needed.
+- Do not modify backend files (DAL, server actions, API routes, queries, schema) unless a tiny frontend-supporting type/helper import is unavoidable.
+- TailwindCSS 4 — utilities are inside `@layer`. CSS rules outside `@layer` in `globals.css` have higher cascade precedence. For fighting inherited color, use dedicated classes in `globals.css` rather than Tailwind arbitrary-value classes.
 
 ## Quality gate
 
@@ -95,23 +136,30 @@ bunx tsc --noEmit
 bun run build
 ```
 
-Browser QA is strongly preferred for any layout-affecting frontend pass.
+All three must pass with zero errors/warnings. Browser QA is strongly preferred for any layout-affecting change.
 
 ## Key files
 
-- `web/src/components/admin/admin-dashboard.tsx`
-- `web/src/app/admin/tags/page.tsx`
-- `web/src/components/admin/admin-comments-panel.tsx`
-- `web/src/components/admin/admin-comment-card.tsx`
-- `web/src/components/admin/post-editor-form.tsx`
-- `web/src/components/admin/post-media-manager.tsx`
-- `web/src/app/(blog)/page.tsx`
-- `web/src/app/layout.tsx`
-- `web/src/app/globals.css`
+- `web/src/app/(blog)/page.tsx` — homepage
+- `web/src/app/(blog)/posts/[slug]/page.tsx` — post detail
+- `web/src/app/(blog)/posts/[slug]/head.tsx` — JSON-LD
+- `web/src/components/blog/home-post-card.tsx` — post card
+- `web/src/components/blog/home-feed.tsx` — grouped feed
+- `web/src/components/blog/filtered-feed.tsx` — category/tag feed
+- `web/src/components/blog/reading-progress.tsx` — progress bar
+- `web/src/components/blog/post-gallery.tsx` — gallery
+- `web/src/components/layout/site-header.tsx` — navigation
+- `web/src/components/layout/mobile-nav.tsx` — mobile drawer
+- `web/src/components/theme/theme-toggle.tsx` — theme switch
+- `web/src/app/globals.css` — CSS variables, theme combos, utilities
+- `web/src/components/admin/admin-dashboard.tsx` — admin layout (preserve)
+- `web/src/components/admin/admin-comment-card.tsx` — moderation card (preserve)
+- `web/src/lib/utils.ts` — typed route helpers, season formatting
 
 ## Report back with
 
-- what you changed
-- what browser QA showed
-- whether the admin layout baseline still held
-- whether lint, type-check, and build passed
+- what you changed and why
+- what browser QA showed (screenshots or descriptions)
+- Lighthouse scores for Performance and Accessibility (before/after if possible)
+- whether the admin layout baseline still held (spot check at 1280px)
+- whether lint, type-check, and build all passed

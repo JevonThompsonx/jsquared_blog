@@ -8,6 +8,7 @@ import type { BlogPost } from "@/types/blog";
 import { HomePostCard } from "@/components/blog/home-post-card";
 import { groupPostsBySeason } from "@/lib/utils";
 import { FeedbackPanel } from "@/components/ui/feedback-panel";
+import { SearchInput } from "@/components/blog/search-input";
 
 const POSTS_PER_PAGE = 20;
 const PULL_THRESHOLD = 64;
@@ -205,6 +206,13 @@ export function HomeFeed({ initialPosts, initialSearch = "" }: { initialPosts: B
           eyebrow="No matches"
           title={`No adventures match "${initialSearch}".`}
         />
+        <div className="mt-12">
+          <SearchInput
+            autoFocus
+            placeholder="Search again…"
+            suggestions={["Sierra", "Winter", "Oregon", "Road trip"]}
+          />
+        </div>
       </section>
     );
   }
@@ -227,7 +235,7 @@ export function HomeFeed({ initialPosts, initialSearch = "" }: { initialPosts: B
         </div>
       ) : null}
     <section aria-label="Stories feed" className="container mx-auto p-4 sm:p-6 lg:p-8">
-      {groupedPosts.map((group) => (
+      {groupedPosts.map((group, groupIndex) => (
         <section key={group.key} className="mb-12 last:mb-0">
           <div className="mb-6 flex items-center gap-3">
             <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
@@ -238,8 +246,13 @@ export function HomeFeed({ initialPosts, initialSearch = "" }: { initialPosts: B
             <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
           </div>
           <div className="grid grid-cols-1 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {group.posts.map((post) => (
-              <HomePostCard key={post.id} post={post} searchTerm={searchTerm} />
+            {group.posts.map((post, postIndex) => (
+              <HomePostCard
+                key={post.id}
+                post={post}
+                priority={groupIndex === 0 && postIndex === 0}
+                searchTerm={searchTerm}
+              />
             ))}
           </div>
         </section>

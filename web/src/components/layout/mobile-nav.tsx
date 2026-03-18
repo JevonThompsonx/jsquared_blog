@@ -3,7 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { Session as AdminSession } from "next-auth";
 
@@ -52,13 +52,9 @@ export function MobileNav({
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close when pathname changes
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
-
   const isAdminSignedIn = Boolean(adminSession?.user);
   const isPublicSignedIn = Boolean(publicSession?.user);
+  const closeMenu = () => setIsOpen(false);
 
   return (
     <div className="flex items-center gap-2 md:hidden">
@@ -78,7 +74,7 @@ export function MobileNav({
 
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm animate-in fade-in duration-300" />
-          <Dialog.Content className="fixed inset-x-0 top-0 z-50 flex max-h-[calc(100vh-2rem)] flex-col overflow-y-auto border-b border-[var(--border)] bg-[var(--card-bg)] px-4 pb-8 pt-[4.5rem] shadow-2xl animate-in slide-in-from-top duration-300 focus:outline-none">
+          <Dialog.Content className="navbar-mobile-menu fixed inset-x-0 top-0 z-50 flex max-h-[calc(100vh-2rem)] flex-col overflow-y-auto border-b border-[var(--border)] bg-[var(--card-bg)] px-4 pb-8 pt-[4.5rem] shadow-2xl animate-in slide-in-from-top duration-300 focus:outline-none">
             <Dialog.Title className="sr-only">Navigation Menu</Dialog.Title>
             <Dialog.Description className="sr-only">Access site links and search.</Dialog.Description>
 
@@ -115,6 +111,7 @@ export function MobileNav({
                   pathname === "/" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
                 }`}
                 href="/"
+                onClick={closeMenu}
               >
                 Home
               </Link>
@@ -123,6 +120,7 @@ export function MobileNav({
                   pathname === "/map" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
                 }`}
                 href="/map"
+                onClick={closeMenu}
               >
                 Map
               </Link>
@@ -131,6 +129,7 @@ export function MobileNav({
                   pathname === "/about" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
                 }`}
                 href="/about"
+                onClick={closeMenu}
               >
                 About
               </Link>
@@ -139,13 +138,14 @@ export function MobileNav({
                 <div className="mt-4 flex flex-col gap-1.5">
                   <div className="px-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]/60">Admin</div>
                   <Link
-                    className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
-                      pathname?.startsWith("/admin") ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
-                    }`}
-                    href="/admin"
-                  >
-                    Dashboard
-                  </Link>
+                      className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
+                        pathname?.startsWith("/admin") ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
+                      }`}
+                      href="/admin"
+                      onClick={closeMenu}
+                    >
+                      Dashboard
+                    </Link>
                   <div className="px-4 pb-2 text-xs text-[var(--text-secondary)]">
                     Logged in as <span className="font-semibold text-[var(--accent)]">{adminSession?.user?.githubLogin ?? adminSession?.user?.email}</span>
                   </div>
@@ -156,21 +156,23 @@ export function MobileNav({
                 <div className="mt-4 flex flex-col gap-1.5">
                   <div className="px-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]/60">Account</div>
                   <Link
-                    className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
-                      pathname === "/bookmarks" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
-                    }`}
-                    href="/bookmarks"
-                  >
-                    Saved posts
-                  </Link>
+                      className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
+                        pathname === "/bookmarks" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
+                      }`}
+                      href="/bookmarks"
+                      onClick={closeMenu}
+                    >
+                      Saved posts
+                    </Link>
                   <Link
-                    className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
-                      pathname === "/account" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
-                    }`}
-                    href="/account"
-                  >
-                    Account settings
-                  </Link>
+                      className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
+                        pathname === "/account" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
+                      }`}
+                      href="/account"
+                      onClick={closeMenu}
+                    >
+                      Account settings
+                    </Link>
                   <div className="px-4 text-xs text-[var(--text-secondary)]">
                     {publicSession?.user?.email}
                   </div>
@@ -179,6 +181,7 @@ export function MobileNav({
                 <Link
                   className="mt-4 flex items-center justify-center gap-3 rounded-2xl bg-[var(--btn-bg)] px-4 py-3.5 text-base font-bold text-[var(--btn-text)] shadow-lg shadow-[var(--btn-bg)]/20 transition-all active:scale-95"
                   href={{ pathname: "/login", query: { redirectTo: pathname ?? "/" } }}
+                  onClick={closeMenu}
                 >
                   Sign in
                 </Link>

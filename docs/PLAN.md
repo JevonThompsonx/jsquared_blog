@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 ## Model Allocation
 
@@ -14,9 +14,9 @@ Last updated: 2026-03-17
 | Python / Data / Terminal scripts | GPT-5.4 | OpenCode / Copilot |
 | Hard Backend Problems | GPT-5.4 | OpenCode / Copilot |
 
-## Current State (Session 9 Baseline)
+## Current State
 
-**Feature-complete travel blog** at jsquaredadventures.com. 110 source files in `web/src/`. Deployed on Vercel. Legacy `client/`/`server/`/`shared/` directories deleted.
+**Feature-complete travel blog** at jsquaredadventures.com. The production app lives in `web/`, deploys on Vercel, and the retired `client/` / `server/` / `shared/` stack has already been removed.
 
 Everything below is additive — the app is live and stable.
 
@@ -77,7 +77,7 @@ Everything below is additive — the app is live and stable.
 | 3.2 | WCAG AA accessibility audit + fix | Opus (audit) → Gemini (fix) | Various components | IN PROGRESS |
 | 3.3 | Image lazy loading + blur placeholders | Gemini 3 Flash | `web/src/components/blog/home-post-card.tsx`, `web/src/components/blog/post-gallery.tsx` | DONE |
 | 3.4 | Skeleton loading states for all async content | Gemini 3 Flash | `web/src/app/**/loading.tsx` | DONE |
-| 3.5 | Mobile nav UX improvements | Gemini 3 Flash | `web/src/components/layout/site-header.tsx` | TODO |
+| 3.5 | Mobile nav UX improvements | Gemini 3 Flash | `web/src/components/layout/site-header.tsx`, `web/src/components/layout/mobile-nav.tsx`, `web/package.json` | DONE |
 | 3.6 | Search improvements (debounce, highlight, empty state) | Gemini 3 Flash | `web/src/app/(blog)/search/` | IN PROGRESS |
 | 3.7 | Reduced motion support (`prefers-reduced-motion`) | Gemini 3 Flash | `web/src/app/globals.css` | DONE |
 | 3.8 | Print stylesheet | Gemini 3 Flash | `web/src/app/globals.css` | DONE |

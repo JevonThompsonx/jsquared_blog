@@ -50,6 +50,13 @@
       "when": 1774045600000,
       "tag": "0006_comment_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1774132000000,
+      "tag": "0007_post_view_count",
+      "breakpoints": true
     }
   ]
 }

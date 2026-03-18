@@ -35,7 +35,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={lora.variable}>
-      <body>
+      <body className="antialiased">
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
         <AppProviders>{children}</AppProviders>
         {process.env.NODE_ENV === "production" ? (
           <Script

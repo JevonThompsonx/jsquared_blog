@@ -25,8 +25,11 @@ The source-of-truth trackers are:
 - Added a reusable admin Playwright path in `web/tests/e2e/helpers/admin.ts`, including a default `playwright/.auth/admin.json` fallback and a non-committed capture helper at `web/scripts/capture-admin-storage-state.ts`.
 - Expanded authenticated smoke coverage so moderation summary/state checks can run from the dashboard even without `E2E_ADMIN_POST_ID`, while the inline delete-confirm flow stays gated to a known comment-bearing post.
 - Finished the homepage seasonal cleanup in `web/src/app/(blog)/page.tsx` and `web/src/app/globals.css`: removed the placeholder spring copy, kept `J²Adventures` as the primary title, and added a more intentional seasonal note panel.
-- Centralized reading-time calculation in `web/src/lib/content.ts` and exposed it through `web/src/server/queries/posts.ts` so live post pages, previews, and future surfaces share one source of truth.
+- Landed the mobile nav drawer in `web/src/components/layout/mobile-nav.tsx` and `web/src/components/layout/site-header.tsx`, then tightened it so link clicks close the drawer reliably.
+- Centralized reading-time calculation in `web/src/lib/content.ts` and exposed it through `web/src/server/queries/posts.ts`; editor estimates now use the same shared helpers, and empty content no longer reports placeholder words.
 - Improved JSON-LD output in `web/src/app/(blog)/posts/[slug]/head.tsx` to use published/updated timestamps, publisher metadata, and a fuller image list.
+- Fixed a stale public smoke test in `web/tests/e2e/smoke.spec.ts` so search coverage follows the real `?search=` query param.
+- Refined filename-alt detection in `web/src/components/admin/post-media-manager.tsx` so obviously generated alt text is flagged without penalizing normal descriptive copy.
 
 ## Verification completed in this pass
 
@@ -42,6 +45,7 @@ The source-of-truth trackers are:
 - PLAN `4.8` widened admin layouts are done and browser-QA'd on `/admin`, `/admin/tags`, and `/admin/posts/[postId]/comments`.
 - PLAN `4.4` JSON-LD is implemented in `web/src/app/(blog)/posts/[slug]/head.tsx`, and the payload is now stronger, but deployed Rich Results validation is still pending.
 - PLAN `4.5` reading time is now effectively done in code: shared helpers power post pages, previews, and editor estimates from one content-derived path.
+- PLAN `3.5` mobile nav UX improvements are now in place with a dedicated drawer component and search/account parity.
 - Canonical Tiptap JSON storage is live; legacy HTML remains read-compatible only.
 - Public smoke coverage is working locally, and the Playwright config is now safe for local and remote targets.
 
@@ -56,7 +60,7 @@ The source-of-truth trackers are:
 
 ### 2. Product/UX follow-up
 
-- Continue Phase 3 polish items that still need real audits, especially mobile nav and accessibility/CWV follow-up.
+- Continue Phase 3 polish items that still need real audits, especially accessibility/CWV cleanup backed by real browser checks.
 
 ### 3. Operational cleanup
 

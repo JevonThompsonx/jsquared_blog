@@ -12,15 +12,11 @@ describe("htmlToPlainText", () => {
   });
 
   it("handles null input gracefully", () => {
-    // sanitizeRichTextHtml returns a placeholder for null/empty
-    const result = htmlToPlainText(null);
-    expect(result).toBeTruthy();
-    expect(typeof result).toBe("string");
+    expect(htmlToPlainText(null)).toBe("");
   });
 
   it("handles empty string", () => {
-    const result = htmlToPlainText("");
-    expect(typeof result).toBe("string");
+    expect(htmlToPlainText("")).toBe("");
   });
 
   it("strips nested tags", () => {
@@ -33,8 +29,8 @@ describe("reading helpers", () => {
     expect(getWordCount("<p>Hello <strong>road trip</strong> crew</p>")).toBe(4);
   });
 
-  it("returns at least one minute for empty content", () => {
-    expect(getReadingTimeMinutes("")).toBe(1);
+  it("returns zero minutes for empty content", () => {
+    expect(getReadingTimeMinutes("")).toBe(0);
   });
 
   it("rounds reading time up", () => {

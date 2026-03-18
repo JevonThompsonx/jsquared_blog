@@ -154,6 +154,7 @@ bun run db:migrate
 # Helpers
 bun run e2e:capture-admin-state
 bun run ./scripts/seed-series-categories.ts
+bun run ./scripts/seed-rich-content.ts
 ```
 
 ---
@@ -161,10 +162,18 @@ bun run ./scripts/seed-series-categories.ts
 ## Database Setup
 
 ### New Project Setup
-Run the combined migration in Supabase SQL Editor:
+Apply Drizzle migrations against Turso from `web/`:
 ```bash
-# Copy contents from:
-server/migrations/APPLY_ALL_MIGRATIONS.sql
+cd web
+bun run db:migrate
+```
+
+Optional local content helpers:
+
+```bash
+cd web
+bun run ./scripts/seed-series-categories.ts
+bun run ./scripts/seed-rich-content.ts
 ```
 
 ### Tables
@@ -218,6 +227,7 @@ GET  /feed.xml
 | Lint | ESLint | `cd web && bun run lint` |
 | Unit tests | Vitest | `cd web && bun run test` |
 | E2E smoke | Playwright | `cd web && bun run test:e2e` |
+| Admin auth capture | Playwright | `cd web && bun run e2e:capture-admin-state` |
 | CI | GitHub Actions | Auto-runs on PR / push to `main` |
 
 **Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.

@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 
 import {
   adminTest,
+  canRunAdminMutationFlows,
   configuredAdminPostId,
+  getAdminMutationHint,
   getAdminStorageStateHint,
   hasAdminStorageState,
   openAdminCommentsPage,
@@ -76,8 +78,9 @@ test.describe("public pages smoke tests", () => {
   });
 
   test("search page is accessible", async ({ page }) => {
-    await page.goto("/?q=adventure");
+    await page.goto("/?search=adventure");
     await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Results for/i })).toBeVisible();
   });
 
   test("login page renders", async ({ page }) => {
@@ -100,6 +103,8 @@ adminTest.describe("authenticated admin smoke tests", () => {
   adminTest.skip(!hasAdminStorageState, getAdminStorageStateHint());
 
   adminTest("admin can filter, clone, and preview a post", async ({ page }) => {
+    adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
+
     await page.goto("/admin");
 
     const postRows = page.getByTestId("admin-post-row");
@@ -166,6 +171,24 @@ adminTest.describe("authenticated admin smoke tests", () => {
     await expect(page.getByRole("button", { name: "Save" }).first()).toBeVisible();
   });
 
+  adminTest("admin can edit a tag description inline", async ({ page }) => {
+    adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
+
+    await page.goto("/admin/tags");
+
+    const firstTagRow = page.locator("li").filter({ has: page.locator('textarea[name="description"]') }).first();
+    const descriptionField = firstTagRow.locator('textarea[name="description"]');
+    const saveButton = firstTagRow.getByRole("button", { name: "Save" });
+    const nextDescription = `E2E tag description ${Date.now()}`;
+
+    await expect(descriptionField).toBeVisible({ timeout: 15_000 });
+    await descriptionField.fill(nextDescription);
+    await saveButton.click();
+
+    await page.waitForLoadState("networkidle");
+    await expect(descriptionField).toHaveValue(nextDescription);
+  });
+
   adminTest("admin moderation page shows summary cards and moderation states", async ({ page }) => {
     const resolvedPostId = await openAdminCommentsPage(page);
 
@@ -187,7 +210,7 @@ adminTest.describe("authenticated admin smoke tests", () => {
   });
 
   adminTest("admin moderation page shows inline delete confirmation when comments exist", async ({ page }) => {
-    adminTest.skip(!configuredAdminPostId, "Set E2E_ADMIN_POST_ID to exercise inline delete confirmation on a post with comments.");
+    adminTest.skip(!configuredAdminPostId, "Run bun run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
 
     await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
 
@@ -200,5 +223,31 @@ adminTest.describe("authenticated admin smoke tests", () => {
     await expect(page.getByText("Permanently delete?")).toBeVisible();
     await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Delete" }).last()).toBeVisible();
+  });
+
+  adminTest("admin can moderate the seeded comment fixture", async ({ page }) => {
+    adminTest.skip(!configuredAdminPostId, "Run bun run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
+    adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
+
+    await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
+
+    await expect(page.getByText("Moderation tools")).toBeVisible();
+
+    const firstComment = page.locator("article").filter({ has: page.getByRole("button", { name: /^Delete$/ }) }).first();
+    await expect(firstComment).toBeVisible({ timeout: 15_000 });
+
+    const hideButton = firstComment.getByRole("button", { name: "Hide" });
+    if (await hideButton.isVisible()) {
+      await hideButton.click();
+      await expect(firstComment.getByText("Hidden")).toBeVisible();
+      await firstComment.getByRole("button", { name: "Unhide" }).click();
+      await expect(firstComment.getByText("Visible")).toBeVisible();
+    }
+
+    const deleteButton = firstComment.getByRole("button", { name: /^Delete$/ }).first();
+    await deleteButton.click();
+    await expect(firstComment.getByText("Permanently delete?")).toBeVisible();
+    await firstComment.getByRole("button", { name: "Cancel" }).click();
+    await expect(firstComment.getByText("Permanently delete?")).not.toBeVisible();
   });
 });

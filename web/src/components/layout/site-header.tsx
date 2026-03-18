@@ -36,22 +36,6 @@ function SearchIcon() {
   );
 }
 
-function HamburgerIcon() {
-  return (
-    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-      <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 import { MobileNav } from "./mobile-nav";
 
 export function ThemeToggle() {
@@ -60,7 +44,7 @@ export function ThemeToggle() {
   return (
     <button
       aria-label={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
-      className="relative inline-flex h-10 w-[4.9rem] shrink-0 items-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-1 shadow-sm transition-all duration-300 hover:border-[var(--primary)] focus:outline-none"
+      className="relative inline-flex h-10 w-[4.9rem] shrink-0 items-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-1 shadow-sm transition-all duration-300 hover:border-[var(--primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
       onClick={toggleMode}
       title={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
       type="button"
@@ -239,6 +223,7 @@ export function SiteHeader() {
         <MobileNav
           adminSession={adminSession}
           currentSearch={currentSearch}
+          key={pathname ?? "/"}
           onSearchChange={handleSearchChange}
           onSearchSubmit={handleSearchSubmit}
           publicSession={publicSession}

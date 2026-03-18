@@ -32,6 +32,7 @@ export type BlogPost = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  viewCount?: number;
   commentCount: number;
   authorId?: string;
   readingTimeMinutes?: number;

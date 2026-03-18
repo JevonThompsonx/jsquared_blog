@@ -85,10 +85,11 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     locationName: post.locationName ?? null,
     locationLat: post.locationLat ?? null,
     locationLng: post.locationLng ?? null,
-    locationZoom: post.locationZoom ?? null,
-    iovanderUrl: post.iovanderUrl ?? null,
-    commentCount: commentCounts.get(post.id) ?? 0,
-    readingTimeMinutes: getPostReadingTime(post),
+     locationZoom: post.locationZoom ?? null,
+     iovanderUrl: post.iovanderUrl ?? null,
+      viewCount: post.viewCount,
+      commentCount: commentCounts.get(post.id) ?? 0,
+      readingTimeMinutes: getPostReadingTime(post),
   }));
 }
 
@@ -151,6 +152,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    viewCount: post.viewCount,
     commentCount: 0,
     authorId: post.authorId,
     readingTimeMinutes: getPostReadingTime(post),
@@ -226,6 +228,7 @@ export async function getPostForPreview(id: string): Promise<BlogPost | null> {
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    viewCount: post.viewCount,
     commentCount: 0,
     authorId: post.authorId,
     readingTimeMinutes: getPostReadingTime(post),

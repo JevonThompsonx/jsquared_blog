@@ -7,7 +7,7 @@ import { categories, mediaAssets, postImages, postTags, posts, series, tags } fr
 import { getDb } from "@/lib/db";
 
 const adminPostStatusSchema = z.enum(["draft", "published", "scheduled"]);
-const adminPostSortSchema = z.enum(["updated-desc", "created-desc", "created-asc", "published-desc", "title-asc"]);
+const adminPostSortSchema = z.enum(["updated-desc", "created-desc", "created-asc", "published-desc", "title-asc", "views-desc"]);
 
 export const adminPostListFiltersSchema = z.object({
   query: z.string().trim().max(120).optional().default(""),
@@ -32,6 +32,7 @@ export type AdminPostRecord = {
   updatedAt: Date;
   publishedAt: Date | null;
   scheduledPublishTime: Date | null;
+  viewCount: number;
 };
 
 export type AdminEditablePostRecord = AdminPostRecord & {
@@ -116,6 +117,8 @@ function getAdminPostOrder(sort: AdminPostListFilters["sort"]) {
       return [desc(posts.publishedAt), desc(posts.updatedAt)];
     case "title-asc":
       return [asc(posts.title), desc(posts.updatedAt)];
+    case "views-desc":
+      return [desc(posts.viewCount), desc(posts.updatedAt)];
     case "updated-desc":
     default:
       return [desc(posts.updatedAt), desc(posts.createdAt)];
@@ -142,6 +145,7 @@ export async function listAdminPostRecords(rawFilters?: Partial<AdminPostListFil
         updatedAt: posts.updatedAt,
         publishedAt: posts.publishedAt,
         scheduledPublishTime: posts.scheduledPublishTime,
+        viewCount: posts.viewCount,
       })
       .from(posts)
       .leftJoin(categories, eq(posts.categoryId, categories.id))

@@ -32,6 +32,7 @@ export type PublishedPostRecord = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  viewCount: number;
   authorId?: string;
 };
 
@@ -142,6 +143,11 @@ export async function listRecentPublishedPostRecords(limit: number, excludePostI
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      viewCount: posts.viewCount,
+      viewCount: posts.viewCount,
+      viewCount: posts.viewCount,
+      viewCount: posts.viewCount,
+      viewCount: posts.viewCount,
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -205,6 +211,7 @@ const POST_DETAIL_SELECT = {
   locationLng: posts.locationLng,
   locationZoom: posts.locationZoom,
   iovanderUrl: posts.iovanderUrl,
+  viewCount: posts.viewCount,
   authorId: posts.authorId,
 } as const;
 
@@ -420,6 +427,7 @@ export type AnyStatusPostRecord = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  viewCount: number;
   authorId: string;
 };
 
@@ -449,6 +457,7 @@ export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRec
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      viewCount: posts.viewCount,
       authorId: posts.authorId,
     })
     .from(posts)
@@ -474,6 +483,18 @@ export async function unschedulePost(postId: string): Promise<void> {
     .update(posts)
     .set({ status: "draft", scheduledPublishTime: null, updatedAt: new Date() })
     .where(eq(posts.id, postId));
+}
+
+export async function incrementPostViewCount(postId: string): Promise<void> {
+  const db = getDb();
+
+  await db
+    .update(posts)
+    .set({
+      viewCount: sql`${posts.viewCount} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(posts.id, postId), eq(posts.status, "published")));
 }
 
 export async function listImagesForPost(postId: string): Promise<PublishedPostImageRecord[]> {

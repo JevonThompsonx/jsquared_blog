@@ -72,8 +72,16 @@ export function getCategoryHref(category: string): `/category/${string}` {
   return `/category/${encodeURIComponent(category)}`;
 }
 
+export function getCategoryFeedHref(category: string): `/category/${string}/feed.xml` {
+  return `/category/${encodeURIComponent(category)}/feed.xml`;
+}
+
 export function getTagHref(slug: string): `/tag/${string}` {
   return `/tag/${slug}`;
+}
+
+export function getTagFeedHref(slug: string): `/tag/${string}/feed.xml` {
+  return `/tag/${slug}/feed.xml`;
 }
 
 export function getAuthorHref(userId: string): `/author/${string}` {

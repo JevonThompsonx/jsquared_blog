@@ -84,6 +84,7 @@ export const posts = sqliteTable(
     locationLng: real("location_lng"),
     locationZoom: integer("location_zoom"),
     iovanderUrl: text("ioverlander_url"),
+    viewCount: integer("view_count").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },

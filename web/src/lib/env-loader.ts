@@ -10,9 +10,11 @@ function getCandidateEnvPaths(): string[] {
   const workspaceRoot = path.resolve(currentDirectory, "..");
 
   return [
+    path.join(currentDirectory, ".env.test.local"),
     path.join(currentDirectory, ".env.local"),
     path.join(currentDirectory, ".env"),
     path.join(currentDirectory, ".dev.vars"),
+    path.join(workspaceRoot, ".env.test.local"),
     path.join(workspaceRoot, ".env.local"),
     path.join(workspaceRoot, ".env"),
     path.join(workspaceRoot, ".dev.vars"),

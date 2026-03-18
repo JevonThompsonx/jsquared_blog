@@ -2,7 +2,7 @@
 
 ## Goal
 
-Use this checklist to decide when `web/` is ready to fully replace the legacy `client/` + `server/` stack.
+Use this checklist as a post-cutover validation record for the Next.js app in `web/` after replacing the legacy `client/` + `server/` stack.
 
 ## Status Key
 
@@ -87,7 +87,7 @@ Use this checklist to decide when `web/` is ready to fully replace the legacy `c
 - [x] Environment variables and deployment docs written (`docs/deployment.md`)
 - [x] Final smoke test completed — all core flows confirmed (reading, SEO, admin, public auth, comments, likes, account settings)
 - [x] Cutover plan executed: `client/`, `server/`, `shared/` all deleted
-- [x] Root `package.json` cleaned (legacy workspaces, scripts, devDeps removed)
+- [x] Root `package.json` no longer references the retired app stack; it remains a thin workspace wrapper around `web/`
 - [x] Root `bun.lock` regenerated with only `web/` workspace
 
 ## Smoke Test Results (2026-03-17)

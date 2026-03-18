@@ -18,7 +18,8 @@ function needsAltTextReview(value: string): boolean {
     return true;
   }
 
-  return /[_-]/.test(trimmedValue) || /\d{3,}/.test(trimmedValue) || /^(img|image|dsc|pxl|mvimg|photo|scan|screenshot)/i.test(trimmedValue);
+  return /\.(avif|gif|heic|jpe?g|png|webp)$/i.test(trimmedValue)
+    || /^(img|image|dsc|pxl|mvimg|photo|scan|screenshot)[-_ ]?\d[\w-]*$/i.test(trimmedValue);
 }
 
 function objectPositionFromFocalPoint(focalX: number, focalY: number): string {

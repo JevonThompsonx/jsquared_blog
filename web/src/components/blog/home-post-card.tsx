@@ -30,7 +30,7 @@ function Highlight({ text, search }: { text: string; search?: string }): ReactNo
     <>
       {parts.map((part, i) => 
         part.toLowerCase() === normalizedSearch.toLowerCase() ? (
-          <mark key={i} className="bg-[var(--primary)]/20 text-[var(--primary)] rounded-sm px-0.5">{part}</mark>
+          <mark key={i}>{part}</mark>
         ) : (
           <span key={i}>{part}</span>
         )
@@ -39,7 +39,15 @@ function Highlight({ text, search }: { text: string; search?: string }): ReactNo
   );
 }
 
-export function HomePostCard({ post, searchTerm }: { post: BlogPost; searchTerm?: string }) {
+export function HomePostCard({ 
+  post, 
+  priority = false, 
+  searchTerm 
+}: { 
+  post: BlogPost; 
+  priority?: boolean;
+  searchTerm?: string; 
+}) {
   const image = post.imageUrl || "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
   const category = post.category || "General";
   const description = htmlToPlainText(post.description || post.excerpt || "");
@@ -58,7 +66,17 @@ export function HomePostCard({ post, searchTerm }: { post: BlogPost; searchTerm?
       <div className={`${gridClass} group relative`}>
         <Link aria-label={`Read post: ${post.title}`} className="absolute inset-0 z-[1] rounded-lg focus:outline-2 focus:outline-[var(--primary)]" href={href} tabIndex={-1} />
         <article className="card-overlay relative block h-full min-h-[22rem] overflow-hidden rounded-lg shadow-lg bg-[var(--accent-soft)] sm:min-h-[24rem]" data-overlay-density={overlayDensity}>
-          <Image alt={post.title} className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" fill loading="lazy" src={image} sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw" placeholder={cdnBlurDataUrl(image) ? "blur" : "empty"} blurDataURL={cdnBlurDataUrl(image)} />
+          <Image 
+            alt={post.title} 
+            className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" 
+            fill 
+            loading={priority ? undefined : "lazy"} 
+            priority={priority}
+            src={image} 
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw" 
+            placeholder={cdnBlurDataUrl(image) ? "blur" : "empty"} 
+            blurDataURL={cdnBlurDataUrl(image)} 
+          />
           <div className="absolute right-2 top-2 z-[2] flex gap-2">
             {statusBadge ? <div className="rounded-full border border-white/15 bg-black/25 px-2.5 py-1 text-[10px] font-bold tracking-[0.16em] text-white backdrop-blur-sm">{statusBadge}</div> : null}
           </div>
@@ -113,7 +131,17 @@ export function HomePostCard({ post, searchTerm }: { post: BlogPost; searchTerm?
         <article className="post-card-shell relative flex h-full flex-col overflow-hidden rounded-lg border shadow-lg transition-all duration-300 md:flex-row bg-[var(--card-bg)]">
           {statusBadge ? <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--card-bg)] px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-[var(--primary)] shadow-md">{statusBadge}</div> : null}
           <div className="relative h-64 overflow-hidden md:h-auto md:min-h-[240px] md:w-1/2 bg-[var(--accent-soft)]">
-            <Image alt={post.title} className="object-cover transition-transform duration-300 group-hover:scale-105" fill loading="lazy" src={image} sizes="(max-width: 768px) 100vw, 50vw" placeholder={cdnBlurDataUrl(image) ? "blur" : "empty"} blurDataURL={cdnBlurDataUrl(image)} />
+            <Image 
+              alt={post.title} 
+              className="object-cover transition-transform duration-300 group-hover:scale-105" 
+              fill 
+              loading={priority ? undefined : "lazy"} 
+              priority={priority}
+              src={image} 
+              sizes="(max-width: 768px) 100vw, 50vw" 
+              placeholder={cdnBlurDataUrl(image) ? "blur" : "empty"} 
+              blurDataURL={cdnBlurDataUrl(image)} 
+            />
           </div>
           <div className="post-card-panel flex flex-col justify-between p-4 md:w-1/2 md:p-6">
             <div>
@@ -167,7 +195,17 @@ export function HomePostCard({ post, searchTerm }: { post: BlogPost; searchTerm?
       <article className="post-card-shell relative flex h-full flex-col overflow-hidden rounded-lg border shadow-lg transition-all duration-300">
         {statusBadge ? <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--card-bg)] px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-[var(--primary)] shadow-md">{statusBadge}</div> : null}
         <div className="relative h-56 overflow-hidden sm:h-60 bg-[var(--accent-soft)]">
-          <Image alt={post.title} className="object-cover transition-transform duration-300 group-hover:scale-105" fill loading="lazy" src={image} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw" placeholder={cdnBlurDataUrl(image) ? "blur" : "empty"} blurDataURL={cdnBlurDataUrl(image)} />
+          <Image 
+            alt={post.title} 
+            className="object-cover transition-transform duration-300 group-hover:scale-105" 
+            fill 
+            loading={priority ? undefined : "lazy"} 
+            priority={priority}
+            src={image} 
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw" 
+            placeholder={cdnBlurDataUrl(image) ? "blur" : "empty"} 
+            blurDataURL={cdnBlurDataUrl(image)} 
+          />
         </div>
         <div className="post-card-panel flex flex-grow flex-col p-4 md:p-6">
           <Link className="post-card-kicker relative z-[2] inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" href={getCategoryHref(category)}>{category}</Link>

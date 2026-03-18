@@ -271,7 +271,11 @@ export function sanitizeRichTextHtml(html: string | null | undefined): string {
 }
 
 export function htmlToPlainText(html: string | null | undefined): string {
-  return sanitizeRichTextHtml(html)
+  if (!html) {
+    return "";
+  }
+
+  return DOMPurify.sanitize(html, SANITIZE_OPTIONS)
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -290,6 +294,10 @@ export function getWordCount(html: string | null | undefined): number {
 export function getReadingTimeMinutes(html: string | null | undefined, wordsPerMinute = 220): number {
   const safeWordsPerMinute = Number.isFinite(wordsPerMinute) && wordsPerMinute > 0 ? wordsPerMinute : 220;
   const wordCount = getWordCount(html);
+
+  if (wordCount === 0) {
+    return 0;
+  }
 
   return Math.max(1, Math.ceil(wordCount / safeWordsPerMinute));
 }
