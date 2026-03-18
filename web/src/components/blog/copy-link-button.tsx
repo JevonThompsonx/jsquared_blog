@@ -42,6 +42,7 @@ export function CopyLinkButton({ url }: { url: string }) {
 
   return (
     <button
+      aria-label={copied ? "Link copied" : "Copy link to this story"}
       className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-150 ${
         copied
           ? "border-[var(--primary)] bg-[var(--accent-soft)] text-[var(--primary)]"

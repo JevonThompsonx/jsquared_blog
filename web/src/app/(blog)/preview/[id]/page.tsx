@@ -76,7 +76,7 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
   const statusLabel = post.status === "draft" ? "Draft" : post.status === "scheduled" ? "Scheduled" : "Published";
 
   return (
-    <main className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
       <ReadingProgressBar />
       <SiteHeader />
 

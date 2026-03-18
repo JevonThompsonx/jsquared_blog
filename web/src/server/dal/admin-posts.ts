@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { categories, mediaAssets, postImages, postTags, posts, series, tags } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
+import { hasPostViewCountColumn } from "@/server/dal/posts";
 
 const adminPostStatusSchema = z.enum(["draft", "published", "scheduled"]);
 const adminPostSortSchema = z.enum(["updated-desc", "created-desc", "created-asc", "published-desc", "title-asc", "views-desc"]);
@@ -107,7 +108,11 @@ function buildAdminPostWhere(filters: AdminPostListFilters) {
   return and(...clauses);
 }
 
-function getAdminPostOrder(sort: AdminPostListFilters["sort"]) {
+function getAdminViewCountSelection(hasViewCount: boolean) {
+  return hasViewCount ? posts.viewCount : sql<number>`0`;
+}
+
+function getAdminPostOrder(sort: AdminPostListFilters["sort"], hasViewCount: boolean) {
   switch (sort) {
     case "created-desc":
       return [desc(posts.createdAt), desc(posts.updatedAt)];
@@ -118,7 +123,7 @@ function getAdminPostOrder(sort: AdminPostListFilters["sort"]) {
     case "title-asc":
       return [asc(posts.title), desc(posts.updatedAt)];
     case "views-desc":
-      return [desc(posts.viewCount), desc(posts.updatedAt)];
+      return hasViewCount ? [desc(posts.viewCount), desc(posts.updatedAt)] : [desc(posts.updatedAt), desc(posts.createdAt)];
     case "updated-desc":
     default:
       return [desc(posts.updatedAt), desc(posts.createdAt)];
@@ -128,6 +133,7 @@ function getAdminPostOrder(sort: AdminPostListFilters["sort"]) {
 export async function listAdminPostRecords(rawFilters?: Partial<AdminPostListFilters>): Promise<AdminPostListResult> {
   const filters = adminPostListFiltersSchema.parse(rawFilters ?? {});
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
   const where = buildAdminPostWhere(filters);
   const offset = (filters.page - 1) * filters.pageSize;
 
@@ -145,13 +151,13 @@ export async function listAdminPostRecords(rawFilters?: Partial<AdminPostListFil
         updatedAt: posts.updatedAt,
         publishedAt: posts.publishedAt,
         scheduledPublishTime: posts.scheduledPublishTime,
-        viewCount: posts.viewCount,
+        viewCount: getAdminViewCountSelection(hasViewCount),
       })
       .from(posts)
       .leftJoin(categories, eq(posts.categoryId, categories.id))
       .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
       .where(where)
-      .orderBy(...getAdminPostOrder(filters.sort))
+      .orderBy(...getAdminPostOrder(filters.sort, hasViewCount))
       .offset(offset)
       .limit(filters.pageSize),
     db
@@ -196,6 +202,7 @@ export async function getAdminPostCounts(): Promise<AdminPostCounts> {
 
 export async function getAdminEditablePostById(postId: string): Promise<AdminEditablePostRecord | null> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
   const rows = await db
     .select({
       id: posts.id,
@@ -211,6 +218,7 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       scheduledPublishTime: posts.scheduledPublishTime,
+      viewCount: getAdminViewCountSelection(hasViewCount),
       layoutType: posts.layoutType,
       contentJson: posts.contentJson,
       contentFormat: posts.contentFormat,

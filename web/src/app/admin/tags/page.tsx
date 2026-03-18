@@ -15,7 +15,7 @@ export default async function AdminTagsPage() {
   const tagsList = await listAllTagsWithCounts();
 
   return (
-    <main className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
       <section className="container mx-auto max-w-[min(92rem,calc(100vw-2rem))]">

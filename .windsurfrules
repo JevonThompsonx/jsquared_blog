@@ -2,11 +2,13 @@
 
 ## Project Context
 
-Travel blog at jsquaredadventures.com. Active code is in `web/`. Next.js 15 App Router on Vercel.
+Travel blog at jsquaredadventures.com. Active code is in `web/`. Next.js 16 App Router on Vercel.
 
-**Stack**: Next.js 15 (App Router, Turbopack), Turso (SQLite + Drizzle ORM), Supabase Auth (public), Auth.js + GitHub (admin), Cloudinary (images), TailwindCSS 4, Tiptap (rich text).
+**Stack**: Next.js 16 (App Router, Turbopack), Turso (SQLite + Drizzle ORM), Supabase Auth (public), Auth.js + GitHub (admin), Cloudinary (images), TailwindCSS 4, Tiptap (rich text).
 
 **Key files to read first**: `CLAUDE.md` (full architecture), `AGENTS.md` (multi-model roles), `docs/PLAN.md` (roadmap)
+
+**IMPORTANT**: Your most recent work on PLAN 3.1, 3.2, and 3.6 is **awaiting review for validity and code quality**. Do not claim tasks are complete without real Lighthouse scores or accessibility audit data. See `docs/gemini_3_flash_frontend_prompt.md` for full assignment details.
 
 ## Your Role (Cascade)
 

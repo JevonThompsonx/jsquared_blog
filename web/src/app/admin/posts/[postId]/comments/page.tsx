@@ -24,7 +24,7 @@ export default async function AdminPostCommentsPage({
   }
 
   return (
-    <main className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <SiteHeader />
       <section className="container mx-auto mt-8 max-w-[min(92rem,calc(100vw-2rem))] sm:mt-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">

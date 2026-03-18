@@ -109,6 +109,7 @@ export function BookmarkButton({ postId }: { postId: string }) {
   if (state === "unauthenticated") {
     return (
       <Link
+        aria-label="Sign in to save this post"
         className="flex h-9 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-3 text-sm font-medium text-[var(--text-secondary)] shadow-sm transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
         href={{ pathname: "/login", query: { redirectTo: pathname } }}
         title="Sign in to save this post"
@@ -123,6 +124,7 @@ export function BookmarkButton({ postId }: { postId: string }) {
 
   return (
     <button
+      aria-label={isBookmarked ? "Remove bookmark from this post" : "Save this post"}
       className={`flex h-9 items-center gap-2 rounded-full border px-3 text-sm font-medium shadow-sm transition-all duration-200 ${
         isBookmarked
           ? "border-[var(--primary)] bg-[var(--accent-soft)] text-[var(--primary)]"

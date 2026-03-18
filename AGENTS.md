@@ -56,7 +56,7 @@ docs/                    → Opus (documentation)
 CLAUDE.md                → Opus (architecture rules)
 AGENTS.md                → Opus (coordination rules)
 docs/PLAN.md             → Opus (roadmap)
-scripts/                 → Codex (automation)
+scripts/                 → GPT-5.4 (automation)
 .github/                 → Opus (CI/CD)
 ```
 
@@ -174,6 +174,14 @@ When a problem crosses the frontend/backend boundary:
 | `docs/plans/` | Feature plan documents (`<feature>-plan.md`) | Opus |
 | `docs/decisions/` | Architecture Decision Records (`NNNN-<title>.md`) | Opus |
 | `docs/context/` | Task checklists and escalation docs | All models |
+
+## Current Status (2026-03-17)
+
+- **Phases 1-2**: Complete.
+- **Phase 3**: 12/14 done. Gemini is working on 3.1 (CWV), 3.2 (WCAG), 3.6 (search). **Awaiting review.**
+- **Phase 4**: 6/8 done. 4.2 (email notifications) and 4.6 (newsletter) not started.
+- **Phase 4.5**: New verification phase added — see `docs/PLAN.md`.
+- Migration `0007_post_view_count.sql` exists but has **not been applied to production**.
 
 ## Reference Links
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 
 function SearchIcon({ className }: { className?: string }) {
   return (
@@ -24,24 +24,27 @@ function LoadingSpinner({ className }: { className?: string }) {
 interface SearchInputProps {
   autoFocus?: boolean;
   className?: string;
+  initialValue?: string;
   placeholder?: string;
   suggestions?: string[];
   showSuggestions?: boolean;
 }
 
-export function SearchInput({ 
-  autoFocus, 
-  className = "", 
+export function SearchInput({
+  autoFocus,
+  className = "",
+  initialValue = "",
   placeholder = "Search stories…",
   suggestions = [],
-  showSuggestions = true
+  showSuggestions = true,
 }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [inputValue, setInputValue] = useState(searchParams?.get("search") ?? "");
+  const inputId = useId();
+  const [inputValue, setInputValue] = useState(initialValue);
   const [isDebouncing, setIsDebouncing] = useState(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const performSearch = (value: string, mode: "push" | "replace" = "replace") => {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
@@ -54,7 +57,7 @@ export function SearchInput({
     }
 
     const nextUrl: "/" | `/?${string}` = params.toString() ? `/?${params.toString()}` : "/";
-    
+
     startTransition(() => {
       if (mode === "replace") {
         router.replace(nextUrl);
@@ -64,7 +67,7 @@ export function SearchInput({
     });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
     setIsDebouncing(true);
@@ -94,13 +97,6 @@ export function SearchInput({
     performSearch(term, "push");
   };
 
-  const currentSearch = searchParams?.get("search");
-
-  useEffect(() => {
-    // Sync input value with search param changes (e.g. from mobile nav or clearing)
-    setInputValue(currentSearch ?? "");
-  }, [currentSearch, setInputValue]);
-
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -114,39 +110,40 @@ export function SearchInput({
   return (
     <div className={`space-y-6 ${className}`}>
       <form className="relative group mx-auto max-w-2xl" onSubmit={handleSubmit}>
+        <label className="sr-only" htmlFor={inputId}>
+          Search stories
+        </label>
         <input
           autoFocus={autoFocus}
           className="search-input w-full rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] py-3.5 pl-5 pr-12 text-base shadow-sm transition-all focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
+          id={inputId}
           onChange={handleChange}
           placeholder={placeholder}
           type="search"
           value={inputValue}
         />
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          {isLoading ? (
-            <LoadingSpinner className="h-5 w-5 animate-spin text-[var(--accent)]" />
-          ) : (
-            <button
-              aria-label="Search"
-              className="text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)]"
-              type="submit"
-            >
-              <SearchIcon className="h-5 w-5" />
-            </button>
-          )}
+          <button
+            aria-label={isLoading ? "Searching stories" : "Search stories"}
+            className="text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)]"
+            type="submit"
+          >
+            {isLoading ? <LoadingSpinner className="h-5 w-5 animate-spin text-[var(--accent)]" /> : <SearchIcon className="h-5 w-5" />}
+          </button>
         </div>
       </form>
 
       {showSuggestions && suggestions.length > 0 && (
         <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[var(--text-secondary)] opacity-70">
-            Suggested adventures
+            Try searching for
           </p>
           <div className="flex flex-wrap justify-center gap-2.5">
             {suggestions.map((term) => (
               <button
+                aria-label={`Search for ${term}`}
                 key={term}
-                className="rounded-full border border-[var(--border)] bg-[var(--card-bg)]/50 px-4 py-1.5 text-sm font-medium text-[var(--text-primary)] transition-all hover:border-[var(--primary)] hover:bg-[var(--accent-soft)] hover:text-[var(--primary)] hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+                className="rounded-full border border-[var(--border)] bg-[var(--card-bg)]/50 px-4 py-1.5 text-sm font-medium text-[var(--text-primary)] transition-all hover:border-[var(--primary)] hover:bg-[var(--accent-soft)] hover:text-[var(--primary)] hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] active:translate-y-0"
                 onClick={() => handleSuggestionClick(term)}
                 type="button"
               >

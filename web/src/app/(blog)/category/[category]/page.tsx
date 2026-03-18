@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { SVGProps } from "react";
 
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -33,13 +34,13 @@ function getCategorySlug(name: string): string {
 
 function CategoryIcon({ slug }: { slug: string }) {
   const cls = "h-6 w-6 text-[var(--accent)] sm:h-7 sm:w-7";
-  const base = {
+  const base: SVGProps<SVGSVGElement> = {
     "aria-hidden": true,
     className: cls,
     fill: "none",
     stroke: "currentColor",
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
     strokeWidth: 2,
     viewBox: "0 0 24 24",
   };

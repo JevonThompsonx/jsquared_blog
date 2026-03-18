@@ -27,7 +27,7 @@ import { getSeriesNavForPost } from "@/server/dal/series";
 import { SeriesNav } from "@/components/blog/series-nav";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
 import { ScrollToContent } from "@/components/blog/scroll-to-content";
-import Head from "./head";
+import PostHead from "./head";
 
 type PostPageProps = {
   params: Promise<{ slug: string }>;
@@ -114,9 +114,9 @@ export default async function PostPage({ params }: PostPageProps) {
   const canonicalUrl = getCanonicalPostUrl(post);
 
   return (
-    <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+      <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+        <PostHead params={params} />
         <PostViewTracker postId={post.id} />
-        <Head params={params} />
         <ScrollToContent hasFeaturedImage={Boolean(post.imageUrl)} />
         <ReadingProgressBar />
         <SiteHeader />

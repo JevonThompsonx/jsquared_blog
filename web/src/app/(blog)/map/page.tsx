@@ -18,7 +18,7 @@ export default async function MapPage() {
   const mappedCount = allPosts.filter((p) => p.locationLat !== null).length;
 
   return (
-    <main className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
       <div className="container mx-auto mt-4 max-w-5xl px-4 sm:mt-6 sm:px-6 lg:px-8">

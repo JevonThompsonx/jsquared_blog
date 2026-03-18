@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import type { BlogPost } from "@/types/blog";
 import { getCategoryHref, getPostHref, getTagHref, htmlToPlainText } from "@/lib/utils";
@@ -11,6 +11,16 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function getSearchTerms(search?: string): string[] {
+  if (!search) {
+    return [];
+  }
+
+  return [...new Set(search.trim().split(/\s+/).filter(Boolean).map((term) => term.toLowerCase()))].sort(
+    (a, b) => b.length - a.length,
+  );
+}
+
 function isNewPost(dateString: string): boolean {
   const postDate = new Date(dateString);
   const now = new Date();
@@ -18,18 +28,19 @@ function isNewPost(dateString: string): boolean {
 }
 
 function Highlight({ text, search }: { text: string; search?: string }): ReactNode {
-  if (!search) return <>{text}</>;
-
-  const normalizedSearch = search.trim();
-  if (!normalizedSearch) {
+  const searchTerms = getSearchTerms(search);
+  if (searchTerms.length === 0) {
     return <>{text}</>;
   }
 
-  const parts = text.split(new RegExp(`(${escapeRegExp(normalizedSearch)})`, "gi"));
+  const matcher = new RegExp(`(${searchTerms.map(escapeRegExp).join("|")})`, "gi");
+  const parts = text.split(matcher);
+  const normalizedTerms = new Set(searchTerms);
+
   return (
     <>
-      {parts.map((part, i) => 
-        part.toLowerCase() === normalizedSearch.toLowerCase() ? (
+      {parts.map((part, i) =>
+        normalizedTerms.has(part.toLowerCase()) ? (
           <mark key={i}>{part}</mark>
         ) : (
           <span key={i}>{part}</span>

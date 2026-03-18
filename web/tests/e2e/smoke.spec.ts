@@ -50,6 +50,34 @@ test.describe("public pages smoke tests", () => {
     expect(body).toContain("<rss");
   });
 
+  test("category RSS feed returns valid XML", async ({ request }) => {
+    const response = await request.get("/category/Travel/feed.xml");
+    expect(response.status()).toBe(200);
+    const contentType = response.headers()["content-type"] ?? "";
+    expect(contentType).toMatch(/xml/);
+    const body = await response.text();
+    expect(body).toContain("<rss");
+    expect(body).toContain("Travel");
+  });
+
+  test("tag RSS feed returns valid XML when a public tag exists", async ({ request }) => {
+    const homepageResponse = await request.get("/");
+    expect(homepageResponse.status()).toBe(200);
+
+    const homepageHtml = await homepageResponse.text();
+    const tagMatch = homepageHtml.match(/href="\/tag\/([^"?#/]+)"/);
+
+    test.skip(!tagMatch, "No public tag links were available to verify a tag feed.");
+
+    const tagSlug = tagMatch?.[1];
+    const response = await request.get(`/tag/${tagSlug}/feed.xml`);
+    expect(response.status()).toBe(200);
+    const contentType = response.headers()["content-type"] ?? "";
+    expect(contentType).toMatch(/xml/);
+    const body = await response.text();
+    expect(body).toContain("<rss");
+  });
+
   test("404 page returns 404 status", async ({ request }) => {
     const response = await request.get("/this-page-does-not-exist-xyz");
     expect(response.status()).toBe(404);

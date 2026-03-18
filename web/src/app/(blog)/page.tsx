@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { HomeFeed } from "@/components/blog/home-feed";
+import { SearchInput } from "@/components/blog/search-input";
 import { ScrollToStories } from "@/components/blog/scroll-to-stories";
 import { SiteHeader } from "@/components/layout/site-header";
 import { listPublishedPosts } from "@/server/queries/posts";
+
+const SEARCH_SUGGESTIONS = ["Sierra", "Winter", "Oregon", "Road trip"];
 
 type SeasonalHero = {
   backgroundImage: string;
@@ -64,15 +67,34 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   const posts = await listPublishedPosts(20, 0, search);
 
   if (search) {
+    const hasMatches = posts.length > 0;
+
     return (
       <main id="main-content" style={{ background: "var(--background)" }}>
         <SiteHeader />
-        <div className="container mx-auto px-4 pb-2 pt-28 sm:px-6 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Search results</p>
-          <h1 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
-            Results for &ldquo;{search}&rdquo;
-          </h1>
-        </div>
+        <section className="container mx-auto px-4 pb-2 pt-28 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-6 shadow-[var(--shadow)] backdrop-blur-sm sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Search results</p>
+            <h1 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+              {hasMatches ? `Results for “${search}”` : `No results for “${search}”`}
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
+              {hasMatches
+                ? "Refine the phrase below or jump into a nearby trail of stories."
+                : "Try a place name, a season, or a road-trip keyword to widen the trail."}
+            </p>
+            <div className="mt-6">
+              <SearchInput
+                autoFocus
+                initialValue={search}
+                key={`search-input:${search.trim().toLowerCase()}`}
+                placeholder="Search stories, places, seasons, and tags…"
+                showSuggestions={!hasMatches}
+                suggestions={SEARCH_SUGGESTIONS}
+              />
+            </div>
+          </div>
+        </section>
         <HomeFeed key={`feed:${search.trim().toLowerCase()}`} initialPosts={posts} initialSearch={search} />
       </main>
     );

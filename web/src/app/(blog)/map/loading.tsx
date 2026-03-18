@@ -2,7 +2,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 
 export default function MapLoading() {
   return (
-    <main className="min-h-screen" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen" style={{ background: "var(--background)" }}>
       <SiteHeader />
       
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

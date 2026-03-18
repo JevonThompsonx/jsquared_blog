@@ -60,6 +60,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const filmstripRef = useRef<HTMLDivElement>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
 
   const isOpen = activeIndex !== null;
 
@@ -104,6 +105,38 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen, prev, next, close]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!isOpen || !lightboxRef.current) return;
+    const container = lightboxRef.current;
+    
+    // Initial focus on close button
+    const closeBtn = container.querySelector('button[aria-label="Close"]') as HTMLButtonElement | null;
+    closeBtn?.focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+
+      const focusables = Array.from(container.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )) as HTMLElement[];
+      
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
 
   // Scroll lock
   useEffect(() => {
@@ -209,6 +242,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
           onClick={close}
           onTouchEnd={onTouchEnd}
           onTouchStart={onTouchStart}
+          ref={lightboxRef}
         >
           {/* Top bar: counter + close */}
           <div className="flex shrink-0 items-center justify-between px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -221,7 +255,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
             )}
             <button
               aria-label="Close"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
               onClick={close}
               type="button"
             >
@@ -235,7 +269,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
             {allImages.length > 1 ? (
               <button
                 aria-label="Previous photo"
-                className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white sm:left-4"
+                className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:left-4"
                 onClick={(e) => { e.stopPropagation(); prev(); }}
                 type="button"
               >
@@ -249,13 +283,16 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
               className="lightbox-img-enter flex max-h-full flex-col items-center"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                alt={active.altText ?? postTitle}
-                className="max-h-full max-w-full rounded-xl object-contain shadow-2xl"
-                src={active.imageUrl}
-                style={{ maxHeight: "calc(100vh - 12rem)" }}
-              />
+              <div className="relative h-[calc(100vh-12rem)] w-[min(92vw,1400px)]">
+                <NextImage
+                  alt={active.altText ?? postTitle}
+                  className="rounded-xl object-contain shadow-2xl"
+                  fill
+                  priority
+                  sizes="92vw"
+                  src={active.imageUrl}
+                />
+              </div>
               {active.altText && active.altText !== postTitle ? (
                 <p className="mt-3 max-w-md text-center text-sm text-white/60">{active.altText}</p>
               ) : null}
@@ -265,7 +302,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
             {allImages.length > 1 ? (
               <button
                 aria-label="Next photo"
-                className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-2 focus:outline-white sm:right-4"
+                className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:right-4"
                 onClick={(e) => { e.stopPropagation(); next(); }}
                 type="button"
               >
@@ -289,7 +326,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
                   <button
                     key={img.id}
                     aria-label={img.altText ?? `Photo ${i + 1}`}
-                    className={`relative shrink-0 overflow-hidden rounded-lg transition-all duration-200 focus:outline-2 focus:outline-white ${
+                    className={`relative shrink-0 overflow-hidden rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                       i === activeIndex
                         ? "ring-2 ring-white ring-offset-1 ring-offset-black opacity-100"
                         : "opacity-50 hover:opacity-80"

@@ -11,6 +11,43 @@ import NextImage from "next/image";
 import { validatePostContentWarningsAction } from "@/app/admin/actions";
 import { getReadingTimeMinutes, getWordCount, type TiptapImageAltWarning } from "@/lib/content";
 
+type EditorUploadResponse = {
+  error?: string;
+  imageUrl?: string;
+};
+
+type LegacyHtmlContent = {
+  type: "legacy-html";
+  html: string;
+};
+
+type TiptapInitDocument = {
+  type: "doc";
+  content?: unknown[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseEditorUploadResponse(value: unknown): EditorUploadResponse {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  const error = typeof value.error === "string" ? value.error : undefined;
+  const imageUrl = typeof value.imageUrl === "string" ? value.imageUrl : undefined;
+  return { error, imageUrl };
+}
+
+function isLegacyHtmlContent(value: unknown): value is LegacyHtmlContent {
+  return isRecord(value) && value.type === "legacy-html" && typeof value.html === "string";
+}
+
+function isTiptapInitDocument(value: unknown): value is TiptapInitDocument {
+  return isRecord(value) && value.type === "doc";
+}
+
 function MenuButton({
   active,
   children,
@@ -90,15 +127,14 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
     try {
       const body = new FormData();
       body.append("file", file);
-    const res = await fetch("/api/admin/uploads/images", { method: "POST", body });
-    if (!res.ok) {
-      const data = await res.json() as { error?: string };
-      throw new Error(data.error ?? "Upload failed");
-    }
-    const data = await res.json() as { imageUrl: string; publicId: string };
-    setPendingImageUrl(data.imageUrl);
-    setImageDraftAlt("");
-    setShowImagePanel(true);
+      const res = await fetch("/api/admin/uploads/images", { method: "POST", body });
+      const payload = parseEditorUploadResponse(await res.json());
+      if (!res.ok || !payload.imageUrl) {
+        throw new Error(payload.error ?? "Upload failed");
+      }
+      setPendingImageUrl(payload.imageUrl);
+      setImageDraftAlt("");
+      setShowImagePanel(true);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -243,15 +279,15 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
 /**
  * Parse stored contentJson into a value Tiptap can consume.
  * - Tiptap JSON  → JSON object (passed directly)
- * - legacy-html  → HTML string (Tiptap parses it on load; saved back as native JSON)
+ * - legacy-html  → HTML string (Tiptap parses it on load; saved back into native JSON)
  * - anything else → empty paragraph
  */
 function parseTiptapInitContent(contentJson: string): string | Record<string, unknown> {
   if (!contentJson) return "<p></p>";
   try {
-    const parsed = JSON.parse(contentJson) as { type?: string; html?: string }; // parsing stored JSON content — shape validated by conditional checks below
-    if (parsed.type === "legacy-html" && typeof parsed.html === "string") return parsed.html;
-    if (parsed.type === "doc") return parsed as Record<string, unknown>;
+    const parsed = JSON.parse(contentJson);
+    if (isLegacyHtmlContent(parsed)) return parsed.html;
+    if (isTiptapInitDocument(parsed)) return parsed;
   } catch { /* fall through */ }
   return "<p></p>";
 }
@@ -263,8 +299,8 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
   const [tiptapJson, setTiptapJson] = useState<string>(() => {
     if (!contentJson) return EMPTY_DOC;
     try {
-      const parsed = JSON.parse(contentJson) as { type?: string };
-      if (parsed.type === "doc") return contentJson;
+      const parsed = JSON.parse(contentJson);
+      if (isTiptapInitDocument(parsed)) return contentJson;
     } catch { /* fall through */ }
     return EMPTY_DOC;
   });
@@ -292,7 +328,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     Placeholder.configure({
       placeholder: "Start writing your adventure...",
     }),
-  ] as unknown as NonNullable<Parameters<typeof useEditor>[0]>["extensions"];
+  ];
 
   const editor = useEditor({
     extensions,

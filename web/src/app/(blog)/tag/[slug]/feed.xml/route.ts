@@ -9,7 +9,7 @@ const paramsSchema = z.object({
   slug: z.string().trim().min(1).max(120),
 });
 
-export async function GET(_request: Request, context: { params: Promise<{ slug: string }> }): Promise<Response> {
+export async function GET(_request: Request, context: { params: Promise<unknown> }): Promise<Response> {
   const parsedParams = paramsSchema.safeParse(await context.params);
   if (!parsedParams.success) {
     return new Response("Invalid tag", { status: 400 });

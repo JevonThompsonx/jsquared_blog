@@ -8,7 +8,6 @@ import type { BlogPost } from "@/types/blog";
 import { HomePostCard } from "@/components/blog/home-post-card";
 import { groupPostsBySeason } from "@/lib/utils";
 import { FeedbackPanel } from "@/components/ui/feedback-panel";
-import { SearchInput } from "@/components/blog/search-input";
 
 const POSTS_PER_PAGE = 20;
 const PULL_THRESHOLD = 64;
@@ -202,17 +201,10 @@ export function HomeFeed({ initialPosts, initialSearch = "" }: { initialPosts: B
               </Link>
             </>
           }
-          description="Try a shorter term, a place name, or a tag. Search looks at titles, categories, tags, and excerpts."
+          description="Try a shorter term, a place name, or a tag. Search looks at titles, categories, tags, and excerpts. Use the search box above to refine the query."
           eyebrow="No matches"
           title={`No adventures match "${initialSearch}".`}
         />
-        <div className="mt-12">
-          <SearchInput
-            autoFocus
-            placeholder="Search again…"
-            suggestions={["Sierra", "Winter", "Oregon", "Road trip"]}
-          />
-        </div>
       </section>
     );
   }

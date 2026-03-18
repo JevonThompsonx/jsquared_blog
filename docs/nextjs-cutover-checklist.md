@@ -149,6 +149,11 @@ Supabase shared email (free tier) confirmed working. Custom SMTP not yet configu
 
 ## Recommended Next Steps
 
-1. Decommission the legacy Cloudflare Worker in the Cloudflare dashboard
-2. Remove old Cloudflare Workers environment variables and build settings from the dashboard
-3. Keep expanding automated coverage for authenticated admin flows and remaining UX polish tasks, especially CI-friendly admin Playwright coverage for the already browser-checked widened admin layouts
+1. Apply migration `0007_post_view_count.sql` via `bun run db:migrate` on production
+2. Decommission the legacy Cloudflare Worker in the Cloudflare dashboard
+3. Enable Supabase email confirmation requirement (known issue above)
+4. Validate JSON-LD via Google Rich Results Test on a deployed post URL
+5. Run full authenticated E2E suite (`bun run seed:e2e` + `bun run e2e:capture-admin-state` + `bun run test:e2e`)
+6. Review Gemini's PLAN 3.1/3.2/3.6 accessibility/CWV/search work for quality
+
+See `docs/PLAN.md` Phase 4.5 for the complete verification task list.

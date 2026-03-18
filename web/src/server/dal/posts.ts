@@ -2,8 +2,29 @@ import "server-only";
 
 import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
-import { getDb } from "@/lib/db";
+import { getDb, getDbClient } from "@/lib/db";
 import { categories, comments, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
+
+let postViewCountColumnPromise: Promise<boolean> | null = null;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export async function hasPostViewCountColumn(): Promise<boolean> {
+  if (!postViewCountColumnPromise) {
+    postViewCountColumnPromise = getDbClient()
+      .execute("PRAGMA table_info('posts')")
+      .then((result) => result.rows.some((row) => isRecord(row) && row.name === "view_count"))
+      .catch(() => false);
+  }
+
+  return postViewCountColumnPromise;
+}
+
+function getViewCountSelection(hasViewCount: boolean) {
+  return hasViewCount ? posts.viewCount : sql<number>`0`;
+}
 
 export type TagRecord = {
   id: string;
@@ -52,6 +73,7 @@ export type PublishedPostImageRecord = {
 
 export async function listPublishedPostRecords(limit: number, offset = 0): Promise<PublishedPostRecord[]> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
 
   return db
     .select({
@@ -74,6 +96,7 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      viewCount: getViewCountSelection(hasViewCount),
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -86,6 +109,7 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
 
 export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord[]> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
 
   return db
     .select({
@@ -108,6 +132,7 @@ export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      viewCount: getViewCountSelection(hasViewCount),
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -118,6 +143,7 @@ export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord
 
 export async function listRecentPublishedPostRecords(limit: number, excludePostId?: string): Promise<PublishedPostRecord[]> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
   const whereClause = excludePostId
     ? and(eq(posts.status, "published"), ne(posts.id, excludePostId))
     : eq(posts.status, "published");
@@ -143,11 +169,7 @@ export async function listRecentPublishedPostRecords(limit: number, excludePostI
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
-      viewCount: posts.viewCount,
-      viewCount: posts.viewCount,
-      viewCount: posts.viewCount,
-      viewCount: posts.viewCount,
-      viewCount: posts.viewCount,
+      viewCount: getViewCountSelection(hasViewCount),
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -191,7 +213,8 @@ export async function listCommentCountsByPostIds(postIds: string[]): Promise<Map
   return new Map(rows.map((row) => [row.postId, row.commentCount]));
 }
 
-const POST_DETAIL_SELECT = {
+function getPostDetailSelect(hasViewCount: boolean) {
+  return {
   id: posts.id,
   slug: posts.slug,
   title: posts.title,
@@ -211,16 +234,19 @@ const POST_DETAIL_SELECT = {
   locationLng: posts.locationLng,
   locationZoom: posts.locationZoom,
   iovanderUrl: posts.iovanderUrl,
-  viewCount: posts.viewCount,
+  viewCount: getViewCountSelection(hasViewCount),
   authorId: posts.authorId,
-} as const;
+  };
+}
 
 export async function getPublishedPostRecordBySlug(slug: string): Promise<PublishedPostRecord | null> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
+  const postDetailSelect = getPostDetailSelect(hasViewCount);
 
   // Exact match (fast, indexed)
   const exactRows = await db
-    .select(POST_DETAIL_SELECT)
+    .select(postDetailSelect)
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
@@ -233,7 +259,7 @@ export async function getPublishedPostRecordBySlug(slug: string): Promise<Publis
 
   // Normalized fallback: DB slugs with spaces/uppercase (e.g. "post post" → "post-post")
   const normalizedRows = await db
-    .select(POST_DETAIL_SELECT)
+    .select(postDetailSelect)
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
@@ -268,6 +294,7 @@ export async function listPublishedPostRecordsByCategory(
   offset = 0,
 ): Promise<PublishedPostRecord[]> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
   return db
     .select({
       id: posts.id,
@@ -289,6 +316,7 @@ export async function listPublishedPostRecordsByCategory(
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      viewCount: getViewCountSelection(hasViewCount),
     })
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
@@ -315,6 +343,7 @@ export async function listPublishedPostRecordsByTagSlug(
   offset = 0,
 ): Promise<PublishedPostRecord[]> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
   return db
     .select({
       id: posts.id,
@@ -336,6 +365,7 @@ export async function listPublishedPostRecordsByTagSlug(
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      viewCount: getViewCountSelection(hasViewCount),
     })
     .from(posts)
     .innerJoin(postTags, eq(postTags.postId, posts.id))
@@ -358,6 +388,7 @@ export async function listPublishedPostRecordsByTagSlugs(
   }
 
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
   const whereClause = excludePostId
     ? and(eq(posts.status, "published"), inArray(tags.slug, tagSlugs), ne(posts.id, excludePostId))
     : and(eq(posts.status, "published"), inArray(tags.slug, tagSlugs));
@@ -383,6 +414,7 @@ export async function listPublishedPostRecordsByTagSlugs(
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      viewCount: getViewCountSelection(hasViewCount),
     })
     .from(posts)
     .innerJoin(postTags, eq(postTags.postId, posts.id))
@@ -433,6 +465,7 @@ export type AnyStatusPostRecord = {
 
 export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRecord | null> {
   const db = getDb();
+  const hasViewCount = await hasPostViewCountColumn();
 
   const rows = await db
     .select({
@@ -457,7 +490,7 @@ export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRec
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
-      viewCount: posts.viewCount,
+      viewCount: getViewCountSelection(hasViewCount),
       authorId: posts.authorId,
     })
     .from(posts)
@@ -486,13 +519,16 @@ export async function unschedulePost(postId: string): Promise<void> {
 }
 
 export async function incrementPostViewCount(postId: string): Promise<void> {
+  if (!(await hasPostViewCountColumn())) {
+    return;
+  }
+
   const db = getDb();
 
   await db
     .update(posts)
     .set({
       viewCount: sql`${posts.viewCount} + 1`,
-      updatedAt: new Date(),
     })
     .where(and(eq(posts.id, postId), eq(posts.status, "published")));
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -59,8 +60,7 @@ function ProfileAvatar({ avatarUrl, displayName, size }: { avatarUrl: string | n
   }
 
   if (avatarUrl && !avatarUrl.startsWith("j2:")) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img alt={displayName} src={avatarUrl} style={{ ...baseStyle, objectFit: "cover" }} />;
+    return <Image alt={displayName} height={size} src={avatarUrl} style={{ ...baseStyle, objectFit: "cover" }} width={size} />;
   }
 
   return (
@@ -120,7 +120,7 @@ export default async function AuthorProfilePage({ params }: { params: Promise<{ 
   const totalLikes = recentComments.reduce((sum, c) => sum + c.likeCount, 0);
 
   return (
-    <main className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
       <div className="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">

@@ -64,7 +64,7 @@ export function MobileNav({
         <Dialog.Trigger asChild>
           <button
             aria-label={isOpen ? "Close menu" : "Open menu"}
-            className="nav-link-pill flex h-10 min-w-[2.6rem] items-center justify-center gap-2 px-3 text-sm"
+            className="nav-link-pill flex h-11 min-w-[2.75rem] items-center justify-center gap-2 px-3 text-sm"
             type="button"
           >
             {isOpen ? <CloseIcon /> : <HamburgerIcon />}

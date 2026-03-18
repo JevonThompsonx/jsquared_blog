@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import type { PublicAuthorProfile } from "@/server/dal/profiles";
@@ -23,11 +24,12 @@ export function AuthorCard({ author }: { author: PublicAuthorProfile }) {
         href={`/author/${author.userId}`}
       >
         {author.avatarUrl && !isPreset ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             alt={author.displayName}
             className="h-14 w-14 rounded-full object-cover ring-2 ring-[var(--border)]"
+            height={56}
             src={author.avatarUrl}
+            width={56}
           />
         ) : (
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent-soft)] text-lg font-bold text-[var(--accent)] ring-2 ring-[var(--border)]">

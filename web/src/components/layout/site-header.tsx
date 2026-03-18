@@ -44,7 +44,7 @@ export function ThemeToggle() {
   return (
     <button
       aria-label={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
-      className="relative inline-flex h-10 w-[4.9rem] shrink-0 items-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-1 shadow-sm transition-all duration-300 hover:border-[var(--primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
+      className="relative inline-flex h-11 w-[5.4rem] shrink-0 items-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-1 shadow-sm transition-all duration-300 hover:border-[var(--primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
       onClick={toggleMode}
       title={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
       type="button"
@@ -54,8 +54,8 @@ export function ThemeToggle() {
         <MoonIcon />
       </span>
       <span
-        className={`absolute inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition-all duration-300 ${
-          mode === "light" ? "translate-x-0" : "translate-x-[2.55rem]"
+        className={`absolute inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition-all duration-300 ${
+          mode === "light" ? "translate-x-0" : "translate-x-[2.85rem]"
         }`}
       >
         {mode === "light" ? <SunIcon /> : <MoonIcon />}

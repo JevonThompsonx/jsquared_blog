@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -127,8 +128,7 @@ function AvatarDisplay({
 
   if (avatarUrl && !avatarUrl.startsWith("j2:")) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img alt={displayName} src={avatarUrl} style={{ ...style, objectFit: "cover" }} />
+      <Image alt={displayName} height={size} src={avatarUrl} style={{ ...style, objectFit: "cover" }} width={size} />
     );
   }
 

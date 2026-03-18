@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useMemo, useRef, useState } from "react";
 import Map, { Layer, NavigationControl, Popup, Source } from "react-map-gl/maplibre";
@@ -289,13 +290,9 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
             >
               <div className="space-y-1.5 text-sm">
                 {activePin.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    alt={activePin.title}
-                    className="mb-2 w-full rounded object-cover"
-                    src={activePin.imageUrl}
-                    style={{ height: 80 }}
-                  />
+                  <div className="relative mb-2 h-20 w-full overflow-hidden rounded">
+                    <Image alt={activePin.title} className="object-cover" fill sizes="228px" src={activePin.imageUrl} />
+                  </div>
                 ) : null}
                 {activePin.category ? (
                   <p className="text-[0.7rem] font-bold uppercase tracking-widest text-[var(--accent)]">
@@ -350,12 +347,13 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
                 href={getPostHref(post)}
               >
                 {post.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     alt={post.title}
                     className="h-14 w-20 shrink-0 rounded-lg object-cover"
+                    height={56}
                     loading="lazy"
                     src={post.imageUrl}
+                    width={80}
                   />
                 ) : (
                   <div className="h-14 w-20 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />

@@ -8,7 +8,7 @@ const paramsSchema = z.object({
   category: z.string().trim().min(1).max(120),
 });
 
-export async function GET(_request: Request, context: { params: Promise<{ category: string }> }): Promise<Response> {
+export async function GET(_request: Request, context: { params: Promise<unknown> }): Promise<Response> {
   const parsedParams = paramsSchema.safeParse(await context.params);
   if (!parsedParams.success) {
     return new Response("Invalid category", { status: 400 });

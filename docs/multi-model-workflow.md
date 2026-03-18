@@ -1,6 +1,6 @@
 # Multi-Model Workflow Guide
 
-Last updated: 2026-03-17
+Last updated: 2026-03-17 (refreshed by Opus)
 
 ## Overview
 
@@ -134,6 +134,25 @@ For authenticated admin smoke coverage in `web/tests/e2e/smoke.spec.ts`:
 | Write a complex client hook | Gemini 3 Flash | Windsurf Cascade |
 | Debug a hard frontend issue | Gemini 3 Flash | Windsurf Cascade |
 | Write a Python script | GPT-5.4 | OpenCode / Copilot |
+| TypeScript cleanup / review | GPT-5.4 | OpenCode / Copilot |
 | Update CLAUDE.md / AGENTS.md | Opus | Claude Code |
 | Write tests | Opus (strategy) → Sonnet (impl) | Claude Code |
 | Review architecture | Opus | Claude Code |
+
+## Review Protocol
+
+### When to review AI-generated code
+
+Every time a model completes a task, the output should be reviewed before it's treated as done. This is especially important for:
+
+1. **Gemini/Cascade output** — known to introduce hardcoded colors, loose types, string literal routes, and inaccurate status claims. Always check against the Cascade-specific review flags in `AGENTS.md`.
+2. **GPT-5.4 output** — generally accurate but can miss project-specific conventions. Check auth boundaries and DAL patterns.
+3. **Sonnet output** — usually clean but verify schema changes and migration file format.
+
+### Review should confirm:
+- Quality gate passes (`lint`, `tsc`, `build`, `test`)
+- No `any`, `as`, or `!` assertions introduced
+- CSS uses variables, not hardcoded colors
+- Routes use typed helpers
+- All 4 theme combinations work
+- Loading/error states present where needed

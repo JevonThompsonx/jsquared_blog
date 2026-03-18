@@ -2,7 +2,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 
 export default function PostLoading() {
   return (
-    <main className="min-h-screen" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen" style={{ background: "var(--background)" }}>
       <SiteHeader />
       
       {/* Hero Image Skeleton */}

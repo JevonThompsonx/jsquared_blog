@@ -1,6 +1,6 @@
 # J²Adventures — Next.js Production Deployment
 
-Last updated: 2026-03-15
+Last updated: 2026-03-17
 
 ## Overview
 
@@ -175,5 +175,8 @@ Verify these URLs return expected content:
 |---|---|
 | `/` | Homepage with posts feed |
 | `/sitemap.xml` | Valid XML sitemap |
-| `/feed.xml` | Valid RSS feed |
+| `/feed.xml` | Valid RSS feed (all posts) |
+| `/category/<name>/feed.xml` | Valid RSS feed (filtered by category) |
+| `/tag/<slug>/feed.xml` | Valid RSS feed (filtered by tag) |
+| `/map` | World map with post pins |
 | `/api/auth/session` | JSON (null if unauthenticated) |

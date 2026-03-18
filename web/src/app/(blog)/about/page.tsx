@@ -22,7 +22,7 @@ function PhotoPlaceholder({ label, className = "" }: { label: string; className?
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
       <SiteHeader />
 
       {/* Hero banner */}

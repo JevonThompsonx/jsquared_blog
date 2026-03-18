@@ -164,9 +164,15 @@ body {
 mark {
   background-color: var(--primary-soft);
   color: var(--primary);
-  border-radius: 0.125rem;
-  padding-inline: 0.125rem;
-  font-weight: 600;
+  border-radius: 0.25rem;
+  padding-inline: 0.25rem;
+  font-weight: 700;
+  transition: background-color 0.2s ease;
+}
+
+[data-theme-mode="dark"] mark {
+  background-color: rgba(180, 210, 150, 0.22);
+  color: #c8eb75;
 }
 
 .skip-link {
@@ -269,7 +275,7 @@ mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.4rem;
+  min-height: 2.75rem;
   padding: 0.55rem 0.95rem;
   border: 1px solid color-mix(in srgb, var(--header-border) 72%, transparent);
   border-radius: 999px;

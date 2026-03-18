@@ -11,6 +11,46 @@ type GalleryEntry = {
   focalY: number;
 };
 
+type ParsedGalleryEntry = {
+  imageUrl?: string;
+  altText?: string;
+  focalX?: number;
+  focalY?: number;
+};
+
+type UploadPayload = {
+  imageUrl?: string;
+  error?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseGalleryEntry(value: unknown): ParsedGalleryEntry | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    imageUrl: typeof value.imageUrl === "string" ? value.imageUrl : undefined,
+    altText: typeof value.altText === "string" ? value.altText : undefined,
+    focalX: typeof value.focalX === "number" ? value.focalX : undefined,
+    focalY: typeof value.focalY === "number" ? value.focalY : undefined,
+  };
+}
+
+function parseUploadPayload(value: unknown): UploadPayload {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return {
+    imageUrl: typeof value.imageUrl === "string" ? value.imageUrl : undefined,
+    error: typeof value.error === "string" ? value.error : undefined,
+  };
+}
+
 function needsAltTextReview(value: string): boolean {
   const trimmedValue = value.trim();
 
@@ -28,9 +68,14 @@ function objectPositionFromFocalPoint(focalX: number, focalY: number): string {
 
 function parseGalleryEntries(value: string): GalleryEntry[] {
   try {
-    const parsed = JSON.parse(value) as Array<{ imageUrl?: string; altText?: string; focalX?: number; focalY?: number }>;
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
     return parsed
-      .filter((entry): entry is { imageUrl: string; altText?: string; focalX?: number; focalY?: number } => Boolean(entry?.imageUrl))
+      .map((entry) => parseGalleryEntry(entry))
+      .filter((entry): entry is ParsedGalleryEntry & { imageUrl: string } => Boolean(entry?.imageUrl))
       .map((entry) => ({
         imageUrl: entry.imageUrl,
         altText: entry.altText ?? "",
@@ -125,7 +170,7 @@ export function PostMediaManager({
           body: formData,
         });
 
-        const payload = await response.json() as { imageUrl?: string; error?: string };
+        const payload = parseUploadPayload(await response.json());
         if (!response.ok || !payload.imageUrl) {
           throw new Error(payload.error || "Upload failed");
         }

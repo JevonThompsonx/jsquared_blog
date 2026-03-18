@@ -2,7 +2,7 @@ import { PostCardSkeleton } from "@/components/blog/post-card-skeleton";
 
 export default function BlogLoading() {
   return (
-    <main style={{ background: "var(--background)" }}>
+    <main id="main-content" style={{ background: "var(--background)" }}>
       {/* Minimal hero placeholder — same height as real hero */}
       <div className="relative flex min-h-[70svh] items-center justify-center bg-[var(--accent-soft)]">
         <div className="animate-pulse space-y-4 text-center">
