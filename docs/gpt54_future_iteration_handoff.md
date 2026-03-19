@@ -10,7 +10,7 @@ Use these as the latest verified command results:
 
 - `bun run lint` — pass
 - `bunx tsc --noEmit` — pass
-- `bun run test` — pass (85 tests)
+- `bun run test` — pass (93 tests)
 - `bun run build` — pass
 - `bun run test:e2e` — pass with **12 passed, 7 skipped** (authenticated admin specs skipped without seed/auth setup)
 
@@ -20,6 +20,11 @@ Current status to treat as true:
 - PLAN `4.3`, `4.4`, `4.7` are **done in code but not fully verified operationally**.
 - PLAN `4.2` and `4.6` are **not started** feature work.
 - PLAN Phase `4.5` (`V.1`...`V.10`) remains open.
+
+Latest cross-model review notes:
+
+- Frontend regressions previously reported in `web/src/components/blog/comments.tsx` were corrected (inline delete confirmation restored; theme-token-based error styles restored).
+- Skip-link related updates remain **partially validated** because the browser QA matrix and measured CWV/a11y evidence are still incomplete.
 
 ---
 
@@ -112,7 +117,7 @@ Do not claim deployed Rich Results validation unless a real deployed URL is test
 - `bun run lint` — pass
 - `bunx tsc --noEmit` — pass
 - `bun run build` — pass
-- `bun run test` — pass (85 tests)
+- `bun run test` — pass (93 tests)
 - `bun run test:e2e` — 12 passed, 7 skipped (authenticated coverage still fixture/auth dependent)
 
 ## Quality gate
@@ -156,3 +161,9 @@ All required commands must pass with zero errors/warnings.
 - E2E test results after Task 3 (including skipped vs executed counts)
 - Verification results from Task 4
 - `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test`, and if run `bun run test:e2e` results
+
+## Priority for your next pass
+
+1. Close PLAN `V.9` with another safe strict-type cleanup sweep in backend/shared code.
+2. Attempt authenticated E2E closure again (capture admin state interactively, then rerun e2e smoke).
+3. Keep verification claims scoped to what is actually measured or manually validated.

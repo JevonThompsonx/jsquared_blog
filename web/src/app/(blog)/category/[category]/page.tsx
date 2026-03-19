@@ -120,7 +120,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   ]);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen" style={{ background: "var(--background)" }} tabIndex={-1}>
       <SiteHeader />
 
       {/* Category hero */}
@@ -163,6 +163,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         emptyTitle={`No ${label} adventures yet.`}
         initialPosts={initialPosts}
       />
-    </div>
+    </main>
   );
 }

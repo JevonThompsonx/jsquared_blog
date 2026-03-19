@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { z } from "zod";
 
 import { getAuthorHref } from "@/lib/utils";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -25,6 +25,7 @@ type PostComment = {
   likeCount: number;
   userHasLiked: boolean;
   canDelete: boolean;
+  visibility: "visible" | "hidden" | "deleted";
 };
 
 const postCommentSchema = z.object({
@@ -40,6 +41,7 @@ const postCommentSchema = z.object({
   likeCount: z.number(),
   userHasLiked: z.boolean(),
   canDelete: z.boolean(),
+  visibility: z.enum(["visible", "hidden", "deleted"]),
 });
 
 const commentsResponseSchema = z.object({
@@ -62,10 +64,11 @@ function formatCommentDate(dateString: string): string {
 }
 
 function buildThreads(flat: PostComment[], sortBy: CommentSortOption): CommentThread[] {
-  const topLevel = flat.filter((c) => !c.parentId);
+  const visibleFlat = flat.filter((c) => c.visibility === "visible" || c.visibility === "hidden");
+  const topLevel = visibleFlat.filter((c) => !c.parentId);
   const replyMap = new Map<string, PostComment[]>();
 
-  for (const c of flat) {
+  for (const c of visibleFlat) {
     if (c.parentId) {
       const existing = replyMap.get(c.parentId) ?? [];
       existing.push(c);
@@ -120,9 +123,20 @@ function CommentCard({
   submittingReply: boolean;
 }) {
   const isOpen = replyingTo === comment.id;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const deleteCancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const deleteConfirmId = useId();
+
+  useEffect(() => {
+    if (showDeleteConfirm) {
+      deleteCancelButtonRef.current?.focus();
+    }
+  }, [showDeleteConfirm]);
+
+  const isHidden = comment.visibility === "hidden";
 
   return (
-    <article className={`rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-sm sm:p-5 ${isReply ? "ml-6 mt-3 border-l-2 border-l-[var(--primary)]" : ""}`}>
+    <article className={`rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-sm sm:p-5 ${isReply ? "ml-6 mt-3 border-l-2 border-l-[var(--primary)]" : ""} ${isHidden ? "opacity-75" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -130,40 +144,85 @@ function CommentCard({
               {comment.authorDisplayName}
             </Link>
             <span className="text-[var(--text-secondary)]">{formatCommentDate(comment.createdAt)}</span>
+            {isHidden && (
+              <span className="rounded-full bg-[var(--color-warning-soft-bg)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)] border border-[var(--color-warning-soft-border)]">
+                Hidden
+              </span>
+            )}
           </div>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[var(--text-primary)]">{comment.content}</p>
+          <p className={`mt-3 whitespace-pre-wrap text-sm leading-7 ${isHidden ? "italic text-[var(--text-secondary)]" : "text-[var(--text-primary)]"}`}>
+            {comment.content}
+          </p>
         </div>
-        {comment.canDelete ? (
-          <button className="text-sm font-semibold text-red-600" onClick={() => onDelete(comment.id)} type="button">
+        {comment.canDelete ? showDeleteConfirm ? (
+          <div
+            className="flex flex-wrap items-center gap-2 rounded-full border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-3 py-1.5"
+            id={deleteConfirmId}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setShowDeleteConfirm(false);
+              }
+            }}
+          >
+            <span className="text-xs font-semibold text-[var(--color-error-text)]">Delete comment?</span>
+            <button
+              className="rounded-full px-3 py-1 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              onClick={() => setShowDeleteConfirm(false)}
+              ref={deleteCancelButtonRef}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="rounded-full bg-[var(--color-error)] px-3 py-1 text-xs font-semibold text-[var(--on-primary)] transition-colors hover:brightness-110"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                onDelete(comment.id);
+              }}
+              type="button"
+            >
+              Delete
+            </button>
+          </div>
+        ) : (
+          <button
+            aria-controls={deleteConfirmId}
+            aria-expanded={showDeleteConfirm}
+            className="rounded-full border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--color-error-text)] transition-colors hover:brightness-95"
+            onClick={() => setShowDeleteConfirm(true)}
+            type="button"
+          >
             Delete
           </button>
         ) : null}
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
-            comment.userHasLiked
-              ? "border-rose-300 bg-rose-50 text-rose-700"
-              : "border-[var(--border)] bg-[var(--background)] text-[var(--text-secondary)]"
-          }`}
-          onClick={() => onLike(comment.id)}
-          type="button"
-        >
-          <span>{comment.userHasLiked ? "Liked" : "Like"}</span>
-          <span>{comment.likeCount}</span>
-        </button>
-
-        {!isReply && accessToken ? (
+      {!isHidden && (
+        <div className="mt-4 flex items-center gap-3">
           <button
-            className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            onClick={() => onReply(isOpen ? null : comment.id)}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
+              comment.userHasLiked
+                ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]"
+                : "border-[var(--border)] bg-[var(--background)] text-[var(--text-secondary)]"
+            }`}
+            onClick={() => onLike(comment.id)}
             type="button"
           >
-            {isOpen ? "Cancel" : "Reply"}
+            <span>{comment.userHasLiked ? "Liked" : "Like"}</span>
+            <span>{comment.likeCount}</span>
           </button>
-        ) : null}
-      </div>
+
+          {!isReply && accessToken ? (
+            <button
+              className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              onClick={() => onReply(isOpen ? null : comment.id)}
+              type="button"
+            >
+              {isOpen ? "Cancel" : "Reply"}
+            </button>
+          ) : null}
+        </div>
+      )}
 
       {isOpen ? (
         <div className="mt-4">
@@ -331,7 +390,7 @@ export function Comments({ postId }: { postId: string }) {
   }
 
   async function handleDeleteComment(commentId: string) {
-    if (!accessToken || !window.confirm("Delete this comment?")) return;
+    if (!accessToken) return;
 
     try {
       const response = await fetch(`/api/comments/${commentId}`, {
@@ -355,7 +414,7 @@ export function Comments({ postId }: { postId: string }) {
 
   const threads = useMemo(() => buildThreads(allComments, sortBy), [allComments, sortBy]);
   const topLevelCount = threads.length;
-  const totalCount = allComments.length;
+  const totalCount = allComments.filter((c) => c.visibility === "visible").length;
 
   return (
     <section className="mt-12 border-t border-[var(--border)] pt-8">
@@ -431,7 +490,7 @@ export function Comments({ postId }: { postId: string }) {
         </div>
       )}
 
-      {error ? <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+      {error ? <div className="mt-4 rounded-xl border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-4 py-3 text-sm text-[var(--color-error-text)]">{error}</div> : null}
 
       {loading ? (
         <div className="flex justify-center py-8">

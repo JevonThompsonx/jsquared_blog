@@ -45,7 +45,7 @@ export default async function TagPage({ params }: TagPageProps) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen" style={{ background: "var(--background)" }} tabIndex={-1}>
       <SiteHeader />
 
       {/* Tag hero */}
@@ -94,6 +94,6 @@ export default async function TagPage({ params }: TagPageProps) {
         emptyTitle={`No adventures tagged "${tag.name}" yet.`}
         initialPosts={initialPosts}
       />
-    </div>
+    </main>
   );
 }

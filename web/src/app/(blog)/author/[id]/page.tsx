@@ -120,7 +120,7 @@ export default async function AuthorProfilePage({ params }: { params: Promise<{ 
   const totalLikes = recentComments.reduce((sum, c) => sum + c.likeCount, 0);
 
   return (
-    <main id="main-content" className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+    <main id="main-content" className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
       <SiteHeader />
 
       <div className="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">

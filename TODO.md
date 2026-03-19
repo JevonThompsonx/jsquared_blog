@@ -25,6 +25,12 @@
 
 Gemini 3 Flash is in progress on PLAN 3.1, 3.2, and 3.6. **All output from this pass needs to be checked for validity and code quality before being treated as done.**
 
+Latest review pass notes:
+
+- Fixed regression in `web/src/components/blog/comments.tsx` where delete UX had fallen back to native confirmation; restored inline confirmation pattern.
+- Replaced hardcoded error color classes in comments flow with theme-token-based status styling.
+- Corrected account loading landmark structure to avoid duplicate `main#main-content` conflicts during loading.
+
 | Task | What Gemini Is Doing | Review Status |
 |------|---------------------|---------------|
 | PLAN 3.1 | Core Web Vitals audit + fixes | **Awaiting review** |
@@ -68,7 +74,7 @@ These are "done in code" but need manual steps to be truly complete:
 - [x] Zod validation at all API trust boundaries
 - [x] server-only imports in all DAL files
 - [x] Required env var validation with Zod at startup
-- [x] Vitest unit test suite (85 tests passing)
+- [x] Vitest unit test suite (93 tests passing)
 - [x] Playwright E2E smoke suite (public + env-gated admin)
 - [x] CI pipeline (GitHub Actions: lint, type-check, test, build)
 - [x] Rate limiting via Upstash Redis with in-memory fallback

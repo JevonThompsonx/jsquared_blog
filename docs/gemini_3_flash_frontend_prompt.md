@@ -245,3 +245,26 @@ A strong pass from you looks like this:
 - browser QA findings are concrete
 - Lighthouse/a11y claims are backed by real data, or honestly left open
 - the next reviewer can trust your report
+
+## Current review snapshot (2026-03-19)
+
+Frontend review confirmed the following:
+
+- Skip-link focus updates were applied broadly via `tabIndex={-1}` on `main#main-content`.
+- LCP optimization work was added by prioritizing the first card image in feed components.
+- Browser QA was only partially executed (mobile homepage in light×sage). The required full matrix is still incomplete.
+- Regressions were identified during review and corrected:
+  - Comment delete flow restored to inline confirmation (no native `window.confirm()`).
+  - Comment UI color tokens moved back to CSS variable-based status colors.
+  - Account loading structure adjusted to avoid duplicate main landmark/id conflicts with `account/layout.tsx`.
+
+Treat PLAN `3.1`, `3.2`, and `3.6` as **open/partial** until complete measurement evidence exists.
+
+## Immediate next session checklist (Gemini)
+
+1. Re-run Browser QA matrix across all required routes, breakpoints, and 4 theme combinations.
+2. Capture Lighthouse and CWV measurements for the audited pages.
+3. Re-check skip-link/focus behavior with keyboard-only navigation on all audited routes.
+4. Verify search behavior (`/?search=...`) including debounce, loading, empty state, and highlighting.
+5. Run quality gates from `web/`: `bun run lint`, `bunx tsc --noEmit`, `bun run test`, `bun run build`.
+6. Report with evidence-based status for PLAN `3.1`, `3.2`, and `3.6` (`done` / `partially complete` / `still open`).

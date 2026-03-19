@@ -136,7 +136,7 @@ export function FilteredFeed({ initialPosts, apiParams, emptyTitle, emptyDescrip
 
   return (
     <section aria-label="Filtered stories feed" className="container mx-auto p-4 sm:p-6 lg:p-8">
-      {groupedPosts.map((group) => (
+      {groupedPosts.map((group, groupIndex) => (
         <section key={group.key} className="mb-12 last:mb-0">
           <div className="mb-6 flex items-center gap-3">
             <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
@@ -147,8 +147,8 @@ export function FilteredFeed({ initialPosts, apiParams, emptyTitle, emptyDescrip
             <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
           </div>
           <div className="grid grid-cols-1 gap-8 auto-rows-[minmax(300px,auto)] grid-flow-dense sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {group.posts.map((post) => (
-              <HomePostCard key={post.id} post={post} />
+            {group.posts.map((post, postIndex) => (
+              <HomePostCard key={post.id} post={post} priority={groupIndex === 0 && postIndex === 0} />
             ))}
           </div>
         </section>

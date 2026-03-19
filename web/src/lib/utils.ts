@@ -1,7 +1,7 @@
 import { htmlToPlainText } from "@/lib/content";
 import type { BlogPost } from "@/types/blog";
 
-const SEASON_LABELS = ["Winter", "Spring", "Summer", "Fall"] as const;
+const SEASON_LABELS: readonly ["Winter", "Spring", "Summer", "Fall"] = ["Winter", "Spring", "Summer", "Fall"];
 
 type SeasonIndex = 0 | 1 | 2 | 3;
 
