@@ -35,6 +35,10 @@ function fallbackEmail(identity: GitHubAdminIdentity): string {
   return identity.email ?? `${identity.login}@users.noreply.github.com`;
 }
 
+function parseAdminRole(value: unknown): AdminAccountRecord["role"] | null {
+  return value === "reader" || value === "author" || value === "admin" ? value : null;
+}
+
 export async function getAdminAccountByGitHubId(providerUserId: string): Promise<AdminAccountRecord | null> {
   const client = getDbClient();
   const result = await client.execute({
@@ -60,9 +64,14 @@ export async function getAdminAccountByGitHubId(providerUserId: string): Promise
     return null;
   }
 
+  const role = parseAdminRole(row.role);
+  if (!role) {
+    return null;
+  }
+
   return {
     userId: String(row.user_id),
-    role: String(row.role) as AdminAccountRecord["role"],
+    role,
     displayName: String(row.display_name ?? "GitHub Admin"),
     avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
     email: String(row.email),

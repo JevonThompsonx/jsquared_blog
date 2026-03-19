@@ -1,6 +1,6 @@
 # J²Adventures — Project Handoff
 
-Last updated: 2026-03-17
+Last updated: 2026-03-19
 
 ## Where the project stands
 
@@ -32,7 +32,7 @@ Gemini is working on PLAN 3.1 (CWV audit), 3.2 (WCAG audit), and 3.6 (search UX)
 
 Infrastructure (env validation, Vitest, Playwright, Cloudinary WebP, rate limiting, Sentry, Plausible, CI, security headers) and admin QoL (bulk publish, preview, Tiptap JSON, search/filter, cron, clone, alt text warnings) are all shipped and verified.
 
-### Phase 3: Mostly complete (12/14)
+### Phase 3: Mostly complete (11/14)
 
 All UX polish tasks are done except:
 - 3.1 CWV audit — Gemini working, awaiting review
@@ -73,7 +73,7 @@ From the `web/` directory:
 - `bunx tsc --noEmit` — pass
 - `bun run build` — pass
 - `bun run test` — pass (85 tests)
-- `bun run test:e2e` — public smoke passes; authenticated admin coverage depends on seeded fixtures + storage state
+- `bun run test:e2e` — 12 passed, 7 skipped (authenticated admin coverage depends on seeded fixtures + storage state)
 
 ---
 

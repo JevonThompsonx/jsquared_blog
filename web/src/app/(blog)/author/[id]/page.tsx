@@ -47,7 +47,7 @@ function ProfileAvatar({ avatarUrl, displayName, size }: { avatarUrl: string | n
     justifyContent: "center",
     flexShrink: 0,
     overflow: "hidden",
-  } as React.CSSProperties;
+  } satisfies React.CSSProperties;
 
   if (preset) {
     return (

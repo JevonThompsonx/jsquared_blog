@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
+import { z } from "zod";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -17,6 +18,19 @@ type BookmarkedPost = {
   imageUrl: string | null;
   bookmarkedAt: string;
 };
+
+const bookmarkedPostSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  slug: z.string(),
+  excerpt: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  bookmarkedAt: z.string(),
+});
+
+const bookmarksResponseSchema = z.object({
+  posts: z.array(bookmarkedPostSchema),
+});
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(iso));
@@ -57,7 +71,7 @@ export default function BookmarksPage() {
       });
       if (!cancelled) {
         if (res.ok) {
-          const json = (await res.json()) as { posts: BookmarkedPost[] };
+          const json = bookmarksResponseSchema.parse(await res.json());
           setPosts(json.posts);
         }
         setStatus("ready");

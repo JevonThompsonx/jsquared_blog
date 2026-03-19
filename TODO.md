@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 17, 2026 | **Stack**: Next.js 16 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 19, 2026 | **Stack**: Next.js 16 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### Gemini's Current Work — Awaiting Review
 
-Gemini 3 Flash is actively working on PLAN 3.1, 3.2, and 3.6. **All output from this pass needs to be checked for validity and code quality before being treated as done.**
+Gemini 3 Flash is in progress on PLAN 3.1, 3.2, and 3.6. **All output from this pass needs to be checked for validity and code quality before being treated as done.**
 
 | Task | What Gemini Is Doing | Review Status |
 |------|---------------------|---------------|

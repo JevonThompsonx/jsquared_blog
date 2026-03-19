@@ -24,7 +24,7 @@ type ThemeContextValue = {
   restorePreference: (mode: ThemeMode, lightLook: ThemeLook, darkLook: ThemeLook) => void;
 };
 
-type ThemeVariables = Record<string, string>;
+type ThemeVariables = CSSProperties & Record<`--${string}`, string>;
 
 const MODE_STORAGE_KEY = "j2adventures_theme_mode";
 const LIGHT_LOOK_STORAGE_KEY = "j2adventures_theme_look_light";
@@ -32,18 +32,35 @@ const DARK_LOOK_STORAGE_KEY = "j2adventures_theme_look_dark";
 const THEME_COOKIE = "j2_theme";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function isThemeMode(value: unknown): value is ThemeMode {
+  return value === "light" || value === "dark";
+}
+
+function isThemeLook(value: unknown): value is ThemeLook {
+  return value === "sage" || value === "lichen";
+}
+
 function readThemeCookie(): { mode: ThemeMode | null; lightLook: ThemeLook | null; darkLook: ThemeLook | null } {
   try {
     const match = document.cookie.match(/(?:^|; )j2_theme=([^;]*)/);
     if (!match?.[1]) return { mode: null, lightLook: null, darkLook: null };
-    const parsed = JSON.parse(decodeURIComponent(match[1])) as Record<string, unknown>;
-    const m = parsed["mode"] as ThemeMode | undefined;
-    const ll = parsed["lightLook"] as ThemeLook | undefined;
-    const dl = parsed["darkLook"] as ThemeLook | undefined;
+    const parsed: unknown = JSON.parse(decodeURIComponent(match[1]));
+    if (!isRecord(parsed)) {
+      return { mode: null, lightLook: null, darkLook: null };
+    }
+
+    const m = parsed["mode"];
+    const ll = parsed["lightLook"];
+    const dl = parsed["darkLook"];
+
     return {
-      mode: m === "light" || m === "dark" ? m : null,
-      lightLook: ll && LOOK_ORDER.includes(ll) ? ll : null,
-      darkLook: dl && LOOK_ORDER.includes(dl) ? dl : null,
+      mode: isThemeMode(m) ? m : null,
+      lightLook: isThemeLook(ll) ? ll : null,
+      darkLook: isThemeLook(dl) ? dl : null,
     };
   } catch {
     return { mode: null, lightLook: null, darkLook: null };
@@ -60,9 +77,9 @@ function readStoredThemePreference(): { mode: ThemeMode; lightLook: ThemeLook; d
     return { mode: "light", lightLook: "sage", darkLook: "lichen" };
   }
 
-  let storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as ThemeMode | null;
-  let storedLightLook = window.localStorage.getItem(LIGHT_LOOK_STORAGE_KEY) as ThemeLook | null;
-  let storedDarkLook = window.localStorage.getItem(DARK_LOOK_STORAGE_KEY) as ThemeLook | null;
+  let storedMode = window.localStorage.getItem(MODE_STORAGE_KEY);
+  let storedLightLook = window.localStorage.getItem(LIGHT_LOOK_STORAGE_KEY);
+  let storedDarkLook = window.localStorage.getItem(DARK_LOOK_STORAGE_KEY);
 
   if (!storedMode || !storedLightLook || !storedDarkLook) {
     const cookie = readThemeCookie();
@@ -82,8 +99,8 @@ function readStoredThemePreference(): { mode: ThemeMode; lightLook: ThemeLook; d
 
   return {
     mode: storedMode === "dark" ? "dark" : "light",
-    lightLook: storedLightLook && LOOK_ORDER.includes(storedLightLook) ? storedLightLook : "sage",
-    darkLook: storedDarkLook && LOOK_ORDER.includes(storedDarkLook) ? storedDarkLook : "lichen",
+    lightLook: isThemeLook(storedLightLook) ? storedLightLook : "sage",
+    darkLook: isThemeLook(storedDarkLook) ? storedDarkLook : "lichen",
   };
 }
 
@@ -380,8 +397,8 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
       return "light";
     }
 
-    const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as ThemeMode | null;
-    return storedMode === "light" || storedMode === "dark" ? storedMode : modeState;
+    const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY);
+    return isThemeMode(storedMode) ? storedMode : modeState;
   }, [hydrated, modeState]);
 
   const lightLook = useMemo<ThemeLook>(() => {
@@ -389,8 +406,8 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
       return "sage";
     }
 
-    const storedLook = window.localStorage.getItem(LIGHT_LOOK_STORAGE_KEY) as ThemeLook | null;
-    return storedLook && LOOK_ORDER.includes(storedLook) ? storedLook : lightLookState;
+    const storedLook = window.localStorage.getItem(LIGHT_LOOK_STORAGE_KEY);
+    return isThemeLook(storedLook) ? storedLook : lightLookState;
   }, [hydrated, lightLookState]);
 
   const darkLook = useMemo<ThemeLook>(() => {
@@ -398,8 +415,8 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
       return "lichen";
     }
 
-    const storedLook = window.localStorage.getItem(DARK_LOOK_STORAGE_KEY) as ThemeLook | null;
-    return storedLook && LOOK_ORDER.includes(storedLook) ? storedLook : darkLookState;
+    const storedLook = window.localStorage.getItem(DARK_LOOK_STORAGE_KEY);
+    return isThemeLook(storedLook) ? storedLook : darkLookState;
   }, [darkLookState, hydrated]);
 
   const look = mode === "light" ? lightLook : darkLook;
@@ -467,7 +484,7 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
     },
   }), [darkLook, lightLook, look, mode]);
 
-  const themeStyle = themePresets[mode][look] as CSSProperties;
+  const themeStyle = themePresets[mode][look];
 
   return (
     <ThemeContext.Provider value={value}>

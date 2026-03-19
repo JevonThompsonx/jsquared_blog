@@ -10,7 +10,7 @@ import path from "node:path";
 import { and, count, eq } from "drizzle-orm";
 
 import { authAccounts, categories, comments, posts, profiles, users } from "../src/drizzle/schema";
-import { getDb } from "../src/lib/db-core";
+import { getDb, getDbClient } from "../src/lib/db-core";
 import { loadEnvironmentFiles } from "../src/lib/env-loader";
 
 loadEnvironmentFiles();
@@ -24,6 +24,15 @@ const FIXTURE_COMMENTER_ID = "e2e-commenter";
 const FIXTURE_COMMENTER_ACCOUNT_ID = "e2e-commenter-supabase-account";
 const FIXTURE_PARENT_COMMENT_ID = "e2e-comment-parent";
 const FIXTURE_REPLY_COMMENT_ID = "e2e-comment-reply";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+async function hasPostViewCountColumn(): Promise<boolean> {
+  const result = await getDbClient().execute("PRAGMA table_info('posts')");
+  return result.rows.some((row) => isRecord(row) && row["name"] === "view_count");
+}
 
 function readExistingEnvFile(): Map<string, string> {
   if (!existsSync(ENV_FILE_PATH)) {
@@ -171,60 +180,70 @@ async function ensurePublicCommenter(): Promise<void> {
 }
 
 async function ensureFixturePost(): Promise<void> {
-  const db = getDb();
+  const client = getDbClient();
   const now = new Date();
+  const hasViewCount = await hasPostViewCountColumn();
+  const timestamp = now.getTime();
+  const insertEntries: Array<[string, string | number | null]> = [
+    ["id", FIXTURE_POST_ID],
+    ["title", "E2E Admin Fixture Post"],
+    ["slug", FIXTURE_POST_SLUG],
+    ["content_json", JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Stable fixture content for authenticated admin smoke coverage." }],
+        },
+      ],
+    })],
+    ["content_format", "tiptap-json"],
+    ["content_html", null],
+    ["content_plain_text", "Stable fixture content for authenticated admin smoke coverage."],
+    ["excerpt", "Stable fixture post used by Playwright admin smoke tests."],
+    ["status", "published"],
+    ["layout_type", "standard"],
+    ["published_at", timestamp],
+    ["scheduled_publish_time", null],
+    ["author_id", FIXTURE_AUTHOR_ID],
+    ["category_id", FIXTURE_CATEGORY_ID],
+    ["series_id", null],
+    ["series_order", null],
+    ["featured_image_id", null],
+    ["external_gallery_url", null],
+    ["external_gallery_label", null],
+    ["location_name", null],
+    ["location_lat", null],
+    ["location_lng", null],
+    ["location_zoom", null],
+    ["ioverlander_url", null],
+  ];
 
-  await db
-    .insert(posts)
-    .values({
-      id: FIXTURE_POST_ID,
-      title: "E2E Admin Fixture Post",
-      slug: FIXTURE_POST_SLUG,
-      contentJson: JSON.stringify({
-        type: "doc",
-        content: [
-          {
-            type: "paragraph",
-            content: [{ type: "text", text: "Stable fixture content for authenticated admin smoke coverage." }],
-          },
-        ],
-      }),
-      contentFormat: "tiptap-json",
-      contentHtml: null,
-      contentPlainText: "Stable fixture content for authenticated admin smoke coverage.",
-      excerpt: "Stable fixture post used by Playwright admin smoke tests.",
-      status: "published",
-      layoutType: "standard",
-      publishedAt: now,
-      scheduledPublishTime: null,
-      authorId: FIXTURE_AUTHOR_ID,
-      categoryId: FIXTURE_CATEGORY_ID,
-      seriesId: null,
-      seriesOrder: null,
-      featuredImageId: null,
-      externalGalleryUrl: null,
-      externalGalleryLabel: null,
-      locationName: null,
-      locationLat: null,
-      locationLng: null,
-      locationZoom: null,
-      iovanderUrl: null,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: posts.id,
-      set: {
-        title: "E2E Admin Fixture Post",
-        slug: FIXTURE_POST_SLUG,
-        excerpt: "Stable fixture post used by Playwright admin smoke tests.",
-        status: "published",
-        authorId: FIXTURE_AUTHOR_ID,
-        categoryId: FIXTURE_CATEGORY_ID,
-        publishedAt: now,
-        updatedAt: now,
-      },
-    });
+  if (hasViewCount) {
+    insertEntries.push(["view_count", 0]);
+  }
+
+  insertEntries.push(["created_at", timestamp], ["updated_at", timestamp]);
+
+  const updateEntries: Array<[string, string | number | null]> = [
+    ["title", "E2E Admin Fixture Post"],
+    ["slug", FIXTURE_POST_SLUG],
+    ["excerpt", "Stable fixture post used by Playwright admin smoke tests."],
+    ["status", "published"],
+    ["author_id", FIXTURE_AUTHOR_ID],
+    ["category_id", FIXTURE_CATEGORY_ID],
+    ["published_at", timestamp],
+    ["updated_at", timestamp],
+  ];
+
+  await client.execute({
+    sql: `
+      INSERT INTO posts (${insertEntries.map(([column]) => `"${column}"`).join(", ")})
+      VALUES (${insertEntries.map(() => "?").join(", ")})
+      ON CONFLICT(id) DO UPDATE SET ${updateEntries.map(([column]) => `"${column}" = ?`).join(", ")}
+    `,
+    args: [...insertEntries.map(([, value]) => value), ...updateEntries.map(([, value]) => value)],
+  });
 }
 
 async function ensureFixtureComments(): Promise<void> {

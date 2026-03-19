@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+function isAbortError(error: unknown): boolean {
+  return (error instanceof DOMException || error instanceof Error) && error.name === "AbortError";
+}
 
 function ShareIcon() {
   return (
@@ -23,7 +27,7 @@ function CheckIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-4 w-4 shrink-0 text-emerald-500"
+      className="h-4 w-4 shrink-0 text-[var(--color-success)]"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.5"
@@ -34,8 +38,45 @@ function CheckIcon() {
   );
 }
 
+function ErrorIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4 shrink-0 text-[var(--color-error)]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 8v5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="16.5" r="0.75" fill="currentColor" stroke="none" />
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3L13.71 3.86a2 2 0 0 0-3.42 0Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ShareButtons({ url, title }: { url: string; title: string }) {
-  const [status, setStatus] = useState<"idle" | "shared" | "copied">("idle");
+  const [status, setStatus] = useState<"idle" | "shared" | "copied" | "error">("idle");
+  const resetTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
+
+  function showStatus(nextStatus: "shared" | "copied" | "error") {
+    setStatus(nextStatus);
+    if (resetTimerRef.current !== null) {
+      window.clearTimeout(resetTimerRef.current);
+    }
+    resetTimerRef.current = window.setTimeout(() => {
+      setStatus("idle");
+      resetTimerRef.current = null;
+    }, 2000);
+  }
 
   async function handleShare() {
     if (status !== "idle") return;
@@ -43,39 +84,46 @@ export function ShareButtons({ url, title }: { url: string; title: string }) {
     try {
       if (navigator.share) {
         await navigator.share({ title, url });
-        setStatus("shared");
+        showStatus("shared");
       } else {
         await navigator.clipboard.writeText(url);
-        setStatus("copied");
+        showStatus("copied");
       }
     } catch (err) {
       // Ignore abort errors from Web Share API
-      if ((err as Error).name !== "AbortError") {
+      if (!isAbortError(err)) {
         try {
           await navigator.clipboard.writeText(url);
-          setStatus("copied");
+          showStatus("copied");
         } catch {
-          // Fallback failed
+          showStatus("error");
         }
       }
-    }
-
-    if (status === "idle") {
-      setTimeout(() => setStatus("idle"), 2000);
     }
   }
 
   return (
-    <button
-      aria-label="Share this story"
-      className="group flex h-9 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-3 text-sm font-medium text-[var(--accent)] shadow-sm transition-colors hover:border-[var(--primary)] hover:bg-[var(--accent-soft)]"
-      onClick={() => void handleShare()}
-      type="button"
-    >
-      {status === "idle" ? <ShareIcon /> : <CheckIcon />}
-      <span className="hidden sm:inline">
-        {status === "shared" ? "Shared!" : status === "copied" ? "Copied!" : "Share"}
+    <>
+      <button
+        aria-label="Share this story"
+        className="group flex h-9 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-3 text-sm font-medium text-[var(--accent)] shadow-sm transition-colors hover:border-[var(--primary)] hover:bg-[var(--accent-soft)]"
+        onClick={() => void handleShare()}
+        type="button"
+      >
+        {status === "idle" ? <ShareIcon /> : status === "error" ? <ErrorIcon /> : <CheckIcon />}
+        <span className="hidden sm:inline">
+          {status === "shared" ? "Shared!" : status === "copied" ? "Copied!" : status === "error" ? "Share failed" : "Share"}
+        </span>
+      </button>
+      <span aria-live="polite" className="sr-only">
+        {status === "shared"
+          ? "Story shared successfully."
+          : status === "copied"
+            ? "Story link copied to clipboard."
+            : status === "error"
+              ? "Sharing failed."
+              : ""}
       </span>
-    </button>
+    </>
   );
 }

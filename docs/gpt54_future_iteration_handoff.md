@@ -1,79 +1,98 @@
-# GPT-5.4 Session Handoff
+# GPT-5.4 Backend & Verification Prompt (Next Task)
 
 **Project**: J²Adventures (`web/` — Next.js 16 App Router, TailwindCSS 4, Turso/Drizzle, Supabase Auth, Auth.js admin)
-**Role**: Review + targeted implementation across tests, automation, backend/frontend boundaries, and contained fixes.
-**Read first**: `AGENTS.md`, `docs/handoff.md`, `docs/PLAN.md`, `TODO.md`, `prompt.md`
+**Role**: Backend + review + verification closure (tests, automation, strict typing cleanup, and cross-checks).
+**Read first**: `AGENTS.md`, `docs/handoff.md`, `docs/PLAN.md`, `TODO.md`, `prompt.md`, then this file.
 
-## Current state
+## Verified baseline snapshot (2026-03-19)
 
-The app is live and stable at `jsquaredadventures.com`. Phases 1-2 are complete. Phase 3 is nearly complete (Gemini is finishing 3.1, 3.2, 3.6). Phase 4 is mostly complete. A new Phase 4.5 (verification tasks) has been added to `docs/PLAN.md`.
+Use these as the latest verified command results:
 
-### What's done and verified
+- `bun run lint` — pass
+- `bunx tsc --noEmit` — pass
+- `bun run test` — pass (85 tests)
+- `bun run build` — pass
+- `bun run test:e2e` — pass with **12 passed, 7 skipped** (authenticated admin specs skipped without seed/auth setup)
 
-- PLAN 4.1 comment moderation — fully done (backend + frontend, optimistic updates, inline delete confirmation, summary stats).
-- PLAN 4.3 RSS per category/tag — code shipped. Manual smoke pending.
-- PLAN 4.5 reading time — shared helpers in `web/src/lib/content.ts`, threaded through queries, post pages, preview, and editor.
-- PLAN 4.7 post view counter — code shipped. Migration 0007 not yet applied to prod.
-- PLAN 4.8 admin desktop layout expansion — done and browser-QA'd.
-- PLAN 3.5 mobile nav UX — done (Radix dialog drawer).
-- PLAN 3.7, 3.8, 3.9, 3.11, 3.12, 3.13, 3.14 — all done.
-- Playwright public smoke suite passes (10 tests). Authenticated admin smoke exists but depends on fixtures.
-- CI pipeline exists in `.github/workflows/ci.yml`.
-- HTTP security headers, rate limiting, Sentry, Plausible — all in place.
-- Canonical Tiptap JSON storage is live; legacy HTML is read-compatible only.
+Current status to treat as true:
 
-### What's in progress
-
-- PLAN 3.1 + 3.2 + 3.6 — Gemini is handling frontend CWV/accessibility/search fixes. **Awaiting review for validity and code quality.**
-- PLAN 4.4 JSON-LD — code is done, deployed Rich Results validation still pending.
+- PLAN `3.1`, `3.2`, `3.6` remain **awaiting review** (Gemini work not yet closed).
+- PLAN `4.3`, `4.4`, `4.7` are **done in code but not fully verified operationally**.
+- PLAN `4.2` and `4.6` are **not started** feature work.
+- PLAN Phase `4.5` (`V.1`...`V.10`) remains open.
 
 ---
 
-## Your next session priorities (in order)
+## Primary mission
 
-### Task 1: Strict TypeScript cleanup pass (PLAN V.9)
+Your next session should close the highest-value backend/review gaps without stepping into speculative frontend redesign.
 
-The repo still contains older `as` assertions in files outside the latest cleanup pass. Sweep and fix them.
+Prioritize in this order.
 
-Find them:
+### Task 1 — Strict TypeScript cleanup (PLAN V.9)
+
+Perform a safe cleanup pass for remaining legacy `as`/`any` usage in backend/shared code.
+
+Search with:
+
 ```bash
-cd web && grep -rn "\bas\b\s" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v ".next"
-cd web && grep -rn ": any" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v ".next"
+cd web
+rg "\bas\b" src --glob "*.ts" --glob "*.tsx"
+rg ": any" src --glob "*.ts" --glob "*.tsx"
 ```
 
-For each occurrence:
-- If the fix is safe and obvious, fix it with proper type narrowing, generics, or Zod parsing.
-- If the fix requires behavioral changes, document it in your report but don't change it.
-- Never use `as` to silence errors.
-- Never introduce `any` to work around a type issue.
+Rules:
 
-### Task 2: Review Gemini's frontend work
+- Prefer narrowing, schema validation, and explicit interfaces.
+- Do not use new `as` assertions as escape hatches.
+- Do not introduce `any`.
+- If a case needs behavioral redesign, document it as remaining work instead of forcing a risky fix.
 
-After Gemini's current session completes, review the changes for:
-- Hardcoded Tailwind colors instead of CSS variables
-- `any` or loose types
-- Missing `"use client"` justification or excessive `"use client"`
-- String literal routes instead of typed helpers
-- Raw `<img>` instead of `next/image`
-- Broken dark mode (works in light only)
-- Missing loading/error states
+### Task 2 — Review Gemini's 3.1/3.2/3.6 output (PLAN V.6)
 
-Report format: `file_path:line — severity (error|warning|suggestion) — description — fix`
+Review frontend changes after Gemini's latest pass using this required format:
 
-### Task 3: Authenticated E2E hardening (PLAN V.5)
+`file_path:line — severity (error|warning|suggestion) — description — fix`
 
-Verify the full authenticated E2E pipeline:
-1. Run `bun run seed:e2e` against a safe dev/test database target
-2. Capture admin auth with `bun run e2e:capture-admin-state`
-3. Run `bun run test:e2e` and confirm authenticated flows pass
-4. Remote mutation suites stay gated unless `E2E_ALLOW_REMOTE_ADMIN_MUTATIONS=1` is explicitly set
+Review checklist:
 
-### Task 4: Verification follow-through
+- hardcoded Tailwind palette classes vs CSS variable theming
+- typed route helper usage for dynamic links
+- unnecessary/excessive `"use client"`
+- raw `<img>` regressions vs `next/image`
+- focus/keyboard/accessibility regressions
+- missing loading/empty/error states
+- unsupported completion claims without measured evidence
 
-Help close out the manual verification tasks in PLAN Phase 4.5:
-- Smoke `/feed.xml`, `/category/<name>/feed.xml`, `/tag/<slug>/feed.xml` in a running app
-- Validate that post views increment once per session in dev
-- Check JSON-LD output on a post page (view source or dev tools)
+### Task 3 — Authenticated E2E pipeline closure (PLAN V.5)
+
+Move from partial E2E coverage to authenticated admin coverage:
+
+1. `bun run seed:e2e` (safe dev/test target only)
+2. `bun run e2e:capture-admin-state`
+3. `bun run test:e2e`
+4. confirm remote mutation guards still require explicit `E2E_ALLOW_REMOTE_ADMIN_MUTATIONS=1`
+
+Capture exactly which previously skipped tests become active and pass.
+
+### Task 4 — Verification assist for 4.3 / 4.4 / 4.7
+
+Use local/dev checks to reduce manual closure risk:
+
+- validate RSS endpoints respond and include expected XML shape
+- validate view counter behavior in dev (single-session increment behavior)
+- verify JSON-LD output structure from post head content
+
+Do not claim deployed Rich Results validation unless a real deployed URL is tested externally.
+
+---
+
+## Guardrails
+
+- Never edit applied Drizzle migrations.
+- Respect existing dirty worktree changes; do not revert unrelated work.
+- Keep auth systems separate (Supabase public vs Auth.js admin).
+- Treat manual production operations (`db:migrate` on prod, dashboard toggles) as out-of-band unless explicitly requested.
 
 ---
 
@@ -94,7 +113,7 @@ Help close out the manual verification tasks in PLAN Phase 4.5:
 - `bunx tsc --noEmit` — pass
 - `bun run build` — pass
 - `bun run test` — pass (85 tests)
-- `bun run test:e2e` — public smoke passes; authenticated coverage depends on fixtures
+- `bun run test:e2e` — 12 passed, 7 skipped (authenticated coverage still fixture/auth dependent)
 
 ## Quality gate
 
@@ -107,7 +126,13 @@ bun run build
 bun run test
 ```
 
-All must pass with zero errors/warnings.
+If working in E2E/auth paths, also run:
+
+```bash
+bun run test:e2e
+```
+
+All required commands must pass with zero errors/warnings.
 
 ## Files that matter most
 
@@ -128,6 +153,6 @@ All must pass with zero errors/warnings.
 
 - List of `as`/`any` occurrences fixed and any that remain
 - Review findings from Gemini's frontend work (if applicable)
-- E2E test results after Task 3
+- E2E test results after Task 3 (including skipped vs executed counts)
 - Verification results from Task 4
-- `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` results
+- `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test`, and if run `bun run test:e2e` results

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { z } from "zod";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useNextTheme } from "@/components/theme/theme-provider";
@@ -24,6 +25,24 @@ type ProfileData = {
 };
 
 type FieldStatus = "idle" | "saving" | "saved" | "error";
+
+const profileResponseSchema = z.object({
+  profile: z.object({
+    userId: z.string(),
+    displayName: z.string(),
+    avatarUrl: z.string().nullable(),
+    themePreference: z.string().nullable(),
+    email: z.string(),
+  }),
+});
+
+const avatarErrorResponseSchema = z.object({
+  error: z.string().optional(),
+});
+
+const avatarUploadResponseSchema = z.object({
+  avatarUrl: z.string(),
+});
 
 // ---------------------------------------------------------------------------
 // Avatar preset icons
@@ -114,7 +133,7 @@ function AvatarDisplay({
     flexShrink: 0,
     overflow: "hidden",
     background: preset ? preset.bg : "var(--primary)",
-  } as React.CSSProperties;
+  } satisfies React.CSSProperties;
 
   if (preset) {
     return (
@@ -151,20 +170,21 @@ function isThemeLook(value: unknown): value is ThemeLook {
   return value === "sage" || value === "lichen";
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
 function parseSavedTheme(raw: string): SavedTheme | null {
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (
-      parsed !== null &&
-      typeof parsed === "object" &&
-      "mode" in parsed &&
-      "lightLook" in parsed &&
-      "darkLook" in parsed &&
-      isThemeMode((parsed as Record<string, unknown>).mode) &&
-      isThemeLook((parsed as Record<string, unknown>).lightLook) &&
-      isThemeLook((parsed as Record<string, unknown>).darkLook)
-    ) {
-      return parsed as SavedTheme;
+    if (isRecord(parsed)) {
+      const mode = parsed["mode"];
+      const lightLook = parsed["lightLook"];
+      const darkLook = parsed["darkLook"];
+
+      if (isThemeMode(mode) && isThemeLook(lightLook) && isThemeLook(darkLook)) {
+        return { mode, lightLook, darkLook };
+      }
     }
   } catch {
     // malformed
@@ -236,7 +256,7 @@ export function AccountSettings() {
         return;
       }
 
-      const json = (await res.json()) as { profile: ProfileData };
+      const json = profileResponseSchema.parse(await res.json());
       const loaded = json.profile;
       setProfile(loaded);
       setDisplayName(loaded.displayName);
@@ -316,12 +336,12 @@ export function AccountSettings() {
       });
 
       if (!res.ok) {
-        const json = await res.json() as { error?: string };
+        const json = avatarErrorResponseSchema.parse(await res.json());
         setAvatarError(json.error ?? "Upload failed.");
         return;
       }
 
-      const json = await res.json() as { avatarUrl: string };
+      const json = avatarUploadResponseSchema.parse(await res.json());
       setAvatarUrl(json.avatarUrl);
       setProfile((prev) => (prev ? { ...prev, avatarUrl: json.avatarUrl } : prev));
       setAvatarStatus("saved");

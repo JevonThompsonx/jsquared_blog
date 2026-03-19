@@ -57,8 +57,43 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (entity, token: string) => {
+    const normalizedToken = token.toLowerCase();
+
+    switch (normalizedToken) {
+      case "amp":
+        return "&";
+      case "lt":
+        return "<";
+      case "gt":
+        return ">";
+      case "quot":
+        return '"';
+      case "apos":
+        return "'";
+      case "nbsp":
+        return " ";
+      default:
+        break;
+    }
+
+    if (normalizedToken.startsWith("#x")) {
+      const codePoint = Number.parseInt(normalizedToken.slice(2), 16);
+      return Number.isNaN(codePoint) ? entity : String.fromCodePoint(codePoint);
+    }
+
+    if (normalizedToken.startsWith("#")) {
+      const codePoint = Number.parseInt(normalizedToken.slice(1), 10);
+      return Number.isNaN(codePoint) ? entity : String.fromCodePoint(codePoint);
+    }
+
+    return entity;
+  });
+}
+
 function safeJsonParse(value: string): unknown {
-  return JSON.parse(value) as unknown;
+  return JSON.parse(value);
 }
 
 function sanitizeHref(value: unknown): string | null {
@@ -275,8 +310,12 @@ export function htmlToPlainText(html: string | null | undefined): string {
     return "";
   }
 
-  return DOMPurify.sanitize(html, SANITIZE_OPTIONS)
-    .replace(/<[^>]+>/g, " ")
+  return decodeHtmlEntities(
+    DOMPurify.sanitize(html, SANITIZE_OPTIONS)
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  )
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -24,6 +24,19 @@ type Props = {
   featuredImageUrl?: string | null;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function readLightboxIndex(event: Event): number | null {
+  if (!(event instanceof CustomEvent) || !isRecord(event.detail)) {
+    return null;
+  }
+
+  const index = event.detail["index"];
+  return typeof index === "number" ? index : null;
+}
+
 function ChevronLeftIcon() {
   return (
     <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -74,8 +87,10 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
   // Listen for inline image click events dispatched by ProseContent
   useEffect(() => {
     function handler(e: Event) {
-      const idx = (e as CustomEvent<{ index: number }>).detail.index;
-      setActiveIndex(idx);
+      const idx = readLightboxIndex(e);
+      if (idx !== null) {
+        setActiveIndex(idx);
+      }
     }
     window.addEventListener("j2:open-lightbox", handler);
     return () => window.removeEventListener("j2:open-lightbox", handler);
@@ -110,18 +125,18 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
   useEffect(() => {
     if (!isOpen || !lightboxRef.current) return;
     const container = lightboxRef.current;
-    
+
     // Initial focus on close button
-    const closeBtn = container.querySelector('button[aria-label="Close"]') as HTMLButtonElement | null;
+    const closeBtn = container.querySelector<HTMLButtonElement>('button[aria-label="Close"]');
     closeBtn?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "Tab") return;
 
-      const focusables = Array.from(container.querySelectorAll(
+      const focusables = Array.from(container.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )) as HTMLElement[];
-      
+      ));
+
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
 
@@ -156,7 +171,7 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
   useEffect(() => {
     if (!isOpen || activeIndex === null || !filmstripRef.current) return;
     const strip = filmstripRef.current;
-    const thumb = strip.children[activeIndex] as HTMLElement | undefined;
+    const thumb = strip.children.item(activeIndex);
     if (thumb) {
       thumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     }

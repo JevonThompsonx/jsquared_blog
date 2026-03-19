@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { z } from "zod";
 
 import { getAuthorHref } from "@/lib/utils";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -25,6 +26,25 @@ type PostComment = {
   userHasLiked: boolean;
   canDelete: boolean;
 };
+
+const postCommentSchema = z.object({
+  id: z.string(),
+  postId: z.string(),
+  authorId: z.string(),
+  authorDisplayName: z.string(),
+  authorAvatarUrl: z.string().nullable(),
+  content: z.string(),
+  parentId: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  likeCount: z.number(),
+  userHasLiked: z.boolean(),
+  canDelete: z.boolean(),
+});
+
+const commentsResponseSchema = z.object({
+  comments: z.array(postCommentSchema).optional(),
+});
 
 type CommentThread = PostComment & { replies: PostComment[] };
 
@@ -225,7 +245,7 @@ export function Comments({ postId }: { postId: string }) {
       const response = await fetch(`/api/posts/${postId}/comments?sort=${sortBy}`, { headers });
       if (!response.ok) throw new Error("Failed to fetch comments");
 
-      const payload = await response.json() as { comments?: PostComment[] };
+      const payload = commentsResponseSchema.parse(await response.json());
       setAllComments(payload.comments ?? []);
     } catch {
       setError("Comments could not be loaded right now.");
@@ -254,7 +274,7 @@ export function Comments({ postId }: { postId: string }) {
 
       if (!response.ok) throw new Error("Failed to post comment");
 
-      const payload = await response.json() as { comments?: PostComment[] };
+      const payload = commentsResponseSchema.parse(await response.json());
       setAllComments(payload.comments ?? []);
       setNewComment("");
       setSortBy("newest");
@@ -280,7 +300,7 @@ export function Comments({ postId }: { postId: string }) {
 
       if (!response.ok) throw new Error("Failed to post reply");
 
-      const payload = await response.json() as { comments?: PostComment[] };
+      const payload = commentsResponseSchema.parse(await response.json());
       setAllComments(payload.comments ?? []);
       setReplyContent("");
       setReplyingTo(null);

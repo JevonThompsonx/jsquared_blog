@@ -7,6 +7,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CallbackState = "verifying" | "success" | "error";
+type CallbackType = "signup" | "email" | "recovery";
+
+function parseCallbackType(value: string | null): CallbackType | null {
+  return value === "signup" || value === "email" || value === "recovery" ? value : null;
+}
 
 function safeRedirectPath(raw: string | null): string {
   if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
@@ -46,7 +51,7 @@ export function CallbackContent() {
 
       const code = searchParams.get("code");
       const tokenHash = searchParams.get("token_hash");
-      const type = searchParams.get("type") as "signup" | "email" | "recovery" | null;
+      const type = parseCallbackType(searchParams.get("type"));
       const redirectTo = safeRedirectPath(searchParams.get("redirectTo"));
 
       if (code) {
@@ -103,9 +108,9 @@ export function CallbackContent() {
 
   return (
     <div className="w-full max-w-sm text-center">
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-8">
-        <h1 className="text-xl font-semibold text-red-800">Verification failed</h1>
-        <p className="mt-3 text-sm leading-7 text-red-700">{errorMessage ?? "Something went wrong. The link may have expired."}</p>
+      <div className="rounded-2xl border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-6 py-8">
+        <h1 className="text-xl font-semibold text-[var(--color-error-text)]">Verification failed</h1>
+        <p className="mt-3 text-sm leading-7 text-[var(--color-error-text)]">{errorMessage ?? "Something went wrong. The link may have expired."}</p>
         <Link
           className="mt-6 inline-block rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)]"
           href="/login"

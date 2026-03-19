@@ -4,10 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { z } from "zod";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type State = "loading" | "unauthenticated" | "bookmarked" | "unbookmarked";
+
+const bookmarkResponseSchema = z.object({
+  bookmarked: z.boolean(),
+});
 
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
@@ -59,7 +64,7 @@ export function BookmarkButton({ postId }: { postId: string }) {
       });
       if (!cancelled) {
         if (res.ok) {
-          const json = (await res.json()) as { bookmarked: boolean };
+          const json = bookmarkResponseSchema.parse(await res.json());
           setState(json.bookmarked ? "bookmarked" : "unbookmarked");
         } else {
           setState("unbookmarked");
@@ -90,7 +95,7 @@ export function BookmarkButton({ postId }: { postId: string }) {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
-      const json = (await res.json()) as { bookmarked: boolean };
+      const json = bookmarkResponseSchema.parse(await res.json());
       setState(json.bookmarked ? "bookmarked" : "unbookmarked");
     } else {
       // Revert on error

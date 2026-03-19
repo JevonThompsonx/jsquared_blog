@@ -8,9 +8,17 @@ import { hasStoredThemePreference, useNextTheme } from "@/components/theme/theme
 type ThemeMode = "light" | "dark";
 type ThemeLook = "sage" | "lichen";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
 function parseThemePref(raw: string): { mode: ThemeMode; lightLook: ThemeLook; darkLook: ThemeLook } | null {
   try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) {
+      return null;
+    }
+
     const mode = parsed["mode"];
     const lightLook = parsed["lightLook"];
     const darkLook = parsed["darkLook"];
@@ -65,8 +73,17 @@ export function UserThemeSync() {
       });
       if (!res.ok) return;
 
-      const json = await res.json() as { profile?: { themePreference?: string | null } };
-      const raw = json.profile?.themePreference;
+      const json: unknown = await res.json();
+      if (!isRecord(json)) {
+        return;
+      }
+
+      const profile = json["profile"];
+      if (!isRecord(profile)) {
+        return;
+      }
+
+      const raw = typeof profile["themePreference"] === "string" ? profile["themePreference"] : null;
       if (!raw) return;
 
       const pref = parseThemePref(raw);

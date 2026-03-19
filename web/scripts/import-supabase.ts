@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 
 import { getDb } from "../src/lib/db-core";
 import { loadEnvironmentFiles } from "../src/lib/env-loader";
@@ -41,7 +42,7 @@ type SupabasePost = {
   description: string | null;
   image_url: string | null;
   category: string | null;
-  author_id: string;
+  author_id: string | null;
   type: "split-horizontal" | "split-vertical" | "hover" | null;
   status: "draft" | "published" | "scheduled";
   scheduled_for?: string | null;
@@ -85,6 +86,76 @@ type SupabaseCommentLike = {
   comment_id: string;
   user_id: string;
 };
+
+const SUPABASE_PROVIDER: "supabase" = "supabase";
+const IMAGE_RESOURCE_TYPE: "image" = "image";
+
+const supabaseProfileSchema: z.ZodType<SupabaseProfile> = z.object({
+  id: z.string(),
+  username: z.string().nullable(),
+  avatar_url: z.string().nullable(),
+  role: z.string().nullable(),
+  theme_preference: z.string().nullable(),
+  bio: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  favorite_category: z.string().nullable().optional(),
+  favorite_destination: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+});
+
+const supabasePostSchema: z.ZodType<SupabasePost> = z.object({
+  id: z.number(),
+  title: z.string(),
+  description: z.string().nullable(),
+  image_url: z.string().nullable(),
+  category: z.string().nullable(),
+  author_id: z.string().nullable(),
+  type: z.enum(["split-horizontal", "split-vertical", "hover"]).nullable(),
+  status: z.enum(["draft", "published", "scheduled"]),
+  scheduled_for: z.string().nullable().optional(),
+  published_at: z.string().nullable().optional(),
+  created_at: z.string(),
+});
+
+const supabasePostImageSchema: z.ZodType<SupabasePostImage> = z.object({
+  id: z.number(),
+  post_id: z.number(),
+  image_url: z.string(),
+  sort_order: z.number(),
+  focal_point: z.string().nullable().optional(),
+  alt_text: z.string().nullable().optional(),
+  created_at: z.string(),
+});
+
+const supabaseTagSchema: z.ZodType<SupabaseTag> = z.object({
+  id: z.number(),
+  name: z.string(),
+  slug: z.string(),
+});
+
+const supabasePostTagSchema: z.ZodType<SupabasePostTag> = z.object({
+  post_id: z.number(),
+  tag_id: z.number(),
+});
+
+const supabaseCommentSchema: z.ZodType<SupabaseComment> = z.object({
+  id: z.string(),
+  post_id: z.number(),
+  user_id: z.string(),
+  content: z.string(),
+  created_at: z.string(),
+  updated_at: z.string().nullable().optional(),
+});
+
+const supabaseCommentLikeSchema: z.ZodType<SupabaseCommentLike> = z.object({
+  comment_id: z.string(),
+  user_id: z.string(),
+});
+
+function parseSupabaseRows<T>(schema: z.ZodType<T>, data: unknown): T[] {
+  return z.array(schema).parse(data ?? []);
+}
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -236,7 +307,7 @@ async function fetchProfilesPage(
       .range(from, to);
 
     if (!error) {
-      return (data ?? []) as unknown as SupabaseProfile[];
+      return parseSupabaseRows(supabaseProfileSchema, data);
     }
   }
 
@@ -261,7 +332,7 @@ async function fetchPostImagesPage(
       .range(from, to);
 
     if (!error) {
-      return (data ?? []) as unknown as SupabasePostImage[];
+      return parseSupabaseRows(supabasePostImageSchema, data);
     }
   }
 
@@ -294,7 +365,7 @@ async function main() {
         throw new Error(`Failed to fetch posts: ${error.message}`);
       }
 
-      return (data ?? []) as SupabasePost[];
+      return parseSupabaseRows(supabasePostSchema, data);
     }),
     fetchAllRows((from, to) => fetchPostImagesPage(supabase, from, to)),
     fetchAllRows(async (from, to) => {
@@ -308,7 +379,7 @@ async function main() {
         throw new Error(`Failed to fetch tags: ${error.message}`);
       }
 
-      return (data ?? []) as SupabaseTag[];
+      return parseSupabaseRows(supabaseTagSchema, data);
     }),
     fetchAllRows(async (from, to) => {
       const { data, error } = await supabase
@@ -320,7 +391,7 @@ async function main() {
         throw new Error(`Failed to fetch post_tags: ${error.message}`);
       }
 
-      return (data ?? []) as SupabasePostTag[];
+      return parseSupabaseRows(supabasePostTagSchema, data);
     }),
     fetchAllRows(async (from, to) => {
       const { data, error } = await supabase
@@ -333,7 +404,7 @@ async function main() {
         throw new Error(`Failed to fetch comments: ${error.message}`);
       }
 
-      return (data ?? []) as SupabaseComment[];
+      return parseSupabaseRows(supabaseCommentSchema, data);
     }),
     fetchAllRows(async (from, to) => {
       const { data, error } = await supabase
@@ -345,7 +416,7 @@ async function main() {
         throw new Error(`Failed to fetch comment_likes: ${error.message}`);
       }
 
-      return (data ?? []) as SupabaseCommentLike[];
+      return parseSupabaseRows(supabaseCommentLikeSchema, data);
     }),
   ]);
 
@@ -472,7 +543,7 @@ async function main() {
         allProfiles.map((profile) => ({
           id: toLegacyAuthAccountId(profile.id),
           userId: toLegacyUserId(profile.id),
-          provider: "supabase" as const,
+          provider: SUPABASE_PROVIDER,
           providerUserId: profile.id,
           providerEmail: null,
           createdAt: toTimestamp(profile.created_at),
@@ -507,10 +578,10 @@ async function main() {
         .map((post) => ({
           id: toLegacyMediaId("featured", post.id),
           ownerUserId: resolveImportedUserId(post.author_id),
-          provider: "supabase" as const,
+          provider: SUPABASE_PROVIDER,
           publicId: extractPublicId(post.image_url ?? ""),
           secureUrl: post.image_url ?? "",
-          resourceType: "image" as const,
+          resourceType: IMAGE_RESOURCE_TYPE,
           format: post.image_url?.split(".").pop()?.split("?")[0] ?? null,
           width: null,
           height: null,
@@ -521,10 +592,10 @@ async function main() {
       ...imageRows.map((image) => ({
         id: toLegacyMediaId("gallery", image.post_id, image.id),
         ownerUserId: resolveImportedUserId(postRows.find((post) => post.id === image.post_id)?.author_id),
-        provider: "supabase" as const,
+        provider: SUPABASE_PROVIDER,
         publicId: extractPublicId(image.image_url),
         secureUrl: image.image_url,
-        resourceType: "image" as const,
+        resourceType: IMAGE_RESOURCE_TYPE,
         format: image.image_url.split(".").pop()?.split("?")[0] ?? null,
         width: null,
         height: null,

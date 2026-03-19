@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-17
+Last updated: 2026-03-19
 
 ## Model Allocation
 
@@ -72,7 +72,7 @@ Everything below is additive — the app is live and stable.
 
 **Goal**: Achieve excellent Core Web Vitals, accessibility, and mobile experience.
 
-**Status: MOSTLY COMPLETE** (12/14 done; 2 in progress with Gemini)
+**Status: MOSTLY COMPLETE** (11/14 done; 3 in progress/awaiting review with Gemini)
 
 | # | Task | Owner | Status |
 |---|------|-------|--------|

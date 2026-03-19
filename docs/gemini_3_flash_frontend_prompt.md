@@ -1,127 +1,143 @@
-# Gemini 3 Flash Frontend Brief
+# Gemini 3 Flash Frontend Brief (Next Task Prompt)
 
 **Project**: J²Adventures (`web/` - Next.js 16 App Router, TailwindCSS 4, Turso/Drizzle, Supabase Auth)
-**Role**: Frontend/UI only. Components, pages, styling, accessibility, browser QA, contained client-side polish.
-**Read first**: `AGENTS.md`, `docs/handoff.md`, `docs/PLAN.md`, `TODO.md`, `prompt.md`
+**Role**: Frontend/UI only (components, page rendering, styling, accessibility, browser QA).
+**Tooling**: Windsurf Cascade + browser (Chrome/devtools when available).
+
+Read first, in this order:
+1. `AGENTS.md`
+2. `.windsurfrules`
+3. `docs/PLAN.md`
+4. `docs/handoff.md`
+5. `TODO.md`
+6. `prompt.md`
+7. This file
 
 ---
 
-## IMPORTANT: Current Work Status
+## Verified status snapshot (2026-03-19)
 
-**Your most recent work on PLAN 3.1, 3.2, and 3.6 is awaiting review for validity and code quality.**
+Treat this as the baseline truth for your next session:
 
-Previous passes by Gemini and GPT-5.4 have introduced issues that required correction (type assertions, inaccurate status claims, broken patterns). Before any new work begins, the project owner needs to verify that your latest accessibility/CWV/search changes are correct and meet the project's quality standards.
+- `bun run lint` — pass
+- `bunx tsc --noEmit` — pass
+- `bun run test` — pass (85 tests)
+- `bun run build` — pass
+- `bun run test:e2e` — pass with **12 passed, 7 skipped** (skipped tests are authenticated admin scenarios)
 
-**Do not claim tasks are complete unless you have real browser data (Lighthouse scores, accessibility audit results) to back the claim.**
+Task status to use:
 
----
+- **In progress / awaiting review**: PLAN `3.1`, `3.2`, `3.6`
+- **Open backend-led features**: PLAN `4.2`, `4.6`
+- **Open manual/verification tasks**: PLAN `V.1` to `V.10` (see `docs/PLAN.md`)
 
-## Current state
-
-The app is live and stable at `jsquaredadventures.com`. The remaining frontend work is verification-backed polish, not broad redesign.
-
-### Stable baselines — preserve these
-
-- PLAN 4.1 admin moderation UI — done and verified.
-- PLAN 4.8 widened admin layouts — done and browser-QA'd.
-- PLAN 3.5 mobile nav drawer — done.
-- PLAN 4.5 reading time — done.
-- PLAN 3.7, 3.8, 3.9, 3.11, 3.12, 3.13, 3.14 — all done.
-- Homepage seasonal hero cleanup — done.
-- Search results page has a dedicated debounced `SearchInput` header and multi-term highlight support.
-- Skip-link targets exist on main public/admin page shells.
-- Author avatars, map card images, and gallery lightbox use `next/image`.
-- JSON-LD remains in `web/src/app/(blog)/posts/[slug]/head.tsx`. Keep it there.
-
-### Corrections from past sessions
-
-- Do not recreate `docs/frontend_polish_walkthrough.md` — it was deleted for being inaccurate.
-- Do not say JSON-LD was moved into `page.tsx` — it was not.
-- Do not mark PLAN 3.1, 3.2, or 3.6 complete unless your browser checks actually support that claim with Lighthouse scores or accessibility audit data.
+Do not mark 3.1/3.2/3.6 done without measured evidence.
 
 ---
 
-## Your assignment (when cleared to resume)
+## Primary mission
 
-### Task 1: Real browser QA for open polish items
+Your immediate assignment is to **complete evidence-backed frontend validation** for PLAN `3.1`, `3.2`, and `3.6`, and fix only frontend-owned issues discovered during that validation.
 
-Use browser tooling, not guesswork, on these public surfaces:
+This is a review-and-verify pass first, coding pass second.
+
+---
+
+## Execution plan (required order)
+
+### Step 1 — Review your own pending frontend changes
+
+Before adding new code:
+
+1. Review changed files from your current 3.1/3.2/3.6 pass.
+2. Remove/fix violations of project rules:
+   - hardcoded Tailwind palette classes instead of CSS variables
+   - string literal internal routes instead of typed helpers
+   - unnecessary `"use client"`
+   - raw `<img>` instead of `next/image`
+   - weak keyboard/focus behavior
+   - unsupported completion claims
+   - type shortcuts (`any`, `as`, `!`)
+
+### Step 2 — Browser QA matrix
+
+Audit these routes:
 
 1. `/`
-2. `/?search=sierra` (or another real query that returns results)
-3. A published post detail page
+2. `/?search=sierra` (or equivalent query with results)
+3. one published post page (`/posts/[slug]`)
 4. `/map`
 5. `/about`
-6. An author page reached from a post
+6. one author page (`/author/[id]`)
 
-Check at minimum:
+At these breakpoints:
 
-- mobile around `390px`
-- tablet around `768px`
-- desktop around `1280px` or wider
+- `390px`
+- `768px`
+- `1280px+`
 
-Focus on:
+Across these theme combos:
 
-- keyboard flow and skip-link behavior
-- focus-visible states (2px outline, appropriate offset)
-- color contrast (4.5:1 minimum for normal text, 3:1 for large text)
-- search interactions (debounce, loading indicator, empty state, highlighting)
-- map popup/filter usability
-- gallery lightbox usability
-- mobile nav search parity
-- touch targets (minimum 44px on mobile)
+- light × sage
+- light × lichen
+- dark × sage
+- dark × lichen
 
-Fix frontend-only issues you can prove from that audit.
+Validate:
 
-### Task 2: Finish the real CWV/accessibility verification
+- keyboard navigation + skip links
+- focus visibility
+- 44px touch targets
+- 200% text scaling
+- no overflow/clipped controls
+- search debounce/loading/empty/highlighting behavior
+- map and lightbox keyboard usability
 
-PLAN 3.1 and 3.2 are still open because they need real verification data.
+### Step 3 — CWV + accessibility evidence
 
-Use Lighthouse and/or browser accessibility tooling on the homepage/search state and a post detail page. Fix what you actually find in allowed frontend files.
+Collect real measurements where tooling allows:
 
-**Targets** (from the project's quality standards):
-- Lighthouse Performance > 90
-- Lighthouse Accessibility > 95
-- LCP < 2.5s, CLS < 0.1, INP < 200ms
-- Zero WCAG AA violations
+- Lighthouse Performance score
+- Lighthouse Accessibility score
+- LCP, CLS, INP indicators
 
-Pay extra attention to:
+Target thresholds:
 
-- icon-only controls missing good labels
-- weak focus states on interactive controls
-- contrast regressions across theme combos (all 4: light/sage, light/lichen, dark/sage, dark/lichen)
-- layout shift around search/results/media
-- mobile overflow or awkward tap targets
-- text scaling: layout should work with browser text scaling up to 200%
+- Performance `> 90`
+- Accessibility `> 95`
+- LCP `< 2.5s`
+- CLS `< 0.1`
+- INP `< 200ms`
 
-### Task 3: Search UX validation
+If you cannot capture metrics in your environment, state that explicitly and leave task status as open/partial.
 
-The search UI is already partly upgraded. Validate it in the browser and only refine if needed.
+### Step 4 — Final determination for 3.1 / 3.2 / 3.6
 
-Check:
+For each task, report one status only:
 
-- debounced URL updates
-- loading indicator behavior
-- empty-state suggestions
-- result highlighting in titles/excerpts
-- mobile search behavior through the drawer/header flow
+- `done`
+- `partially complete`
+- `still open`
 
-Keep the existing query-param model (`?search=`). Do not build a new route structure.
-
-### Task 4: JSON-LD verification only
-
-For PLAN 4.4:
-
-1. Verify the structured data still renders correctly from `web/src/app/(blog)/posts/[slug]/head.tsx`.
-2. Confirm the rendered payload still includes `BlogPosting`, `headline`, `datePublished`, `dateModified`, `author`, `publisher`, `image`, `description`, and `mainEntityOfPage`.
-3. Do not move it into `page.tsx`.
-4. Do not claim Google Rich Results validation is complete unless you actually validate a deployed URL externally.
+Each status must include evidence (numbers, tested pages, and observed outcomes).
 
 ---
 
-## Allowed focus areas
+## Guardrails
 
-Stay in these frontend-owned areas:
+- Do not redesign the site.
+- Do not edit backend-owned files.
+- Do not claim Google Rich Results validation is complete unless you validated a deployed URL externally.
+- Do not regress admin UX to browser-native `confirm()` dialogs.
+- Do not create summary docs unless explicitly requested.
+
+---
+
+## File ownership and allowed edit zones
+
+Stay in frontend-owned files only.
+
+Primary allowed areas:
 
 - `web/src/app/(blog)/**`
 - `web/src/app/(public-auth)/**`
@@ -131,33 +147,52 @@ Stay in these frontend-owned areas:
 - `web/src/components/blog/**`
 - `web/src/components/layout/**`
 - `web/src/components/theme/**`
+- `web/src/components/providers/**` when needed for frontend behavior only
 
-## Off-limits
+Only edit other frontend component areas if your fix clearly belongs there and stays within Gemini's ownership.
 
-Do not edit backend files. If you encounter a backend issue, create `docs/context/<issue>-escalation.md` and report it.
+Off-limits:
 
 - `web/src/server/**`
 - `web/src/drizzle/**`
 - `web/src/lib/**`
 - `web/src/app/api/**`
 - `web/src/app/admin/actions.ts`
-- `CLAUDE.md`, `AGENTS.md`, `docs/PLAN.md`
+- `scripts/**`
+- `CLAUDE.md`
+- `AGENTS.md`
+- `docs/PLAN.md`
+
+If you hit a backend/data/auth issue, create `docs/context/<issue>-escalation.md` and report it instead of hacking around it in frontend code.
 
 ---
 
-## Constraints
+## Non-negotiable frontend rules
 
-- Server Components by default; use `"use client"` only when needed.
+- Server Components by default; add `"use client"` only when hooks, event handlers, or browser APIs require it.
 - No `any`, `as`, or `!` in new work.
-- Use CSS variables for theming — no hardcoded theme colors.
-- Use `next/image` for editorial/site images.
-- Use typed route helpers for dynamic links.
-- Preserve existing visual direction; polish intentionally instead of redesigning from scratch.
-- Do not create standalone markdown walkthrough/report files unless explicitly asked.
+- Use CSS variables for theming; no hardcoded theme colors.
+- Use `next/image` for images.
+- Use typed route helpers for dynamic internal links.
+- Preserve existing visual direction; polish intentionally instead of redesigning.
+- Keep semantic HTML, keyboard support, and ARIA labels in place.
+- Test all 4 theme combinations for any changed UI.
+- Do not write fake completion notes, broad claims, or standalone markdown reports unless explicitly requested.
 
-## Quality gate
+Common failure patterns to self-check before finishing:
 
-Run from `web/`:
+- `bg-green-500`, `text-gray-700`, or similar hardcoded palette classes
+- `href="/posts/..."` or other string literal internal routes
+- unnecessary client components
+- missing loading/empty/error states on edited async views
+- dark mode fixed but lichen broken, or vice versa
+- visually hidden regressions at mobile widths
+
+---
+
+## Validation and testing expectations
+
+Run from `web/` after your changes:
 
 ```bash
 bun run lint
@@ -165,13 +200,48 @@ bunx tsc --noEmit
 bun run build
 ```
 
-All three must pass with zero errors/warnings.
+Also run:
 
-## Report back with
+```bash
+bun run test
+```
 
-- what you changed and why
-- which pages and breakpoints you checked
-- what browser QA found (specific issues, not vague claims)
-- Lighthouse performance/accessibility scores (actual numbers)
-- whether `lint`, `tsc`, and `build` all pass
-- any issues that need backend escalation
+Run `bun run test:e2e` if your changes can affect public smoke coverage and your environment supports it.
+
+If a command fails, fix the issue if it is in your frontend scope. If it is outside your scope, report it clearly.
+
+Do not claim success unless the commands you ran actually passed.
+
+---
+
+## How to report back
+
+When you finish, report in this format:
+
+1. `Files changed` — exact files and what changed in each.
+2. `Review findings` — what was wrong in the prior Gemini pass and what you corrected.
+3. `Browser QA` — exact pages, breakpoints, themes, and interactions checked.
+4. `Metrics` — actual Lighthouse/CWV/a11y results, or explicit tooling limitation.
+5. `Quality gates` — whether `lint`, `tsc`, `build`, `test`, and (if run) `test:e2e` passed.
+6. `Open issues` — anything blocked by backend, tooling limits, or manual verification.
+7. `PLAN status recommendation` — for each of 3.1, 3.2, and 3.6, say one of: `done`, `partially complete`, or `still open`, with evidence.
+
+Important:
+
+- Be specific.
+- Do not say "everything looks good".
+- Do not mark a task done without evidence.
+- If verification is incomplete, say exactly what still needs to be checked manually.
+
+---
+
+## Success standard
+
+A strong pass from you looks like this:
+
+- frontend-only issues are fixed cleanly
+- no architecture or ownership boundaries are crossed
+- no new hardcoded colors, route regressions, or type shortcuts are introduced
+- browser QA findings are concrete
+- Lighthouse/a11y claims are backed by real data, or honestly left open
+- the next reviewer can trust your report

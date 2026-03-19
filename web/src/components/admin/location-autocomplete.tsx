@@ -13,12 +13,13 @@ export function LocationAutocomplete({ defaultValue }: { defaultValue?: string }
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (containerRef.current && e.target instanceof Node && !containerRef.current.contains(e.target)) {
         setOpen(false);
       }
     }
@@ -29,6 +30,7 @@ export function LocationAutocomplete({ defaultValue }: { defaultValue?: string }
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const next = e.target.value;
     setValue(next);
+    setLookupError(null);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -46,12 +48,29 @@ export function LocationAutocomplete({ defaultValue }: { defaultValue?: string }
           headers: { "Accept-Language": "en" },
         });
         if (res.ok) {
-          const data = (await res.json()) as Suggestion[];
-          setSuggestions(data);
-          setOpen(data.length > 0);
+          const data: unknown = await res.json();
+          if (Array.isArray(data)) {
+            const suggestions = data.filter((value): value is Suggestion => (
+              value !== null &&
+              typeof value === "object" &&
+              "place_id" in value && typeof value.place_id === "number" &&
+              "display_name" in value && typeof value.display_name === "string" &&
+              "type" in value && typeof value.type === "string"
+            ));
+
+            setSuggestions(suggestions);
+            setOpen(suggestions.length > 0);
+            setLookupError(null);
+          }
+        } else {
+          setSuggestions([]);
+          setOpen(false);
+          setLookupError("Suggestions unavailable right now. You can still type a location manually.");
         }
       } catch {
-        // silently ignore — input still works without suggestions
+        setSuggestions([]);
+        setOpen(false);
+        setLookupError("Suggestions unavailable right now. You can still type a location manually.");
       } finally {
         setLoading(false);
       }
@@ -85,6 +104,12 @@ export function LocationAutocomplete({ defaultValue }: { defaultValue?: string }
         <span className="absolute right-3 top-1/2 mt-0.5 -translate-y-1/2 text-xs text-[var(--text-secondary)]">
           Searching…
         </span>
+      ) : null}
+
+      {lookupError ? (
+        <p aria-live="polite" className="mt-2 text-xs text-[var(--color-warning-text)]">
+          {lookupError}
+        </p>
       ) : null}
 
       {open && suggestions.length > 0 ? (

@@ -1,8 +1,22 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { z } from "zod";
 
 import { getCloudinaryConfig } from "@/lib/cloudinary/server";
+
+const avatarUploadResponseSchema = z.object({
+  secure_url: z.string().url(),
+});
+
+const editorialUploadResponseSchema = z.object({
+  secure_url: z.string().url(),
+  public_id: z.string(),
+  format: z.string().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  bytes: z.number().optional(),
+});
 
 export async function uploadAvatarImage(file: File) {
   const config = getCloudinaryConfig();
@@ -29,7 +43,7 @@ export async function uploadAvatarImage(file: File) {
     throw new Error(`Cloudinary upload failed: ${errorText}`);
   }
 
-  const payload = await response.json() as { secure_url: string };
+  const payload = avatarUploadResponseSchema.parse(await response.json());
   return { imageUrl: payload.secure_url };
 }
 
@@ -58,14 +72,7 @@ export async function uploadEditorialImage(file: File) {
     throw new Error(`Cloudinary upload failed: ${errorText}`);
   }
 
-  const payload = await response.json() as {
-    secure_url: string;
-    public_id: string;
-    format?: string;
-    width?: number;
-    height?: number;
-    bytes?: number;
-  };
+  const payload = editorialUploadResponseSchema.parse(await response.json());
 
   return {
     provider: "cloudinary",

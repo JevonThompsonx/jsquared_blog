@@ -114,7 +114,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const canonicalUrl = getCanonicalPostUrl(post);
 
   return (
-      <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }}>
+      <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
         <PostHead params={params} />
         <PostViewTracker postId={post.id} />
         <ScrollToContent hasFeaturedImage={Boolean(post.imageUrl)} />

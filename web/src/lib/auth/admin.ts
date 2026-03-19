@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { DefaultSession, NextAuthOptions } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 
 import { getServerEnv } from "@/lib/env";
@@ -38,19 +38,52 @@ type AdminToken = {
   avatarUrl?: string | null;
 };
 
+type GitHubProfile = {
+  id: number | null;
+  login: string | null;
+  email: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function readOptionalNumber(value: unknown): number | null {
+  return typeof value === "number" ? value : null;
+}
+
+function parseGitHubProfile(profile: unknown): GitHubProfile | null {
+  if (!isRecord(profile)) {
+    return null;
+  }
+
+  return {
+    id: readOptionalNumber(profile["id"]),
+    login: readOptionalString(profile["login"]),
+    email: readOptionalString(profile["email"]),
+    name: readOptionalString(profile["name"]),
+    avatarUrl: readOptionalString(profile["avatar_url"]),
+  };
+}
+
 export function buildAdminAuthOptions(): NextAuthOptions {
   const env = getServerEnv();
+  const githubClientId = env.AUTH_GITHUB_ID;
+  const githubClientSecret = env.AUTH_GITHUB_SECRET;
 
-  if (!hasGitHubProviderConfig()) {
+  if (!hasGitHubProviderConfig() || !githubClientId || !githubClientSecret) {
     return {
       secret: env.AUTH_SECRET,
       providers: [],
       session: { strategy: "jwt" },
     };
   }
-
-  const githubClientId = env.AUTH_GITHUB_ID!;
-  const githubClientSecret = env.AUTH_GITHUB_SECRET!;
 
   return {
     secret: env.AUTH_SECRET,
@@ -73,15 +106,9 @@ export function buildAdminAuthOptions(): NextAuthOptions {
           return false;
         }
 
-        const githubProfile = profile as {
-          id?: number;
-          login?: string;
-          email?: string | null;
-          name?: string | null;
-          avatar_url?: string | null;
-        };
+        const githubProfile = parseGitHubProfile(profile);
 
-        if (!githubProfile.id || !githubProfile.login || !canAccessAdmin({ id: githubProfile.id })) {
+        if (!githubProfile?.id || !githubProfile.login || !canAccessAdmin({ id: githubProfile.id })) {
           return false;
         }
 
@@ -90,53 +117,38 @@ export function buildAdminAuthOptions(): NextAuthOptions {
           login: githubProfile.login,
           email: githubProfile.email ?? null,
           name: githubProfile.name ?? null,
-          avatarUrl: githubProfile.avatar_url ?? null,
+          avatarUrl: githubProfile.avatarUrl ?? null,
         });
 
         return true;
       },
       async jwt({ token, account, profile }) {
-        const enrichedToken = token as typeof token & AdminToken;
-
         if (account?.provider === "github") {
-          const githubProfile = profile as {
-            id?: number;
-            login?: string;
-            avatar_url?: string | null;
-          };
+          const githubProfile = parseGitHubProfile(profile);
 
-          if (githubProfile.id) {
+          if (githubProfile?.id) {
             const adminAccount = await getAdminAccountByGitHubId(String(githubProfile.id));
             if (adminAccount) {
-              enrichedToken.userId = adminAccount.userId;
-              enrichedToken.role = adminAccount.role;
-              enrichedToken.githubLogin = githubProfile.login ?? adminAccount.login;
-              enrichedToken.avatarUrl = githubProfile.avatar_url ?? adminAccount.avatarUrl;
+              const nextToken: typeof token & AdminToken = token;
+              nextToken.userId = adminAccount.userId;
+              nextToken.role = adminAccount.role;
+              nextToken.githubLogin = githubProfile.login ?? adminAccount.login;
+              nextToken.avatarUrl = githubProfile.avatarUrl ?? adminAccount.avatarUrl;
             }
           }
         }
 
-        return enrichedToken;
+        return token;
       },
       async session({ session, token }) {
-        const enrichedToken = token as typeof token & AdminToken;
-        const enrichedSession = session as DefaultSession & {
-          user: DefaultSession["user"] & {
-            id?: string;
-            role?: "reader" | "author" | "admin";
-            githubLogin?: string;
-            avatarUrl?: string | null;
-          };
-        };
-
-        if (enrichedSession.user) {
-          enrichedSession.user.id = enrichedToken.userId;
-          enrichedSession.user.role = enrichedToken.role;
-          enrichedSession.user.githubLogin = enrichedToken.githubLogin;
-          enrichedSession.user.avatarUrl = enrichedToken.avatarUrl ?? null;
+        if (session.user) {
+          session.user.id = token.userId;
+          session.user.role = token.role;
+          session.user.githubLogin = token.githubLogin;
+          session.user.avatarUrl = token.avatarUrl ?? null;
         }
 
-        return enrichedSession;
+        return session;
       },
       async redirect({ url, baseUrl }) {
         if (url.startsWith("/")) {

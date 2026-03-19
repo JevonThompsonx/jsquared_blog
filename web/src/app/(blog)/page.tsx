@@ -70,7 +70,7 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
     const hasMatches = posts.length > 0;
 
     return (
-      <main id="main-content" style={{ background: "var(--background)" }}>
+      <main id="main-content" style={{ background: "var(--background)" }} tabIndex={-1}>
         <SiteHeader />
         <section className="container mx-auto px-4 pb-2 pt-28 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-6 shadow-[var(--shadow)] backdrop-blur-sm sm:p-8">
@@ -103,7 +103,7 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   const seasonalHero = getSeasonalHero();
 
   return (
-    <main id="main-content" style={{ background: "var(--background)" }}>
+    <main id="main-content" style={{ background: "var(--background)" }} tabIndex={-1}>
       <SiteHeader />
 
         <div className="landing-page relative overflow-hidden">
