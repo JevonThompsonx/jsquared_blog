@@ -369,7 +369,7 @@ Building worlds, systems, and experiences across every major engine.
 
 ---
 
-### Scenario 5: Paid Media Account Takeover
+### Scenario 4: Paid Media Account Takeover
 
 **Your Team**:
 
@@ -384,7 +384,7 @@ Building worlds, systems, and experiences across every major engine.
 
 ---
 
-### Scenario 4: Full Agency Product Discovery
+### Scenario 5: Full Agency Product Discovery
 
 **Your Team**: All 8 divisions working in parallel on a single mission.
 
@@ -475,7 +475,7 @@ Each agent is designed with:
 
 ## 📊 Stats
 
-- 🎭 **144 Specialized Agents** across 12 divisions
+- 🎭 **147 Specialized Agents** across 12 divisions
 - 📝 **10,000+ lines** of personality, process, and code examples
 - ⏱️ **Months of iteration** from real-world usage
 - 🌟 **Battle-tested** in production environments

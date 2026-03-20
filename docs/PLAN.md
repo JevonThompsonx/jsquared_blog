@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-19 (pass 6 — Phase 5.4 restore endpoint + Phase 5.6 EXIF backend complete; migrations 0007/0008/0009 applied to production)
+Last updated: 2026-03-20 (pass 8 — hydration mismatch fix in theme-provider; V.2 RSS + V.3 view counter confirmed)
 
 ## Model Allocation
 
@@ -20,11 +20,11 @@ Everything below is additive — the app is live and stable.
 
 ### Active Work Right Now
 
-- **Gemini 3.1 Pro** — next task is Phase 5.6 EXIF frontend: pass EXIF fields from the `uploadEditorialImage()` response into `galleryEntries` JSON on post save, then display camera/aperture/shutter/ISO/date/GPS in the lightbox detail panel.
 - PLAN `3.1`, `3.2`, `3.6` browser QA is **deferred** until a live QA/Lighthouse environment is available — estimated next week.
 - PLAN `V.9` `as`/`any` cleanup is complete — no unjustified type assertions remain in backend/shared code.
+- **Phase 5.1** PWA is **fully done** — manifest, SVG icon, service worker (`sw.js`), `ServiceWorkerRegistry` component. Reviewed and bugs fixed (operator precedence bug in registry, invalid combined sizes in manifest, removed console.log, fixed SW registration timing). Frontend EXIF lightbox display is also complete.
 - **Phase 5.4** post revision history is **fully done** — schema, migration (applied), DAL, GET list route, POST restore route, 20 unit tests.
-- **Phase 5.6** EXIF backend is **fully done** — schema (9 columns, migration applied), parser utility, upload integration, actions storage, 43 unit tests. Frontend display pending Gemini.
+- **Phase 5.6** EXIF backend and frontend are **fully done** — schema (9 columns, migration applied), parser utility, upload integration, actions storage, 43 unit tests. Lightbox detail panel displays camera/aperture/shutter/ISO/date/GPS data.
 - No other models are actively editing code.
 
 ---
@@ -129,8 +129,8 @@ Everything below is additive — the app is live and stable.
 | # | Task | Owner | Status |
 |---|------|-------|--------|
 | V.1 | Apply migrations `0007`, `0008`, `0009` via `bun run db:migrate` | Manual | **DONE** — applied 2026-03-19 |
-| V.2 | Smoke test RSS feeds in browser (`/feed.xml`, `/category/*/feed.xml`, `/tag/*/feed.xml`) | Manual | TODO |
-| V.3 | Verify post view counter increments once per session in dev | Manual | TODO |
+| V.2 | Smoke test RSS feeds in browser (`/feed.xml`, `/category/*/feed.xml`, `/tag/*/feed.xml`) | Manual | **DONE** — confirmed 2026-03-20 |
+| V.3 | Verify post view counter increments once per session in dev | Manual | **DONE** — confirmed 2026-03-20 |
 | V.4 | Validate JSON-LD on a deployed post URL via Google Rich Results Test | Manual | TODO |
 | V.5 | Run authenticated E2E suite (`bun run seed:e2e` + `bun run e2e:capture-admin-state` + `bun run test:e2e`) | Manual | PARTIAL — seed + public smoke green; admin storage state still missing |
 | V.6 | Review Gemini's 3.1/3.2/3.6 work for correctness and code quality | Opus | DEFERRED — revisit next week when live browser QA tools are available |
@@ -149,13 +149,11 @@ Lower priority. Only pursue after Phases 1–4.5 are solid.
 
 | # | Task | Notes |
 |---|------|-------|
-| 5.1 | PWA (offline reading of saved posts) | Service worker + cache strategy |
+| 5.1 | PWA (offline reading of saved posts) | Service worker + cache strategy | **DONE** — manifest (`web/src/app/manifest.ts`), SVG icon (`web/public/icon.svg`), service worker (`web/public/sw.js`, network-first HTML + stale-while-revalidate static assets), `ServiceWorkerRegistry` component (`web/src/components/pwa-registry.tsx`) injected via layout. Reviewed + bugs fixed (operator precedence, manifest sizes, console.log, SW registration timing). |
 | 5.2 | i18n (multilingual support) | next-intl or similar |
 | 5.3 | Webmentions / IndieWeb | Backfeed from other blogs |
 | 5.4 | Post revision history | Backend DONE + wired — schema (`post_revisions`), migration `0008` (applied to prod), DAL (`post-revisions.ts`), API routes (`GET /api/admin/posts/[postId]/revisions`, `POST .../restore`), 20 unit tests, revision capture on every post save (pre-update snapshot), restore creates pre-restore undo-point. ADR at `docs/decisions/0001-post-revision-history.md`. Frontend diff viewer UI DONE (Added simple viewer modal in editor form to list, inspect, and restore previous JSON snapshots). |
-| 5.5 | Removed - Not needed for this site|
-| 5.6 | Photo EXIF metadata display | Backend DONE — 9 EXIF columns on `media_assets`, migration `0009` (applied to prod), parser utility (`web/src/lib/cloudinary/exif.ts`), upload integration (`image_metadata=1`), actions stores EXIF on gallery inserts, 43 unit tests. Frontend display DONE — Lightbox detail panel now extracts and surfaces EXIF data inline when navigating photos. Backend DAL also updated to surface EXIF metadata. |
-
+| 5.5 | Photo EXIF metadata display | Backend DONE — 9 EXIF columns on `media_assets`, migration `0009` (applied to prod), parser utility (`web/src/lib/cloudinary/exif.ts`), upload integration (`image_metadata=1`), actions stores EXIF on gallery inserts, 43 unit tests. Frontend display DONE — Lightbox detail panel now extracts and surfaces EXIF data inline when navigating photos. Backend DAL also updated to surface EXIF metadata. |
 ---
 
 ## Cross-Cutting Quality Standards

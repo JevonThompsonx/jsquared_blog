@@ -80,8 +80,8 @@ references:
   - https://attack.mitre.org/techniques/T1059/001/
   - https://attack.mitre.org/techniques/T1027/010/
 author: Detection Engineering Team
-date: 2025/03/15
-modified: 2025/06/20
+date: 2026/03/15
+modified: 2026/03/20
 tags:
   - attack.execution
   - attack.t1059.001
@@ -328,7 +328,9 @@ jobs:
       - name: Deploy to Splunk
         run: |
           # Push compiled rules via Splunk REST API
-          curl -k -u "${{ secrets.SPLUNK_USER }}:${{ secrets.SPLUNK_PASS }}" \
+          # --cacert: provide your Splunk CA certificate to verify TLS — never use -k (insecure)
+          curl --cacert /etc/ssl/certs/splunk-ca.crt \
+            -u "${{ secrets.SPLUNK_USER }}:${{ secrets.SPLUNK_PASS }}" \
             https://${{ secrets.SPLUNK_HOST }}:8089/servicesNS/admin/search/saved/searches \
             -d @compiled/splunk/rules.conf
 
@@ -423,21 +425,21 @@ performance:
   true_positive_rate: 0.78
   false_positive_rate: 0.22
   mean_time_to_triage: "4m"
-  last_true_positive: "2025-05-12"
-  last_validated: "2025-06-01"
+  last_true_positive: "2026-01-15"
+  last_validated: "2026-03-01"
   validation_method: "atomic_red_team"
 
 allowlist:
   - pattern: "SCCM\\\\.*powershell.exe.*-enc"
     reason: "SCCM software deployment uses encoded commands"
-    added: "2025-03-20"
-    reviewed: "2025-06-01"
+    added: "2026-03-15"
+    reviewed: "2026-03-15"
 
 lifecycle:
-  created: "2025-03-15"
+  created: "2026-03-15"
   author: "detection-engineering-team"
-  last_modified: "2025-06-20"
-  review_due: "2025-09-15"
+  last_modified: "2026-03-20"
+  review_due: "2026-09-15"
   review_cadence: quarterly
 ```
 

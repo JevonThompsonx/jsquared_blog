@@ -15,13 +15,13 @@ Read first, in this order:
 
 ---
 
-## Verified baseline snapshot (2026-03-19)
+## Verified baseline snapshot (2026-03-19 pass 7)
 
 Treat this as the verified baseline before your session:
 
 - `bun run lint` — pass
 - `bunx tsc --noEmit` — pass
-- `bun run test` — pass (107 tests)
+- `bun run test` — pass (170 tests)
 - `bun run build` — pass
 - `bun run test:e2e` — 12 passed, 7 skipped (authenticated admin scenarios require storage state capture)
 
@@ -37,7 +37,9 @@ Treat this as the verified baseline before your session:
 - [x] First-pass search highlight/debounce work already exists in `home-post-card.tsx` and surrounding feed components.
 - [x] Backend newsletter API at `POST /api/newsletter` is complete — do not rebuild the backend contract in frontend code.
 - [x] PLAN 4.6 Newsletter Signup UI — Created `NewsletterSignupForm` and integrated into the homepage bottom.
-- [x] **Agent opencode has read the docs and marked this prompt as DONE.**
+- [x] **PLAN 5.1 PWA** — `web/src/app/manifest.ts`, `web/public/icon.svg`, `web/public/sw.js` (network-first HTML, stale-while-revalidate static assets), `web/src/components/pwa-registry.tsx` injected via `layout.tsx`. Reviewed and bugs fixed by Sonnet (operator precedence in registry condition, invalid manifest icon sizes, `console.log` removed, SW registration timing fixed).
+- [x] **PLAN 5.6 EXIF display** — Lightbox detail panel in `web/src/components/blog/post-gallery.tsx` now displays camera/aperture/shutter/ISO/date/GPS from EXIF data. EXIF fields passed from upload response → `galleryEntries` JSON → lightbox.
+- [x] **Agent opencode has read the docs and marked this prompt as DONE (pass 7).**
 
 ---
 
@@ -58,5 +60,5 @@ None of these are possible in the current tooling context. They are explicitly s
 
 Please consult `docs/PLAN.md` for the next available tasks for Gemini (Frontend Engineer).
 Current frontend tasks pending:
-- Phase 5.6 EXIF frontend: pass EXIF fields from the `uploadEditorialImage()` response into `galleryEntries` JSON on post save, then display camera/aperture/shutter/ISO/date/GPS in the lightbox detail panel.
-- Phase 5.4 post revision history diff viewer UI.
+- **PLAN 3.1 / 3.2 / 3.6** (CWV, WCAG AA, Search interactive QA) — deferred to next week; requires interactive browser + Lighthouse environment. **Do not attempt without the live tooling.**
+- No other frontend feature tasks remain in Phases 1–5. Remaining stretch goals (5.2 i18n, 5.3 Webmentions) are unscoped.
