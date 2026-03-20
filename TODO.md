@@ -21,21 +21,21 @@
 
 ## What Needs Attention Now
 
-### Gemini's Current Work — Awaiting Review
+### Gemini's Completed Work
 
-Gemini 3 Flash is in progress on PLAN 3.1, 3.2, and 3.6. **All output from this pass needs to be checked for validity and code quality before being treated as done.**
+Gemini 3.1 Pro completed its last session with the following outcomes:
 
-Latest review pass notes:
+- **DONE**: `web/src/components/blog/home-post-card.tsx` — replaced `placehold.co` SVG fallback with a `.png` fallback, resolving the `dangerouslyAllowSVG` Next.js dev warning.
+- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (107 tests), `bun run test:e2e` (12 passed, 7 skipped) all pass.
+- **DEFERRED** (next week): PLAN 3.1 (CWV), 3.2 (WCAG), 3.6 (Search interactive QA) — blocked by lack of an interactive browser / Lighthouse environment. Code improvements from prior passes are shipped; measurement-backed evidence is not yet available.
 
-- Fixed regression in `web/src/components/blog/comments.tsx` where delete UX had fallen back to native confirmation; restored inline confirmation pattern.
-- Replaced hardcoded error color classes in comments flow with theme-token-based status styling.
-- Corrected account loading landmark structure to avoid duplicate `main#main-content` conflicts during loading.
+### Next Gemini Task (Assigned)
 
-| Task | What Gemini Is Doing | Review Status |
-|------|---------------------|---------------|
-| PLAN 3.1 | Core Web Vitals audit + fixes | **Awaiting review** |
-| PLAN 3.2 | WCAG AA accessibility audit + fixes | **Awaiting review** |
-| PLAN 3.6 | Search UX improvements | **Awaiting review** |
+Gemini's next session is the **PLAN 4.6 newsletter signup form UI**. The backend is complete and production-ready. See `docs/frontendPrompt.md` for the full brief.
+
+| Task | Owner | Scope for next pass |
+|------|-------|---------------------|
+| PLAN 4.6 — Newsletter signup form | Gemini / Frontend | Implement a lightweight newsletter signup form component using the existing `POST /api/newsletter` backend contract. Keep it visually consistent with the current design system. |
 
 ### Verification Tasks (Manual / Operational)
 
@@ -47,6 +47,7 @@ These are "done in code" but need manual steps to be truly complete:
 | RSS feed smoke test | Visit `/feed.xml`, `/category/*/feed.xml`, `/tag/*/feed.xml` in browser | Closing PLAN 4.3 |
 | View counter verification | Check that views increment once per session in dev | Closing PLAN 4.7 |
 | JSON-LD validation | Run a deployed post URL through Google Rich Results Test | Closing PLAN 4.4 |
+| Comment notification smoke test | Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL`, then post a real dev comment/reply | Closing PLAN 4.2 |
 | Authenticated E2E suite | Run `bun run seed:e2e` + `bun run e2e:capture-admin-state` + `bun run test:e2e` | Full E2E coverage |
 | Supabase email confirmation | Enable "require email confirmation" in Supabase dashboard | Known security issue |
 | Decommission CF Worker | Delete legacy worker in Cloudflare dashboard | Cleanup |
@@ -55,10 +56,17 @@ These are "done in code" but need manual steps to be truly complete:
 
 | Task | Owner | Notes |
 |------|-------|-------|
-| PLAN 4.2 — Email notification on new comment | Sonnet | Needs Resend integration; depends on custom SMTP (1.8) |
-| PLAN 4.6 — Newsletter signup | Sonnet + Gemini | Needs Resend + form; lower priority |
+| PLAN 3.1 / 3.2 / 3.6 — Live QA pass | Gemini | Deferred to next week; requires interactive browser + Lighthouse environment |
 | PLAN 1.8 — Custom SMTP for Supabase | Manual | Not blocking; shared email works fine |
-| PLAN V.9 — Remaining `as` assertion cleanup | GPT-5.4 | Older files outside latest cleanup pass |
+
+Latest session notes (2026-03-19):
+
+- Gemini 3.1 Pro completed `home-post-card.tsx` SVG fallback fix (was `placehold.co/*.svg`, now `placehold.co/*.png`).
+- All quality gates pass: 107 unit tests, 12 E2E passed (7 skipped), lint, tsc, build all clean.
+- PLAN 3.1 / 3.2 / 3.6 deferred to next week — code improvements from prior sessions are in place; Lighthouse/CWV measurement and full interactive browser QA matrix require a live environment that is not available in the current tooling context.
+- PLAN V.9 (`as`/`any` cleanup) is complete: no unjustified type assertions remain in backend/shared code. Only legitimate `as const` for GeoJSON discrimination in `world-map.tsx` remains.
+- PLAN 4.6 backend is fully shipped. Gemini's next task is the frontend newsletter signup form component.
+- The next frontend brief is in `docs/frontendPrompt.md`. The next backend brief is in `docs/backendPrompt.md`.
 
 ---
 
@@ -74,7 +82,7 @@ These are "done in code" but need manual steps to be truly complete:
 - [x] Zod validation at all API trust boundaries
 - [x] server-only imports in all DAL files
 - [x] Required env var validation with Zod at startup
-- [x] Vitest unit test suite (93 tests passing)
+- [x] Vitest unit test suite (99 tests passing)
 - [x] Playwright E2E smoke suite (public + env-gated admin)
 - [x] CI pipeline (GitHub Actions: lint, type-check, test, build)
 - [x] Rate limiting via Upstash Redis with in-memory fallback
@@ -186,6 +194,7 @@ These are "done in code" but need manual steps to be truly complete:
 - [x] Delete own comment
 - [x] Nested replies (one level deep)
 - [x] Admin moderation (hide, unhide, delete, flag, unflag)
+- [x] Non-blocking email notification on new comment/reply (Resend, env-gated)
 
 </details>
 

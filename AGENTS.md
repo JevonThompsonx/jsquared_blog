@@ -10,13 +10,10 @@ J²Adventures is a travel blog at jsquaredadventures.com. The active codebase is
 
 ## Model Roles
 
-### Claude Opus 4.6 — Architect & PM (Claude Code)
-**Owns**: Planning, architecture decisions, test strategy, AGENTS.md, CLAUDE.md, PLAN.md
+### Claude Sonnet 4.6 — Architect, PM, and Backend Engineer (Claude Code / OpenCode)
+**Owns**: Planning, architecture decisions, test strategy, AGENTS.md, CLAUDE.md, PLAN.md, server-side TypeScript — API routes, server actions, DAL, queries, schemas, migrations
 **Creates**: ADRs, test plans, CI config, schema designs, migration plans
 **Reviews**: All cross-cutting changes before merge
-
-### Claude Sonnet 4.6 — Backend Engineer (Claude Code)
-**Owns**: Server-side TypeScript — API routes, server actions, DAL, queries, schemas, migrations
 **Key directories**: `web/src/server/`, `web/src/app/api/`, `web/src/lib/`, `web/src/drizzle/`
 **Rules**:
 - Every DAL file starts with `import "server-only"`
@@ -25,7 +22,7 @@ J²Adventures is a travel blog at jsquaredadventures.com. The active codebase is
 - No `any`, `as`, or `!` — strict TypeScript
 - Turso migration files use `--> statement-breakpoint` delimiter (not semicolons)
 
-### Gemini 3 Flash — Frontend Engineer (Windsurf Cascade)
+### Gemini 3.1 Pro — Frontend Engineer (Windsurf Cascade)
 **Owns**: UI components, styling, client-side interactivity, loading states
 **Key directories**: `web/src/components/`, `web/src/app/**/page.tsx`, `web/src/app/**/loading.tsx`, `web/src/app/globals.css`
 **Rules**:
@@ -175,12 +172,12 @@ When a problem crosses the frontend/backend boundary:
 | `docs/decisions/` | Architecture Decision Records (`NNNN-<title>.md`) | Opus |
 | `docs/context/` | Task checklists and escalation docs | All models |
 
-## Current Status (2026-03-17)
+## Current Status (2026-03-19)
 
 - **Phases 1-2**: Complete.
-- **Phase 3**: 12/14 done. Gemini is working on 3.1 (CWV), 3.2 (WCAG), 3.6 (search). **Awaiting review.**
-- **Phase 4**: 6/8 done. 4.2 (email notifications) and 4.6 (newsletter) not started.
-- **Phase 4.5**: New verification phase added — see `docs/PLAN.md`.
+- **Phase 3**: 12/14 done. PLAN 3.1 (CWV), 3.2 (WCAG), 3.6 (Search) are **DEFERRED** — code improvements shipped; Lighthouse/browser QA requires a live environment (scheduled next week).
+- **Phase 4**: 7/8 done. PLAN 4.6 (newsletter) backend is complete; Gemini is building the frontend signup form UI now.
+- **Phase 4.5**: V.9 type cleanup is DONE. V.1/V.2/V.3/V.4/V.7/V.10 remain manual-only tasks.
 - Migration `0007_post_view_count.sql` exists but has **not been applied to production**.
 
 ## Reference Links

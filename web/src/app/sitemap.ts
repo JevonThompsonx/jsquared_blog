@@ -5,6 +5,12 @@ import { listPublishedPosts } from "@/server/queries/posts";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await listPublishedPosts(100);
+  const postEntries: MetadataRoute.Sitemap = posts.map((post) => ({
+    url: getCanonicalPostUrl(post),
+    lastModified: new Date(post.createdAt),
+    changeFrequency: "weekly",
+    priority: 0.8,
+  }));
 
   return [
     {
@@ -13,11 +19,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
-    ...posts.map((post) => ({
-      url: getCanonicalPostUrl(post),
-      lastModified: new Date(post.createdAt),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    })),
+    ...postEntries,
   ];
 }

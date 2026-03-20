@@ -45,6 +45,19 @@ export type UserCommentSummary = {
   post: { id: string; title: string; slug: string };
 };
 
+export type CommentNotificationRecord = {
+  id: string;
+  content: string;
+  parentId: string | null;
+  createdAt: Date;
+  authorDisplayName: string;
+  post: {
+    id: string;
+    title: string;
+    slug: string;
+  };
+};
+
 export type CommentModerationItemResult = {
   commentId: string;
   postId: string;
@@ -311,12 +324,13 @@ export async function createCommentRecord(
   authorId: string,
   content: string,
   parentId: string | null = null,
-): Promise<void> {
+): Promise<CommentNotificationRecord> {
   const db = getDb();
   const timestamp = new Date();
+  const commentId = crypto.randomUUID();
 
   await db.insert(comments).values({
-    id: crypto.randomUUID(),
+    id: commentId,
     postId,
     authorId,
     content,
@@ -328,6 +342,41 @@ export async function createCommentRecord(
     createdAt: timestamp,
     updatedAt: timestamp,
   });
+
+  const rows = await db
+    .select({
+      id: comments.id,
+      content: comments.content,
+      parentId: comments.parentId,
+      createdAt: comments.createdAt,
+      authorDisplayName: profiles.displayName,
+      postId: posts.id,
+      postTitle: posts.title,
+      postSlug: posts.slug,
+    })
+    .from(comments)
+    .innerJoin(posts, eq(posts.id, comments.postId))
+    .leftJoin(profiles, eq(profiles.userId, comments.authorId))
+    .where(eq(comments.id, commentId))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) {
+    throw new Error("Failed to load created comment record");
+  }
+
+  return {
+    id: row.id,
+    content: row.content,
+    parentId: row.parentId,
+    createdAt: row.createdAt,
+    authorDisplayName: row.authorDisplayName ?? "Traveler",
+    post: {
+      id: row.postId,
+      title: row.postTitle,
+      slug: row.postSlug,
+    },
+  };
 }
 
 export async function deleteCommentRecord(commentId: string, authorId: string): Promise<boolean> {

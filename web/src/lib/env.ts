@@ -28,6 +28,10 @@ const serverEnvSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().min(1, "required"),
   SUPABASE_URL: z.string().url("must be a valid URL"),
   SUPABASE_ANON_KEY: z.string().min(1, "required"),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
+  COMMENT_NOTIFICATION_TO_EMAIL: z.string().email().optional(),
+  RESEND_NEWSLETTER_SEGMENT_ID: z.string().min(1).optional(),
 });
 
 // NEXT_PUBLIC_ vars are embedded at build time, so they can't be validated

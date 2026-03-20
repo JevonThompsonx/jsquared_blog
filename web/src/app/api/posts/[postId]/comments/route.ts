@@ -5,6 +5,7 @@ import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
 import { canCommentOnPost, canReplyToComment, createCommentRecord, listCommentsForPost } from "@/server/dal/comments";
 import { createCommentSchema, commentSortSchema, postCommentsParamsSchema } from "@/server/forms/comments";
+import { sendCommentNotification } from "@/server/services/comment-notifications";
 
 export async function GET(request: Request, context: { params: Promise<{ postId: string }> }): Promise<NextResponse> {
   const paramsParse = postCommentsParamsSchema.safeParse(await context.params);
@@ -66,7 +67,8 @@ export async function POST(request: Request, context: { params: Promise<{ postId
   }
 
   const publicUser = await ensurePublicAppUser(supabaseUser);
-  await createCommentRecord(postId, publicUser.id, parse.data.content, parse.data.parentId ?? null);
+  const comment = await createCommentRecord(postId, publicUser.id, parse.data.content, parse.data.parentId ?? null);
+  await sendCommentNotification(comment);
   const comments = await listCommentsForPost(postId, publicUser.id, "newest");
   return NextResponse.json({ comments }, { status: 201 });
 }

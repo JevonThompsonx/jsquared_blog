@@ -1,0 +1,135 @@
+import type { User } from "@supabase/supabase-js";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { NextResponse } from "next/server";
+
+vi.mock("@/lib/supabase/server", () => ({
+  getRequestSupabaseUser: vi.fn(),
+}));
+
+vi.mock("@/server/auth/public-users", () => ({
+  ensurePublicAppUser: vi.fn(),
+  getPublicAppUserBySupabaseId: vi.fn(),
+}));
+
+vi.mock("@/server/dal/comments", () => ({
+  canCommentOnPost: vi.fn(),
+  canReplyToComment: vi.fn(),
+  createCommentRecord: vi.fn(),
+  listCommentsForPost: vi.fn(),
+}));
+
+vi.mock("@/server/services/comment-notifications", () => ({
+  sendCommentNotification: vi.fn(),
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+}));
+
+import { POST } from "@/app/api/posts/[postId]/comments/route";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getRequestSupabaseUser } from "@/lib/supabase/server";
+import { ensurePublicAppUser } from "@/server/auth/public-users";
+import { canCommentOnPost, canReplyToComment, createCommentRecord, listCommentsForPost } from "@/server/dal/comments";
+import { sendCommentNotification } from "@/server/services/comment-notifications";
+
+function makeSupabaseUser(id = "supabase-user-1"): User {
+  return {
+    id,
+    app_metadata: {},
+    user_metadata: {},
+    aud: "authenticated",
+    created_at: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+describe("POST /api/posts/[postId]/comments", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns success and sends notifications for top-level comments", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(createCommentRecord).mockResolvedValue({
+      id: "comment-1",
+      content: "Looks great",
+      parentId: null,
+      createdAt: new Date("2026-03-19T12:00:00.000Z"),
+      authorDisplayName: "Reader",
+      post: {
+        id: "post-1",
+        title: "Patagonia Notes",
+        slug: "patagonia-notes",
+      },
+    });
+    vi.mocked(sendCommentNotification).mockResolvedValue({ status: "sent" });
+    vi.mocked(listCommentsForPost).mockResolvedValue([]);
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Looks great" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(201);
+    expect(vi.mocked(createCommentRecord)).toHaveBeenCalledWith("post-1", "public-user-1", "Looks great", null);
+    expect(vi.mocked(sendCommentNotification)).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns success when notification delivery fails after comment persistence", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(createCommentRecord).mockResolvedValue({
+      id: "comment-1",
+      content: "Replying here",
+      parentId: "comment-root-1",
+      createdAt: new Date("2026-03-19T12:00:00.000Z"),
+      authorDisplayName: "Reader",
+      post: {
+        id: "post-1",
+        title: "Patagonia Notes",
+        slug: "patagonia-notes",
+      },
+    });
+    vi.mocked(canReplyToComment).mockResolvedValue(true);
+    vi.mocked(sendCommentNotification).mockResolvedValue({ status: "failed", reason: "send-error" });
+    vi.mocked(listCommentsForPost).mockResolvedValue([]);
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Replying here", parentId: "comment-root-1" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(201);
+    expect(vi.mocked(canReplyToComment)).toHaveBeenCalledWith("post-1", "comment-root-1");
+    expect(vi.mocked(sendCommentNotification)).toHaveBeenCalledTimes(1);
+    expect(await response.json()).toEqual({ comments: [] });
+  });
+});

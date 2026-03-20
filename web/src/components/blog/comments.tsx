@@ -11,6 +11,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CommentSortOption = "likes" | "newest" | "oldest";
+const COMMENT_SORT_OPTIONS: readonly CommentSortOption[] = ["likes", "newest", "oldest"];
 
 type PostComment = {
   id: string;
@@ -423,7 +424,7 @@ export function Comments({ postId }: { postId: string }) {
           Comments ({totalCount})
         </h2>
         <div className="flex flex-wrap gap-2">
-          {(["likes", "newest", "oldest"] as const).map((option) => (
+          {COMMENT_SORT_OPTIONS.map((option) => (
             <button
               key={option}
               className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${

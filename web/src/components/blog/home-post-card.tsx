@@ -59,7 +59,7 @@ export function HomePostCard({
   priority?: boolean;
   searchTerm?: string; 
 }) {
-  const image = post.imageUrl || "https://placehold.co/600x400/EEE/31343C?text=Image+Not+Found";
+  const image = post.imageUrl || "https://placehold.co/600x400/EEE/31343C.png?text=Image+Not+Found";
   const category = post.category || "General";
   const description = htmlToPlainText(post.description || post.excerpt || "");
   const overlayDescription = description.length > 132 ? `${description.slice(0, 129).trimEnd()}...` : description;
