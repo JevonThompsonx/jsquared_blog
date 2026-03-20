@@ -13,6 +13,7 @@ import { PostMediaManager } from "@/components/admin/post-media-manager";
 import { PostRichTextEditor } from "@/components/admin/post-rich-text-editor";
 import { SeriesSelector } from "@/components/admin/series-selector";
 import { TagMultiSelect } from "@/components/admin/tag-multi-select";
+import { RevisionHistory } from "@/components/admin/revision-history";
 
 type AdminTag = { id: string; name: string; slug: string };
 
@@ -94,6 +95,15 @@ export function PostEditorForm({
       altText: image.altText ?? "",
       focalX: image.focalX ?? 50,
       focalY: image.focalY ?? 50,
+      exifTakenAt: image.exifTakenAt ? new Date(image.exifTakenAt).getTime() : null,
+      exifLat: image.exifLat,
+      exifLng: image.exifLng,
+      exifCameraMake: image.exifCameraMake,
+      exifCameraModel: image.exifCameraModel,
+      exifLensModel: image.exifLensModel,
+      exifAperture: image.exifAperture,
+      exifShutterSpeed: image.exifShutterSpeed,
+      exifIso: image.exifIso,
     })) ?? [],
   );
 
@@ -154,6 +164,7 @@ export function PostEditorForm({
                   Clone draft
                 </button>
               )}
+              {post.id && mode === "edit" ? <RevisionHistory postId={post.id} /> : null}
               {post.status !== "published" ? (
                 <button
                   type="button"

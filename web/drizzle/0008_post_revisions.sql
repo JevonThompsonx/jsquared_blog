@@ -15,4 +15,3 @@ CREATE TABLE `post_revisions` (
 CREATE INDEX `post_revisions_post_id_revision_num_idx` ON `post_revisions` (`post_id`,`revision_num`);
 --> statement-breakpoint
 CREATE INDEX `post_revisions_post_id_saved_at_idx` ON `post_revisions` (`post_id`,`saved_at`);
---> statement-breakpoint

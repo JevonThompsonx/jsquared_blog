@@ -53,7 +53,23 @@ export type AdminEditablePostRecord = AdminPostRecord & {
   locationZoom: number | null;
   iovanderUrl: string | null;
   tags: Array<{ id: string; name: string; slug: string }>;
-  galleryImages: Array<{ id: string; imageUrl: string; altText: string | null; sortOrder: number; focalX: number | null; focalY: number | null }>;
+  galleryImages: Array<{
+    id: string;
+    imageUrl: string;
+    altText: string | null;
+    sortOrder: number;
+    focalX: number | null;
+    focalY: number | null;
+    exifTakenAt: Date | null;
+    exifLat: number | null;
+    exifLng: number | null;
+    exifCameraMake: string | null;
+    exifCameraModel: string | null;
+    exifLensModel: string | null;
+    exifAperture: number | null;
+    exifShutterSpeed: string | null;
+    exifIso: number | null;
+  }>;
 };
 
 export type AdminCategoryRecord = {
@@ -252,7 +268,23 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       .innerJoin(tags, eq(postTags.tagId, tags.id))
       .where(eq(postTags.postId, postId)),
     db
-      .select({ id: postImages.id, imageUrl: mediaAssets.secureUrl, altText: mediaAssets.altText, sortOrder: postImages.sortOrder, focalX: postImages.focalX, focalY: postImages.focalY })
+      .select({
+        id: postImages.id,
+        imageUrl: mediaAssets.secureUrl,
+        altText: mediaAssets.altText,
+        sortOrder: postImages.sortOrder,
+        focalX: postImages.focalX,
+        focalY: postImages.focalY,
+        exifTakenAt: mediaAssets.exifTakenAt,
+        exifLat: mediaAssets.exifLat,
+        exifLng: mediaAssets.exifLng,
+        exifCameraMake: mediaAssets.exifCameraMake,
+        exifCameraModel: mediaAssets.exifCameraModel,
+        exifLensModel: mediaAssets.exifLensModel,
+        exifAperture: mediaAssets.exifAperture,
+        exifShutterSpeed: mediaAssets.exifShutterSpeed,
+        exifIso: mediaAssets.exifIso,
+      })
       .from(postImages)
       .innerJoin(mediaAssets, eq(postImages.mediaAssetId, mediaAssets.id))
       .where(eq(postImages.postId, postId))

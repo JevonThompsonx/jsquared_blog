@@ -9,6 +9,15 @@ type GalleryEntry = {
   altText: string;
   focalX: number;
   focalY: number;
+  exifTakenAt?: number | null;
+  exifLat?: number | null;
+  exifLng?: number | null;
+  exifCameraMake?: string | null;
+  exifCameraModel?: string | null;
+  exifLensModel?: string | null;
+  exifAperture?: number | null;
+  exifShutterSpeed?: string | null;
+  exifIso?: number | null;
 };
 
 type ParsedGalleryEntry = {
@@ -16,11 +25,33 @@ type ParsedGalleryEntry = {
   altText?: string;
   focalX?: number;
   focalY?: number;
+  exifTakenAt?: number | null;
+  exifLat?: number | null;
+  exifLng?: number | null;
+  exifCameraMake?: string | null;
+  exifCameraModel?: string | null;
+  exifLensModel?: string | null;
+  exifAperture?: number | null;
+  exifShutterSpeed?: string | null;
+  exifIso?: number | null;
+};
+
+type ExifPayload = {
+  takenAt: string | null; // serialized as ISO string from server
+  lat: number | null;
+  lng: number | null;
+  cameraMake: string | null;
+  cameraModel: string | null;
+  lensModel: string | null;
+  aperture: number | null;
+  shutterSpeed: string | null;
+  iso: number | null;
 };
 
 type UploadPayload = {
   imageUrl?: string;
   error?: string;
+  exif?: ExifPayload;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -37,6 +68,15 @@ function parseGalleryEntry(value: unknown): ParsedGalleryEntry | null {
     altText: typeof value.altText === "string" ? value.altText : undefined,
     focalX: typeof value.focalX === "number" ? value.focalX : undefined,
     focalY: typeof value.focalY === "number" ? value.focalY : undefined,
+    exifTakenAt: typeof value.exifTakenAt === "number" ? value.exifTakenAt : null,
+    exifLat: typeof value.exifLat === "number" ? value.exifLat : null,
+    exifLng: typeof value.exifLng === "number" ? value.exifLng : null,
+    exifCameraMake: typeof value.exifCameraMake === "string" ? value.exifCameraMake : null,
+    exifCameraModel: typeof value.exifCameraModel === "string" ? value.exifCameraModel : null,
+    exifLensModel: typeof value.exifLensModel === "string" ? value.exifLensModel : null,
+    exifAperture: typeof value.exifAperture === "number" ? value.exifAperture : null,
+    exifShutterSpeed: typeof value.exifShutterSpeed === "string" ? value.exifShutterSpeed : null,
+    exifIso: typeof value.exifIso === "number" ? value.exifIso : null,
   };
 }
 
@@ -45,9 +85,25 @@ function parseUploadPayload(value: unknown): UploadPayload {
     return {};
   }
 
+  let exif: ExifPayload | undefined = undefined;
+  if (isRecord(value.exif)) {
+    exif = {
+      takenAt: typeof value.exif.takenAt === "string" ? value.exif.takenAt : null,
+      lat: typeof value.exif.lat === "number" ? value.exif.lat : null,
+      lng: typeof value.exif.lng === "number" ? value.exif.lng : null,
+      cameraMake: typeof value.exif.cameraMake === "string" ? value.exif.cameraMake : null,
+      cameraModel: typeof value.exif.cameraModel === "string" ? value.exif.cameraModel : null,
+      lensModel: typeof value.exif.lensModel === "string" ? value.exif.lensModel : null,
+      aperture: typeof value.exif.aperture === "number" ? value.exif.aperture : null,
+      shutterSpeed: typeof value.exif.shutterSpeed === "string" ? value.exif.shutterSpeed : null,
+      iso: typeof value.exif.iso === "number" ? value.exif.iso : null,
+    };
+  }
+
   return {
     imageUrl: typeof value.imageUrl === "string" ? value.imageUrl : undefined,
     error: typeof value.error === "string" ? value.error : undefined,
+    exif,
   };
 }
 
@@ -81,6 +137,15 @@ function parseGalleryEntries(value: string): GalleryEntry[] {
         altText: entry.altText ?? "",
         focalX: typeof entry.focalX === "number" ? entry.focalX : 50,
         focalY: typeof entry.focalY === "number" ? entry.focalY : 50,
+        exifTakenAt: entry.exifTakenAt,
+        exifLat: entry.exifLat,
+        exifLng: entry.exifLng,
+        exifCameraMake: entry.exifCameraMake,
+        exifCameraModel: entry.exifCameraModel,
+        exifLensModel: entry.exifLensModel,
+        exifAperture: entry.exifAperture,
+        exifShutterSpeed: entry.exifShutterSpeed,
+        exifIso: entry.exifIso,
       }));
   } catch {
     return [];
@@ -188,6 +253,15 @@ export function PostMediaManager({
               altText: "",
               focalX: 50,
               focalY: 50,
+              exifTakenAt: payload.exif?.takenAt ? new Date(payload.exif.takenAt).getTime() : null,
+              exifLat: payload.exif?.lat ?? null,
+              exifLng: payload.exif?.lng ?? null,
+              exifCameraMake: payload.exif?.cameraMake ?? null,
+              exifCameraModel: payload.exif?.cameraModel ?? null,
+              exifLensModel: payload.exif?.lensModel ?? null,
+              exifAperture: payload.exif?.aperture ?? null,
+              exifShutterSpeed: payload.exif?.shutterSpeed ?? null,
+              exifIso: payload.exif?.iso ?? null,
             },
           ]);
         }

@@ -9,6 +9,15 @@ export type BlogImage = {
   imageUrl: string;
   altText: string | null;
   sortOrder: number;
+  exifTakenAt?: Date | null;
+  exifLat?: number | null;
+  exifLng?: number | null;
+  exifCameraMake?: string | null;
+  exifCameraModel?: string | null;
+  exifLensModel?: string | null;
+  exifAperture?: number | null;
+  exifShutterSpeed?: string | null;
+  exifIso?: number | null;
 };
 
 export type BlogPost = {

@@ -15,4 +15,3 @@ ALTER TABLE `media_assets` ADD COLUMN `exif_aperture` real;
 ALTER TABLE `media_assets` ADD COLUMN `exif_shutter_speed` text;
 --> statement-breakpoint
 ALTER TABLE `media_assets` ADD COLUMN `exif_iso` integer;
---> statement-breakpoint

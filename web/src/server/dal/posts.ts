@@ -69,6 +69,15 @@ export type PublishedPostImageRecord = {
   imageUrl: string;
   altText: string | null;
   sortOrder: number;
+  exifTakenAt?: Date | null;
+  exifLat?: number | null;
+  exifLng?: number | null;
+  exifCameraMake?: string | null;
+  exifCameraModel?: string | null;
+  exifLensModel?: string | null;
+  exifAperture?: number | null;
+  exifShutterSpeed?: string | null;
+  exifIso?: number | null;
 };
 
 export async function listPublishedPostRecords(limit: number, offset = 0): Promise<PublishedPostRecord[]> {
@@ -542,6 +551,15 @@ export async function listImagesForPost(postId: string): Promise<PublishedPostIm
       imageUrl: mediaAssets.secureUrl,
       altText: mediaAssets.altText,
       sortOrder: postImages.sortOrder,
+      exifTakenAt: mediaAssets.exifTakenAt,
+      exifLat: mediaAssets.exifLat,
+      exifLng: mediaAssets.exifLng,
+      exifCameraMake: mediaAssets.exifCameraMake,
+      exifCameraModel: mediaAssets.exifCameraModel,
+      exifLensModel: mediaAssets.exifLensModel,
+      exifAperture: mediaAssets.exifAperture,
+      exifShutterSpeed: mediaAssets.exifShutterSpeed,
+      exifIso: mediaAssets.exifIso,
     })
     .from(postImages)
     .innerJoin(mediaAssets, eq(postImages.mediaAssetId, mediaAssets.id))

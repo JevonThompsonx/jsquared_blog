@@ -3,6 +3,7 @@ import { Lora } from "next/font/google";
 import Script from "next/script";
 
 import { AppProviders } from "@/components/providers/app-providers";
+import { ServiceWorkerRegistry } from "@/components/pwa-registry";
 
 import "./globals.css";
 
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           Skip to main content
         </a>
         <AppProviders>{children}</AppProviders>
+        <ServiceWorkerRegistry />
         {process.env.NODE_ENV === "production" ? (
           <Script
             data-domain="jsquaredadventures.com"

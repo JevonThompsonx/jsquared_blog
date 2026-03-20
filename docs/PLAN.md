@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-19 (Gemini 3.1 Pro image fallback fix confirmed; 3.1/3.2/3.6 deferred pending live QA tooling)
+Last updated: 2026-03-19 (pass 6 — Phase 5.4 restore endpoint + Phase 5.6 EXIF backend complete; migrations 0007/0008/0009 applied to production)
 
 ## Model Allocation
 
@@ -20,9 +20,11 @@ Everything below is additive — the app is live and stable.
 
 ### Active Work Right Now
 
-- **Gemini 3.1 Pro** has completed the `home-post-card.tsx` SVG fallback fix (PLAN 3.1/3.2/3.6 browser QA is **deferred** until a live QA/Lighthouse environment is available — estimated next week).
-- PLAN `4.6` frontend signup UI is the next Gemini task (newsletter form component).
+- **Gemini 3.1 Pro** — next task is Phase 5.6 EXIF frontend: pass EXIF fields from the `uploadEditorialImage()` response into `galleryEntries` JSON on post save, then display camera/aperture/shutter/ISO/date/GPS in the lightbox detail panel.
+- PLAN `3.1`, `3.2`, `3.6` browser QA is **deferred** until a live QA/Lighthouse environment is available — estimated next week.
 - PLAN `V.9` `as`/`any` cleanup is complete — no unjustified type assertions remain in backend/shared code.
+- **Phase 5.4** post revision history is **fully done** — schema, migration (applied), DAL, GET list route, POST restore route, 20 unit tests.
+- **Phase 5.6** EXIF backend is **fully done** — schema (9 columns, migration applied), parser utility, upload integration, actions storage, 43 unit tests. Frontend display pending Gemini.
 - No other models are actively editing code.
 
 ---
@@ -110,8 +112,8 @@ Everything below is additive — the app is live and stable.
 | 4.3 | RSS per category/tag | Sonnet | DONE — code shipped, manual smoke pending |
 | 4.4 | Structured data (JSON-LD for BlogPosting) | Gemini | DONE (code) — deployed Rich Results validation pending |
 | 4.5 | Reading time estimate | Sonnet | DONE |
-| 4.6 | Newsletter signup (Resend + simple form) | Sonnet + Gemini | BACKEND DONE — backend route/service/tests shipped; frontend signup form UI is Gemini's next task |
-| 4.7 | Post view counter (privacy-respecting) | Sonnet | DONE (code) — migration 0007 pending on prod DB |
+| 4.6 | Newsletter signup (Resend + simple form) | Sonnet + Gemini | DONE — backend route/service/tests shipped; frontend signup form UI implemented, integrated, and reviewed (useFormStatus bug fixed) |
+| 4.7 | Post view counter (privacy-respecting) | Sonnet | DONE — migration 0007 applied to prod |
 | 4.8 | Admin desktop layout expansion | Gemini | DONE |
 
 **Exit criteria**: Admin has moderation tools. Structured data validates in Google Rich Results test. **Partially met — Rich Results validation still needs deployed URL check, and 4.2 still needs env-backed smoke verification.**
@@ -126,7 +128,7 @@ Everything below is additive — the app is live and stable.
 
 | # | Task | Owner | Status |
 |---|------|-------|--------|
-| V.1 | Apply migration `0007_post_view_count.sql` via `bun run db:migrate` | Manual | TODO |
+| V.1 | Apply migrations `0007`, `0008`, `0009` via `bun run db:migrate` | Manual | **DONE** — applied 2026-03-19 |
 | V.2 | Smoke test RSS feeds in browser (`/feed.xml`, `/category/*/feed.xml`, `/tag/*/feed.xml`) | Manual | TODO |
 | V.3 | Verify post view counter increments once per session in dev | Manual | TODO |
 | V.4 | Validate JSON-LD on a deployed post URL via Google Rich Results Test | Manual | TODO |
@@ -150,9 +152,9 @@ Lower priority. Only pursue after Phases 1–4.5 are solid.
 | 5.1 | PWA (offline reading of saved posts) | Service worker + cache strategy |
 | 5.2 | i18n (multilingual support) | next-intl or similar |
 | 5.3 | Webmentions / IndieWeb | Backfeed from other blogs |
-| 5.4 | Post revision history | Diff viewer in admin |
-| 5.5 | AI-assisted writing (summarize, SEO suggestions) | Claude API integration |
-| 5.6 | Photo EXIF metadata display | Extract on upload, display in lightbox |
+| 5.4 | Post revision history | Backend DONE + wired — schema (`post_revisions`), migration `0008` (applied to prod), DAL (`post-revisions.ts`), API routes (`GET /api/admin/posts/[postId]/revisions`, `POST .../restore`), 20 unit tests, revision capture on every post save (pre-update snapshot), restore creates pre-restore undo-point. ADR at `docs/decisions/0001-post-revision-history.md`. Frontend diff viewer UI DONE (Added simple viewer modal in editor form to list, inspect, and restore previous JSON snapshots). |
+| 5.5 | Removed - Not needed for this site|
+| 5.6 | Photo EXIF metadata display | Backend DONE — 9 EXIF columns on `media_assets`, migration `0009` (applied to prod), parser utility (`web/src/lib/cloudinary/exif.ts`), upload integration (`image_metadata=1`), actions stores EXIF on gallery inserts, 43 unit tests. Frontend display DONE — Lightbox detail panel now extracts and surfaces EXIF data inline when navigating photos. Backend DAL also updated to surface EXIF metadata. |
 
 ---
 

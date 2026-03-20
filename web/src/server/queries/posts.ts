@@ -125,6 +125,15 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     imageUrl: cdnImageUrl(image.imageUrl) ?? image.imageUrl,
     altText: image.altText ?? null,
     sortOrder: image.sortOrder,
+    exifTakenAt: image.exifTakenAt,
+    exifLat: image.exifLat,
+    exifLng: image.exifLng,
+    exifCameraMake: image.exifCameraMake,
+    exifCameraModel: image.exifCameraModel,
+    exifLensModel: image.exifLensModel,
+    exifAperture: image.exifAperture,
+    exifShutterSpeed: image.exifShutterSpeed,
+    exifIso: image.exifIso,
   }));
 
   return {
@@ -201,6 +210,15 @@ export async function getPostForPreview(id: string): Promise<BlogPost | null> {
     imageUrl: cdnImageUrl(image.imageUrl) ?? image.imageUrl,
     altText: image.altText ?? null,
     sortOrder: image.sortOrder,
+    exifTakenAt: image.exifTakenAt,
+    exifLat: image.exifLat,
+    exifLng: image.exifLng,
+    exifCameraMake: image.exifCameraMake,
+    exifCameraModel: image.exifCameraModel,
+    exifLensModel: image.exifLensModel,
+    exifAperture: image.exifAperture,
+    exifShutterSpeed: image.exifShutterSpeed,
+    exifIso: image.exifIso,
   }));
 
   return {

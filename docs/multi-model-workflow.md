@@ -10,7 +10,7 @@ This project uses multiple AI models across two tools (Claude Code and Windsurf 
 
 ### Claude Code/Copilot (Terminal / VS Code Extension)
 - Reads: `CLAUDE.md` (auto-loaded), `AGENTS.md` (reference)
-- Models: Claude Opus 4.6 or GPT-5.4 (planning), Claude Sonnet 4.6 and GPT-5.4 (backend/review)
+- Models: Claude Opus 4.6, Claude Sonnet 4.6 or GPT-5.4 (planning), Claude Sonnet 4.6 and GPT-5.4 (backend/review)
 - Switch models: `/model opus` or `/model sonnet`
 
 ### Windsurf Cascade (IDE)
