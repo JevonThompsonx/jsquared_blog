@@ -55,6 +55,16 @@ export const mediaAssets = sqliteTable("media_assets", {
   bytes: integer("bytes"),
   altText: text("alt_text"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  // EXIF metadata extracted at upload time (nullable — not all images have EXIF)
+  exifTakenAt: integer("exif_taken_at", { mode: "timestamp_ms" }),
+  exifLat: real("exif_lat"),
+  exifLng: real("exif_lng"),
+  exifCameraMake: text("exif_camera_make"),
+  exifCameraModel: text("exif_camera_model"),
+  exifLensModel: text("exif_lens_model"),
+  exifAperture: real("exif_aperture"),
+  exifShutterSpeed: text("exif_shutter_speed"),
+  exifIso: integer("exif_iso"),
 });
 
 export const posts = sqliteTable(
@@ -182,5 +192,24 @@ export const postBookmarks = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.userId] }),
     userIdx: index("post_bookmarks_user_id_idx").on(table.userId),
+  }),
+);
+
+export const postRevisions = sqliteTable(
+  "post_revisions",
+  {
+    id: text("id").primaryKey(),
+    postId: text("post_id").notNull().references(() => posts.id),
+    revisionNum: integer("revision_num").notNull(),
+    title: text("title").notNull(),
+    contentJson: text("content_json").notNull(),
+    excerpt: text("excerpt"),
+    savedByUserId: text("saved_by_user_id").notNull().references(() => users.id),
+    savedAt: integer("saved_at", { mode: "timestamp_ms" }).notNull(),
+    label: text("label"),
+  },
+  (table) => ({
+    postRevNumIdx: index("post_revisions_post_id_revision_num_idx").on(table.postId, table.revisionNum),
+    postSavedAtIdx: index("post_revisions_post_id_saved_at_idx").on(table.postId, table.savedAt),
   }),
 );

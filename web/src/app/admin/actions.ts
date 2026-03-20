@@ -8,6 +8,7 @@ import { z } from "zod";
 import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
+import { createPostRevision } from "@/server/dal/post-revisions";
 import { ensureSeriesId } from "@/server/dal/series";
 import { adminPostFormSchema } from "@/server/forms/admin-post-form";
 import { derivePostContent } from "@/server/posts/content";
@@ -167,6 +168,16 @@ const galleryEntrySchema = z.object({
   sortOrder: z.number().optional(),
   focalX: z.number().nullable().optional(),
   focalY: z.number().nullable().optional(),
+  // EXIF fields — set by the upload route and passed back from the frontend
+  exifTakenAt: z.number().nullable().optional(), // epoch ms
+  exifLat: z.number().nullable().optional(),
+  exifLng: z.number().nullable().optional(),
+  exifCameraMake: z.string().nullable().optional(),
+  exifCameraModel: z.string().nullable().optional(),
+  exifLensModel: z.string().nullable().optional(),
+  exifAperture: z.number().nullable().optional(),
+  exifShutterSpeed: z.string().nullable().optional(),
+  exifIso: z.number().nullable().optional(),
 });
 
 function parseGalleryEntries(value: string) {
@@ -181,6 +192,15 @@ function parseGalleryEntries(value: string) {
         sortOrder: typeof entry.sortOrder === "number" ? entry.sortOrder : index,
         focalX: typeof entry.focalX === "number" ? entry.focalX : null,
         focalY: typeof entry.focalY === "number" ? entry.focalY : null,
+        exifTakenAt: typeof entry.exifTakenAt === "number" ? new Date(entry.exifTakenAt) : null,
+        exifLat: typeof entry.exifLat === "number" ? entry.exifLat : null,
+        exifLng: typeof entry.exifLng === "number" ? entry.exifLng : null,
+        exifCameraMake: entry.exifCameraMake?.trim() || null,
+        exifCameraModel: entry.exifCameraModel?.trim() || null,
+        exifLensModel: entry.exifLensModel?.trim() || null,
+        exifAperture: typeof entry.exifAperture === "number" ? entry.exifAperture : null,
+        exifShutterSpeed: entry.exifShutterSpeed?.trim() || null,
+        exifIso: typeof entry.exifIso === "number" ? Math.round(entry.exifIso) : null,
       }));
   } catch {
     return [];
@@ -239,7 +259,22 @@ async function replacePostMediaTx(tx: DbExecutor, options: {
   authorId: string;
   featuredImageUrl: string;
   featuredImageAlt: string;
-  galleryEntries: Array<{ imageUrl: string; altText: string | null; sortOrder: number; focalX: number | null; focalY: number | null }>;
+  galleryEntries: Array<{
+    imageUrl: string;
+    altText: string | null;
+    sortOrder: number;
+    focalX: number | null;
+    focalY: number | null;
+    exifTakenAt: Date | null;
+    exifLat: number | null;
+    exifLng: number | null;
+    exifCameraMake: string | null;
+    exifCameraModel: string | null;
+    exifLensModel: string | null;
+    exifAperture: number | null;
+    exifShutterSpeed: string | null;
+    exifIso: number | null;
+  }>;
 }) {
   const existingPost = await tx.query.posts.findFirst({
     where: eq(posts.id, options.postId),
@@ -304,6 +339,15 @@ async function replacePostMediaTx(tx: DbExecutor, options: {
       bytes: null,
       altText: entry.altText,
       createdAt: new Date(),
+      exifTakenAt: entry.exifTakenAt,
+      exifLat: entry.exifLat,
+      exifLng: entry.exifLng,
+      exifCameraMake: entry.exifCameraMake,
+      exifCameraModel: entry.exifCameraModel,
+      exifLensModel: entry.exifLensModel,
+      exifAperture: entry.exifAperture,
+      exifShutterSpeed: entry.exifShutterSpeed,
+      exifIso: entry.exifIso,
     });
 
     await tx.insert(postImages).values({
@@ -409,7 +453,10 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   const { derivedContent, scheduledPublishTime } = buildPostSavePayload(values);
   const db = getDb();
   const [existingPost, seriesId, geo, slug] = await Promise.all([
-    db.query.posts.findFirst({ where: eq(posts.id, postId), columns: { publishedAt: true } }),
+    db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      columns: { publishedAt: true, title: true, contentJson: true, excerpt: true },
+    }),
     ensureSeriesId(values.seriesTitle ?? ""),
     values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
     generateUniquePostSlug(values.slug.trim() || values.title, postId),
@@ -455,6 +502,24 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
       galleryEntries: parseGalleryEntries(values.galleryEntries),
     });
   });
+
+  // Capture a revision snapshot of the pre-update state.
+  // Best-effort: a revision failure must not block the save.
+  if (existingPost) {
+    try {
+      await createPostRevision({
+        postId,
+        title: existingPost.title,
+        contentJson: existingPost.contentJson,
+        excerpt: existingPost.excerpt ?? null,
+        savedByUserId: authorId,
+      });
+    } catch {
+      // Non-fatal: log to stderr so it's visible in Vercel logs but don't rethrow.
+      console.error(`[revisions] Failed to create revision for post ${postId}`);
+    }
+  }
+
   await revokePostPreviewTokens(postId);
 
   revalidatePath("/");

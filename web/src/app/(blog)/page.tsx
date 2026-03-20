@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { HomeFeed } from "@/components/blog/home-feed";
+import { NewsletterSignupForm } from "@/components/blog/newsletter-signup-form";
 import { SearchInput } from "@/components/blog/search-input";
 import { ScrollToStories } from "@/components/blog/scroll-to-stories";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -149,6 +150,18 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
           <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Stories from the trail</h2>
         </div>
         <HomeFeed key="feed:home" initialPosts={posts} initialSearch="" />
+        
+        <section className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-8 shadow-[var(--shadow)] backdrop-blur-sm sm:p-12 text-center">
+            <h2 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Stay on the trail</h2>
+            <p className="mt-4 mb-8 text-[var(--text-secondary)]">
+              Get notified when we post new stories, photos, and guides from our adventures.
+            </p>
+            <div className="flex justify-center">
+              <NewsletterSignupForm source="homepage-bottom" />
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );
