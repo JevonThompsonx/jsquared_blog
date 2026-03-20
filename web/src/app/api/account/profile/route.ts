@@ -5,7 +5,7 @@ import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth
 import { getProfileByUserId, updateProfileFields } from "@/server/dal/profiles";
 import { patchProfileSchema } from "@/server/forms/profile";
 
-export async function GET(request: Request) {
+export async function GET(request: Request): Promise<NextResponse> {
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   });
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: Request): Promise<NextResponse> {
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

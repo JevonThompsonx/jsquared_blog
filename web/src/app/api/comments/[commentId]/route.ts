@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 import { getServerEnv } from "@/lib/env";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { deleteCommentRecord } from "@/server/dal/comments";
+
+const commentIdSchema = z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/);
 
 async function getRequestSupabaseUser(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -37,8 +40,17 @@ async function getRequestSupabaseUser(request: Request) {
   return result.data.user ?? null;
 }
 
-export async function DELETE(request: Request, context: { params: Promise<{ commentId: string }> }) {
-  const { commentId } = await context.params;
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ commentId: string }> },
+): Promise<NextResponse> {
+  const { commentId: rawCommentId } = await context.params;
+  const parseId = commentIdSchema.safeParse(rawCommentId);
+  if (!parseId.success) {
+    return NextResponse.json({ error: "Invalid comment ID" }, { status: 400 });
+  }
+  const commentId = parseId.data;
+
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

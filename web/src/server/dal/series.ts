@@ -132,3 +132,28 @@ export async function ensureSeriesId(title: string): Promise<string | null> {
 
   return id;
 }
+
+export type SeriesPartNumbers = {
+  takenNumbers: number[];
+  next: number;
+};
+
+/**
+ * Returns the part numbers already assigned to posts in a series, plus the
+ * next suggested part number (max + 1, or 1 if the series is empty).
+ */
+export async function getSeriesPartNumbers(seriesId: string): Promise<SeriesPartNumbers> {
+  const db = getDb();
+  const rows = await db
+    .select({ seriesOrder: posts.seriesOrder })
+    .from(posts)
+    .where(eq(posts.seriesId, seriesId));
+
+  const takenNumbers = rows
+    .map((r) => r.seriesOrder)
+    .filter((n): n is number => typeof n === "number");
+
+  const next = takenNumbers.length === 0 ? 1 : Math.max(...takenNumbers) + 1;
+
+  return { takenNumbers, next };
+}

@@ -14,11 +14,11 @@ export function FeedbackPanel({
   tone?: "default" | "error";
 }) {
   const toneClasses = tone === "error"
-    ? "border-red-200 bg-red-50"
+    ? "border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)]"
     : "border-[var(--border)] bg-[var(--card-bg)]";
 
   const descriptionClass = tone === "error"
-    ? "mt-4 text-sm leading-7 text-red-700 sm:text-base"
+    ? "mt-4 text-sm leading-7 text-[var(--color-error-text)] sm:text-base"
     : "mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base";
 
   return (

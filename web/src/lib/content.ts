@@ -191,7 +191,7 @@ function renderTiptapNode(node: TiptapNode): string {
       const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
       const title = typeof node.attrs?.title === "string" ? node.attrs.title.trim() : "";
       const titleAttribute = title ? ` title="${escapeHtml(title)}"` : "";
-      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${titleAttribute} />`;
+      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${titleAttribute} loading="lazy" />`;
     }
     default:
       return renderChildren(node.content);

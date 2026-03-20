@@ -16,6 +16,9 @@ if (!process.env.NEXTAUTH_URL) {
 // Optional exceptions:
 //   AUTH_ADMIN_GITHUB_IDS  — can be absent (disables admin access) but not a crash
 //   NEXT_PUBLIC_STADIA_MAPS_API_KEY — map degrades gracefully if unset
+//   CRON_SECRET — optional in local dev; required in all deployed environments
+//   UPSTASH_REDIS_REST_URL / _TOKEN — optional; without them rate limiting falls
+//     back to in-process memory (not consistent across Vercel instances)
 const serverEnvSchema = z.object({
   TURSO_DATABASE_URL: z.string().url("must be a valid libsql:// or https:// URL"),
   TURSO_AUTH_TOKEN: z.string().min(1, "required"),
@@ -32,6 +35,11 @@ const serverEnvSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email().optional(),
   COMMENT_NOTIFICATION_TO_EMAIL: z.string().email().optional(),
   RESEND_NEWSLETTER_SEGMENT_ID: z.string().min(1).optional(),
+  // Rate limiter — optional but logged as a warning when absent in non-dev environments
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+  // Cron endpoint secret — optional in local dev only (enforced by the route handler)
+  CRON_SECRET: z.string().min(16).optional(),
 });
 
 // NEXT_PUBLIC_ vars are embedded at build time, so they can't be validated
@@ -70,6 +78,23 @@ if (!isNextBuild) {
         "",
       ].join("\n"),
     );
+  }
+
+  // Warn (non-fatal) when Upstash is absent in a deployed environment: rate limiting
+  // will fall back to in-process memory which is not consistent across instances.
+  const isDeployed = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+  if (isDeployed) {
+    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+      console.warn(
+        "[env] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are not set. " +
+        "Rate limiting will use in-process memory and will NOT be consistent across instances.",
+      );
+    }
+    if (!process.env.CRON_SECRET) {
+      console.warn(
+        "[env] CRON_SECRET is not set. The /api/cron/publish-scheduled endpoint will return 500.",
+      );
+    }
   }
 }
 

@@ -106,7 +106,7 @@ export function ShareButtons({ url, title }: { url: string; title: string }) {
     <>
       <button
         aria-label="Share this story"
-        className="group flex h-9 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-3 text-sm font-medium text-[var(--accent)] shadow-sm transition-colors hover:border-[var(--primary)] hover:bg-[var(--accent-soft)]"
+        className="group flex h-11 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card-bg)] px-3 text-sm font-medium text-[var(--accent)] shadow-sm transition-colors hover:border-[var(--primary)] hover:bg-[var(--accent-soft)]"
         onClick={() => void handleShare()}
         type="button"
       >

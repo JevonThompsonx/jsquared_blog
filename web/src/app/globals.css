@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --background: linear-gradient(180deg, #f4efe5 0%, #e6e5d8 48%, #d7dfd2 100%);
   --text-primary: #273126;
   --text-secondary: #5c6758;
@@ -85,6 +86,7 @@
 }
 
 [data-theme-mode="dark"] {
+  color-scheme: dark;
   --background: #111812;
   --text-primary: #e2e8e0;
   --text-secondary: #a0ac9c;

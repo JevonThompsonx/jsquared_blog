@@ -5,7 +5,10 @@ import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { isPostBookmarked, togglePostBookmark } from "@/server/dal/bookmarks";
 
-export async function GET(request: Request, context: { params: Promise<{ postId: string }> }) {
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ postId: string }> },
+): Promise<NextResponse> {
   const { postId } = await context.params;
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
@@ -16,7 +19,10 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
   return NextResponse.json({ bookmarked });
 }
 
-export async function POST(request: Request, context: { params: Promise<{ postId: string }> }) {
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ postId: string }> },
+): Promise<NextResponse> {
   const { postId } = await context.params;
 
   // 20 bookmark toggles per minute per IP

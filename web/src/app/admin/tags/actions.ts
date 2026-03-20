@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/session";
@@ -13,8 +14,8 @@ const updateTagDescriptionSchema = z.object({
 
 export async function updateTagDescriptionAction(formData: FormData): Promise<void> {
   const session = await requireAdminSession();
-  if (session?.user?.role !== "admin") {
-    return;
+  if (!session) {
+    redirect("/admin?error=AccessDenied");
   }
 
   const raw = updateTagDescriptionSchema.safeParse({

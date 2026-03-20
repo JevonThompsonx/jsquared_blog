@@ -13,7 +13,7 @@
     "db:import:supabase": "bun run ./scripts/import-supabase.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "e2e:capture-admin-state": "bun run ./scripts/capture-admin-storage-state.ts",
+    "e2e:capture-admin-state": "node --import tsx/esm ./scripts/capture-admin-storage-state.ts",
     "seed:e2e": "bun run ./scripts/seed-e2e-fixtures.ts"
   },
   "dependencies": {
@@ -38,7 +38,7 @@
     "isomorphic-dompurify": "3.3.0",
     "jsdom": "^29.0.0",
     "maplibre-gl": "^5.20.1",
-    "next": "16.1.6",
+    "next": "^16.2.0",
     "next-auth": "4.24.13",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -55,6 +55,7 @@
     "@types/react-dom": "19.2.3",
     "eslint": "9.28.0",
     "eslint-config-next": "16.1.6",
+    "tsx": "^4.21.0",
     "typescript": "5.9.3",
     "vitest": "4.1.0"
   }

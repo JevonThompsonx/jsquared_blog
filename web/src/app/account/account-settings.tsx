@@ -439,8 +439,8 @@ export function AccountSettings() {
 
   if (loadError) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-8 text-center">
-        <p className="text-sm text-red-700">{loadError}</p>
+      <div className="rounded-2xl border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-6 py-8 text-center">
+        <p className="text-sm text-[var(--color-error-text)]">{loadError}</p>
       </div>
     );
   }
@@ -495,8 +495,8 @@ export function AccountSettings() {
               {nameStatus === "saving" ? "Saving…" : "Save"}
             </button>
           </div>
-          {nameError ? <p className="mt-2 text-sm text-red-500">{nameError}</p> : null}
-          {nameStatus === "saved" ? <p className="mt-2 text-sm text-green-600">Display name updated.</p> : null}
+          {nameError ? <p className="mt-2 text-sm text-[var(--color-error-text)]">{nameError}</p> : null}
+          {nameStatus === "saved" ? <p className="mt-2 text-sm text-[var(--color-success-text)]">Display name updated.</p> : null}
         </form>
 
         {/* Avatar */}
@@ -565,8 +565,8 @@ export function AccountSettings() {
             </div>
           </form>
 
-          {avatarError ? <p className="mt-2 text-sm text-red-500">{avatarError}</p> : null}
-          {avatarStatus === "saved" ? <p className="mt-2 text-sm text-green-600">Avatar updated.</p> : null}
+          {avatarError ? <p className="mt-2 text-sm text-[var(--color-error-text)]">{avatarError}</p> : null}
+          {avatarStatus === "saved" ? <p className="mt-2 text-sm text-[var(--color-success-text)]">Avatar updated.</p> : null}
         </div>
       </section>
 
@@ -587,8 +587,8 @@ export function AccountSettings() {
         >
           {themeStatus === "saving" ? "Saving…" : "Save current theme as preference"}
         </button>
-        {themeStatus === "saved" ? <p className="mt-3 text-sm text-green-600">Theme preference saved.</p> : null}
-        {themeStatus === "error" ? <p className="mt-3 text-sm text-red-500">Failed to save theme preference.</p> : null}
+        {themeStatus === "saved" ? <p className="mt-3 text-sm text-[var(--color-success-text)]">Theme preference saved.</p> : null}
+        {themeStatus === "error" ? <p className="mt-3 text-sm text-[var(--color-error-text)]">Failed to save theme preference.</p> : null}
       </section>
 
       {/* Email */}
@@ -618,9 +618,9 @@ export function AccountSettings() {
               {emailStatus === "saving" ? "Sending…" : "Update"}
             </button>
           </div>
-          {emailError ? <p className="mt-2 text-sm text-red-500">{emailError}</p> : null}
+          {emailError ? <p className="mt-2 text-sm text-[var(--color-error-text)]">{emailError}</p> : null}
           {emailStatus === "saved" ? (
-            <p className="mt-2 text-sm text-green-600">Verification email sent — check your inbox to confirm.</p>
+            <p className="mt-2 text-sm text-[var(--color-success-text)]">Verification email sent — check your inbox to confirm.</p>
           ) : null}
         </form>
       </section>
@@ -678,8 +678,8 @@ export function AccountSettings() {
             {passwordStatus === "saving" ? "Updating…" : "Update password"}
           </button>
 
-          {passwordError ? <p className="text-sm text-red-500">{passwordError}</p> : null}
-          {passwordStatus === "saved" ? <p className="text-sm text-green-600">Password updated successfully.</p> : null}
+          {passwordError ? <p className="text-sm text-[var(--color-error-text)]">{passwordError}</p> : null}
+          {passwordStatus === "saved" ? <p className="text-sm text-[var(--color-success-text)]">Password updated successfully.</p> : null}
         </form>
       </section>
 
@@ -688,7 +688,7 @@ export function AccountSettings() {
         <h2 className="mb-3 text-xl font-semibold text-[var(--text-primary)]">Sign out</h2>
         <p className="mb-5 text-sm text-[var(--text-secondary)]">You will be returned to the home page.</p>
         <button
-          className="rounded-lg border border-red-300 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+          className="rounded-lg border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-5 py-2 text-sm font-semibold text-[var(--color-error-text)] transition-colors hover:opacity-90 disabled:opacity-50"
           disabled={signingOut}
           onClick={() => void handleSignOut()}
           type="button"

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Lora } from "next/font/google";
 import Script from "next/script";
 
@@ -12,6 +12,15 @@ const lora = Lora({
   variable: "--font-lora",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4efe5" },
+    { media: "(prefers-color-scheme: dark)", color: "#111812" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://jsquaredadventures.com"),

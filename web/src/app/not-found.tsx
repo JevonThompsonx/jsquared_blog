@@ -11,9 +11,6 @@ export default function NotFound() {
             <Link className="inline-flex w-fit rounded-full bg-[var(--accent-strong)] px-5 py-3 text-sm font-semibold text-white" href="/">
               Return home
             </Link>
-            <Link className="inline-flex w-fit rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--text-primary)]" href="/admin">
-              Open admin
-            </Link>
           </>
         )}
         description="Try heading back to the homepage, opening the admin dashboard, or picking up another story from the trail."

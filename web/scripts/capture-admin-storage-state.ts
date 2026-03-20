@@ -1,6 +1,9 @@
 /**
  * Capture a reusable Playwright storage state for Auth.js admin smoke tests.
  * Usage: bun run e2e:capture-admin-state
+ * NOTE: This script must run under Node (via tsx), NOT Bun. Bun hangs silently on
+ *       headed Playwright launches on Windows. The package.json script uses:
+ *         node --import tsx/esm ./scripts/capture-admin-storage-state.ts
  * Env: E2E_BASE_URL=https://jsquaredadventures.com and/or E2E_ADMIN_STORAGE_STATE=playwright/.auth/admin.prod.json
  */
 

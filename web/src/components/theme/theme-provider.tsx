@@ -488,7 +488,7 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <div className="theme-root min-h-screen transition-[background,color,border-color,box-shadow] duration-300" data-theme-look={look} data-theme-mode={mode} style={themeStyle}>
+      <div suppressHydrationWarning className="theme-root min-h-screen transition-[background,color,border-color,box-shadow] duration-300" data-theme-look={look} data-theme-mode={mode} style={themeStyle}>
         {children}
       </div>
     </ThemeContext.Provider>
