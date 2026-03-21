@@ -1,1 +1,7 @@
-{ "crons": [{ "path": "/api/cron/publish-scheduled", "schedule": "0 0 * * *" }] }
+{
+  "framework": "nextjs",
+  "buildCommand": "bun run build",
+  "outputDirectory": ".next",
+  "installCommand": "bun install",
+  "crons": [{ "path": "/api/cron/publish-scheduled", "schedule": "0 0 * * *" }]
+}
