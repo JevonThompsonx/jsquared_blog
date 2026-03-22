@@ -424,6 +424,16 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     onUpdate: ({ editor: e }) => {
       setTiptapJson(JSON.stringify(e.getJSON()));
     },
+    // After a mouse-initiated selection change (click, double-click, drag),
+    // clear storedMarks so formatting doesn't randomly activate.
+    // Explicit toggles (Ctrl+B, toolbar buttons) still work because they
+    // either apply marks directly (when text is selected) or set storedMarks
+    // after our clearing (toolbar clicks don't fire mousedown on the editor).
+    onSelectionUpdate: ({ editor: e }) => {
+      if (isMouseDownRef.current && e.state.storedMarks !== null) {
+        e.view.dispatch(e.state.tr.setStoredMarks(null));
+      }
+    },
     immediatelyRender: false,
   });
 
