@@ -159,13 +159,13 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">Formatting</span>
         <div className="flex flex-wrap gap-2">
-          <MenuButton active={editor.isActive("bold")} disabled={!editor.can().chain().focus().toggleBold().run()} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">
+          <MenuButton active={editor.isActive("bold")} disabled={!editor.can().chain().toggleBold().run()} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">
             B
           </MenuButton>
-          <MenuButton active={editor.isActive("italic")} disabled={!editor.can().chain().focus().toggleItalic().run()} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">
+          <MenuButton active={editor.isActive("italic")} disabled={!editor.can().chain().toggleItalic().run()} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">
             I
           </MenuButton>
-          <MenuButton active={editor.isActive("strike")} disabled={!editor.can().chain().focus().toggleStrike().run()} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough">
+          <MenuButton active={editor.isActive("strike")} disabled={!editor.can().chain().toggleStrike().run()} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough">
             S
           </MenuButton>
           <MenuButton active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
@@ -204,10 +204,10 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
           <MenuButton disabled={isUploadingImage} onClick={openImageUpload} title="Insert image">
             {isUploadingImage ? "Uploading…" : "Image"}
           </MenuButton>
-          <MenuButton disabled={!editor.can().chain().focus().undo().run()} onClick={() => editor.chain().focus().undo().run()} title="Undo">
+          <MenuButton disabled={!editor.can().chain().undo().run()} onClick={() => editor.chain().focus().undo().run()} title="Undo">
             Undo
           </MenuButton>
-          <MenuButton disabled={!editor.can().chain().focus().redo().run()} onClick={() => editor.chain().focus().redo().run()} title="Redo">
+          <MenuButton disabled={!editor.can().chain().redo().run()} onClick={() => editor.chain().focus().redo().run()} title="Redo">
             Redo
           </MenuButton>
         </div>
@@ -309,7 +309,10 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
   const [isValidating, setIsValidating] = useState(false);
 
   const initContent = parseTiptapInitContent(contentJson);
-  const extensions = [
+  // Memoize so the array reference is stable across re-renders. Passing a new
+  // array reference on every render can cause Tiptap 3.x to re-initialise
+  // internal state and corrupt storedMarks, producing phantom bold/italic.
+  const extensions = useMemo(() => [
     StarterKit.configure({
       heading: { levels: [2, 3] },
       link: false,
@@ -328,7 +331,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     Placeholder.configure({
       placeholder: "Start writing your adventure...",
     }),
-  ];
+  ], []);
 
   const editor = useEditor({
     extensions,
