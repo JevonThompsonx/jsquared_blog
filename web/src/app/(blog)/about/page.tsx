@@ -121,7 +121,7 @@ export default function AboutPage() {
             {/* Photo strip — 3 across */}
             <div className="mt-6 grid grid-cols-3 gap-3">
               <div className="relative aspect-square overflow-hidden rounded-2xl">
-                <Image src="/images/hiking.webp" alt="Hiking" fill className="object-cover rotate-180" style={{ objectPosition: "130% center" }} />
+                <Image src="/images/hiking.webp" alt="Hiking" fill className="object-cover" />
               </div>
               <div className="relative aspect-square overflow-hidden rounded-2xl">
                 <Image src="/images/camping.webp" alt="Van / camping" fill className="object-cover" />
