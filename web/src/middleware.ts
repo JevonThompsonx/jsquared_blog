@@ -29,7 +29,6 @@ export function middleware(request: NextRequest): NextResponse {
     "https://*.supabase.co",
     "wss://*.supabase.co",
     "https://*.sentry.io",
-    "https://o*.ingest.sentry.io",
     "https://plausible.io",
     "https://tiles.stadiamaps.com",
     "https://*.stadiamaps.com",

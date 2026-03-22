@@ -178,7 +178,7 @@ export function SiteHeader() {
           <form action="/" className="relative" onSubmit={handleSearchSubmit}>
             <input
               aria-label="Search stories"
-              className="search-input w-40 rounded-full border py-2 pl-4 pr-9 text-sm transition-[width] duration-200 focus:w-52 lg:w-52 lg:focus:w-64"
+              className="search-input h-11 w-40 rounded-full border py-2 pl-4 pr-9 text-sm transition-[width] duration-200 focus:w-52 lg:w-52 lg:focus:w-64"
               defaultValue={currentSearch}
               key={`desktop-search:${pathname}:${currentSearch}`}
               name="search"
@@ -188,7 +188,7 @@ export function SiteHeader() {
             />
             <button
               aria-label="Search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)]"
+              className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)]"
               type="submit"
             >
               <SearchIcon />

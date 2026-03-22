@@ -96,7 +96,7 @@ export function MobileNav({
                 />
                 <button
                   aria-label="Submit search"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--primary)]"
+                  className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-[var(--text-secondary)] hover:text-[var(--primary)]"
                   type="submit"
                 >
                   <SearchIcon />
