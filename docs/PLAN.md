@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-21 (pass 11 — production deployment unblocked; site live at jsquaredadventures.com)
+Last updated: 2026-03-21 (pass 12 — Phase 6 tasks added from agency-agents security/SRE/DB/a11y review)
 
 ## Model Allocation
 
@@ -20,14 +20,10 @@ Everything below is additive — the app is live and stable.
 
 ### Active Work Right Now
 
-- **Site is LIVE** at jsquaredadventures.com — Vercel production deployment resolved 2026-03-21.
-- PLAN `3.1`, `3.2`, `3.6` browser QA is now **unblocked** — live domain available. Run Lighthouse on jsquaredadventures.com.
-- PLAN `V.4` Google Rich Results Test is now **actionable** — test a live post URL.
-- PLAN `V.9` `as`/`any` cleanup is complete — no unjustified type assertions remain in backend/shared code.
-- **Phase 5.1** PWA is **fully done** — manifest, SVG icon, service worker (`sw.js`), `ServiceWorkerRegistry` component. Reviewed and bugs fixed (operator precedence bug in registry, invalid combined sizes in manifest, removed console.log, fixed SW registration timing). Frontend EXIF lightbox display is also complete.
-- **Phase 5.4** post revision history is **fully done** — schema, migration (applied), DAL, GET list route, POST restore route, 20 unit tests.
-- **Phase 5.6** EXIF backend and frontend are **fully done** — schema (9 columns, migration applied), parser utility, upload integration, actions storage, 43 unit tests. Lightbox detail panel displays camera/aperture/shutter/ISO/date/GPS data.
-- No other models are actively editing code.
+- **Site is LIVE** at jsquaredadventures.com — Lighthouse 100/100 Performance, 100 Accessibility, 100 SEO. 170 unit tests + 19/19 E2E passing.
+- Phases 1–5 are **complete**. Active work moves to Phase 6: security hardening, DB optimization, CI improvements, observability, and accessibility automation.
+- **Next priorities**: 6.S.5 (Supabase email confirmation), 6.O.1 (uptime monitoring), 6.S.1 (nonce CSP), 6.D.1 (FK index audit), 6.A.1 (axe-core in CI).
+- Manual items still open: Resend comment notification smoke test (6.S.6), newsletter real-provider verification (6.O.3), Supabase email confirmation (6.S.5), custom SMTP (V.8).
 
 ---
 
@@ -156,6 +152,62 @@ Lower priority. Only pursue after Phases 1–4.5 are solid.
 | 5.3 | Webmentions / IndieWeb | Backfeed from other blogs |
 | 5.4 | Post revision history | Backend DONE + wired — schema (`post_revisions`), migration `0008` (applied to prod), DAL (`post-revisions.ts`), API routes (`GET /api/admin/posts/[postId]/revisions`, `POST .../restore`), 20 unit tests, revision capture on every post save (pre-update snapshot), restore creates pre-restore undo-point. ADR at `docs/decisions/0001-post-revision-history.md`. Frontend diff viewer UI DONE (Added simple viewer modal in editor form to list, inspect, and restore previous JSON snapshots). |
 | 5.5 | Photo EXIF metadata display | Backend DONE — 9 EXIF columns on `media_assets`, migration `0009` (applied to prod), parser utility (`web/src/lib/cloudinary/exif.ts`), upload integration (`image_metadata=1`), actions stores EXIF on gallery inserts, 43 unit tests. Frontend display DONE — Lightbox detail panel now extracts and surfaces EXIF data inline when navigating photos. Backend DAL also updated to surface EXIF metadata. |
+
+---
+
+## Phase 6: Security, Observability & CI Hardening
+
+**Goal**: Close remaining security gaps, add automated CI quality gates, and improve production observability. Derived from Security Engineer, SRE, Database Optimizer, Performance Benchmarker, Accessibility Auditor, and DevOps Automator review of the live site.
+
+**Status: NOT STARTED**
+
+### Security (Security Engineer review)
+
+| # | Task | Owner | Priority | Notes |
+|---|------|-------|----------|-------|
+| 6.S.1 | Nonce-based CSP — remove `unsafe-inline` from `script-src` | Sonnet | High | Current `Content-Security-Policy` in `next.config.ts` allows `'unsafe-inline'` scripts. Requires generating a per-request nonce and threading it through `next/headers` → `<Script nonce>`. Complex but the most impactful security fix. |
+| 6.S.2 | Tighten CSP `img-src` and `connect-src` | Sonnet | Medium | Replace broad `https:` wildcard with explicit allowed domains (Cloudinary, Supabase, Stadia Maps, Plausible, Sentry). Enumerate all third-party origins first. |
+| 6.S.3 | Add dependency vulnerability scan to CI | Sonnet | Medium | Add `bun audit` (or `npm audit --audit-level=high`) step to GitHub Actions. Fail on critical/high CVEs. Prevents regressions like the Next.js CSRF CVE caught manually in pass 10. |
+| 6.S.4 | Add secrets scanning to CI | Sonnet | Medium | Add Gitleaks action to GitHub Actions on push and pull_request. Prevents accidental credential commits. |
+| 6.S.5 | Enable Supabase email confirmation | Manual (Jevon) | High | Currently any email can sign up without confirming it. Toggle in Supabase dashboard → Authentication → Settings → "Enable email confirmations". Documented as known issue in V.10. |
+| 6.S.6 | Comment notification smoke test | Manual (Jevon) | Medium | Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL` in Vercel env → post a real comment → confirm notification arrives. Closes PLAN 4.2. |
+
+### Database Optimization (Database Optimizer review)
+
+| # | Task | Owner | Priority | Notes |
+|---|------|-------|----------|-------|
+| 6.D.1 | Audit foreign key indexes on Turso schema | Sonnet | Medium | Turso/SQLite does not auto-index FK columns. Check every FK column in `web/src/drizzle/schema.ts` against existing index definitions. Add missing indexes for join-heavy columns (e.g. `comments.post_id`, `post_images.post_id`, `comment_likes.comment_id`). |
+| 6.D.2 | Add partial index for published posts feed | Sonnet | Medium | The homepage feed always queries `WHERE status = 'published' ORDER BY published_at DESC`. A partial/composite index on `(status, published_at DESC)` would speed this up significantly at scale. |
+| 6.D.3 | Add index on `posts.scheduled_publish_time` | Sonnet | Low | The daily cron queries posts where `scheduled_publish_time <= now AND status = 'scheduled'`. Add a partial index on `(scheduled_publish_time)` where `status = 'scheduled'`. |
+
+### CI / DevOps (DevOps Automator + Performance Benchmarker review)
+
+| # | Task | Owner | Priority | Notes |
+|---|------|-------|----------|-------|
+| 6.CI.1 | Add Lighthouse CI to GitHub Actions | Sonnet | Medium | Run `@lhci/cli` on the deployed preview URL after each Vercel preview build. Fail the check if Performance drops below 90 or Accessibility below 95. Prevents regressions like the Speed Index regression that went undetected until a manual run. |
+| 6.CI.2 | Add Semgrep SAST to GitHub Actions | Sonnet | Low | Add `semgrep/semgrep-action` with `p/owasp-top-ten` ruleset to the CI pipeline. Catches injection, broken auth, and other OWASP Top 10 patterns statically. |
+| 6.CI.3 | Add `bun audit` / dependency scan step | Sonnet | Medium | See 6.S.3 — can be implemented as part of the same CI job. |
+
+### Observability / SRE (SRE review)
+
+| # | Task | Owner | Priority | Notes |
+|---|------|-------|----------|-------|
+| 6.O.1 | External uptime monitoring | Manual (Jevon) | High | Set up Betterstack, UptimeRobot, or Vercel Monitoring on `jsquaredadventures.com`. Alert on downtime. Currently relying on Sentry which only catches errors, not full outages. |
+| 6.O.2 | Sentry performance monitoring on key routes | Sonnet | Low | Enable Sentry performance tracing (`tracesSampleRate`) on the post read and comment write paths. Surfaces slow DB queries and upstream latency regressions in the Sentry dashboard. |
+| 6.O.3 | Newsletter real-provider verification | Manual (Jevon) | Medium | Set `RESEND_API_KEY` and `RESEND_NEWSLETTER_SEGMENT_ID` in `.env.local` → hit `POST /api/newsletter` with a test email → confirm Resend Segment receives it. Closes PLAN 4.6 operationally. |
+
+### Accessibility (Accessibility Auditor review)
+
+| # | Task | Owner | Priority | Notes |
+|---|------|-------|----------|-------|
+| 6.A.1 | Add axe-core to Playwright E2E suite | Sonnet | Medium | Install `@axe-core/playwright`. Add `checkA11y()` calls to the existing smoke spec on homepage, post detail, and comment form. Catches WCAG regressions automatically on every CI run. Lighthouse 100/100 does not substitute for axe-core — they test different things. |
+| 6.A.2 | Manual screen reader QA | Manual (Jevon) | Medium | Test with VoiceOver (macOS) or NVDA (Windows) on: homepage feed, post detail + ToC, comment form, account settings, mobile nav drawer. Lighthouse passes do not guarantee real screen reader usability. |
+
+### PWA Icons (Frontend — deferred from 5.1)
+
+| # | Task | Owner | Priority | Notes |
+|---|------|-------|----------|-------|
+| 6.P.1 | Add PNG fallback icons to PWA manifest | Gemini | Low | Current manifest uses SVG-only icons. Older Android WebView and some PWA install prompts require PNG icons (192×192 and 512×512). Add when branding assets are finalized. |
 ---
 
 ## Cross-Cutting Quality Standards

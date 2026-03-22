@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 21, 2026 (pass 11) | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 21, 2026 (pass 12 — Phase 6 planning from agency-agents review) | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -19,7 +19,78 @@
 
 ---
 
-## What Needs Attention Now
+## Phase 6 — Active Task List
+
+Phases 1–5 complete. The site is live, stable, and scoring 100/100 on Lighthouse. Phase 6 addresses security gaps, DB optimization, CI hardening, observability, and accessibility automation — derived from a review of the agency-agents Security Engineer, SRE, Database Optimizer, Performance Benchmarker, Accessibility Auditor, and DevOps Automator frameworks.
+
+Full task definitions in `docs/PLAN.md` Phase 6.
+
+### Security (code tasks — Sonnet)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.S.1 — Nonce-based CSP (remove `unsafe-inline`) | High | TODO |
+| 6.S.2 — Tighten CSP `img-src` / `connect-src` to explicit domains | Medium | TODO |
+| 6.S.3 — Add `bun audit` dependency scan to GitHub Actions CI | Medium | TODO |
+| 6.S.4 — Add Gitleaks secrets scanning to GitHub Actions CI | Medium | TODO |
+
+### Security (manual — Jevon)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.S.5 — Enable Supabase email confirmation in dashboard | High | TODO |
+| 6.S.6 — Resend comment notification smoke test (set env vars, post real comment) | Medium | TODO |
+
+### Database Optimization (Sonnet)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.D.1 — Audit FK columns for missing indexes (`comments.post_id`, `post_images.post_id`, etc.) | Medium | TODO |
+| 6.D.2 — Add partial/composite index on `posts(status, published_at)` for feed query | Medium | TODO |
+| 6.D.3 — Add index on `posts.scheduled_publish_time` WHERE `status = 'scheduled'` | Low | TODO |
+
+### CI / DevOps (Sonnet)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.CI.1 — Add Lighthouse CI to GitHub Actions (perf regression gate) | Medium | TODO |
+| 6.CI.2 — Add Semgrep SAST scan to GitHub Actions | Low | TODO |
+
+### Observability (manual — Jevon)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.O.1 — Set up external uptime monitoring (Betterstack or UptimeRobot) | High | TODO |
+| 6.O.3 — Newsletter real-provider verification (Resend segment) | Medium | TODO |
+| V.8 — Custom SMTP for Supabase (Resend) | Low | TODO |
+
+### Observability (code — Sonnet)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.O.2 — Enable Sentry performance tracing on key API routes | Low | TODO |
+
+### Accessibility (Sonnet)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.A.1 — Add axe-core to Playwright E2E smoke spec | Medium | TODO |
+
+### Accessibility (manual — Jevon)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.A.2 — Manual VoiceOver/NVDA screen reader QA (homepage, post, comments, account, nav) | Medium | TODO |
+
+### PWA (Gemini — deferred)
+
+| Task | Priority | Status |
+|------|----------|--------|
+| 6.P.1 — Add PNG fallback icons (192×192, 512×512) to PWA manifest | Low | TODO — blocked on finalized branding assets |
+
+---
+
+## Historical Completed Work
 
 ### Sonnet's Completed Work (pass 11 — Vercel production deployment unblocked)
 
@@ -109,7 +180,7 @@
   3. `pwa-registry.tsx`: `console.log` in production-shipped code. Removed.
   4. `pwa-registry.tsx`: SW registered inside `window.addEventListener('load', ...)` inside `useEffect` — by the time the component mounts, `load` has already fired, so the callback would never run. Fixed to register directly in `useEffect`.
 - **DONE**: Phase 5.6 EXIF frontend reviewed — `post-gallery.tsx` EXIF display in lightbox is correct. No bugs found.
-- **DONE**: `docs/handoff.md` rewritten to remove stale duplicate section. `docs/PLAN.md`, `docs/frontendPrompt.md`, and `TODO.md` updated to reflect current state.
+- **DONE**: `docs/PLAN.md` and `TODO.md` updated to reflect current state.
 - **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (170 tests) all pass.
 
 ### Sonnet's Completed Work (pass 6)
@@ -163,12 +234,7 @@ These are "done in code" but need manual steps to be truly complete:
 | Decommission CF Worker | Delete legacy worker in Cloudflare dashboard | **DONE 2026-03-22** |
 | Delete leftover clone posts | Remove "Clone? Zip-lining" and "Copy of Mountain Peak Sunrise" from admin | **DONE 2026-03-22** |
 
-### Not Yet Started (Future Work)
-
-| Task | Owner | Notes |
-|------|-------|-------|
-| PLAN 3.1 / 3.2 / 3.6 — Live QA pass | Gemini | Deferred to next week; requires interactive browser + Lighthouse environment |
-| PLAN 1.8 — Custom SMTP for Supabase | Manual | Not blocking; shared email works fine |
+### Not Yet Started (see Phase 6 task list above)
 
 Latest session notes (2026-03-20 pass 9):
 
