@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
   title: "About — J²Adventures",
-  description: "Two people with the travel bug and a lot of trail miles between them. Meet the J's behind J²Adventures.",
+  description: "Two people, a van named Blu, and a serious travel bug. Meet the J\u2019s behind J²Adventures.",
 };
 
 function PhotoPlaceholder({ label, className = "" }: { label: string; className?: string }) {
@@ -50,13 +50,13 @@ export default function AboutPage() {
             <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Two people with a serious travel bug.</h2>
             <div className="prose-content mt-4 space-y-4 text-[var(--text-secondary)]">
               <p>
-                J²Adventures is what happens when a self-taught tech guy and a Cal Poly-educated outdoor enthusiast decide that sitting still is overrated. We are Jevon and Jessica — two people who found each other, found the trails, and never really looked back.
+                J²Adventures is what happens when a self-taught tech guy and a casual outdoor enthusiast decide that sitting still is overrated. We are Jevon and Jessica — two people who found each other, found the trails, and never really looked back.
               </p>
               <p>
-                We started this blog because we kept telling the same stories at dinner tables and thought: someone else probably wants to hear this. Maybe you are planning a trip. Maybe you just want to live vicariously through someone else&apos;s bad decisions on a mountain. Either way, you are in the right place.
+                We started this blog because we wanted to have a digital scrapbook of everywhere we went, everything we did, and someplace to dump all of our random thoughts we had along the way. This blog is mostly for us, but we thought, why not share it? If we love hearing stories like this, there are others out there who might want to hear <em>our</em> stories too. Maybe you are planning a trip. Maybe you just want to live vicariously through someone else&apos;s bad decisions on a mountain. Either way, you are in the right place.
               </p>
               <p>
-                We cover hikes, backpacking trips, van life dispatches, camping spots, and the occasional gear rabbit hole. No fluff, no algorithm-optimized lists — just the honest version of what happened and where we went.
+                We cover hikes, backpacking trips, van life dispatches, camping spots, and the occasional gear rabbit hole. No fluff, no algorithm-optimized lists — just the honest version of what happened and where we went. We&apos;ll see you out there.
               </p>
             </div>
             <div className="clear-both" />
@@ -78,10 +78,10 @@ export default function AboutPage() {
                 <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Jevon</h3>
                 <div className="prose-content mt-3 space-y-3 text-sm text-[var(--text-secondary)]">
                   <p>
-                    Systems administrator by trade, self-taught developer by curiosity. Grew up in Jamaica with a habit of taking things apart to see how they worked — phones, computers, eventually servers. That curiosity followed him to America and hasn&apos;t slowed down since.
+                    Professional vibe coder of this website and always open to try anything once (on the trail...what were you thinking?). Growing up in Jamaica, he loved being outside, and you could always catch him trying to get to the highest point in sight, whether that was by climbing a tree or a mountain.
                   </p>
                   <p>
-                    On the trail he is the one with too many podcast recommendations downloaded offline and strong opinions about camp coffee. Off the trail he builds the systems that keep this blog running.
+                    On the trail he is the one with two battery backups with a solar charger on hand, a fully downloaded audiobook and comic library &ldquo;so he has options,&rdquo; yet he still forgot his water bottle in the car. Off the trail he builds the systems that keep this blog running.
                   </p>
                 </div>
               </div>
@@ -95,10 +95,10 @@ export default function AboutPage() {
                 <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Jessica</h3>
                 <div className="prose-content mt-3 space-y-3 text-sm text-[var(--text-secondary)]">
                   <p>
-                    Cal Poly graduate, certified granola girl, and the reason we own crampons. She built her own van — with her own hands, from scratch — which is either extremely impressive or a sign of a problem, depending on who you ask.
+                    Certified granola girl, and the reason we have campsite reservations almost every weekend. Growing up hiking, backpacking, and camping, she dreamed of a life that prioritized adventure rather than one that tried to make time for it. After college, she built out a van to help make those dreams a reality.
                   </p>
                   <p>
-                    She has been hiking, backpacking, and generally preferring dirt roads to highways for longer than she&apos;d like to admit. If there is a trail, she has probably already looked up the elevation profile.
+                    On the trail, she is the reason we have everything we need from fun facts about the local flora and fauna to the water Jevon left in the car. Off the trail, she&apos;s already planning our next trip.
                   </p>
                 </div>
               </div>
@@ -122,8 +122,8 @@ export default function AboutPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               {[
                 { title: "Hiking & backpacking", body: "Day hikes, multi-day trips, the occasional Type 2 fun experience we probably should have trained harder for." },
-                { title: "Van life & camping", body: "Dispatches from the road. The van has a name. We will get to that." },
-                { title: "Travel & gear", body: "Where we went, what we brought, and honestly what we would leave behind next time." },
+                { title: "Van life & camping", body: "Dispatches from Blu (our van) and nights spent under the stars." },
+                { title: "Travel", body: "Where we went, what we ate, and everything in between." },
               ].map((item) => (
                 <div key={item.title} className="rounded-xl bg-[var(--background)] p-4">
                   <h3 className="font-bold text-[var(--text-primary)]">{item.title}</h3>

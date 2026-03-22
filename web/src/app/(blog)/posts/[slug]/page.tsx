@@ -26,7 +26,7 @@ import { getPublishedPostBySlug, getRelatedPosts } from "@/server/queries/posts"
 import { getSeriesNavForPost } from "@/server/dal/series";
 import { SeriesNav } from "@/components/blog/series-nav";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
-import { ScrollToContent } from "@/components/blog/scroll-to-content";
+
 import PostHead from "./head";
 
 type PostPageProps = {
@@ -117,7 +117,7 @@ export default async function PostPage({ params }: PostPageProps) {
       <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
         <PostHead params={params} />
         <PostViewTracker postId={post.id} />
-        <ScrollToContent hasFeaturedImage={Boolean(post.imageUrl)} />
+
         <ReadingProgressBar />
         <SiteHeader />
 
