@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -116,6 +117,34 @@ test.describe("public pages smoke tests", () => {
     await expect(page.locator("main")).toBeVisible();
     // Should have an email input
     await expect(page.locator('input[type="email"]')).toBeVisible();
+  });
+
+  // 6.A.1: axe-core accessibility checks on key public pages
+  test("homepage has no critical axe-core violations", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("article").first()).toBeVisible({ timeout: 15_000 });
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("category page has no critical axe-core violations", async ({ page }) => {
+    await page.goto("/category/Travel");
+    await expect(page.getByRole("heading", { name: "Travel", exact: true })).toBeVisible({ timeout: 10_000 });
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("login page has no critical axe-core violations", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
   });
 
   test("admin redirects to GitHub sign-in when unauthenticated", async ({ browser }) => {

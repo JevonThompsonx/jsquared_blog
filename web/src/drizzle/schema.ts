@@ -26,14 +26,20 @@ export const profiles = sqliteTable("profiles", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
-export const authAccounts = sqliteTable("auth_accounts", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id),
-  provider: text("provider", { enum: ["supabase", "github"] }).notNull(),
-  providerUserId: text("provider_user_id").notNull(),
-  providerEmail: text("provider_email"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-});
+export const authAccounts = sqliteTable(
+  "auth_accounts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    provider: text("provider", { enum: ["supabase", "github"] }).notNull(),
+    providerUserId: text("provider_user_id").notNull(),
+    providerEmail: text("provider_email"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("auth_accounts_user_id_idx").on(table.userId),
+  }),
+);
 
 export const categories = sqliteTable("categories", {
   id: text("id").primaryKey(),
@@ -42,30 +48,36 @@ export const categories = sqliteTable("categories", {
   description: text("description"),
 });
 
-export const mediaAssets = sqliteTable("media_assets", {
-  id: text("id").primaryKey(),
-  ownerUserId: text("owner_user_id").notNull().references(() => users.id),
-  provider: text("provider", { enum: ["cloudinary", "supabase"] }).notNull(),
-  publicId: text("public_id").notNull(),
-  secureUrl: text("secure_url").notNull(),
-  resourceType: text("resource_type", { enum: ["image", "video"] }).notNull().default("image"),
-  format: text("format"),
-  width: integer("width"),
-  height: integer("height"),
-  bytes: integer("bytes"),
-  altText: text("alt_text"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  // EXIF metadata extracted at upload time (nullable — not all images have EXIF)
-  exifTakenAt: integer("exif_taken_at", { mode: "timestamp_ms" }),
-  exifLat: real("exif_lat"),
-  exifLng: real("exif_lng"),
-  exifCameraMake: text("exif_camera_make"),
-  exifCameraModel: text("exif_camera_model"),
-  exifLensModel: text("exif_lens_model"),
-  exifAperture: real("exif_aperture"),
-  exifShutterSpeed: text("exif_shutter_speed"),
-  exifIso: integer("exif_iso"),
-});
+export const mediaAssets = sqliteTable(
+  "media_assets",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id").notNull().references(() => users.id),
+    provider: text("provider", { enum: ["cloudinary", "supabase"] }).notNull(),
+    publicId: text("public_id").notNull(),
+    secureUrl: text("secure_url").notNull(),
+    resourceType: text("resource_type", { enum: ["image", "video"] }).notNull().default("image"),
+    format: text("format"),
+    width: integer("width"),
+    height: integer("height"),
+    bytes: integer("bytes"),
+    altText: text("alt_text"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    // EXIF metadata extracted at upload time (nullable — not all images have EXIF)
+    exifTakenAt: integer("exif_taken_at", { mode: "timestamp_ms" }),
+    exifLat: real("exif_lat"),
+    exifLng: real("exif_lng"),
+    exifCameraMake: text("exif_camera_make"),
+    exifCameraModel: text("exif_camera_model"),
+    exifLensModel: text("exif_lens_model"),
+    exifAperture: real("exif_aperture"),
+    exifShutterSpeed: text("exif_shutter_speed"),
+    exifIso: integer("exif_iso"),
+  },
+  (table) => ({
+    ownerUserIdIdx: index("media_assets_owner_user_id_idx").on(table.ownerUserId),
+  }),
+);
 
 export const posts = sqliteTable(
   "posts",
@@ -105,6 +117,12 @@ export const posts = sqliteTable(
     authorIndex: index("posts_author_id_idx").on(table.authorId),
     seriesIndex: index("posts_series_id_idx").on(table.seriesId),
     contentFormatIndex: index("posts_content_format_idx").on(table.contentFormat),
+    // 6.D.1: FK columns missing indexes
+    categoryIdIdx: index("posts_category_id_idx").on(table.categoryId),
+    // 6.D.2: composite index speeds up published feed query (status='published' ORDER BY published_at DESC)
+    statusPublishedAtIdx: index("posts_status_published_at_idx").on(table.status, table.publishedAt),
+    // 6.D.3: index for scheduled-publish cron (scheduled_publish_time <= now AND status='scheduled')
+    scheduledPublishTimeIdx: index("posts_scheduled_publish_time_idx").on(table.scheduledPublishTime),
   }),
 );
 
@@ -128,16 +146,23 @@ export const postPreviewTokens = sqliteTable(
   }),
 );
 
-export const postImages = sqliteTable("post_images", {
-  id: text("id").primaryKey(),
-  postId: text("post_id").notNull().references(() => posts.id),
-  mediaAssetId: text("media_asset_id").notNull().references(() => mediaAssets.id),
-  sortOrder: integer("sort_order").notNull().default(0),
-  focalX: integer("focal_x"),
-  focalY: integer("focal_y"),
-  caption: text("caption"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-});
+export const postImages = sqliteTable(
+  "post_images",
+  {
+    id: text("id").primaryKey(),
+    postId: text("post_id").notNull().references(() => posts.id),
+    mediaAssetId: text("media_asset_id").notNull().references(() => mediaAssets.id),
+    sortOrder: integer("sort_order").notNull().default(0),
+    focalX: integer("focal_x"),
+    focalY: integer("focal_y"),
+    caption: text("caption"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    postIdIdx: index("post_images_post_id_idx").on(table.postId),
+    mediaAssetIdIdx: index("post_images_media_asset_id_idx").on(table.mediaAssetId),
+  }),
+);
 
 export const tags = sqliteTable("tags", {
   id: text("id").primaryKey(),
@@ -157,19 +182,26 @@ export const postTags = sqliteTable(
   }),
 );
 
-export const comments = sqliteTable("comments", {
-  id: text("id").primaryKey(),
-  postId: text("post_id").notNull().references(() => posts.id),
-  authorId: text("author_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
-  parentId: text("parent_id"),
-  visibility: text("visibility", { enum: ["visible", "hidden", "deleted"] }).notNull().default("visible"),
-  isFlagged: integer("is_flagged", { mode: "boolean" }).notNull().default(false),
-  moderatedAt: integer("moderated_at", { mode: "timestamp_ms" }),
-  moderatedByUserId: text("moderated_by_user_id").references(() => users.id),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
-});
+export const comments = sqliteTable(
+  "comments",
+  {
+    id: text("id").primaryKey(),
+    postId: text("post_id").notNull().references(() => posts.id),
+    authorId: text("author_id").notNull().references(() => users.id),
+    content: text("content").notNull(),
+    parentId: text("parent_id"),
+    visibility: text("visibility", { enum: ["visible", "hidden", "deleted"] }).notNull().default("visible"),
+    isFlagged: integer("is_flagged", { mode: "boolean" }).notNull().default(false),
+    moderatedAt: integer("moderated_at", { mode: "timestamp_ms" }),
+    moderatedByUserId: text("moderated_by_user_id").references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    postIdIdx: index("comments_post_id_idx").on(table.postId),
+    authorIdIdx: index("comments_author_id_idx").on(table.authorId),
+  }),
+);
 
 export const commentLikes = sqliteTable(
   "comment_likes",

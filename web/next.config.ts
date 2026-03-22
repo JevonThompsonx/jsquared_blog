@@ -2,29 +2,11 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  ["script-src 'self' 'unsafe-inline'", isProduction ? "" : "'unsafe-eval'", "https://plausible.io"]
-    .filter(Boolean)
-    .join(" "),
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https: wss:",
-  "media-src 'self' data: blob: https:",
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  isProduction ? "upgrade-insecure-requests" : "",
-].filter(Boolean).join("; ");
 
+// 6.S.1: CSP is now set dynamically per-request by middleware.ts (with a per-request nonce).
+// next.config.ts only sets the remaining non-CSP security headers.
+// 6.S.2: the explicit img-src / connect-src allowlists live in middleware.ts alongside the nonce logic.
 const securityHeaders = [
-  {
-    key: "Content-Security-Policy",
-    value: contentSecurityPolicy,
-  },
   {
     key: "Referrer-Policy",
     value: "strict-origin-when-cross-origin",

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Lora } from "next/font/google";
 import Script from "next/script";
 
@@ -42,7 +43,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // 6.S.1: Read nonce injected by middleware so the Plausible <Script> is whitelisted by CSP
+  const headersList = await headers();
+  const nonce = headersList.get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" className={lora.variable}>
       <body className="antialiased">
@@ -55,6 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <Script
             data-domain="jsquaredadventures.com"
             defer
+            nonce={nonce}
             src="https://plausible.io/js/script.js"
             strategy="afterInteractive"
           />

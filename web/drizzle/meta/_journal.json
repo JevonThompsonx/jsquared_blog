@@ -71,6 +71,13 @@
       "when": 1774304800000,
       "tag": "0009_media_asset_exif",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1742565600000,
+      "tag": "0010_phase6_indexes",
+      "breakpoints": true
     }
   ]
 }

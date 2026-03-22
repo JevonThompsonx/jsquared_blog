@@ -1,0 +1,48 @@
+name: Lighthouse CI
+
+# 6.CI.1: Run Lighthouse against the Vercel preview URL after each deployment.
+# Fails the check if Performance < 90 or Accessibility < 95.
+#
+# Prerequisites (set in repo secrets):
+#   LHCI_GITHUB_APP_TOKEN — Lighthouse CI GitHub App token for PR status checks
+#   VERCEL_TOKEN          — Used to resolve the preview deployment URL
+#   VERCEL_ORG_ID         — Vercel organisation ID
+#   VERCEL_PROJECT_ID     — Vercel project ID for jsquared_blog / web
+#
+# The workflow waits for Vercel to finish deploying, then runs Lighthouse
+# against the resulting preview URL.
+
+on:
+  deployment_status:
+
+jobs:
+  lighthouse:
+    name: Lighthouse audit
+    runs-on: ubuntu-latest
+    # Only run when Vercel deployment succeeds
+    if: github.event.deployment_status.state == 'success'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install @lhci/cli
+        run: npm install -g @lhci/cli
+
+      - name: Run Lighthouse CI
+        run: |
+          lhci autorun \
+            --collect.url="${{ github.event.deployment_status.target_url }}" \
+            --collect.url="${{ github.event.deployment_status.target_url }}/posts" \
+            --assert.preset=lighthouse:recommended \
+            --assert.assertions.categories:performance=["error",{"minScore":0.9}] \
+            --assert.assertions.categories:accessibility=["error",{"minScore":0.95}] \
+            --assert.assertions.categories:seo=["warn",{"minScore":0.9}] \
+            --upload.target=temporary-public-storage
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

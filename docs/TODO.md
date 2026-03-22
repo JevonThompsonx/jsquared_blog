@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 21, 2026 (pass 12 — Phase 6 planning from agency-agents review) | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 21, 2026 (pass 13 — Phase 6 code tasks complete) | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -21,18 +21,18 @@
 
 ## Phase 6 — Active Task List
 
-Phases 1–5 complete. The site is live, stable, and scoring 100/100 on Lighthouse. Phase 6 addresses security gaps, DB optimization, CI hardening, observability, and accessibility automation — derived from a review of the agency-agents Security Engineer, SRE, Database Optimizer, Performance Benchmarker, Accessibility Auditor, and DevOps Automator frameworks.
+Phases 1–5 complete. The site is live, stable, and scoring 100/100 on Lighthouse. Phase 6 addresses security gaps, DB optimization, CI hardening, observability, and accessibility automation.
 
-Full task definitions in `docs/PLAN.md` Phase 6.
+Full task definitions in `docs/PLAN.md` Phase 6. **All code tasks DONE as of pass 13.**
 
 ### Security (code tasks — Sonnet)
 
 | Task | Priority | Status |
 |------|----------|--------|
-| 6.S.1 — Nonce-based CSP (remove `unsafe-inline`) | High | TODO |
-| 6.S.2 — Tighten CSP `img-src` / `connect-src` to explicit domains | Medium | TODO |
-| 6.S.3 — Add `bun audit` dependency scan to GitHub Actions CI | Medium | TODO |
-| 6.S.4 — Add Gitleaks secrets scanning to GitHub Actions CI | Medium | TODO |
+| 6.S.1 — Nonce-based CSP (remove `unsafe-inline`) | High | **DONE** — `middleware.ts` + `layout.tsx` nonce threading |
+| 6.S.2 — Tighten CSP `img-src` / `connect-src` to explicit domains | Medium | **DONE** — explicit allowlists in `middleware.ts` |
+| 6.S.3 — Add `bun audit` dependency scan to GitHub Actions CI | Medium | **DONE** |
+| 6.S.4 — Add Gitleaks secrets scanning to GitHub Actions CI | Medium | **DONE** |
 
 ### Security (manual — Jevon)
 
@@ -45,16 +45,17 @@ Full task definitions in `docs/PLAN.md` Phase 6.
 
 | Task | Priority | Status |
 |------|----------|--------|
-| 6.D.1 — Audit FK columns for missing indexes (`comments.post_id`, `post_images.post_id`, etc.) | Medium | TODO |
-| 6.D.2 — Add partial/composite index on `posts(status, published_at)` for feed query | Medium | TODO |
-| 6.D.3 — Add index on `posts.scheduled_publish_time` WHERE `status = 'scheduled'` | Low | TODO |
+| 6.D.1 — FK index audit + 7 missing indexes added | Medium | **DONE** — migration `0010_phase6_indexes.sql` |
+| 6.D.2 — Composite `(status, published_at)` index on `posts` | Medium | **DONE** — in migration `0010` |
+| 6.D.3 — Index on `posts.scheduled_publish_time` | Low | **DONE** — in migration `0010` |
+| **Apply migration 0010 to production** | High | **TODO** — run `bun run db:migrate` from `web/` |
 
 ### CI / DevOps (Sonnet)
 
 | Task | Priority | Status |
 |------|----------|--------|
-| 6.CI.1 — Add Lighthouse CI to GitHub Actions (perf regression gate) | Medium | TODO |
-| 6.CI.2 — Add Semgrep SAST scan to GitHub Actions | Low | TODO |
+| 6.CI.1 — Lighthouse CI on Vercel deployment_status | Medium | **DONE** — `.github/workflows/lighthouse.yml`. Requires `LHCI_GITHUB_APP_TOKEN` secret. |
+| 6.CI.2 — Semgrep SAST scan | Low | **DONE** — `sast` job in `ci.yml`. Optional: add `SEMGREP_APP_TOKEN` secret for dashboard. |
 
 ### Observability (manual — Jevon)
 
@@ -68,13 +69,13 @@ Full task definitions in `docs/PLAN.md` Phase 6.
 
 | Task | Priority | Status |
 |------|----------|--------|
-| 6.O.2 — Enable Sentry performance tracing on key API routes | Low | TODO |
+| 6.O.2 — Sentry route-aware performance tracing | Low | **DONE** — `tracesSampler` in `sentry.server.config.ts` |
 
 ### Accessibility (Sonnet)
 
 | Task | Priority | Status |
 |------|----------|--------|
-| 6.A.1 — Add axe-core to Playwright E2E smoke spec | Medium | TODO |
+| 6.A.1 — axe-core WCAG 2.1 AA checks in Playwright E2E | Medium | **DONE** — 3 checks in `smoke.spec.ts` (homepage, category, login) |
 
 ### Accessibility (manual — Jevon)
 

@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-21 (pass 12 — Phase 6 tasks added from agency-agents security/SRE/DB/a11y review)
+Last updated: 2026-03-21 (pass 13 — Phase 6 all code tasks complete)
 
 ## Model Allocation
 
@@ -21,9 +21,9 @@ Everything below is additive — the app is live and stable.
 ### Active Work Right Now
 
 - **Site is LIVE** at jsquaredadventures.com — Lighthouse 100/100 Performance, 100 Accessibility, 100 SEO. 170 unit tests + 19/19 E2E passing.
-- Phases 1–5 are **complete**. Active work moves to Phase 6: security hardening, DB optimization, CI improvements, observability, and accessibility automation.
-- **Next priorities**: 6.S.5 (Supabase email confirmation), 6.O.1 (uptime monitoring), 6.S.1 (nonce CSP), 6.D.1 (FK index audit), 6.A.1 (axe-core in CI).
-- Manual items still open: Resend comment notification smoke test (6.S.6), newsletter real-provider verification (6.O.3), Supabase email confirmation (6.S.5), custom SMTP (V.8).
+- **Phase 6 code tasks are COMPLETE** (pass 13). Remaining items are all manual/operational.
+- **Remaining manual items**: 6.S.5 (Supabase email confirmation), 6.O.1 (uptime monitoring), 6.S.6 (Resend comment smoke test), 6.O.3 (newsletter provider verification), 6.A.2 (screen reader QA), 6.P.1 (PNG PWA icons — Gemini), V.8 (custom SMTP).
+- **Next code action**: run `bun run db:migrate` from `web/` to apply migration `0010_phase6_indexes.sql` to production Turso DB.
 
 ---
 
@@ -159,49 +159,49 @@ Lower priority. Only pursue after Phases 1–4.5 are solid.
 
 **Goal**: Close remaining security gaps, add automated CI quality gates, and improve production observability. Derived from Security Engineer, SRE, Database Optimizer, Performance Benchmarker, Accessibility Auditor, and DevOps Automator review of the live site.
 
-**Status: NOT STARTED**
+**Status: MOSTLY COMPLETE** — all code tasks done (2026-03-21 pass 13). Manual tasks remain for Jevon.
 
 ### Security (Security Engineer review)
 
-| # | Task | Owner | Priority | Notes |
-|---|------|-------|----------|-------|
-| 6.S.1 | Nonce-based CSP — remove `unsafe-inline` from `script-src` | Sonnet | High | Current `Content-Security-Policy` in `next.config.ts` allows `'unsafe-inline'` scripts. Requires generating a per-request nonce and threading it through `next/headers` → `<Script nonce>`. Complex but the most impactful security fix. |
-| 6.S.2 | Tighten CSP `img-src` and `connect-src` | Sonnet | Medium | Replace broad `https:` wildcard with explicit allowed domains (Cloudinary, Supabase, Stadia Maps, Plausible, Sentry). Enumerate all third-party origins first. |
-| 6.S.3 | Add dependency vulnerability scan to CI | Sonnet | Medium | Add `bun audit` (or `npm audit --audit-level=high`) step to GitHub Actions. Fail on critical/high CVEs. Prevents regressions like the Next.js CSRF CVE caught manually in pass 10. |
-| 6.S.4 | Add secrets scanning to CI | Sonnet | Medium | Add Gitleaks action to GitHub Actions on push and pull_request. Prevents accidental credential commits. |
-| 6.S.5 | Enable Supabase email confirmation | Manual (Jevon) | High | Currently any email can sign up without confirming it. Toggle in Supabase dashboard → Authentication → Settings → "Enable email confirmations". Documented as known issue in V.10. |
-| 6.S.6 | Comment notification smoke test | Manual (Jevon) | Medium | Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL` in Vercel env → post a real comment → confirm notification arrives. Closes PLAN 4.2. |
+| # | Task | Owner | Priority | Status |
+|---|------|-------|----------|--------|
+| 6.S.1 | Nonce-based CSP — remove `unsafe-inline` from `script-src` | Sonnet | High | **DONE** — `middleware.ts` generates a per-request nonce; CSP set dynamically. `<Script nonce>` wired in `layout.tsx`. `next.config.ts` CSP removed (middleware owns it). |
+| 6.S.2 | Tighten CSP `img-src` and `connect-src` | Sonnet | Medium | **DONE** — explicit domain allowlists in `middleware.ts` (Cloudinary, Supabase, Sentry, Plausible, Stadia Maps). |
+| 6.S.3 | Add dependency vulnerability scan to CI | Sonnet | Medium | **DONE** — `bun audit --audit-level=high` step added to `ci.yml`. |
+| 6.S.4 | Add secrets scanning to CI | Sonnet | Medium | **DONE** — `gitleaks/gitleaks-action@v2` job added to `ci.yml`. |
+| 6.S.5 | Enable Supabase email confirmation | Manual (Jevon) | High | TODO — toggle in Supabase dashboard → Authentication → Settings → "Enable email confirmations". |
+| 6.S.6 | Comment notification smoke test | Manual (Jevon) | Medium | TODO — set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL` in Vercel env → post a real comment. |
 
 ### Database Optimization (Database Optimizer review)
 
-| # | Task | Owner | Priority | Notes |
-|---|------|-------|----------|-------|
-| 6.D.1 | Audit foreign key indexes on Turso schema | Sonnet | Medium | Turso/SQLite does not auto-index FK columns. Check every FK column in `web/src/drizzle/schema.ts` against existing index definitions. Add missing indexes for join-heavy columns (e.g. `comments.post_id`, `post_images.post_id`, `comment_likes.comment_id`). |
-| 6.D.2 | Add partial index for published posts feed | Sonnet | Medium | The homepage feed always queries `WHERE status = 'published' ORDER BY published_at DESC`. A partial/composite index on `(status, published_at DESC)` would speed this up significantly at scale. |
-| 6.D.3 | Add index on `posts.scheduled_publish_time` | Sonnet | Low | The daily cron queries posts where `scheduled_publish_time <= now AND status = 'scheduled'`. Add a partial index on `(scheduled_publish_time)` where `status = 'scheduled'`. |
+| # | Task | Owner | Priority | Status |
+|---|------|-------|----------|--------|
+| 6.D.1 | Audit foreign key indexes on Turso schema | Sonnet | Medium | **DONE** — added indexes: `comments.post_id`, `comments.author_id`, `post_images.post_id`, `post_images.media_asset_id`, `posts.category_id`, `auth_accounts.user_id`, `media_assets.owner_user_id`. Migration `0010_phase6_indexes.sql`. |
+| 6.D.2 | Add partial index for published posts feed | Sonnet | Medium | **DONE** — composite `(status, published_at)` index on `posts` added in migration `0010`. |
+| 6.D.3 | Add index on `posts.scheduled_publish_time` | Sonnet | Low | **DONE** — index on `scheduled_publish_time` added in migration `0010`. |
 
 ### CI / DevOps (DevOps Automator + Performance Benchmarker review)
 
-| # | Task | Owner | Priority | Notes |
-|---|------|-------|----------|-------|
-| 6.CI.1 | Add Lighthouse CI to GitHub Actions | Sonnet | Medium | Run `@lhci/cli` on the deployed preview URL after each Vercel preview build. Fail the check if Performance drops below 90 or Accessibility below 95. Prevents regressions like the Speed Index regression that went undetected until a manual run. |
-| 6.CI.2 | Add Semgrep SAST to GitHub Actions | Sonnet | Low | Add `semgrep/semgrep-action` with `p/owasp-top-ten` ruleset to the CI pipeline. Catches injection, broken auth, and other OWASP Top 10 patterns statically. |
-| 6.CI.3 | Add `bun audit` / dependency scan step | Sonnet | Medium | See 6.S.3 — can be implemented as part of the same CI job. |
+| # | Task | Owner | Priority | Status |
+|---|------|-------|----------|--------|
+| 6.CI.1 | Add Lighthouse CI to GitHub Actions | Sonnet | Medium | **DONE** — `.github/workflows/lighthouse.yml` triggers on `deployment_status` success; fails if Performance < 90 or Accessibility < 95. Requires `LHCI_GITHUB_APP_TOKEN` secret. |
+| 6.CI.2 | Add Semgrep SAST to GitHub Actions | Sonnet | Low | **DONE** — `sast` job in `ci.yml` using `semgrep/semgrep` container with `p/owasp-top-ten` + `p/typescript`. |
+| 6.CI.3 | Add `bun audit` / dependency scan step | Sonnet | Medium | **DONE** — see 6.S.3. |
 
 ### Observability / SRE (SRE review)
 
-| # | Task | Owner | Priority | Notes |
-|---|------|-------|----------|-------|
-| 6.O.1 | External uptime monitoring | Manual (Jevon) | High | Set up Betterstack, UptimeRobot, or Vercel Monitoring on `jsquaredadventures.com`. Alert on downtime. Currently relying on Sentry which only catches errors, not full outages. |
-| 6.O.2 | Sentry performance monitoring on key routes | Sonnet | Low | Enable Sentry performance tracing (`tracesSampleRate`) on the post read and comment write paths. Surfaces slow DB queries and upstream latency regressions in the Sentry dashboard. |
-| 6.O.3 | Newsletter real-provider verification | Manual (Jevon) | Medium | Set `RESEND_API_KEY` and `RESEND_NEWSLETTER_SEGMENT_ID` in `.env.local` → hit `POST /api/newsletter` with a test email → confirm Resend Segment receives it. Closes PLAN 4.6 operationally. |
+| # | Task | Owner | Priority | Status |
+|---|------|-------|----------|--------|
+| 6.O.1 | External uptime monitoring | Manual (Jevon) | High | TODO — set up Betterstack, UptimeRobot, or Vercel Monitoring on `jsquaredadventures.com`. |
+| 6.O.2 | Sentry performance monitoring on key routes | Sonnet | Low | **DONE** — `sentry.server.config.ts` updated with route-aware `tracesSampler`: post paths 30%, comment paths 50%, others 5%. |
+| 6.O.3 | Newsletter real-provider verification | Manual (Jevon) | Medium | TODO — set `RESEND_API_KEY` + `RESEND_NEWSLETTER_SEGMENT_ID` → test `POST /api/newsletter`. |
 
 ### Accessibility (Accessibility Auditor review)
 
-| # | Task | Owner | Priority | Notes |
-|---|------|-------|----------|-------|
-| 6.A.1 | Add axe-core to Playwright E2E suite | Sonnet | Medium | Install `@axe-core/playwright`. Add `checkA11y()` calls to the existing smoke spec on homepage, post detail, and comment form. Catches WCAG regressions automatically on every CI run. Lighthouse 100/100 does not substitute for axe-core — they test different things. |
-| 6.A.2 | Manual screen reader QA | Manual (Jevon) | Medium | Test with VoiceOver (macOS) or NVDA (Windows) on: homepage feed, post detail + ToC, comment form, account settings, mobile nav drawer. Lighthouse passes do not guarantee real screen reader usability. |
+| # | Task | Owner | Priority | Status |
+|---|------|-------|----------|--------|
+| 6.A.1 | Add axe-core to Playwright E2E suite | Sonnet | Medium | **DONE** — `@axe-core/playwright` installed; WCAG 2.1 AA checks on homepage, category page, and login page in `smoke.spec.ts`. |
+| 6.A.2 | Manual screen reader QA | Manual (Jevon) | Medium | TODO — test with VoiceOver/NVDA on: homepage, post detail + ToC, comment form, account settings, mobile nav. |
 
 ### PWA Icons (Frontend — deferred from 5.1)
 
