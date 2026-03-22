@@ -33,6 +33,7 @@ export function middleware(request: NextRequest): NextResponse {
     "https://tiles.stadiamaps.com",
     "https://*.stadiamaps.com",
     "https://fonts.stadiamaps.com",
+    "https://nominatim.openstreetmap.org",
   ].join(" ");
 
   const csp = [
