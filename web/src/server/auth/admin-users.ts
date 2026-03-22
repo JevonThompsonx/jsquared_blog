@@ -85,7 +85,7 @@ export async function ensureGitHubAdminUser(identity: GitHubAdminIdentity): Prom
   const userId = getGitHubUserId(identity.providerUserId);
   const accountId = getGitHubAccountId(identity.providerUserId);
   const email = fallbackEmail(identity);
-  const displayName = identity.name?.trim() || identity.login;
+  const displayName = "Jevon + Jessica";
 
   await client.execute({
     sql: `
@@ -108,7 +108,7 @@ export async function ensureGitHubAdminUser(identity: GitHubAdminIdentity): Prom
         avatar_url = excluded.avatar_url,
         updated_at = excluded.updated_at
     `,
-    args: [userId, displayName, identity.avatarUrl, timestamp, timestamp],
+    args: [userId, displayName, "/images/us.webp", timestamp, timestamp],
   });
 
   await client.execute({
@@ -126,7 +126,7 @@ export async function ensureGitHubAdminUser(identity: GitHubAdminIdentity): Prom
     userId,
     role: "admin",
     displayName,
-    avatarUrl: identity.avatarUrl,
+    avatarUrl: "/images/us.webp",
     email,
     login: identity.login,
   };

@@ -1022,6 +1022,113 @@ a {
   margin: 1rem 0;
 }
 
+/* ─── Filter Dropdown ─────────────────────────────────────────────── */
+
+.filter-dropdown {
+  z-index: 50;
+  max-height: 24rem;
+  min-width: 8rem;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  box-shadow: var(--card-shell-shadow);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+}
+
+.filter-dropdown[data-state="open"] {
+  animation: filter-dropdown-in 150ms ease-out;
+}
+
+.filter-dropdown[data-state="closed"] {
+  animation: filter-dropdown-out 150ms ease-in;
+}
+
+@keyframes filter-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes filter-dropdown-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.filter-dropdown-option {
+  position: relative;
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  user-select: none;
+  align-items: center;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 2rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: background-color 120ms ease, color 120ms ease;
+  border-left: 2px solid transparent;
+}
+
+.filter-dropdown-option[data-highlighted] {
+  background-color: var(--accent-soft);
+  color: var(--primary);
+}
+
+.filter-dropdown-option[data-state="checked"] {
+  border-left-color: var(--primary);
+  color: var(--primary);
+}
+
+.filter-dropdown-option[data-disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.filter-dropdown-scroll-btn {
+  display: flex;
+  cursor: default;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0;
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.filter-dropdown-scroll-btn:hover {
+  background-color: var(--accent-soft);
+}
+
+[data-theme-mode="dark"] .filter-dropdown {
+  background-color: var(--card-bg);
+  border-color: var(--border);
+  box-shadow: var(--card-shell-shadow);
+}
+
+@media (max-width: 767px) {
+  .filter-dropdown {
+    min-width: calc(100vw - 2rem);
+  }
+}
+
 /* ─── Reduced motion ──────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

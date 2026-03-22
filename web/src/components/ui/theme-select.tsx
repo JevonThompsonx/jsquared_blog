@@ -24,7 +24,7 @@ export function ThemeSelect({
     <Select.Root value={value} onValueChange={onChange}>
       <Select.Trigger
         aria-label={ariaLabel}
-        className={`flex h-[38px] items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm transition-shadow focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-[var(--muted)] ${className}`}
+        className={`flex h-[38px] items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)] shadow-sm transition-shadow focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-[var(--muted)] ${className}`}
       >
         <Select.Value placeholder={placeholder} />
         <Select.Icon asChild>
@@ -46,11 +46,11 @@ export function ThemeSelect({
       </Select.Trigger>
       <Select.Portal>
         <Select.Content
-          className="relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] shadow-md"
+          className="filter-dropdown"
           position="popper"
-          sideOffset={4}
+          sideOffset={6}
         >
-          <Select.ScrollUpButton className="flex cursor-default items-center justify-center py-1 bg-[var(--background)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]">
+          <Select.ScrollUpButton className="filter-dropdown-scroll-btn">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -71,7 +71,7 @@ export function ThemeSelect({
               <Select.Item
                 key={option.value}
                 value={option.value}
-                className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-[var(--accent-soft)] focus:text-[var(--text-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-[var(--accent-soft)]"
+                className="filter-dropdown-option"
               >
                 <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                   <Select.ItemIndicator>
@@ -95,7 +95,7 @@ export function ThemeSelect({
               </Select.Item>
             ))}
           </Select.Viewport>
-          <Select.ScrollDownButton className="flex cursor-default items-center justify-center py-1 bg-[var(--background)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]">
+          <Select.ScrollDownButton className="filter-dropdown-scroll-btn">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"

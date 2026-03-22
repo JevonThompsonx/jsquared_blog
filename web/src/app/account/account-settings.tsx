@@ -99,6 +99,12 @@ const AVATAR_PRESETS: AvatarPreset[] = [
     bg: "#c8843a",
     path: "M12 3v2M12 19v2M3 12H1M23 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z",
   },
+  {
+    id: "j2:couple",
+    label: "Couple",
+    bg: "#8b5e6b",
+    path: "M16 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 0a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 10c0-4 3.6-7 8-7 1.5 0 2.9.3 4 .9A8.1 8.1 0 0 0 8 21H0zm24 0c0-4-3.6-7-8-7-1.5 0-2.9.3-4 .9A8.1 8.1 0 0 1 16 21h8z",
+  },
 ];
 
 function getPreset(avatarUrl: string | null): AvatarPreset | null {
