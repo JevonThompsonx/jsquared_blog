@@ -1,10 +1,14 @@
-import DOMPurify from "isomorphic-dompurify";
 import { z } from "zod";
 
-const SANITIZE_OPTIONS = {
-  USE_PROFILES: { html: true },
-  ADD_ATTR: ["target", "rel"],
-};
+// Dangerous element names whose tags and inner content should be stripped.
+const DANGEROUS_BLOCK_RE =
+  /<(script|style|iframe|object|embed|form|meta|link|base)([\s>][\s\S]*?<\/\1>|\s*\/>)/gi;
+// Self-closing or void dangerous tags not caught by the block pattern.
+const DANGEROUS_VOID_RE =
+  /<(input|button|select|textarea|meta|link|base)[^>]*\/?>/gi;
+// Inline event handlers (onclick, onload, …) and javascript: URIs.
+const EVENT_HANDLER_RE = /\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi;
+const JS_URI_RE = /(href|src|action)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi;
 
 const tiptapMarkSchema = z.object({
   type: z.string().optional(),
@@ -302,7 +306,11 @@ export function sanitizeRichTextHtml(html: string | null | undefined): string {
     return "<p>This story is still being migrated.</p>";
   }
 
-  return DOMPurify.sanitize(html, SANITIZE_OPTIONS);
+  return html
+    .replace(DANGEROUS_BLOCK_RE, "")
+    .replace(DANGEROUS_VOID_RE, "")
+    .replace(EVENT_HANDLER_RE, "")
+    .replace(JS_URI_RE, "");
 }
 
 export function htmlToPlainText(html: string | null | undefined): string {
@@ -310,14 +318,12 @@ export function htmlToPlainText(html: string | null | undefined): string {
     return "";
   }
 
-  return decodeHtmlEntities(
-    DOMPurify.sanitize(html, SANITIZE_OPTIONS)
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim(),
-  )
+  const stripped = sanitizeRichTextHtml(html)
+    .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+  return decodeHtmlEntities(stripped).replace(/\s+/g, " ").trim();
 }
 
 export function getWordCount(html: string | null | undefined): number {
