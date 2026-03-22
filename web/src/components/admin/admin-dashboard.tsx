@@ -473,7 +473,7 @@ export function AdminDashboard({
 
           <div className="mt-6 space-y-4">
             {selectedPostIds.size > 0 ? (
-              <div className="fixed bottom-6 left-6 right-6 z-50 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[var(--border)] bg-[var(--foreground)] px-5 py-3 text-[var(--background)] shadow-2xl sm:left-auto sm:right-6 sm:w-auto">
+              <div className="fixed bottom-6 left-6 right-6 z-50 flex flex-wrap items-center justify-between gap-4 rounded-[0.75rem] border border-[var(--border)] bg-[var(--surface-strong)] px-5 py-3 text-[var(--text-primary)] shadow-[var(--card-shell-shadow)] backdrop-blur-[12px] sm:left-auto sm:right-6 sm:w-auto">
                 <span className="text-sm font-semibold">
                   {selectedPostIds.size} selected
                 </span>
@@ -482,7 +482,7 @@ export function AdminDashboard({
                     type="button"
                     onClick={handleBulkPublish}
                     disabled={isPending}
-                    className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--on-primary)] transition-colors hover:bg-[var(--primary-light)] disabled:opacity-50"
+                    className="btn-primary rounded-full px-4 py-2 text-sm font-semibold transition-[background-color,border-color] duration-150 ease-in-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] disabled:opacity-50"
                   >
                     Publish
                   </button>
@@ -490,7 +490,7 @@ export function AdminDashboard({
                     type="button"
                     onClick={handleBulkUnpublish}
                     disabled={isPending}
-                    className="rounded-full bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--border)] disabled:opacity-50"
+                    className="rounded-full border border-[var(--border)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-[background-color,border-color] duration-150 ease-in-out hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] disabled:opacity-50"
                   >
                     Unpublish
                   </button>
@@ -498,14 +498,14 @@ export function AdminDashboard({
                     type="button"
                     onClick={promptDeleteBulk}
                     disabled={isPending}
-                    className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                    className="rounded-full bg-[var(--color-error)] px-4 py-2 text-sm font-semibold text-white transition-[background-color,border-color] duration-150 ease-in-out hover:brightness-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] disabled:opacity-50"
                   >
                     Delete
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedPostIds(new Set())}
-                    className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--accent-soft)]"
+                    className="rounded-full border border-[var(--border)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-[background-color,border-color] duration-150 ease-in-out hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--ring)]"
                   >
                     Clear selection
                   </button>
