@@ -939,6 +939,14 @@ a {
   color: var(--text-primary);
 }
 
+.tiptap h4 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
 .tiptap p {
   margin-bottom: 1rem;
   line-height: 1.75;

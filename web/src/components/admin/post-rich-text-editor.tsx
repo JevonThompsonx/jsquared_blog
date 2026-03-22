@@ -63,15 +63,19 @@ function MenuButton({
   disabled?: boolean;
   onClick: () => void;
   title: string;
-}) {
+}): React.JSX.Element {
   return (
     <button
       aria-pressed={active}
-      className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
-        active ? "bg-[var(--primary)] text-[var(--on-primary)]" : "bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
+      className={`flex items-center justify-center rounded-md px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2.5rem] min-w-[2.5rem] ${
+        active
+          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+          : "bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
       } disabled:cursor-not-allowed disabled:opacity-50`}
       disabled={disabled}
       onClick={onClick}
+      onMouseDown={(e) => e.preventDefault()}
+      tabIndex={-1}
       title={title}
       type="button"
     >
@@ -80,7 +84,92 @@ function MenuButton({
   );
 }
 
-function EditorMenuBar({ editor }: { editor: Editor | null }) {
+function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent): void {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  function getCurrentLabel(): string {
+    if (editor.isActive("heading", { level: 2 })) return "H2";
+    if (editor.isActive("heading", { level: 3 })) return "H3";
+    if (editor.isActive("heading", { level: 4 })) return "H4";
+    return "Para";
+  }
+
+  const isHeadingActive = editor.isActive("heading");
+
+  const options = [
+    { label: "Paragraph", active: !isHeadingActive, action: () => editor.chain().focus(undefined, { scrollIntoView: false }).setParagraph().run() },
+    { label: "Heading 2", active: editor.isActive("heading", { level: 2 }), action: () => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 2 }).run() },
+    { label: "Heading 3", active: editor.isActive("heading", { level: 3 }), action: () => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 3 }).run() },
+    { label: "Heading 4", active: editor.isActive("heading", { level: 4 }), action: () => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 4 }).run() },
+  ];
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2.5rem] ${
+          isHeadingActive
+            ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+            : "bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
+        }`}
+        onClick={() => setOpen((v) => !v)}
+        onMouseDown={(e) => e.preventDefault()}
+        tabIndex={-1}
+        title="Text style"
+        type="button"
+      >
+        {getCurrentLabel()}
+        <svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[10rem] rounded-lg border border-[var(--border)] bg-[var(--card-bg)] py-1 shadow-lg" role="listbox">
+          {options.map((opt) => (
+            <button
+              key={opt.label}
+              className={`block w-full px-3 py-2 text-left text-sm transition-colors ${
+                opt.active
+                  ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent)]"
+                  : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
+              }`}
+              onClick={() => {
+                opt.action();
+                setOpen(false);
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              role="option"
+              aria-selected={opt.active}
+              tabIndex={-1}
+              type="button"
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ToolbarDivider(): React.JSX.Element {
+  return <span className="hidden h-6 w-px shrink-0 bg-[var(--border)] sm:block" aria-hidden="true" />;
+}
+
+function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element | null {
   const [linkDraft, setLinkDraft] = useState("");
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showImagePanel, setShowImagePanel] = useState(false);
@@ -89,13 +178,34 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isStuck, setIsStuck] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiContainerRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Detect when toolbar becomes sticky via an Intersection Observer on a
+  // zero-height sentinel element placed just above the toolbar. When the
+  // sentinel scrolls out of view, the toolbar is stuck.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry) {
+          setIsStuck(!entry.isIntersecting);
+        }
+      },
+      { threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
   // Close emoji picker when clicking outside it
   useEffect(() => {
     if (!showEmojiPicker) return;
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent): void {
       if (emojiContainerRef.current && !emojiContainerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
       }
@@ -107,7 +217,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
   const handleEmojiClick = useCallback(
     (emojiData: EmojiClickData) => {
       if (!editor) return;
-      editor.chain().focus().insertContent(emojiData.emoji).run();
+      editor.chain().focus(undefined, { scrollIntoView: false }).insertContent(emojiData.emoji).run();
       setShowEmojiPicker(false);
     },
     [editor],
@@ -128,9 +238,9 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
     }
 
     if (linkDraft.trim() === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").unsetLink().run();
     } else {
-      editor.chain().focus().extendMarkRange("link").setLink({ href: linkDraft.trim() }).run();
+      editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").setLink({ href: linkDraft.trim() }).run();
     }
 
     setShowLinkInput(false);
@@ -179,7 +289,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
 
   const insertImage = useCallback(() => {
     if (!editor || !pendingImageUrl) return;
-    editor.chain().focus().setImage({ src: pendingImageUrl, alt: imageDraftAlt.trim() }).run();
+    editor.chain().focus(undefined, { scrollIntoView: false }).setImage({ src: pendingImageUrl, alt: imageDraftAlt.trim() }).run();
     setShowImagePanel(false);
     setPendingImageUrl(null);
     setImageDraftAlt("");
@@ -190,55 +300,91 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
   }
 
   return (
-    <div className="rounded-t-2xl border-b border-[var(--border)] bg-[var(--accent-soft)] p-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">Formatting</span>
-        <div className="flex flex-wrap gap-2">
-          <MenuButton active={editor.isActive("bold")} disabled={!editor.can().chain().toggleBold().run()} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">
+    <>
+      {/* Sentinel for sticky detection — sits at the toolbar's natural position */}
+      <div ref={sentinelRef} className="h-0 w-full" aria-hidden="true" />
+      <div
+        ref={toolbarRef}
+        className={`sticky z-20 border-b border-[var(--border)] bg-[var(--surface)] p-3 backdrop-blur-[12px] transition-[border-radius,box-shadow] ${
+          isStuck
+            ? "rounded-none shadow-[var(--shadow)]"
+            : "rounded-t-2xl"
+        }`}
+        style={{ top: "5rem" }}
+      >
+        {/* Horizontally scrollable button row for mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] sm:flex-wrap sm:gap-2 sm:overflow-x-visible">
+          {/* Group: Text Style */}
+          <TextStyleDropdown editor={editor} />
+
+          <ToolbarDivider />
+
+          {/* Group: Bold, Italic */}
+          <MenuButton
+            active={editor.isActive("bold")}
+            disabled={!editor.can().chain().toggleBold().run()}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run()}
+            title="Bold (Ctrl+B)"
+          >
             B
           </MenuButton>
-          <MenuButton active={editor.isActive("italic")} disabled={!editor.can().chain().toggleItalic().run()} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">
+          <MenuButton
+            active={editor.isActive("italic")}
+            disabled={!editor.can().chain().toggleItalic().run()}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run()}
+            title="Italic (Ctrl+I)"
+          >
             I
           </MenuButton>
-          <MenuButton active={editor.isActive("strike")} disabled={!editor.can().chain().toggleStrike().run()} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough">
-            S
-          </MenuButton>
-          <MenuButton active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
-            H2
-          </MenuButton>
-          <MenuButton active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">
-            H3
-          </MenuButton>
-        </div>
 
-        <span className="hidden h-6 w-px bg-[var(--border)] sm:block" />
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">Structure</span>
-        <div className="flex flex-wrap gap-2">
-          <MenuButton active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list">
+          <ToolbarDivider />
+
+          {/* Group: Bullet, Ordered, Blockquote */}
+          <MenuButton
+            active={editor.isActive("bulletList")}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleBulletList().run()}
+            title="Bullet list"
+          >
             Bullets
           </MenuButton>
-          <MenuButton active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Ordered list">
+          <MenuButton
+            active={editor.isActive("orderedList")}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleOrderedList().run()}
+            title="Ordered list"
+          >
             Numbers
           </MenuButton>
-          <MenuButton active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Blockquote">
+          <MenuButton
+            active={editor.isActive("blockquote")}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleBlockquote().run()}
+            title="Blockquote"
+          >
             Quote
           </MenuButton>
-          <MenuButton active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()} title="Code block">
-            Code
-          </MenuButton>
-          <MenuButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal rule">
-            Bar
-          </MenuButton>
-        </div>
 
-        <span className="hidden h-6 w-px bg-[var(--border)] sm:block" />
-        <div className="flex flex-wrap gap-2">
+          <ToolbarDivider />
+
+          {/* Group: Link, Image, Code, HR */}
           <MenuButton active={editor.isActive("link")} onClick={setLink} title="Link">
             Link
           </MenuButton>
           <MenuButton disabled={isUploadingImage} onClick={openImageUpload} title="Insert image">
-            {isUploadingImage ? "Uploading…" : "Image"}
+            {isUploadingImage ? "Uploading\u2026" : "Image"}
           </MenuButton>
+          <MenuButton
+            active={editor.isActive("codeBlock")}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleCodeBlock().run()}
+            title="Code block"
+          >
+            Code
+          </MenuButton>
+          <MenuButton
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).setHorizontalRule().run()}
+            title="Horizontal rule"
+          >
+            HR
+          </MenuButton>
+
           {/* Emoji picker — positioned relative to this container */}
           <div ref={emojiContainerRef} className="relative">
             <MenuButton
@@ -258,75 +404,108 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
               </div>
             ) : null}
           </div>
-          <MenuButton disabled={!editor.can().chain().undo().run()} onClick={() => editor.chain().focus().undo().run()} title="Undo">
+
+          <ToolbarDivider />
+
+          {/* Group: Undo, Redo */}
+          <MenuButton
+            disabled={!editor.can().chain().undo().run()}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).undo().run()}
+            title="Undo (Ctrl+Z)"
+          >
             Undo
           </MenuButton>
-          <MenuButton disabled={!editor.can().chain().redo().run()} onClick={() => editor.chain().focus().redo().run()} title="Redo">
+          <MenuButton
+            disabled={!editor.can().chain().redo().run()}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).redo().run()}
+            title="Redo (Ctrl+Y)"
+          >
             Redo
           </MenuButton>
         </div>
-      </div>
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-        type="file"
-      />
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+          type="file"
+        />
 
-      {uploadError ? (
-        <p className="mt-2 text-xs text-[var(--color-error)]">{uploadError}</p>
-      ) : null}
+        {uploadError ? (
+          <p className="mt-2 text-xs text-[var(--color-error)]">{uploadError}</p>
+        ) : null}
 
-      {showLinkInput ? (
-        <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
-          <input
-            className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] sm:min-w-[14rem]"
-            onChange={(event) => setLinkDraft(event.target.value)}
-            placeholder="https://example.com"
-            value={linkDraft}
-          />
-          <button className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]" onClick={applyLink} type="button">
-            Apply link
-          </button>
-          <button className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]" onClick={() => setShowLinkInput(false)} type="button">
-            Cancel
-          </button>
-        </div>
-      ) : null}
-
-      {showImagePanel && pendingImageUrl ? (
-        <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
-          {/* Preview */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img alt="preview" className="h-16 w-24 rounded-md object-cover" src={pendingImageUrl} />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+        {showLinkInput ? (
+          <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
             <input
-              autoFocus
-              className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)]"
-              onChange={(e) => setImageDraftAlt(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") insertImage(); }}
-              placeholder="Alt text (optional)"
-              value={imageDraftAlt}
+              className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] sm:min-w-[14rem]"
+              onChange={(event) => setLinkDraft(event.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") applyLink(); }}
+              placeholder="https://example.com"
+              value={linkDraft}
             />
-            <div className="flex gap-2">
-              <button className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]" onClick={insertImage} type="button">
-                Insert image
-              </button>
-              <button
-                className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
-                onClick={() => { setShowImagePanel(false); setPendingImageUrl(null); }}
-                type="button"
-              >
-                Cancel
-              </button>
+            <button
+              className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]"
+              onClick={applyLink}
+              onMouseDown={(e) => e.preventDefault()}
+              tabIndex={-1}
+              type="button"
+            >
+              Apply link
+            </button>
+            <button
+              className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
+              onClick={() => setShowLinkInput(false)}
+              onMouseDown={(e) => e.preventDefault()}
+              tabIndex={-1}
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : null}
+
+        {showImagePanel && pendingImageUrl ? (
+          <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
+            {/* Preview */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img alt="preview" className="h-16 w-24 rounded-md object-cover" src={pendingImageUrl} />
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <input
+                autoFocus
+                className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                onChange={(e) => setImageDraftAlt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") insertImage(); }}
+                placeholder="Alt text (optional)"
+                value={imageDraftAlt}
+              />
+              <div className="flex gap-2">
+                <button
+                  className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]"
+                  onClick={insertImage}
+                  onMouseDown={(e) => e.preventDefault()}
+                  tabIndex={-1}
+                  type="button"
+                >
+                  Insert image
+                </button>
+                <button
+                  className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
+                  onClick={() => { setShowImagePanel(false); setPendingImageUrl(null); }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  tabIndex={-1}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </>
   );
 }
 
@@ -348,7 +527,7 @@ function parseTiptapInitContent(contentJson: string): string | Record<string, un
 
 const EMPTY_DOC = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
 
-export function PostRichTextEditor({ contentJson, inputName, excerpt }: { contentJson: string; inputName: string; excerpt?: string | null }) {
+export function PostRichTextEditor({ contentJson, inputName, excerpt }: { contentJson: string; inputName: string; excerpt?: string | null }): React.JSX.Element {
   // tiptapJson holds the JSON string that will be submitted via the hidden input.
   const [tiptapJson, setTiptapJson] = useState<string>(() => {
     if (!contentJson) return EMPTY_DOC;
@@ -369,7 +548,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
   // internal state and corrupt storedMarks, producing phantom bold/italic.
   const extensions = useMemo(() => [
     StarterKit.configure({
-      heading: { levels: [2, 3] },
+      heading: { levels: [2, 3, 4] },
       link: false,
     }),
     Link.configure({
@@ -440,7 +619,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
   // Debounced backend validation
   useEffect(() => {
     if (!tiptapJson) return;
-    
+
     const timer = setTimeout(async () => {
       setIsValidating(true);
       try {

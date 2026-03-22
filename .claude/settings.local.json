@@ -48,7 +48,8 @@
       "Bash(find c:/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -name package.json -path *@tiptap*)",
       "Bash(find c:/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -maxdepth 3 -name package.json -path *tiptap/core*)",
       "Bash(grep -n \"window\\\\.scroll\\\\|document\\\\.documentElement\\\\|history\\\\.scroll\" web/src/components/**/*.tsx)",
-      "Bash(grep -n \"tabIndex\\\\|main-content\\\\|article-top\" web/src/app/\\\\\\(blog\\\\\\)/posts/[slug]/page.tsx)"
+      "Bash(grep -n \"tabIndex\\\\|main-content\\\\|article-top\" web/src/app/\\\\\\(blog\\\\\\)/posts/[slug]/page.tsx)",
+      "Bash(find /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src -name *.css -type f)"
     ]
   }
 }
