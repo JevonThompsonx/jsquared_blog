@@ -34,6 +34,9 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
+  // Cache API only supports http/https — skip chrome-extension://, data:, etc.
+  if (!url.protocol.startsWith('http')) return;
+
   // Only handle GET requests from the same origin or specific CDNs (like Cloudinary)
   if (request.method !== 'GET') return;
   
