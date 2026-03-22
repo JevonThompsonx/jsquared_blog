@@ -97,7 +97,7 @@ Everything below is additive — the app is live and stable.
 | 3.13 | Post page scroll/focus priority | Gemini | DONE |
 | 3.14 | Season-year grouped feed | Sonnet + Gemini | DONE |
 
-**Exit criteria**: Lighthouse Performance > 90, Accessibility > 95 on key pages. No WCAG AA violations. **Deferred: requires a live browser/Lighthouse environment. Scheduled for next week.**
+**Exit criteria**: Lighthouse Performance > 90, Accessibility > 95 on key pages. No WCAG AA violations. **MET** — Performance ~100, Accessibility 100, Speed Index 0.6s (2026-03-22).
 
 ---
 
@@ -136,7 +136,7 @@ Everything below is additive — the app is live and stable.
 | V.4 | Validate JSON-LD on a deployed post URL via Google Rich Results Test | Manual | **DONE** — validated 2026-03-21 |
 | V.5 | Run authenticated E2E suite (`bun run seed:e2e` + `bun run e2e:capture-admin-state` + `bun run test:e2e`) | Manual | PARTIAL — seed + public smoke green; admin storage state still missing |
 | V.6 | Review Gemini's 3.1/3.2/3.6 work for correctness and code quality | Opus | DEFERRED — revisit next week when live browser QA tools are available |
-| V.7 | Decommission legacy Cloudflare Worker from dashboard | Manual | TODO |
+| V.7 | Decommission legacy Cloudflare Worker from dashboard | Manual | **DONE** — deleted 2026-03-22 |
 | V.8 | Optionally configure custom SMTP (Resend) for Supabase | Manual | TODO — not blocking |
 | V.9 | Remaining `as` assertion cleanup across untouched files | GPT-5.4 | DONE — no unjustified `as` or `any` assertions remain in backend/shared code; only typed `as const` for GeoJSON discrimination in `world-map.tsx` |
 | V.10 | Enable Supabase email confirmation requirement | Manual | TODO — see known issue in cutover checklist |

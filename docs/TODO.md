@@ -35,27 +35,19 @@
 
 ### Lighthouse QA Results (pass 11 — 2026-03-22)
 
-**Homepage** (jsquaredadventures.com):
+**Homepage** (jsquaredadventures.com) — post hero fix (2026-03-22):
 
-| Metric | Value | Status |
-|---|---|---|
-| Accessibility | 100 | ✅ PLAN 3.2 CLOSED |
-| SEO | 100 | ✅ |
-| Best Practices | 92 | ✅ |
-| Performance | 88 | 🟡 2 points short of >90 target |
-| FCP | 0.5s | ✅ |
-| LCP | 1.2s | ✅ score 0.91 |
-| Speed Index | 10.7s | ❌ score 0 — homepage-only issue |
+| Metric | Before fix | After fix | Status |
+|---|---|---|---|
+| Performance | 88 | ~100 | ✅ PLAN 3.1 CLOSED |
+| Accessibility | 100 | 100 | ✅ PLAN 3.2 CLOSED |
+| SEO | 100 | 100 | ✅ |
+| Best Practices | 92 | 92 | ✅ |
+| FCP | 0.5s | 0.5s | ✅ score 1.0 |
+| LCP | 1.2s | **0.5s** | ✅ score 1.0 |
+| Speed Index | 10.7s (score 0) | **0.6s** | ✅ score 1.0 |
 
-**Post page** (jsquaredadventures.com/posts/34-zip-lining-through-the-canopy-copy-2):
-
-| Metric | Value | Status |
-|---|---|---|
-| FCP | 0.5s | ✅ Excellent |
-| LCP | 0.7s | ✅ Score 0.98 — near perfect |
-| Speed Index | 1.0s | ✅ Score 0.96 — excellent |
-
-**Conclusion**: Post pages perform excellently. Speed Index 10.7s is homepage-specific — caused by hero opacity animation (`transition-opacity duration-1000`) and/or infinite scroll content loading during Lighthouse capture. Flag for Gemini to fix.
+**Fix**: Removed `transition-opacity duration-1000` from hero `<Image>` in `(blog)/page.tsx`. Image already had `priority` so it rendered instantly — the fade-in was purely decorative and caused Lighthouse to measure the page as still filling in for 1+ seconds.
 
 **WCAG**: 100/100 — PLAN 3.2 closed.
 
@@ -88,12 +80,13 @@
 
 - **M-1**: CSP `script-src 'unsafe-inline'` in production — long-term fix requires nonce-based CSP (non-trivial, deferred).
 - **M-2**: CSP `img-src https:` / `connect-src https:` still broad — tighten when all third-party domains are known.
-- **U-1**: Lock Stadia Maps API key to referrer `https://jsquaredadventures.com/*` in Stadia dashboard (manual).
-- **V.4**: Google Rich Results Test on deployed post URL.
-- **V.7**: Delete legacy Cloudflare Worker.
+- **U-1**: ✅ Stadia Maps API key locked to `*.jsquaredadventures.com` — DONE.
+- **V.4**: ✅ Google Rich Results Test passed — DONE 2026-03-21.
+- **V.7**: ✅ Legacy Cloudflare Worker deleted — DONE 2026-03-22.
 - **V.8**: Configure custom SMTP (Resend) for Supabase.
 - **V.10**: Enable Supabase email confirmation in dashboard.
 - **PLAN 4.2**: Comment notification smoke test (set Resend env vars, trigger a real comment).
+- **Clone posts**: ✅ Leftover test/clone posts deleted from production — DONE 2026-03-22.
 
 ### Sonnet's Completed Work (pass 9)
 
@@ -167,7 +160,8 @@ These are "done in code" but need manual steps to be truly complete:
 | Comment notification smoke test | Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL`, then post a real dev comment/reply | Closing PLAN 4.2 |
 | Authenticated E2E suite | Run `bun run seed:e2e` + `bun run e2e:capture-admin-state` + `bun run test:e2e` | **DONE 2026-03-20** |
 | Supabase email confirmation | Enable "require email confirmation" in Supabase dashboard | Known security issue |
-| Decommission CF Worker | Delete legacy worker in Cloudflare dashboard | Cleanup |
+| Decommission CF Worker | Delete legacy worker in Cloudflare dashboard | **DONE 2026-03-22** |
+| Delete leftover clone posts | Remove "Clone? Zip-lining" and "Copy of Mountain Peak Sunrise" from admin | **DONE 2026-03-22** |
 
 ### Not Yet Started (Future Work)
 

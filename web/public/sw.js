@@ -3,7 +3,6 @@ const CACHE_NAME = 'j2-adventures-cache-v1';
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
   '/',
-  '/offline', // A generic offline fallback page (we can create later if needed)
 ];
 
 self.addEventListener('install', (event) => {
