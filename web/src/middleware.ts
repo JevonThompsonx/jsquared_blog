@@ -34,6 +34,9 @@ export function middleware(request: NextRequest): NextResponse {
     "https://*.stadiamaps.com",
     "https://fonts.stadiamaps.com",
     "https://nominatim.openstreetmap.org",
+    // Cloudinary: required for the service worker's stale-while-revalidate fetch strategy
+    "https://res.cloudinary.com",
+    "https://*.cloudinary.com",
   ].join(" ");
 
   const csp = [

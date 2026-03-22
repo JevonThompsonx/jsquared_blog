@@ -37,7 +37,8 @@
       "Bash(grep -r \"captureException\\\\|Sentry\\\\.\" /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src/server --include=*.ts)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(ls -la \"/c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src/app/\\(blog\\)/map/\")"
+      "Bash(ls -la \"/c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src/app/\\(blog\\)/map/\")",
+      "Bash(find /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web -name next.config.* -o -name middleware.ts -o -name middleware.js)"
     ]
   }
 }

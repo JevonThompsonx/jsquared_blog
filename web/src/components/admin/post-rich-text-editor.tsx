@@ -7,6 +7,9 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import NextImage from "next/image";
+import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
+
+import imageCompression from "browser-image-compression";
 
 import { validatePostContentWarningsAction } from "@/app/admin/actions";
 import { getReadingTimeMinutes, getWordCount, type TiptapImageAltWarning } from "@/lib/content";
@@ -85,7 +88,30 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
   const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close emoji picker when clicking outside it
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (emojiContainerRef.current && !emojiContainerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
+
+  const handleEmojiClick = useCallback(
+    (emojiData: EmojiClickData) => {
+      if (!editor) return;
+      editor.chain().focus().insertContent(emojiData.emoji).run();
+      setShowEmojiPicker(false);
+    },
+    [editor],
+  );
 
   const setLink = useCallback(() => {
     if (!editor) {
@@ -125,8 +151,17 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
     setUploadError(null);
 
     try {
+      // Compress before upload to avoid 413s on large originals.
+      // useWebWorker: false prevents browser-image-compression from loading
+      // itself from jsdelivr CDN, which is blocked by the site's CSP.
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 2,
+        maxWidthOrHeight: 2560,
+        useWebWorker: false,
+      });
+
       const body = new FormData();
-      body.append("file", file);
+      body.append("file", compressed);
       const res = await fetch("/api/admin/uploads/images", { method: "POST", body });
       const payload = parseEditorUploadResponse(await res.json());
       if (!res.ok || !payload.imageUrl) {
@@ -204,6 +239,25 @@ function EditorMenuBar({ editor }: { editor: Editor | null }) {
           <MenuButton disabled={isUploadingImage} onClick={openImageUpload} title="Insert image">
             {isUploadingImage ? "Uploading…" : "Image"}
           </MenuButton>
+          {/* Emoji picker — positioned relative to this container */}
+          <div ref={emojiContainerRef} className="relative">
+            <MenuButton
+              active={showEmojiPicker}
+              onClick={() => setShowEmojiPicker((v) => !v)}
+              title="Insert emoji"
+            >
+              😊
+            </MenuButton>
+            {showEmojiPicker ? (
+              <div className="absolute left-0 top-full z-50 mt-1 shadow-xl">
+                <EmojiPicker
+                  height={350}
+                  width={300}
+                  onEmojiClick={handleEmojiClick}
+                />
+              </div>
+            ) : null}
+          </div>
           <MenuButton disabled={!editor.can().chain().undo().run()} onClick={() => editor.chain().focus().undo().run()} title="Undo">
             Undo
           </MenuButton>
@@ -310,12 +364,6 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
 
   const initContent = parseTiptapInitContent(contentJson);
 
-  // Tracks whether the current transaction was started by a mouse click.
-  // Used in handleScrollToSelection to suppress ProseMirror's automatic
-  // scrollIntoView on click: clicking on visible text should never scroll the
-  // page, but keyboard-driven moves (arrow keys past the viewport edge) should.
-  const isClickRef = useRef(false);
-
   // Memoize so the array reference is stable across re-renders. Passing a new
   // array reference on every render can cause Tiptap 3.x to re-initialise
   // internal state and corrupt storedMarks, producing phantom bold/italic.
@@ -344,26 +392,20 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     extensions,
     content: initContent,
     editorProps: {
-      // ProseMirror appends scrollIntoView() to every transaction, including
-      // click-initiated selection changes. When the user clicks visible text the
-      // cursor is already on-screen — the extra scroll causes jarring jumps
-      // (text lands at the bottom of the viewport, especially with the sticky
-      // toolbar at top-24 offsetting the browser's scroll-margin calculation).
-      // Solution: set isClickRef on mousedown, then suppress the scroll inside
-      // handleScrollToSelection for that transaction only. Keyboard navigation
-      // (arrow keys scrolling past the viewport edge) is unaffected.
-      handleDOMEvents: {
-        mousedown: () => {
-          isClickRef.current = true;
-          return false; // don't prevent default click/cursor handling
-        },
-      },
-      handleScrollToSelection: () => {
-        if (isClickRef.current) {
-          isClickRef.current = false;
-          return true; // "handled" — tells ProseMirror not to scroll
+      // ProseMirror calls scrollIntoView() on every selection-changing transaction,
+      // which causes jarring jumps when clicking visible text (cursor lands at the
+      // viewport edge even though it was already on-screen).
+      //
+      // Fix: suppress the scroll only when the cursor is already within the visible
+      // viewport. This leaves keyboard navigation (arrow keys past the viewport edge)
+      // and typing past the bottom of the screen fully intact.
+      handleScrollToSelection: (view) => {
+        try {
+          const coords = view.coordsAtPos(view.state.selection.from);
+          return coords.top >= 0 && coords.bottom <= window.innerHeight;
+        } catch {
+          return false;
         }
-        return false; // let ProseMirror scroll normally (keyboard nav)
       },
     },
     onCreate: ({ editor: e }) => {
