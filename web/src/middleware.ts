@@ -38,9 +38,10 @@ export function middleware(request: NextRequest): NextResponse {
   const csp = [
     "default-src 'self'",
     // nonce covers all legitimate inline scripts; unsafe-eval only in dev for hot reload
+    // wasm-unsafe-eval is required in production for MapLibre GL 5.x (WASM-based renderer)
     [
       `script-src 'self' 'nonce-${nonce}'`,
-      isProduction ? "" : "'unsafe-eval'",
+      isProduction ? "'wasm-unsafe-eval'" : "'unsafe-eval'",
       "https://plausible.io",
     ]
       .filter(Boolean)

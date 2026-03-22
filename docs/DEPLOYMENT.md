@@ -1,6 +1,6 @@
 # J²Adventures — Next.js Production Deployment
 
-Last updated: 2026-03-17
+Last updated: 2026-03-21
 
 ## Overview
 
@@ -10,8 +10,6 @@ The production stack is a single Next.js app (`web/`) deployed to Vercel, with:
 - **Supabase Auth** — public user authentication (sign up, login, password reset)
 - **Auth.js + GitHub** — admin authentication
 - **Cloudinary** — image and media hosting
-
-The legacy Cloudflare Worker (`server/`) and Vite frontend (`client/`) are retired.
 
 ---
 
@@ -58,13 +56,35 @@ Set all of these in the Vercel project dashboard under **Settings → Environmen
 |---|---|
 | `NEXT_PUBLIC_STADIA_MAPS_API_KEY` | Stadia Maps API key — get a free key at stadiamaps.com (200K credits/month free, no card required). Used for the `/map` page and per-post embedded maps. Map degrades gracefully if unset. |
 
+### Email (Resend)
+
+| Variable | Description |
+|---|---|
+| `RESEND_API_KEY` | Resend API key — used for comment notifications and newsletter |
+| `RESEND_FROM_EMAIL` | Sender address for comment notifications (e.g. `noreply@yourdomain.com`) |
+| `COMMENT_NOTIFICATION_TO_EMAIL` | Where to receive new comment alerts |
+| `RESEND_NEWSLETTER_SEGMENT_ID` | Resend audience/segment ID for newsletter signups |
+
+### Monitoring
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN — find in Sentry project settings under Client Keys |
+| `SENTRY_AUTH_TOKEN` | Sentry auth token for source map upload during build |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Plausible analytics domain (e.g. `jsquaredadventures.com`) |
+
 ### Site
 
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | Production URL — `https://jsquaredadventures.com` |
 
-> **Note:** `LEGACY_API_BASE_URL` was a transitional variable pointing to the old Hono worker. It is no longer used and should not be set in production.
+### CI (GitHub Secrets)
+
+| Variable | Description |
+|---|---|
+| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI GitHub App token — for PR status checks |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel Protection Bypass secret — enables Lighthouse CI to audit the real app instead of the Vercel login page. Enable "Protection Bypass for Automation" in Vercel project settings, then copy the generated secret here. |
 
 ---
 
@@ -72,13 +92,11 @@ Set all of these in the Vercel project dashboard under **Settings → Environmen
 
 1. Import the repository into Vercel.
 2. Set the **Root Directory** to `web/`.
-3. Build settings are controlled by `web/vercel.json` — do **not** set manual overrides in the Vercel dashboard (Production Overrides). The `vercel.json` sets `framework`, `buildCommand` (`bun run build`), `installCommand` (`bun install`), and `outputDirectory` (`.next`).
+3. Build settings are controlled by `web/vercel.json` — do **not** set manual overrides in the Vercel dashboard. The `vercel.json` sets `framework`, `buildCommand` (`bun run build`), `installCommand` (`bun install`), and `outputDirectory` (`.next`).
 4. Add all environment variables listed above.
 5. Push to `main` — Vercel auto-deploys via GitHub webhook.
 
-> **Note on Production Overrides**: If the Vercel dashboard shows old build commands under "Production Overrides" (e.g. `cd client && bun run vercel-build`), these must be cleared manually from **Settings → Build & Development Settings** — click each override to remove it and fall back to `vercel.json`.
-
-> **Cron jobs**: The Hobby plan allows one cron job at most with a minimum interval of 1 day. The cron at `/api/cron/publish-scheduled` runs daily at midnight UTC. Do not set `*/5 * * * *` — Vercel will reject it on Hobby.
+> **Cron jobs**: The Hobby plan allows one cron job at most with a minimum interval of 1 day. The cron at `/api/cron/publish-scheduled` runs daily at midnight UTC.
 
 ### GitHub OAuth callback URL
 
@@ -123,33 +141,6 @@ bun run db:generate
 ```
 
 Migrations are append-only — never edit an applied migration file.
-
----
-
-## Decommissioning the Legacy Cloudflare Stack
-
-Once the Next.js app is confirmed live and healthy:
-
-### Cloudflare Workers dashboard
-
-1. Go to Workers & Pages → your Hono worker (e.g. `jsquared-blog-api`)
-2. Click **Manage** → **Delete** the worker
-3. Remove any associated custom domain routes (`api.jsquaredadventures.com` or similar)
-
-### Cloudflare Pages dashboard
-
-If the old Vite frontend was deployed to Cloudflare Pages:
-
-1. Go to Workers & Pages → your Pages project
-2. Update the build settings to point to `web/` OR delete the old project if it was separate
-3. Remove old environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-
-### Legacy environment variables to remove
-
-These were only needed for the old Cloudflare Worker — they are no longer used:
-
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `DEV_MODE`
 
 ---
 

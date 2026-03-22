@@ -34,7 +34,9 @@
       "Bash(grep -r instrumentation /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src --include=*.ts --include=*.tsx)",
       "Bash(grep -A2 \"^export default\" src/app/account/loading.tsx src/app/\\\\\\(blog\\\\\\)/posts/[slug]/loading.tsx src/app/\\\\\\(blog\\\\\\)/series/[slug]/loading.tsx src/app/\\\\\\(blog\\\\\\)/author/[id]/loading.tsx src/app/\\\\\\(blog\\\\\\)/map/loading.tsx)",
       "Bash(grep -r \"captureException\\\\|Sentry\\\\.\" /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src/app/api --include=*.ts)",
-      "Bash(grep -r \"captureException\\\\|Sentry\\\\.\" /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src/server --include=*.ts)"
+      "Bash(grep -r \"captureException\\\\|Sentry\\\\.\" /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src/server --include=*.ts)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

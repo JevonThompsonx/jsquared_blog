@@ -2,7 +2,7 @@
 
 **Date**: 2026-03-19
 **Status**: Accepted
-**Deciders**: Claude Sonnet 4.6 (Architect), Jevon
+**Deciders**: Jevon
 
 ## Context
 

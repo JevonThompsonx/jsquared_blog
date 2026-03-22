@@ -1,6 +1,6 @@
-# J²Adventures Blog — Project Tracker
+# J²Adventures Blog — Status
 
-> **Last Updated**: March 21, 2026 (pass 13 — Phase 6 code tasks complete) | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 21, 2026 | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -19,263 +19,23 @@
 
 ---
 
-## Phase 6 — Active Task List
+## Remaining Manual Tasks
 
-Phases 1–5 complete. The site is live, stable, and scoring 100/100 on Lighthouse. Phase 6 addresses security gaps, DB optimization, CI hardening, observability, and accessibility automation.
+### High Priority
 
-Full task definitions in `docs/PLAN.md` Phase 6. **All code tasks DONE as of pass 13.**
+- **Apply migration `0010_phase6_indexes.sql`** — run `bun run db:migrate` from `web/`
+- **Enable Supabase email confirmation** — Supabase dashboard → Authentication → Settings → "Enable email confirmations"
+- **Set up external uptime monitoring** — Betterstack, UptimeRobot, or Vercel Monitoring on `jsquaredadventures.com`
 
-### Security (code tasks — Sonnet)
+### Medium Priority
 
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.S.1 — Nonce-based CSP (remove `unsafe-inline`) | High | **DONE** — `middleware.ts` + `layout.tsx` nonce threading |
-| 6.S.2 — Tighten CSP `img-src` / `connect-src` to explicit domains | Medium | **DONE** — explicit allowlists in `middleware.ts` |
-| 6.S.3 — Add `bun audit` dependency scan to GitHub Actions CI | Medium | **DONE** |
-| 6.S.4 — Add Gitleaks secrets scanning to GitHub Actions CI | Medium | **DONE** |
+- **Comment notification smoke test** — set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL` in Vercel → post a real comment
+- **Newsletter provider verification** — set `RESEND_API_KEY` + `RESEND_NEWSLETTER_SEGMENT_ID` → test `POST /api/newsletter`
+- **Manual screen reader QA** — test with VoiceOver/NVDA on: homepage, post detail + ToC, comment form, account settings, mobile nav
 
-### Security (manual — Jevon)
+### Low Priority
 
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.S.5 — Enable Supabase email confirmation in dashboard | High | TODO |
-| 6.S.6 — Resend comment notification smoke test (set env vars, post real comment) | Medium | TODO |
-
-### Database Optimization (Sonnet)
-
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.D.1 — FK index audit + 7 missing indexes added | Medium | **DONE** — migration `0010_phase6_indexes.sql` |
-| 6.D.2 — Composite `(status, published_at)` index on `posts` | Medium | **DONE** — in migration `0010` |
-| 6.D.3 — Index on `posts.scheduled_publish_time` | Low | **DONE** — in migration `0010` |
-| **Apply migration 0010 to production** | High | **TODO** — run `bun run db:migrate` from `web/` |
-
-### CI / DevOps (Sonnet)
-
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.CI.1 — Lighthouse CI on Vercel deployment_status | Medium | **DONE** — `.github/workflows/lighthouse.yml`. Requires `LHCI_GITHUB_APP_TOKEN` secret. |
-| 6.CI.2 — Semgrep SAST scan | Low | **DONE** — `sast` job in `ci.yml`. Optional: add `SEMGREP_APP_TOKEN` secret for dashboard. |
-
-### Observability (manual — Jevon)
-
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.O.1 — Set up external uptime monitoring (Betterstack or UptimeRobot) | High | TODO |
-| 6.O.3 — Newsletter real-provider verification (Resend segment) | Medium | TODO |
-| V.8 — Custom SMTP for Supabase (Resend) | Low | TODO |
-
-### Observability (code — Sonnet)
-
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.O.2 — Sentry route-aware performance tracing | Low | **DONE** — `tracesSampler` in `sentry.server.config.ts` |
-
-### Accessibility (Sonnet)
-
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.A.1 — axe-core WCAG 2.1 AA checks in Playwright E2E | Medium | **DONE** — 3 checks in `smoke.spec.ts` (homepage, category, login) |
-
-### Accessibility (manual — Jevon)
-
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.A.2 — Manual VoiceOver/NVDA screen reader QA (homepage, post, comments, account, nav) | Medium | TODO |
-
-### PWA (Gemini — deferred)
-
-| Task | Priority | Status |
-|------|----------|--------|
-| 6.P.1 — Add PNG fallback icons (192×192, 512×512) to PWA manifest | Low | TODO — blocked on finalized branding assets |
-
----
-
-## Historical Completed Work
-
-### Sonnet's Completed Work (pass 11 — Vercel production deployment unblocked)
-
-**Context**: The site was showing old pre-Next.js code on jsquaredadventures.com even after merging `nextjs-port-backup` into `main`. Multiple layers of issues blocked production deployment.
-
-- **DONE**: Cleared stale Vercel "Production Overrides" (`cd client && bun run vercel-build`) by adding explicit `framework`, `buildCommand`, `installCommand`, `outputDirectory` to `web/vercel.json`. Dashboard overrides now have nothing to override.
-- **DONE**: Fixed cron schedule — changed `*/5 * * * *` → `0 0 * * *` (daily midnight UTC) in both `web/vercel.json` and root `vercel.json`. Hobby plan rejects sub-daily schedules.
-- **DONE**: Removed `"type": "module"` from `web/package.json` — it made all `.js` files ES modules, breaking Vercel's CJS serverless launcher (`___next_launcher.cjs`).
-- **DONE**: Removed `isomorphic-dompurify` from runtime deps (depended on `jsdom@29` → `html-encoding-sniffer@6` → `@exodus/bytes` pure ESM chain, which Node 24 CJS `require()` cannot load). Replaced with regex-based sanitizer in `web/src/lib/content.ts`. `jsdom` moved to `devDependencies` (test-only).
-- **DONE**: Added missing image remote patterns to `web/next.config.ts`: `placehold.co`, `images.unsplash.com`, `imagedelivery.net` (Cloudflare Images), `*.supabase.co` (Supabase Storage).
-- **DONE**: Updated cron comment in `api/cron/publish-scheduled/route.ts` to reflect daily schedule.
-- **STATUS**: Site is **LIVE** at jsquaredadventures.com. GitHub → Vercel auto-deploy confirmed working. All images loading.
-
-### Lighthouse QA Results (pass 11 — 2026-03-22)
-
-**Homepage** (jsquaredadventures.com) — post hero fix (2026-03-22):
-
-| Metric | Before fix | After fix | Status |
-|---|---|---|---|
-| Performance | 88 | ~100 | ✅ PLAN 3.1 CLOSED |
-| Accessibility | 100 | 100 | ✅ PLAN 3.2 CLOSED |
-| SEO | 100 | 100 | ✅ |
-| Best Practices | 92 | 92 | ✅ |
-| FCP | 0.5s | 0.5s | ✅ score 1.0 |
-| LCP | 1.2s | **0.5s** | ✅ score 1.0 |
-| Speed Index | 10.7s (score 0) | **0.6s** | ✅ score 1.0 |
-
-**Fix**: Removed `transition-opacity duration-1000` from hero `<Image>` in `(blog)/page.tsx`. Image already had `priority` so it rendered instantly — the fade-in was purely decorative and caused Lighthouse to measure the page as still filling in for 1+ seconds.
-
-**WCAG**: 100/100 — PLAN 3.2 closed.
-
-### Remaining tasks now unblocked by live site
-
-- **V.4**: ✅ Google Rich Results Test passed — 1 valid `BlogPosting` item detected on post page. PLAN 4.4 CLOSED.
-- **3.1 Performance**: ✅ Homepage hero `transition-opacity duration-1000` removed from `(blog)/page.tsx:113`. Speed Index should drop significantly on next Lighthouse run.
-- **E2E fixture post**: ✅ Deleted from production — DONE.
-- **Stadia Maps API key**: ✅ Locked to `*.jsquaredadventures.com` — DONE.
-
----
-
-### Sonnet's Completed Work (pass 10 — production readiness fixes)
-
-- **DONE**: H-1 — Upgraded Next.js `16.1.6` → `16.2.0` to close CVE `GHSA-mq59-m269-xvcx` (null origin bypasses Server Actions CSRF check).
-- **DONE**: M-4 — Confirmed: `api/posts/route.ts` already has Zod validation (limit 1–50, offset ≥ 0, search/category/tag length capped) from backend agent pass. No re-work needed.
-- **DONE**: L-2 — Added Zod validation on `commentId` path param in `api/comments/[commentId]/route.ts` (regex `[a-zA-Z0-9_-]+`, max 128 chars).
-- **DONE**: FAIL-4 — Replaced all hardcoded `red-*`/`green-*` Tailwind color classes with CSS custom properties (`--color-error-*`, `--color-success-*`) in `feedback-panel.tsx`, `login-form.tsx`, `signup-form.tsx`, and `account-settings.tsx`. Dark mode now works correctly for error/success states.
-- **DONE**: FAIL-3 — Bumped touch targets from `h-9` (36px) to `h-11` (44px) on `BookmarkButton` and `ShareButtons` (WCAG 2.5.5 compliance). `CopyLinkButton` and newsletter form already met the 44px threshold via `py-2`/`h-10`.
-- **DONE**: FAIL-2 — Added `loading="lazy"` to prose `<img>` tag emitter in `content.ts:194`.
-- **DONE**: FAIL-5 — Created `loading.tsx` for `/tag/[slug]/` and `/category/[category]/` routes with skeleton header + post card grid.
-- **DONE**: FAIL-10 — Restricted `next/image remotePatterns` from wildcard `hostname: "**"` to explicit Cloudinary domains (`res.cloudinary.com`, `*.cloudinary.com`).
-- **DONE**: FAIL-9 — Removed "Open admin" link from public `not-found.tsx` (was exposing `/admin` URL to all users).
-- **DONE**: FAIL-14 — Added `color-scheme: light` / `color-scheme: dark` to CSS `:root` and `[data-theme-mode="dark"]` blocks so browser scrollbars/form controls match the active theme.
-- **DONE**: FAIL-15 — Added `viewport` export to `layout.tsx` with `theme-color` for Android browser chrome (light: `#f4efe5`, dark: `#111812`).
-- **DONE**: FAIL-8 — Replaced bare unstyled `global-error.tsx` with branded error page (serif font, site palette, "Try again" + "Return home" actions).
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build` all pass on Next.js 16.2.0.
-
-### Remaining manual tasks (not AI-actionable)
-
-- **M-1**: CSP `script-src 'unsafe-inline'` in production — long-term fix requires nonce-based CSP (non-trivial, deferred).
-- **M-2**: CSP `img-src https:` / `connect-src https:` still broad — tighten when all third-party domains are known.
-- **U-1**: ✅ Stadia Maps API key locked to `*.jsquaredadventures.com` — DONE.
-- **V.4**: ✅ Google Rich Results Test passed — DONE 2026-03-21.
-- **V.7**: ✅ Legacy Cloudflare Worker deleted — DONE 2026-03-22.
-- **V.8**: Configure custom SMTP (Resend) for Supabase.
-- **V.10**: Enable Supabase email confirmation in dashboard.
-- **PLAN 4.2**: Comment notification smoke test (set Resend env vars, trigger a real comment).
-- **Clone posts**: ✅ Leftover test/clone posts deleted from production — DONE 2026-03-22.
-
-### Sonnet's Completed Work (pass 9)
-
-- **DONE**: V.5 Authenticated E2E suite — all 19 Playwright tests now pass (previously 12 passed / 7 skipped).
-- **DONE**: Fixed test 14 (`admin dashboard filters and navigation stay usable`) — the `waitForURL` assertion for `sort=updated-desc` was unreliable because `router.push` in `updateFilters` races with Next.js App Router server-component re-renders when the Radix Select fires on a `value={undefined}` (uncontrolled) select. Fix: assert on the rendered Radix select value ("Recently updated" visible) rather than the URL param. The UI state is the reliable signal; URL update is best-effort in this scenario.
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run test` (170 tests), `bun run test:e2e` (19/19) all pass.
-
-### Sonnet's Completed Work (pass 8)
-
-- **DONE**: Hydration mismatch fix — added `suppressHydrationWarning` to the `theme-root` `<div>` in `web/src/components/theme/theme-provider.tsx`. The mismatch was caused by `useSyncExternalStore` returning `hydrated=false` on the server (producing `light/sage` defaults) and `hydrated=true` immediately on the client (reading localStorage values), causing React to see differing `data-theme-look`/`data-theme-mode` attributes. `suppressHydrationWarning` is the correct fix — the mismatch is intentional (user preference can only be known client-side) and the div re-renders with correct values immediately.
-- **DONE**: V.2 RSS smoke — confirmed by Jevon manually.
-- **DONE**: V.3 View counter — confirmed by Jevon manually.
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (170 tests) all pass.
-
-### Sonnet's Completed Work (pass 7 — review)
-
-- **DONE**: Phase 5.1 PWA review — found and fixed 4 bugs in Gemini's implementation:
-  1. `pwa-registry.tsx` operator precedence bug: `&& C || D` evaluated as `(... && C) || D`, making the `localhost` check unconditional. Fixed to `&& (C || D)`.
-  2. `manifest.ts` invalid `sizes` field: `'192x192 512x512 any'` is wrong for an SVG — the correct value is `'any'` (scalable). Fixed.
-  3. `pwa-registry.tsx`: `console.log` in production-shipped code. Removed.
-  4. `pwa-registry.tsx`: SW registered inside `window.addEventListener('load', ...)` inside `useEffect` — by the time the component mounts, `load` has already fired, so the callback would never run. Fixed to register directly in `useEffect`.
-- **DONE**: Phase 5.6 EXIF frontend reviewed — `post-gallery.tsx` EXIF display in lightbox is correct. No bugs found.
-- **DONE**: `docs/PLAN.md` and `TODO.md` updated to reflect current state.
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (170 tests) all pass.
-
-### Sonnet's Completed Work (pass 6)
-
-- **DONE**: Phase 5.4 restore endpoint — `POST /api/admin/posts/[postId]/revisions/[revisionId]/restore` implemented. Creates a pre-restore undo-point revision, recomputes `contentHtml`/`contentPlainText` via `derivePostContent()`, updates the post. 9 unit tests in `web/tests/unit/post-revision-restore-route.test.ts`.
-- **DONE**: Phase 5.6 EXIF metadata backend — 9 EXIF columns added to `media_assets` schema, `0009_media_asset_exif.sql` migration, `web/src/lib/cloudinary/exif.ts` parser utility, `uploadEditorialImage()` requests `image_metadata=1` and returns parsed EXIF, `actions.ts` stores EXIF in gallery inserts. 43 unit tests in `web/tests/unit/exif.test.ts`.
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (170 tests) all pass.
-
-### Sonnet's Completed Work (pass 5)
-
-- **DONE**: Phase 5.4 revision capture wired — `updateAdminPostAction` (`web/src/app/admin/actions.ts`) now calls `createPostRevision()` after every successful save. Snapshot records the pre-update state (title, contentJson, excerpt). Best-effort: revision failure does not block the save. 4 new unit tests in `web/tests/unit/update-post-revision-capture.test.ts`.
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (118 tests) all pass.
-
-### Sonnet's Completed Work (pass 3)
-
-- **DONE**: PLAN 4.6 newsletter form review — found and fixed `useFormStatus` bug in `web/src/components/blog/newsletter-signup-form.tsx`. `useFormStatus` only tracks Server Action pending state, not client-side async handlers. Replaced with explicit `loading` prop. Removed unused `catch (err)` variable. All states verified correct.
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (107 tests) all pass.
-
-### Gemini's Completed Work (pass 7)
-
-- **DONE**: Phase 5.1 PWA — manifest, SVG icon, service worker, `ServiceWorkerRegistry` component. (Bugs reviewed and fixed by Sonnet — see pass 7 above.)
-- **DONE**: Phase 5.6 EXIF display — lightbox detail panel surfaces camera/aperture/shutter/ISO/date/GPS data.
-
-### Gemini's Completed Work (pass 3–4)
-
-- **DONE**: `web/src/components/blog/home-post-card.tsx` — replaced `placehold.co` SVG fallback with a `.png` fallback, resolving the `dangerouslyAllowSVG` Next.js dev warning.
-- **DONE**: PLAN 4.6 Newsletter signup form UI implemented and integrated into the frontend.
-- **DONE**: Quality gates — `bun run lint`, `bunx tsc --noEmit`, `bun run build`, `bun run test` (107 tests), `bun run test:e2e` (12 passed, 7 skipped) all pass.
-- **DEFERRED** (next week): PLAN 3.1 (CWV), 3.2 (WCAG), 3.6 (Search interactive QA) — blocked by lack of an interactive browser / Lighthouse environment.
-
-### Next Gemini Task
-
-No frontend feature work remains. All Phases 1–5 frontend tasks are complete.
-
-Next Gemini session (when live environment available):
-- PLAN 3.1 / 3.2 / 3.6 — Live Lighthouse + WCAG browser QA pass. **Requires interactive browser. Do not attempt without it.**
-
-### Verification Tasks (Manual / Operational)
-
-These are "done in code" but need manual steps to be truly complete:
-
-| Task | What's Needed | Blocks |
-|------|---------------|--------|
-| Apply migrations 0007 + 0009 | Run `bun run db:migrate` on production DB | **DONE 2026-03-19** |
-| RSS feed smoke test | Visit `/feed.xml`, `/category/*/feed.xml`, `/tag/*/feed.xml` in browser | **DONE 2026-03-20** |
-| View counter verification | Check that views increment once per session in dev | **DONE 2026-03-20** |
-| JSON-LD validation | Run a deployed post URL through Google Rich Results Test | Closing PLAN 4.4 |
-| Comment notification smoke test | Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL`, then post a real dev comment/reply | Closing PLAN 4.2 |
-| Authenticated E2E suite | Run `bun run seed:e2e` + `bun run e2e:capture-admin-state` + `bun run test:e2e` | **DONE 2026-03-20** |
-| Supabase email confirmation | Enable "require email confirmation" in Supabase dashboard | Known security issue |
-| Decommission CF Worker | Delete legacy worker in Cloudflare dashboard | **DONE 2026-03-22** |
-| Delete leftover clone posts | Remove "Clone? Zip-lining" and "Copy of Mountain Peak Sunrise" from admin | **DONE 2026-03-22** |
-
-### Not Yet Started (see Phase 6 task list above)
-
-Latest session notes (2026-03-20 pass 9):
-
-- V.5 authenticated E2E suite complete: all 19 Playwright tests pass (19/19).
-- Fixed test 14 — replaced unreliable `waitForURL(sort=updated-desc)` with `expect(sortSelect).toContainText("Recently updated")`. Root cause: Next.js App Router `router.push` races server-component re-renders when a Radix Select fires in uncontrolled mode (`value={undefined}`). Asserting on rendered UI state is the correct approach.
-- Total unit tests: 170. All quality gates green: lint ✅, tsc ✅, build ✅, 170 unit ✅, 19/19 E2E ✅.
-
-Latest session notes (2026-03-20 pass 8):
-
-- Fixed hydration mismatch in `NextThemeProvider`: added `suppressHydrationWarning` to the theme-root `<div>` in `web/src/components/theme/theme-provider.tsx`. Root cause: `useSyncExternalStore` SSR snapshot returns `false` (not hydrated), so server renders `light/sage` defaults; client immediately reads localStorage and can produce different `data-theme-look`/`data-theme-mode` values. Fix is correct — the attribute difference is intentional and `suppressHydrationWarning` is the standard React pattern for this.
-- V.2 (RSS feeds) and V.3 (view counter) manually confirmed by Jevon.
-- Total unit tests: 170. All quality gates green.
-
-Latest session notes (2026-03-19 pass 7):
-
-- Reviewed Gemini's Phase 5.1 PWA implementation. Found and fixed 4 bugs: operator precedence in `pwa-registry.tsx` condition, invalid `sizes` value in `manifest.ts`, `console.log` in production code, SW registration inside `load` event (already fired at mount time).
-- Reviewed Gemini's Phase 5.6 EXIF lightbox display. Clean — no bugs found.
-- Rewrote `docs/handoff.md` to remove duplicated stale section. Updated `docs/PLAN.md`, `docs/frontendPrompt.md`, `TODO.md`.
-- Total unit tests: 170. All quality gates green.
-
-Latest session notes (2026-03-19 pass 6):
-
-- Phase 5.4 restore endpoint implemented: `POST /api/admin/posts/[postId]/revisions/[revisionId]/restore`. Creates pre-restore undo snapshot, recomputes contentHtml/contentPlainText, updates post. 9 unit tests.
-- Phase 5.6 EXIF backend complete: schema (9 new columns on `media_assets`), migration (`0009_media_asset_exif.sql`), EXIF parser utility (`exif.ts`), upload integration (`image_metadata=1`), actions storage (gallery inserts now carry EXIF), 43 unit tests.
-- Total unit tests: 170. All quality gates green.
-- Handoff to Gemini: pass EXIF fields from upload response into `galleryEntries` JSON; display in lightbox.
-
-Latest session notes (2026-03-19 pass 4):
-
-- Phase 5.4 revision capture integrated: `updateAdminPostAction` now calls `createPostRevision()` (best-effort, pre-update snapshot) after each save. 4 unit tests added.
-- Total unit tests: 118. All quality gates green.
-
-Latest session notes (2026-03-19):
-
-- Gemini 3.1 Pro completed `home-post-card.tsx` SVG fallback fix (was `placehold.co/*.svg`, now `placehold.co/*.png`).
-- All quality gates pass: 107 unit tests, 12 E2E passed (7 skipped), lint, tsc, build all clean.
-- PLAN 3.1 / 3.2 / 3.6 deferred to next week.
-- PLAN V.9 (`as`/`any` cleanup) is complete: no unjustified type assertions remain in backend/shared code.
-- PLAN 4.6 backend is fully shipped.
-- The next frontend brief is in `docs/frontendPrompt.md`. The next backend brief is in `docs/backendPrompt.md`.
+- **Custom SMTP for Supabase (Resend)** — not blocking; shared email works
 
 ---
 
@@ -292,14 +52,15 @@ Latest session notes (2026-03-19):
 - [x] server-only imports in all DAL files
 - [x] Required env var validation with Zod at startup
 - [x] Vitest unit test suite (170 tests passing)
-- [x] Playwright E2E smoke suite (public + authenticated admin, **19/19 passing**)
-- [x] CI pipeline (GitHub Actions: lint, type-check, test, build)
+- [x] Playwright E2E smoke suite (public + authenticated admin, 19/19 passing)
+- [x] CI pipeline (GitHub Actions: lint, type-check, test, build, SAST, dependency audit)
+- [x] Lighthouse CI on Vercel deployments
 - [x] Rate limiting via Upstash Redis with in-memory fallback
 - [x] Sentry error monitoring
 - [x] Plausible analytics
-- [x] HTTP security headers (CSP, HSTS, X-Frame-Options, etc.)
+- [x] HTTP security headers (CSP with nonces, HSTS, X-Frame-Options, etc.)
 - [x] Cloudinary WebP delivery (`f_auto,q_auto`)
-- [x] PWA: web app manifest, SVG icon, service worker (offline-first HTML + stale-while-revalidate static assets), `ServiceWorkerRegistry` component
+- [x] PWA: web app manifest, SVG icon, service worker (offline-first HTML + stale-while-revalidate static assets)
 
 </details>
 
@@ -327,14 +88,13 @@ Latest session notes (2026-03-19):
 - [x] Tag descriptions (shown on `/tag/[slug]`, editable via `/admin/tags`)
 - [x] Category-specific SVG icons
 - [x] Empty search state with action buttons
-- [x] Button contrast via dedicated CSS vars
 - [x] Post bookmarks + `/bookmarks` page
 - [x] Author profiles (`/author/[id]`)
 - [x] RSS feeds (global, per-category, per-tag)
 - [x] Reading time estimate
 - [x] Mobile nav drawer (Radix dialog-based)
 - [x] Sitemap XML, Open Graph, Twitter Cards, canonical URLs
-- [x] Newsletter signup form (`NewsletterSignupForm` component, integrated on homepage)
+- [x] Newsletter signup form
 
 </details>
 
@@ -355,22 +115,19 @@ Latest session notes (2026-03-19):
 - [x] GitHub OAuth admin login
 - [x] Admin dashboard with post list, search, filters
 - [x] Create/edit post — Tiptap editor, status, scheduling, category, tags, images, series, location
-- [x] Cloudinary image upload (now also captures EXIF metadata)
+- [x] Cloudinary image upload (captures EXIF metadata)
 - [x] Bulk publish/unpublish
 - [x] Post preview at unlisted URL
 - [x] Clone post
 - [x] Alt text validation warnings in editor
-- [x] Theme-aware custom selects (Radix)
-- [x] Widened admin layouts (browser QA'd)
 - [x] Series management with conflict warnings
 - [x] Tag management page with inline description editing
 - [x] Location field with Nominatim autocomplete
 - [x] iOverlander URL field
 - [x] Inline image insertion in Tiptap editor
-- [x] Tiptap JSON storage (legacy HTML read-compatible only)
+- [x] Tiptap JSON storage (legacy HTML read-compatible)
 - [x] Comment moderation (flag, hide, unhide, delete, summary stats)
-- [x] Inline confirmation dialogs (no browser `confirm()`)
-- [x] Post revision history (schema, DAL, GET list, POST restore, diff viewer UI)
+- [x] Post revision history (schema, DAL, API routes, diff viewer UI)
 
 </details>
 
@@ -465,9 +222,10 @@ post_revisions     id, post_id (FK), revision_num, title, content_json, excerpt,
 | `0004_tag_description.sql` | `description` column on `tags` |
 | `0005_post_content_and_preview_tokens.sql` | Canonical content fields + preview token support |
 | `0006_comment_moderation.sql` | Comment moderation columns and indexes |
-| `0007_post_view_count.sql` | `view_count` column on `posts` — **applied to prod 2026-03-19** |
-| `0008_post_revisions.sql` | `post_revisions` table — **applied to prod 2026-03-19** |
-| `0009_media_asset_exif.sql` | 9 EXIF columns on `media_assets` — **applied to prod 2026-03-19** |
+| `0007_post_view_count.sql` | `view_count` column on `posts` |
+| `0008_post_revisions.sql` | `post_revisions` table |
+| `0009_media_asset_exif.sql` | 9 EXIF columns on `media_assets` |
+| `0010_phase6_indexes.sql` | FK indexes, composite feed index, scheduled-publish index — **pending prod apply** |
 
 ### Key Directories
 
@@ -497,12 +255,8 @@ bun run db:generate                # Generate Drizzle migrations after schema ch
 bun run db:migrate                 # Apply migrations to Turso
 bun run e2e:capture-admin-state    # Capture reusable admin Playwright session
 bun run seed:e2e                   # Seed stable admin E2E post/comment fixtures
-bun run ./scripts/seed-locations          # Seed location data onto existing posts (dev only)
-bun run ./scripts/seed-series-categories  # Seed test series + categories (dev only, idempotent)
-bun run ./scripts/seed-rich-content       # Seed richer editorial content for local QA
 ```
 
 ## Deployment
 
-Push to GitHub -> Vercel auto-deploys. Root directory: `web/`. See `docs/deployment.md`.
-
+Push to GitHub → Vercel auto-deploys. Root directory: `web/`. See `docs/DEPLOYMENT.md`.
