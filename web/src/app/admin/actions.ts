@@ -14,6 +14,7 @@ import { adminPostFormSchema } from "@/server/forms/admin-post-form";
 import { derivePostContent } from "@/server/posts/content";
 import { clonePostById } from "@/server/posts/clone";
 import { createPostPreviewAccess, revokePostPreviewTokens } from "@/server/posts/preview";
+import { deletePosts, type PostDeleteResult } from "@/server/posts/delete";
 import { publishPosts, unpublishPosts, type PostPublishResult } from "@/server/posts/publish";
 import { generateUniquePostSlug } from "@/server/posts/slug";
 import { slugify } from "@/lib/utils";
@@ -598,4 +599,30 @@ export async function validatePostContentWarningsAction(contentJson: string, exc
     warnings: payload.imageAltWarnings,
     excerpt: payload.excerpt,
   };
+}
+
+const deletePostSchema = z.object({
+  postId: z.string().min(1),
+});
+
+// deletePostAction
+// Input: { postId: string }
+// Output: PostDeleteResult
+// Auth: Admin (Auth.js GitHub)
+// UI: single post delete from dashboard row action, with confirmation dialog
+export async function deletePostAction(postId: string): Promise<PostDeleteResult> {
+  await ensureAdmin();
+  const { postId: validPostId } = deletePostSchema.parse({ postId });
+  return deletePosts([validPostId]);
+}
+
+// bulkDeletePosts
+// Input: { postIds: string[] }
+// Output: PostDeleteResult
+// Auth: Admin (Auth.js GitHub)
+// UI: bulk delete from dashboard toolbar, with confirmation dialog
+export async function bulkDeletePosts(postIds: string[]): Promise<PostDeleteResult> {
+  await ensureAdmin();
+  const { postIds: validPostIds } = bulkPostIdsSchema.parse({ postIds });
+  return deletePosts(validPostIds);
 }

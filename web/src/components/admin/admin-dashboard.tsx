@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import type { AdminSession } from "@/lib/auth/session";
 import {
+  bulkDeletePosts,
   bulkPublishPosts,
   bulkUnpublishPosts,
   clonePost,
   createPostPreviewLinkAction,
+  deletePostAction,
 } from "@/app/admin/actions";
 import { formatPublishedDate, getPostHref } from "@/lib/utils";
 import type { AdminPostRecord, AdminPostListResult, AdminCategoryRecord } from "@/server/dal/admin-posts";
@@ -91,6 +93,7 @@ export function AdminDashboard({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(postsResult.filters.query);
   const [pageJumpInput, setPageJumpInput] = useState(String(postsResult.page));
+  const [deleteConfirm, setDeleteConfirm] = useState<{ ids: string[]; titles: string[] } | null>(null);
 
   const posts = postsResult.posts;
   const { page, totalPages, totalCount } = postsResult;
@@ -276,8 +279,88 @@ export function AdminDashboard({
     });
   };
 
+  const promptDeleteSingle = (postId: string, postTitle: string) => {
+    setDeleteConfirm({ ids: [postId], titles: [postTitle] });
+  };
+
+  const promptDeleteBulk = () => {
+    if (selectedPostIds.size === 0) return;
+    const titles = posts
+      .filter((p: AdminPostRecord) => selectedPostIds.has(p.id))
+      .map((p: AdminPostRecord) => p.title);
+    setDeleteConfirm({ ids: Array.from(selectedPostIds), titles });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteConfirm) return;
+    const idsToDelete = deleteConfirm.ids;
+    setDeleteConfirm(null);
+    startTransition(async () => {
+      try {
+        const result = idsToDelete.length === 1
+          ? await deletePostAction(idsToDelete[0])
+          : await bulkDeletePosts(idsToDelete);
+        setToastMessage(`Deleted ${result.deletedCount} post(s).${result.missingIds.length > 0 ? ` ${result.missingIds.length} not found.` : ""}`);
+        setSelectedPostIds(new Set());
+        setTimeout(() => {
+          setToastMessage(null);
+        }, 4000);
+        router.refresh();
+      } catch (err: unknown) {
+        console.error("Delete failed:", err);
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setToastMessage(`Failed to delete: ${message}`);
+        setTimeout(() => {
+          setToastMessage(null);
+        }, 4000);
+      }
+    });
+  };
+
   return (
     <div className="mt-10 space-y-8">
+      {/* Delete confirmation dialog */}
+      {deleteConfirm ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Confirm delete">
+          <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-[var(--foreground)]">
+              Delete {deleteConfirm.ids.length === 1 ? "post" : `${deleteConfirm.ids.length} posts`}?
+            </h3>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              This will permanently delete {deleteConfirm.ids.length === 1 ? "this post" : "these posts"} and all associated comments, images, bookmarks, and revisions. This cannot be undone.
+            </p>
+            {deleteConfirm.titles.length <= 5 ? (
+              <ul className="mt-3 space-y-1 text-sm text-[var(--muted)]">
+                {deleteConfirm.titles.map((title, i) => (
+                  <li key={deleteConfirm.ids[i]} className="truncate">&bull; {title}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-[var(--muted)]">
+                {deleteConfirm.titles.slice(0, 3).join(", ")} and {deleteConfirm.titles.length - 3} more
+              </p>
+            )}
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--accent-soft)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isPending}
+                className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {isPending ? "Deleting..." : "Delete permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editorial workspace</p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
@@ -410,6 +493,14 @@ export function AdminDashboard({
                     className="rounded-full bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--border)] disabled:opacity-50"
                   >
                     Unpublish
+                  </button>
+                  <button
+                    type="button"
+                    onClick={promptDeleteBulk}
+                    disabled={isPending}
+                    className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Delete
                   </button>
                   <button
                     type="button"
@@ -558,6 +649,15 @@ export function AdminDashboard({
                                 Preview
                               </button>
                           )}
+                            <button
+                              type="button"
+                              onClick={() => promptDeleteSingle(post.id, post.title)}
+                              disabled={isPending}
+                              data-testid="admin-post-delete"
+                              className="admin-delete-btn rounded-full border px-3 py-2 text-center font-semibold transition-colors disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
                         </div>
                       </div>
                     </div>
