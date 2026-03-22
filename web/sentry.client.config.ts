@@ -1,8 +1,2 @@
-import * as Sentry from "@sentry/nextjs";
-
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  tracesSampleRate: 0.1,
-  debug: false,
-  enabled: process.env.NODE_ENV === "production",
-});
+// Superseded by src/instrumentation-client.ts (Next.js native instrumentation hook pattern).
+// This file is intentionally empty — @sentry/nextjs >=8 loads instrumentation-client.ts instead.

@@ -74,15 +74,25 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-  // Suppresses source map upload logs during build
-  silent: !process.env.CI,
+  org: "jsquared-vf",
+  project: "jsquaredblog",
+
   // Upload source maps to Sentry for readable stack traces in production.
-  // Requires SENTRY_AUTH_TOKEN env var (set in Vercel, not committed).
+  // Set SENTRY_AUTH_TOKEN in Vercel environment variables (do not commit).
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  // Tree-shake Sentry SDK for smaller client bundles
+
+  // Upload a wider set of client files for better stack trace resolution
+  widenClientFileUpload: true,
+
+  // Proxy Sentry requests through /monitoring to bypass ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Suppress non-CI source map upload logs
+  silent: !process.env.CI,
+
+  // Tree-shake Sentry SDK for smaller client bundles (webpack only)
   disableLogger: true,
+
   // Automatically instrument Next.js data fetching methods
   autoInstrumentServerFunctions: true,
 });
