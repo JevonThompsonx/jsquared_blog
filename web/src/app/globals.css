@@ -619,11 +619,30 @@ a {
 .prose-content h2,
 .prose-content h3,
 .prose-content h4 {
-  margin-top: 2rem;
-  margin-bottom: 0.75rem;
   color: var(--text-primary);
   font-family: var(--font-lora, Georgia, serif);
   scroll-margin-top: 5.5rem;
+}
+
+.prose-content h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-content h3 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-content h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .prose-content p,

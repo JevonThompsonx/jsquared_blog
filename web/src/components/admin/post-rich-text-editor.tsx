@@ -388,24 +388,34 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     }),
   ], []);
 
+  // Track mouse-initiated selections so we can suppress ProseMirror's
+  // automatic scrollIntoView on clicks (user clicked something visible).
+  const isMouseDownRef = useRef(false);
+
   const editor = useEditor({
     extensions,
     content: initContent,
     editorProps: {
-      // ProseMirror calls scrollIntoView() on every selection-changing transaction,
-      // which causes jarring jumps when clicking visible text (cursor lands at the
-      // viewport edge even though it was already on-screen).
-      //
-      // Fix: suppress the scroll only when the cursor is already within the visible
-      // viewport. This leaves keyboard navigation (arrow keys past the viewport edge)
-      // and typing past the bottom of the screen fully intact.
-      handleScrollToSelection: (view) => {
-        try {
-          const coords = view.coordsAtPos(view.state.selection.from);
-          return coords.top >= 0 && coords.bottom <= window.innerHeight;
-        } catch {
+      handleDOMEvents: {
+        mousedown: () => {
+          isMouseDownRef.current = true;
           return false;
+        },
+        mouseup: () => {
+          // Reset after a tick so handleScrollToSelection sees it first
+          requestAnimationFrame(() => { isMouseDownRef.current = false; });
+          return false;
+        },
+      },
+      // ProseMirror calls scrollIntoView() on every selection-changing transaction.
+      // For mouse clicks, always suppress — the user clicked something already visible.
+      // For keyboard/programmatic changes, allow scroll so typing past the bottom
+      // and arrow-key navigation still work.
+      handleScrollToSelection: () => {
+        if (isMouseDownRef.current) {
+          return true; // suppress scroll on click
         }
+        return false; // allow normal scroll for keyboard nav
       },
     },
     onCreate: ({ editor: e }) => {
