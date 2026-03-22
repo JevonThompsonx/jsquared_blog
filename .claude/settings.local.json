@@ -38,7 +38,15 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(ls -la \"/c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/src/app/\\(blog\\)/map/\")",
-      "Bash(find /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web -name next.config.* -o -name middleware.ts -o -name middleware.js)"
+      "Bash(find /c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web -name next.config.* -o -name middleware.ts -o -name middleware.js)",
+      "Bash(for pkg:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules/@tiptap/$pkg/**)",
+      "Bash(tr -d ' \"\"\"\"version:,')",
+      "Bash(done)",
+      "Bash(find c:/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -name package.json -path *tiptap/core*)",
+      "Bash(find c:/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -name package.json -path *@tiptap*)",
+      "Bash(find c:/Users/Jevon/Nextcloud/Projects/jsquared_blog/web/node_modules -maxdepth 3 -name package.json -path *tiptap/core*)"
     ]
   }
 }
