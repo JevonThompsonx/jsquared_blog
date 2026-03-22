@@ -99,13 +99,6 @@ function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  function getCurrentLabel(): string {
-    if (editor.isActive("heading", { level: 2 })) return "H2";
-    if (editor.isActive("heading", { level: 3 })) return "H3";
-    if (editor.isActive("heading", { level: 4 })) return "H4";
-    return "Para";
-  }
-
   const isHeadingActive = editor.isActive("heading");
 
   const options = [
@@ -120,18 +113,15 @@ function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
       <button
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2.5rem] ${
-          isHeadingActive
-            ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-            : "bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
-        }`}
+        className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2.5rem] bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
         onClick={() => setOpen((v) => !v)}
         onMouseDown={(e) => e.preventDefault()}
         tabIndex={-1}
         title="Text style"
         type="button"
       >
-        {getCurrentLabel()}
+        {/* Static label — pilcrow icon */}
+        <span aria-hidden="true">¶</span>
         <svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -141,10 +131,10 @@ function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
           {options.map((opt) => (
             <button
               key={opt.label}
-              className={`block w-full px-3 py-2 text-left text-sm transition-colors ${
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
                 opt.active
-                  ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent)]"
-                  : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
+                  ? "border-l-[3px] border-l-[var(--primary)] bg-[var(--accent-soft)] font-semibold text-[var(--accent)]"
+                  : "border-l-[3px] border-l-transparent text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
               }`}
               onClick={() => {
                 opt.action();
@@ -156,6 +146,7 @@ function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
               tabIndex={-1}
               type="button"
             >
+              {opt.active ? <span aria-hidden="true">✓</span> : <span className="w-[1ch]" />}
               {opt.label}
             </button>
           ))}
