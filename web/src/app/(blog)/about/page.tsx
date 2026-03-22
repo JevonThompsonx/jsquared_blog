@@ -27,14 +27,14 @@ export default function AboutPage() {
       <SiteHeader />
 
       {/* Hero banner */}
-      <div className="relative w-full overflow-hidden">
-        <div className="relative mx-auto h-64 w-full sm:h-80 lg:h-96">
-          <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover" priority />
-        </div>
-        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent">
-          <div className="container mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">Est. somewhere between a trailhead and a campfire</p>
-            <h1 className="mt-1 text-3xl font-bold text-white sm:text-4xl lg:text-5xl">The story behind J²</h1>
+      <div className="relative w-full overflow-hidden" style={{ background: "var(--background)" }}>
+        <div className="relative mx-auto h-64 w-full max-w-6xl sm:h-80 lg:h-[28rem]">
+          <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover lg:rounded-b-2xl" priority />
+          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent lg:rounded-b-2xl">
+            <div className="container mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">Est. somewhere between a trailhead and a campfire</p>
+              <h1 className="mt-1 text-3xl font-bold text-white sm:text-4xl lg:text-5xl">The story behind J²</h1>
+            </div>
           </div>
         </div>
       </div>

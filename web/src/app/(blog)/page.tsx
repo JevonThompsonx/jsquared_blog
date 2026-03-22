@@ -21,40 +21,8 @@ type SeasonalHero = {
 };
 
 function getSeasonalHero(): SeasonalHero {
-  const month = new Date().getMonth();
-  // Winter (Dec-Feb)
-  if (month === 11 || month <= 1) {
-    return {
-      backgroundImage: "url('https://images.unsplash.com/photo-1542601098-8fc114e148e2?q=80&w=1920&auto=format&fit=crop')",
-      kicker: "",
-      title: "J²Adventures",
-      subtitle: "",
-      note: "",
-    };
-  }
-  // Spring (Mar-May)
-  if (month <= 4) {
-    return {
-      backgroundImage: "url('https://images.unsplash.com/photo-1490750967868-88aa4486c946?q=80&w=1920&auto=format&fit=crop')",
-      kicker: "",
-      title: "J²Adventures",
-      subtitle: "",
-      note: "",
-    };
-  }
-  // Summer (Jun-Aug)
-  if (month <= 7) {
-    return {
-      backgroundImage: "url('https://images.unsplash.com/photo-1682686578842-00ba49b0a71a?q=80&w=1920&auto=format&fit=crop')",
-      kicker: "",
-      title: "J²Adventures",
-      subtitle: "",
-      note: "",
-    };
-  }
-  // Fall (Sep-Nov)
   return {
-    backgroundImage: "url('https://images.unsplash.com/photo-1507371341162-763b5e419408?q=80&w=1920&auto=format&fit=crop')",
+    backgroundImage: "url('/images/welcome.webp')",
     kicker: "",
     title: "J²Adventures",
     subtitle: "",
