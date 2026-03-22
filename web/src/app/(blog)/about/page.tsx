@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
@@ -27,7 +28,9 @@ export default function AboutPage() {
 
       {/* Hero banner */}
       <div className="relative w-full overflow-hidden">
-        <PhotoPlaceholder label="Hero photo — trails, van, or landscape" className="mx-auto h-64 max-w-none w-full rounded-none sm:h-80 lg:h-96" />
+        <div className="relative mx-auto h-64 w-full sm:h-80 lg:h-96">
+          <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover" priority />
+        </div>
         <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent">
           <div className="container mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">Est. somewhere between a trailhead and a campfire</p>
@@ -42,10 +45,9 @@ export default function AboutPage() {
         <section className="mt-12">
           <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-lg sm:p-8 lg:p-10">
             {/* Float photo */}
-            <PhotoPlaceholder
-              label="The two of us"
-              className="mb-4 h-56 w-full sm:float-right sm:mb-0 sm:ml-8 sm:h-64 sm:w-64 lg:h-72 lg:w-72"
-            />
+            <div className="relative mb-4 h-56 w-full overflow-hidden rounded-2xl sm:float-right sm:mb-0 sm:ml-8 sm:h-64 sm:w-64 lg:h-72 lg:w-72">
+              <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover" />
+            </div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Who we are</p>
             <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Two people with a serious travel bug.</h2>
             <div className="prose-content mt-4 space-y-4 text-[var(--text-secondary)]">
@@ -72,7 +74,9 @@ export default function AboutPage() {
 
             {/* Jevon */}
             <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg">
-              <PhotoPlaceholder label="Jevon — photo" className="h-56 w-full rounded-none rounded-t-2xl" />
+              <div className="relative h-56 w-full">
+                <Image src="/images/me.webp" alt="Jevon" fill className="object-cover rounded-t-2xl" style={{ objectPosition: "center 20%" }} />
+              </div>
               <div className="p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">The tech half</p>
                 <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Jevon</h3>
@@ -89,7 +93,9 @@ export default function AboutPage() {
 
             {/* Jessica */}
             <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg">
-              <PhotoPlaceholder label="Jessica — photo" className="h-56 w-full rounded-none rounded-t-2xl" />
+              <div className="relative h-56 w-full">
+                <Image src="/images/tiddies.webp" alt="Jessica" fill className="object-cover rounded-t-2xl" />
+              </div>
               <div className="p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">The outdoors half</p>
                 <h3 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Jessica</h3>
@@ -114,9 +120,15 @@ export default function AboutPage() {
 
             {/* Photo strip — 3 across */}
             <div className="mt-6 grid grid-cols-3 gap-3">
-              <PhotoPlaceholder label="Hiking" className="aspect-square" />
-              <PhotoPlaceholder label="Van / camping" className="aspect-square" />
-              <PhotoPlaceholder label="Travel" className="aspect-square" />
+              <div className="relative aspect-square overflow-hidden rounded-2xl">
+                <Image src="/images/hiking.webp" alt="Hiking" fill className="object-cover rotate-180" style={{ objectPosition: "130% center" }} />
+              </div>
+              <div className="relative aspect-square overflow-hidden rounded-2xl">
+                <Image src="/images/camping.webp" alt="Van / camping" fill className="object-cover" />
+              </div>
+              <div className="relative aspect-square overflow-hidden rounded-2xl">
+                <Image src="/images/travel.jpg" alt="Travel" fill className="object-cover" />
+              </div>
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
