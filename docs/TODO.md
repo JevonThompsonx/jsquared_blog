@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Tracker
 
-> **Last Updated**: March 20, 2026 (pass 10) | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
+> **Last Updated**: March 21, 2026 (pass 11) | **Stack**: Next.js 16.2 · Turso · Supabase Auth · Cloudinary · Vercel
 
 ---
 
@@ -20,6 +20,53 @@
 ---
 
 ## What Needs Attention Now
+
+### Sonnet's Completed Work (pass 11 — Vercel production deployment unblocked)
+
+**Context**: The site was showing old pre-Next.js code on jsquaredadventures.com even after merging `nextjs-port-backup` into `main`. Multiple layers of issues blocked production deployment.
+
+- **DONE**: Cleared stale Vercel "Production Overrides" (`cd client && bun run vercel-build`) by adding explicit `framework`, `buildCommand`, `installCommand`, `outputDirectory` to `web/vercel.json`. Dashboard overrides now have nothing to override.
+- **DONE**: Fixed cron schedule — changed `*/5 * * * *` → `0 0 * * *` (daily midnight UTC) in both `web/vercel.json` and root `vercel.json`. Hobby plan rejects sub-daily schedules.
+- **DONE**: Removed `"type": "module"` from `web/package.json` — it made all `.js` files ES modules, breaking Vercel's CJS serverless launcher (`___next_launcher.cjs`).
+- **DONE**: Removed `isomorphic-dompurify` from runtime deps (depended on `jsdom@29` → `html-encoding-sniffer@6` → `@exodus/bytes` pure ESM chain, which Node 24 CJS `require()` cannot load). Replaced with regex-based sanitizer in `web/src/lib/content.ts`. `jsdom` moved to `devDependencies` (test-only).
+- **DONE**: Added missing image remote patterns to `web/next.config.ts`: `placehold.co`, `images.unsplash.com`, `imagedelivery.net` (Cloudflare Images), `*.supabase.co` (Supabase Storage).
+- **DONE**: Updated cron comment in `api/cron/publish-scheduled/route.ts` to reflect daily schedule.
+- **STATUS**: Site is **LIVE** at jsquaredadventures.com. GitHub → Vercel auto-deploy confirmed working. All images loading.
+
+### Lighthouse QA Results (pass 11 — 2026-03-22)
+
+**Homepage** (jsquaredadventures.com):
+
+| Metric | Value | Status |
+|---|---|---|
+| Accessibility | 100 | ✅ PLAN 3.2 CLOSED |
+| SEO | 100 | ✅ |
+| Best Practices | 92 | ✅ |
+| Performance | 88 | 🟡 2 points short of >90 target |
+| FCP | 0.5s | ✅ |
+| LCP | 1.2s | ✅ score 0.91 |
+| Speed Index | 10.7s | ❌ score 0 — homepage-only issue |
+
+**Post page** (jsquaredadventures.com/posts/34-zip-lining-through-the-canopy-copy-2):
+
+| Metric | Value | Status |
+|---|---|---|
+| FCP | 0.5s | ✅ Excellent |
+| LCP | 0.7s | ✅ Score 0.98 — near perfect |
+| Speed Index | 1.0s | ✅ Score 0.96 — excellent |
+
+**Conclusion**: Post pages perform excellently. Speed Index 10.7s is homepage-specific — caused by hero opacity animation (`transition-opacity duration-1000`) and/or infinite scroll content loading during Lighthouse capture. Flag for Gemini to fix.
+
+**WCAG**: 100/100 — PLAN 3.2 closed.
+
+### Remaining tasks now unblocked by live site
+
+- **V.4**: ✅ Google Rich Results Test passed — 1 valid `BlogPosting` item detected on post page. PLAN 4.4 CLOSED.
+- **3.1 Performance**: ✅ Homepage hero `transition-opacity duration-1000` removed from `(blog)/page.tsx:113`. Speed Index should drop significantly on next Lighthouse run.
+- **E2E fixture post**: ✅ Deleted from production — DONE.
+- **Stadia Maps API key**: ✅ Locked to `*.jsquaredadventures.com` — DONE.
+
+---
 
 ### Sonnet's Completed Work (pass 10 — production readiness fixes)
 
@@ -398,28 +445,3 @@ bun run ./scripts/seed-rich-content       # Seed richer editorial content for lo
 
 Push to GitHub -> Vercel auto-deploys. Root directory: `web/`. See `docs/deployment.md`.
 
----
-
-## agency-agents-main Audit (2026-03-20)
-
-Production readiness audit of `agency-agents-main/`. Full report: `docs/PRODUCTION-AUDIT.md`.
-
-### Issues Found & Fixed
-
-| ID | Severity | File | Issue | Status |
-|---|---|---|---|---|
-| CRIT-1 | Critical | `engineering-security-engineer.md` (root), `engineering-senior-developer.md` (root) | Orphaned root-level duplicates never processed by lint/convert/install scripts | **Fixed** — deleted both root-level orphans |
-| CRIT-2 | Critical | `engineering/engineering-senior-developer.md` | Four broken internal path refs: `ai/system/component-library.md`, `ai/system/premium-style-guide.md`, `ai/system/advanced-tech-patterns.md`, `ai/agents/dev.md` — extracted from a private client project | **Fixed** — removed all dead references; agent is now self-contained |
-| HIGH-1 | High | `engineering/engineering-software-architect.md` | Missing `emoji` + `vibe` frontmatter fields; missing `Learning & Memory`, `Success Metrics`, `Advanced Capabilities` sections (81 lines vs 150–534 for peers) | **Fixed** — added all missing fields and sections |
-| HIGH-2 | High | `engineering/engineering-threat-detection-engineer.md` | `curl -k` in Splunk deploy step disables TLS cert verification — contradicts security-first principles | **Fixed** — replaced with `--cacert` + explanatory comment |
-| MED-1 | Medium | `README.md` | Agent count says "144" in Stats (line 478) vs "147" in Acknowledgments (line 789) | **Fixed** — Stats section updated to 147 |
-| MED-2 | Medium | `README.md` | Scenarios numbered 1, 2, 3, 5, 4 (out of order) | **Fixed** — renumbered to 1, 2, 3, 4, 5 |
-| LOW-1 | Low | `engineering/engineering-security-engineer.md` | `trivy-action@master` is an unpinned floating reference | **Fixed** — pinned to `aquasecurity/trivy-action@0.28.0` |
-| LOW-2 | Low | `engineering/engineering-threat-detection-engineer.md` | Example dates from 2025 (stale) | **Fixed** — updated to 2026 equivalents |
-
-### Additional Cleanup
-
-- Deleted `jsquared_blog/docs/engineering-security-engineer.md` — orphaned agent file in wrong project folder
-- Deleted `jsquared_blog/design-ui-designer.md` — orphaned agent file at project root
-- Deleted `jsquared_blog/design-ux-researcher.md` — orphaned agent file at project root
-- Moved audit report from incorrectly created `agency-agents-main/docs/` → `jsquared_blog/docs/PRODUCTION-AUDIT.md`

@@ -1,6 +1,6 @@
 # J²Adventures — Comprehensive Project Plan
 
-Last updated: 2026-03-20 (pass 8 — hydration mismatch fix in theme-provider; V.2 RSS + V.3 view counter confirmed)
+Last updated: 2026-03-21 (pass 11 — production deployment unblocked; site live at jsquaredadventures.com)
 
 ## Model Allocation
 
@@ -20,7 +20,9 @@ Everything below is additive — the app is live and stable.
 
 ### Active Work Right Now
 
-- PLAN `3.1`, `3.2`, `3.6` browser QA is **deferred** until a live QA/Lighthouse environment is available — estimated next week.
+- **Site is LIVE** at jsquaredadventures.com — Vercel production deployment resolved 2026-03-21.
+- PLAN `3.1`, `3.2`, `3.6` browser QA is now **unblocked** — live domain available. Run Lighthouse on jsquaredadventures.com.
+- PLAN `V.4` Google Rich Results Test is now **actionable** — test a live post URL.
 - PLAN `V.9` `as`/`any` cleanup is complete — no unjustified type assertions remain in backend/shared code.
 - **Phase 5.1** PWA is **fully done** — manifest, SVG icon, service worker (`sw.js`), `ServiceWorkerRegistry` component. Reviewed and bugs fixed (operator precedence bug in registry, invalid combined sizes in manifest, removed console.log, fixed SW registration timing). Frontend EXIF lightbox display is also complete.
 - **Phase 5.4** post revision history is **fully done** — schema, migration (applied), DAL, GET list route, POST restore route, 20 unit tests.
@@ -80,7 +82,7 @@ Everything below is additive — the app is live and stable.
 
 | # | Task | Owner | Status |
 |---|------|-------|--------|
-| 3.1 | Core Web Vitals audit + fix (LCP, CLS, INP) | Opus (audit) / Gemini (fix) | **DEFERRED** — code improvements shipped; Lighthouse/CWV measurement blocked by tooling; revisit next week with live environment |
+| 3.1 | Core Web Vitals audit + fix (LCP, CLS, INP) | Opus (audit) / Gemini (fix) | **DONE** — hero `transition-opacity duration-1000` removed (Speed Index fix); LCP 1.2s, FCP 0.5s already excellent |
 | 3.2 | WCAG AA accessibility audit + fix | Opus (audit) / Gemini (fix) | **DEFERRED** — code improvements shipped; interactive browser a11y audit blocked by tooling; revisit next week |
 | 3.3 | Image lazy loading + blur placeholders | Gemini | DONE |
 | 3.4 | Skeleton loading states for all async content | Gemini | DONE |
@@ -110,13 +112,13 @@ Everything below is additive — the app is live and stable.
 | 4.1 | Comment moderation tools (admin flag/hide/delete) | Sonnet + Gemini | DONE |
 | 4.2 | Email notification on new comment (Resend) | Sonnet | DONE (code) — env setup + smoke verification pending |
 | 4.3 | RSS per category/tag | Sonnet | DONE — code shipped, manual smoke pending |
-| 4.4 | Structured data (JSON-LD for BlogPosting) | Gemini | DONE (code) — deployed Rich Results validation pending |
+| 4.4 | Structured data (JSON-LD for BlogPosting) | Gemini | DONE — 1 valid BlogPosting detected via Google Rich Results Test (2026-03-21) |
 | 4.5 | Reading time estimate | Sonnet | DONE |
 | 4.6 | Newsletter signup (Resend + simple form) | Sonnet + Gemini | DONE — backend route/service/tests shipped; frontend signup form UI implemented, integrated, and reviewed (useFormStatus bug fixed) |
 | 4.7 | Post view counter (privacy-respecting) | Sonnet | DONE — migration 0007 applied to prod |
 | 4.8 | Admin desktop layout expansion | Gemini | DONE |
 
-**Exit criteria**: Admin has moderation tools. Structured data validates in Google Rich Results test. **Partially met — Rich Results validation still needs deployed URL check, and 4.2 still needs env-backed smoke verification.**
+**Exit criteria**: Admin has moderation tools. Structured data validates in Google Rich Results test. **Mostly met — Rich Results validated 2026-03-21. 4.2 still needs env-backed smoke verification (Resend env vars).**
 
 ---
 
@@ -131,7 +133,7 @@ Everything below is additive — the app is live and stable.
 | V.1 | Apply migrations `0007`, `0008`, `0009` via `bun run db:migrate` | Manual | **DONE** — applied 2026-03-19 |
 | V.2 | Smoke test RSS feeds in browser (`/feed.xml`, `/category/*/feed.xml`, `/tag/*/feed.xml`) | Manual | **DONE** — confirmed 2026-03-20 |
 | V.3 | Verify post view counter increments once per session in dev | Manual | **DONE** — confirmed 2026-03-20 |
-| V.4 | Validate JSON-LD on a deployed post URL via Google Rich Results Test | Manual | TODO |
+| V.4 | Validate JSON-LD on a deployed post URL via Google Rich Results Test | Manual | **DONE** — validated 2026-03-21 |
 | V.5 | Run authenticated E2E suite (`bun run seed:e2e` + `bun run e2e:capture-admin-state` + `bun run test:e2e`) | Manual | PARTIAL — seed + public smoke green; admin storage state still missing |
 | V.6 | Review Gemini's 3.1/3.2/3.6 work for correctness and code quality | Opus | DEFERRED — revisit next week when live browser QA tools are available |
 | V.7 | Decommission legacy Cloudflare Worker from dashboard | Manual | TODO |

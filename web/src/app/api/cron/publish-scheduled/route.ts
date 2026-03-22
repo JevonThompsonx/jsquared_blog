@@ -17,7 +17,7 @@ import { publishDueScheduledPosts } from "@/server/posts/publish";
  * where the secret is typically absent). Any other environment — including Vercel Preview
  * deployments — must supply the secret or receives 401.
  *
- * Schedule: every 5 minutes (cron: "0/5 * * * *") — configured in vercel.json.
+ * Schedule: daily at midnight UTC (cron: "0 0 * * *") — configured in vercel.json.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;

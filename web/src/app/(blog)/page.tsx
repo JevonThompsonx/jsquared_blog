@@ -110,7 +110,7 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
         <div className="landing-page relative overflow-hidden">
           <Image
             alt="Hero background"
-            className="object-cover transition-opacity duration-1000"
+            className="object-cover"
             fill
             priority
             src={seasonalHero.backgroundImage.replace(/^url\('(.+)'\)$/, "$1")}

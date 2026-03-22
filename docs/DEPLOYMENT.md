@@ -72,9 +72,13 @@ Set all of these in the Vercel project dashboard under **Settings → Environmen
 
 1. Import the repository into Vercel.
 2. Set the **Root Directory** to `web/`.
-3. Vercel auto-detects Next.js — leave the build command as default (`next build`).
+3. Build settings are controlled by `web/vercel.json` — do **not** set manual overrides in the Vercel dashboard (Production Overrides). The `vercel.json` sets `framework`, `buildCommand` (`bun run build`), `installCommand` (`bun install`), and `outputDirectory` (`.next`).
 4. Add all environment variables listed above.
-5. Deploy.
+5. Push to `main` — Vercel auto-deploys via GitHub webhook.
+
+> **Note on Production Overrides**: If the Vercel dashboard shows old build commands under "Production Overrides" (e.g. `cd client && bun run vercel-build`), these must be cleared manually from **Settings → Build & Development Settings** — click each override to remove it and fall back to `vercel.json`.
+
+> **Cron jobs**: The Hobby plan allows one cron job at most with a minimum interval of 1 day. The cron at `/api/cron/publish-scheduled` runs daily at midnight UTC. Do not set `*/5 * * * *` — Vercel will reject it on Hobby.
 
 ### GitHub OAuth callback URL
 
