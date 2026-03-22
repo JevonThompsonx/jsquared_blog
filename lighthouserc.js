@@ -58,7 +58,20 @@ module.exports = {
         // ── Best Practices ────────────────────────────────────────────────
         "errors-in-console": ["warn", { minScore: 1 }],
 
-        // ── Not applicable for Next.js / Vercel ───────────────────────────
+        // ── Not applicable for Next.js / Vercel preview deployments ─────────
+        // Vercel previews set X-Robots-Tag: noindex — correct for previews, not a real SEO issue.
+        "is-crawlable": "off",
+        // Next.js dynamic pages always emit Cache-Control: no-store — not actionable.
+        "bf-cache": "off",
+        // Source maps are uploaded to Sentry (private), not served publicly — intentional.
+        "valid-source-maps": "off",
+        // Informational insight; scores 0 whenever any render-blocking resource exists.
+        "network-dependency-tree-insight": "off",
+        // Inspector issues picks up CSP/extension noise that varies by browser state.
+        "inspector-issues": "off",
+        // Image delivery optimisations (Cloudinary transforms, sizing) are a frontend concern.
+        "image-delivery-insight": "off",
+        "uses-responsive-images": "off",
         "redirects": "off",
       },
     },

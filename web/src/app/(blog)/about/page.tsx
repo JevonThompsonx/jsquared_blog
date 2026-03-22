@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 function PhotoPlaceholder({ label, className = "" }: { label: string; className?: string }) {
   return (
-    <div className={`flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)] border border-[var(--border)] text-[var(--text-secondary)] ${className}`}>
+    <div aria-hidden="true" className={`flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)] border border-[var(--border)] text-[var(--text-secondary)] ${className}`}>
       <svg className="h-8 w-8 opacity-40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
         <path d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" strokeLinecap="round" strokeLinejoin="round" />
@@ -30,7 +30,7 @@ export default function AboutPage() {
         <PhotoPlaceholder label="Hero photo — trails, van, or landscape" className="mx-auto h-64 max-w-none w-full rounded-none sm:h-80 lg:h-96" />
         <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent">
           <div className="container mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--primary-light)]">Est. somewhere between a trailhead and a campfire</p>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">Est. somewhere between a trailhead and a campfire</p>
             <h1 className="mt-1 text-3xl font-bold text-white sm:text-4xl lg:text-5xl">The story behind J²</h1>
           </div>
         </div>

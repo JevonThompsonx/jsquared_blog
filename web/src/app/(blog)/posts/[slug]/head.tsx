@@ -49,5 +49,6 @@ export default async function Head({ params }: PostHeadProps) {
     },
   });
 
+  // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml -- Standard JSON-LD injection pattern. jsonLd is produced by serializeJsonLd() which calls JSON.stringify() (escapes all special chars) then replaces < with \u003c to prevent </script> injection. Content is admin-only structured data, not user input.
   return <script dangerouslySetInnerHTML={{ __html: jsonLd }} type="application/ld+json" />;
 }

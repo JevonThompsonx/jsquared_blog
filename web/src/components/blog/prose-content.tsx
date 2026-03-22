@@ -39,6 +39,7 @@ export function ProseContent({ html, className }: Props) {
     };
   }, [html]);
 
+  // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml -- html prop is pre-sanitized before being passed: renderTiptapJson() produces controlled HTML from Tiptap's structured AST, then sanitizeRichTextHtml() strips script/style/iframe/object/embed tags, all inline event handlers, and javascript: URIs. Content is admin-authored only.
   return (
     <div
       ref={ref}
