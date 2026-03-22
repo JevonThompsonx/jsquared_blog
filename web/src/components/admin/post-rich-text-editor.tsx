@@ -309,6 +309,13 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
   const [isValidating, setIsValidating] = useState(false);
 
   const initContent = parseTiptapInitContent(contentJson);
+
+  // Tracks whether the current transaction was started by a mouse click.
+  // Used in handleScrollToSelection to suppress ProseMirror's automatic
+  // scrollIntoView on click: clicking on visible text should never scroll the
+  // page, but keyboard-driven moves (arrow keys past the viewport edge) should.
+  const isClickRef = useRef(false);
+
   // Memoize so the array reference is stable across re-renders. Passing a new
   // array reference on every render can cause Tiptap 3.x to re-initialise
   // internal state and corrupt storedMarks, producing phantom bold/italic.
@@ -336,6 +343,29 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
   const editor = useEditor({
     extensions,
     content: initContent,
+    editorProps: {
+      // ProseMirror appends scrollIntoView() to every transaction, including
+      // click-initiated selection changes. When the user clicks visible text the
+      // cursor is already on-screen — the extra scroll causes jarring jumps
+      // (text lands at the bottom of the viewport, especially with the sticky
+      // toolbar at top-24 offsetting the browser's scroll-margin calculation).
+      // Solution: set isClickRef on mousedown, then suppress the scroll inside
+      // handleScrollToSelection for that transaction only. Keyboard navigation
+      // (arrow keys scrolling past the viewport edge) is unaffected.
+      handleDOMEvents: {
+        mousedown: () => {
+          isClickRef.current = true;
+          return false; // don't prevent default click/cursor handling
+        },
+      },
+      handleScrollToSelection: () => {
+        if (isClickRef.current) {
+          isClickRef.current = false;
+          return true; // "handled" — tells ProseMirror not to scroll
+        }
+        return false; // let ProseMirror scroll normally (keyboard nav)
+      },
+    },
     onCreate: ({ editor: e }) => {
       setTiptapJson(JSON.stringify(e.getJSON()));
     },
