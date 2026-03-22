@@ -1,4 +1,4 @@
-const CACHE_NAME = 'j2-adventures-cache-v1';
+const CACHE_NAME = 'j2-adventures-cache-v2';
 
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
@@ -37,9 +37,13 @@ self.addEventListener('fetch', (event) => {
   // Cache API only supports http/https — skip chrome-extension://, data:, etc.
   if (!url.protocol.startsWith('http')) return;
 
-  // Only handle GET requests from the same origin or specific CDNs (like Cloudinary)
+  // Only handle GET requests
   if (request.method !== 'GET') return;
-  
+
+  // Don't intercept cross-origin requests — avoids CSP connect-src issues
+  // (Cloudinary and other CDNs already have their own edge caching)
+  if (url.origin !== self.location.origin) return;
+
   // Don't cache API routes, admin routes, or auth routes
   if (
     url.pathname.startsWith('/api/') || 
@@ -81,10 +85,9 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Static assets (CSS, JS, Fonts, Images)
-  const isStaticAsset = 
-    url.pathname.startsWith('/_next/static/') || 
-    url.pathname.match(/\.(css|js|woff2?|png|jpe?g|gif|svg|webp|ico)$/i) ||
-    url.hostname.includes('res.cloudinary.com'); // Cache cloudinary images too
+  const isStaticAsset =
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.match(/\.(css|js|woff2?|png|jpe?g|gif|svg|webp|ico)$/i);
 
   if (isStaticAsset) {
     event.respondWith(
