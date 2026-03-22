@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Map, { Marker, NavigationControl, Popup } from "react-map-gl/maplibre";
+import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+// Use the pre-built CSP worker served from public/ instead of the webpack-bundled
+// blob: worker. This prevents Next.js from transforming the worker code in a way
+// that breaks variable references (ReferenceError: b is not defined) in production.
+setWorkerUrl("/maplibre-worker.js");
 
 type PostMapProps = {
   locationName: string;

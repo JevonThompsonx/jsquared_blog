@@ -5,8 +5,14 @@ import Link from "next/link";
 import { useCallback, useMemo, useRef, useState } from "react";
 import Map, { Layer, NavigationControl, Popup, Source } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
+import { setWorkerUrl } from "maplibre-gl";
 import type { GeoJSONSource, MapMouseEvent } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+// Use the pre-built CSP worker served from public/ instead of the webpack-bundled
+// blob: worker. This prevents Next.js from transforming the worker code in a way
+// that breaks variable references (ReferenceError: b is not defined) in production.
+setWorkerUrl("/maplibre-worker.js");
 
 import { PostDate } from "@/components/blog/post-date";
 import { getPostHref } from "@/lib/utils";
