@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getSeriesPartNumbers } from "@/server/dal/series";
 
@@ -11,12 +12,17 @@ const seriesIdSchema = z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/);
 // Auth: Admin (Auth.js GitHub)
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ seriesId: string }> },
 ): Promise<NextResponse> {
   const session = await requireAdminSession();
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(`admin-series-part-numbers:${session.user.id}:${getClientIp(request)}`, 120, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   const raw = await params;

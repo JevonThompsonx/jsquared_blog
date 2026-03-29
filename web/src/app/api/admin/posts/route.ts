@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { parseAdminPostListSearchParams } from "@/server/forms/admin-post-list";
 import { listAdminPostRecords } from "@/server/dal/admin-posts";
@@ -13,6 +14,11 @@ export async function GET(request: Request): Promise<NextResponse> {
   const session = await requireAdminSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(`admin-posts-list:${session.user.id}:${getClientIp(request)}`, 120, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   const url = new URL(request.url);

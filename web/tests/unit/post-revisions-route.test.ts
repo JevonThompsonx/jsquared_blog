@@ -1,4 +1,11 @@
+import { NextResponse } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(() => Promise.resolve({ allowed: true, limit: 120, remaining: 119, resetAt: Date.now() + 60_000 })),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+}));
 
 vi.mock("@/lib/auth/session", () => ({
   requireAdminSession: vi.fn(),
@@ -12,6 +19,7 @@ vi.mock("@/server/dal/post-revisions", () => ({
 
 import { GET } from "@/app/api/admin/posts/[postId]/revisions/route";
 import { requireAdminSession } from "@/lib/auth/session";
+import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { countPostRevisions, listPostRevisions, postExistsById } from "@/server/dal/post-revisions";
 
 const MOCK_ADMIN_SESSION = {
@@ -46,7 +54,7 @@ const MOCK_REVISIONS = [
 
 describe("GET /api/admin/posts/[postId]/revisions", () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -69,6 +77,20 @@ describe("GET /api/admin/posts/[postId]/revisions", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid post id" });
+  });
+
+  it("returns the throttled response when rate limited", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 120, remaining: 0, resetAt: Date.now() + 60_000 });
+    const throttled = NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    vi.mocked(tooManyRequests).mockReturnValue(throttled);
+
+    const response = await GET(new Request("http://localhost/api/admin/posts/post-1/revisions"), {
+      params: Promise.resolve({ postId: "post-1" }),
+    });
+
+    expect(response).toBe(throttled);
+    expect(vi.mocked(postExistsById)).not.toHaveBeenCalled();
   });
 
   it("returns 404 when post does not exist", async () => {
