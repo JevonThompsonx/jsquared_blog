@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { incrementPostViewCount } from "@/server/dal/posts";
-import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 const paramsSchema = z.object({
   postId: z.string().trim().min(1),
@@ -38,7 +38,7 @@ export async function POST(_request: Request, context: { params: Promise<unknown
     return NextResponse.json({ counted: false }, { status: 200 });
   }
 
-  const rateLimit = await checkRateLimit(`post-view:${postId}:${viewerId}`, 20, 60_000);
+  const rateLimit = await checkRateLimit(`post-view:${postId}:${getClientIp(_request)}`, 20, 60_000);
   if (!rateLimit.allowed) {
     return tooManyRequests(rateLimit);
   }

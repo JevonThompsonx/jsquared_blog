@@ -1,44 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-import { getServerEnv } from "@/lib/env";
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { deleteCommentRecord } from "@/server/dal/comments";
 
 const commentIdSchema = z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/);
-
-async function getRequestSupabaseUser(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const token = authHeader.slice("Bearer ".length).trim();
-  if (!token) {
-    return null;
-  }
-
-  const env = getServerEnv();
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-    return null;
-  }
-
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  const result = await supabase.auth.getUser();
-  return result.data.user ?? null;
-}
 
 export async function DELETE(
   request: Request,
@@ -54,6 +22,11 @@ export async function DELETE(
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(`comment-delete:${supabaseUser.id}:${getClientIp(request)}`, 20, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   const publicUser = await ensurePublicAppUser(supabaseUser);

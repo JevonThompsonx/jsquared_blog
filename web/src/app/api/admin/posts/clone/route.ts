@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { clonePostById } from "@/server/posts/clone";
 
@@ -19,13 +20,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rl = await checkRateLimit(`admin-posts-clone:${session.user.id}:${getClientIp(request)}`, 20, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   try {
     const body = clonePostSchema.parse(await request.json());
     const result = await clonePostById(body.postId);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Clone failed";
-    const status = message.includes("not found") ? 404 : 400;
-    return NextResponse.json({ error: message }, { status });
+    const isNotFound = error instanceof Error && error.message.toLowerCase().includes("not found");
+    return NextResponse.json({ error: isNotFound ? "Post not found" : "Invalid clone request" }, { status: isNotFound ? 404 : 400 });
   }
 }

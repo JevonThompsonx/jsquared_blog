@@ -1,6 +1,12 @@
 import type { AdminSession } from "@/lib/auth/session";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(() => Promise.resolve({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 })),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+  tooManyRequests: vi.fn(),
+}));
+
 vi.mock("@/lib/auth/session", () => ({
   requireAdminSession: vi.fn(),
 }));

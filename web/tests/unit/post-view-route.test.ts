@@ -15,6 +15,7 @@ vi.mock("@/server/dal/posts", () => ({
 
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
+  getClientIp: vi.fn(() => "127.0.0.1"),
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
@@ -105,7 +106,7 @@ describe("POST /api/posts/[postId]/view", () => {
 
     expect(response.status).toBe(202);
     expect(await response.json()).toEqual({ counted: true });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("post-view:post-1:viewer-123", 20, 60_000);
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("post-view:post-1:127.0.0.1", 20, 60_000);
     expect(vi.mocked(incrementPostViewCount)).toHaveBeenCalledWith("post-1");
     expect(cookieStore.set).toHaveBeenCalledWith(
       "j2-viewed-post-post-1",

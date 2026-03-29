@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import {
   applyRevisionContentToPost,
@@ -26,12 +27,17 @@ const restoreParamsSchema = z.object({
 });
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ postId: string; revisionId: string }> },
 ): Promise<NextResponse> {
   const session = await requireAdminSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(`admin-post-revision-restore:${session.user.id}:${getClientIp(request)}`, 10, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   const paramsParse = restoreParamsSchema.safeParse(await context.params);

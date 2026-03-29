@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { publishPosts, unpublishPosts } from "@/server/posts/publish";
 
@@ -20,14 +21,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rl = await checkRateLimit(`admin-posts-bulk-status:${session.user.id}:${getClientIp(request)}`, 20, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   try {
     const body = bulkStatusSchema.parse(await request.json());
     const result = body.status === "published"
       ? await publishPosts(body.postIds)
       : await unpublishPosts(body.postIds);
     return NextResponse.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Bulk update failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Invalid bulk update request" }, { status: 400 });
   }
 }

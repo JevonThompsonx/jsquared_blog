@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { uploadAvatarImage } from "@/lib/cloudinary/uploads";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
@@ -12,6 +13,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(`account-avatar:${supabaseUser.id}:${getClientIp(request)}`, 10, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   let formData: FormData;
@@ -40,9 +46,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     await updateProfileFields(appUser.id, { avatarUrl: imageUrl });
     return NextResponse.json({ avatarUrl: imageUrl }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Upload failed";
-    console.error("[avatar upload]", message);
-    const status = message.includes("not configured") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+    console.error("[avatar upload]", error);
+    const status = error instanceof Error && error.message.includes("not configured") ? 503 : 500;
+    const safeMessage = status === 503 ? "Upload service unavailable" : "Upload failed";
+    return NextResponse.json({ error: safeMessage }, { status });
   }
 }

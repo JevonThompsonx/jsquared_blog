@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(() => Promise.resolve({ allowed: true, limit: 10, remaining: 9, resetAt: Date.now() + 60_000 })),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+  tooManyRequests: vi.fn(),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));

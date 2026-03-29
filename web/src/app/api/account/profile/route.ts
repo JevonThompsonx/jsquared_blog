@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
 import { getProfileByUserId, updateProfileFields } from "@/server/dal/profiles";
@@ -36,6 +37,11 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(`account-profile-patch:${supabaseUser.id}:${getClientIp(request)}`, 20, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   // ensurePublicAppUser creates the user+profile record if it doesn't exist yet

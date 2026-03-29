@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { createPostPreviewAccess } from "@/server/posts/preview";
 
@@ -19,13 +20,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rl = await checkRateLimit(`admin-posts-preview:${session.user.id}:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   try {
     const body = createPreviewSchema.parse(await request.json());
     const preview = await createPostPreviewAccess(body.postId, session.user.id);
     return NextResponse.json(preview, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Preview creation failed";
-    const status = message.includes("not found") ? 404 : 400;
-    return NextResponse.json({ error: message }, { status });
+    const isNotFound = error instanceof Error && error.message.toLowerCase().includes("not found");
+    return NextResponse.json({ error: isNotFound ? "Post not found" : "Invalid preview request" }, { status: isNotFound ? 404 : 400 });
   }
 }

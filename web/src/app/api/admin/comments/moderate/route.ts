@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { moderateCommentsSchema } from "@/server/forms/comments";
 import { moderateCommentsByIds } from "@/server/dal/comments";
@@ -15,12 +16,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rl = await checkRateLimit(`admin-comments-moderate:${session.user.id}:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   try {
     const body = moderateCommentsSchema.parse(await request.json());
     const result = await moderateCommentsByIds(body.commentIds, body.action, session.user.id);
     return NextResponse.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Moderation failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Invalid moderation request" }, { status: 400 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { derivePostContent } from "@/server/posts/content";
 
@@ -20,12 +21,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rl = await checkRateLimit(`admin-posts-warnings:${session.user.id}:${getClientIp(request)}`, 60, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   try {
     const body = postWarningsSchema.parse(await request.json());
     const content = derivePostContent(body.contentJson, body.excerpt ?? null);
     return NextResponse.json({ warnings: content.imageAltWarnings, excerpt: content.excerpt });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Validation failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Invalid warnings request" }, { status: 400 });
   }
 }
