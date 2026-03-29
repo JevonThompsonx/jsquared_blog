@@ -16,7 +16,7 @@
     "seed:e2e": "bun run ./scripts/seed-e2e-fixtures.ts"
   },
   "dependencies": {
-    "@libsql/client": "0.17.0",
+    "@libsql/client": "0.17.2",
     "@radix-ui/react-dialog": "1.1.15",
     "@radix-ui/react-select": "2.2.6",
     "@sentry/nextjs": "^10.43.0",
