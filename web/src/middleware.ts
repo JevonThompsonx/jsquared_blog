@@ -2,12 +2,63 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const isProduction = process.env.NODE_ENV === "production";
+const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function isStateChangingMethod(method: string): boolean {
+  return STATE_CHANGING_METHODS.has(method);
+}
+
+function isAdminPath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+function isAdminApiPath(pathname: string): boolean {
+  return pathname === "/api/admin" || pathname.startsWith("/api/admin/");
+}
+
+function isSameOrigin(originValue: string, requestOrigin: string): boolean {
+  try {
+    return new URL(originValue).origin === requestOrigin;
+  } catch {
+    return false;
+  }
+}
+
+function allowsFetchSite(fetchSite: string | null): boolean {
+  if (!fetchSite) {
+    return true;
+  }
+
+  return fetchSite === "same-origin" || fetchSite === "same-site" || fetchSite === "none";
+}
+
+function forbiddenResponse(pathname: string): NextResponse {
+  if (isAdminApiPath(pathname)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return new NextResponse("Forbidden", { status: 403 });
+}
 
 // 6.S.1: Generate a per-request nonce so we can remove 'unsafe-inline' from script-src.
 // The nonce is set in two places:
 //   1. The Content-Security-Policy response header (authorises scripts with that nonce)
 //   2. The x-nonce request header (forwarded to Server Components so they can render <Script nonce>)
 export function middleware(request: NextRequest): NextResponse {
+  const pathname = request.nextUrl.pathname;
+
+  if (isStateChangingMethod(request.method) && (isAdminPath(pathname) || isAdminApiPath(pathname))) {
+    const originHeader = request.headers.get("origin");
+    const fetchSiteHeader = request.headers.get("sec-fetch-site");
+
+    if (
+      (originHeader !== null && !isSameOrigin(originHeader, request.nextUrl.origin)) ||
+      !allowsFetchSite(fetchSiteHeader)
+    ) {
+      return forbiddenResponse(pathname);
+    }
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   const imgSrc = [
@@ -50,6 +101,7 @@ export function middleware(request: NextRequest): NextResponse {
     ]
       .filter(Boolean)
       .join(" "),
+    "script-src-attr 'none'",
     // style-src keeps unsafe-inline: Tailwind/CSS-in-JS needs it; style nonces are a separate effort
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc}`,
@@ -57,6 +109,8 @@ export function middleware(request: NextRequest): NextResponse {
     `connect-src ${connectSrc}`,
     "media-src 'self' data: blob:",
     "worker-src 'self' blob:",
+    "frame-src 'none'",
+    "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -75,6 +129,12 @@ export function middleware(request: NextRequest): NextResponse {
   });
 
   response.headers.set("Content-Security-Policy", csp);
+
+  if (isAdminPath(pathname) || isAdminApiPath(pathname)) {
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+  }
 
   return response;
 }
