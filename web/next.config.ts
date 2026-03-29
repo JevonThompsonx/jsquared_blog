@@ -21,7 +21,31 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), geolocation=(), microphone=()",
+    value: "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()",
+  },
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin-allow-popups",
+  },
+  {
+    key: "Cross-Origin-Resource-Policy",
+    value: "same-site",
+  },
+  {
+    key: "Origin-Agent-Cluster",
+    value: "?1",
+  },
+  {
+    key: "X-DNS-Prefetch-Control",
+    value: "off",
+  },
+  {
+    key: "X-Permitted-Cross-Domain-Policies",
+    value: "none",
+  },
+  {
+    key: "X-XSS-Protection",
+    value: "0",
   },
   ...(isProduction
     ? [
@@ -35,6 +59,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
+  poweredByHeader: false,
   async headers() {
     return [
       {
