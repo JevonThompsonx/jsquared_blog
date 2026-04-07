@@ -14,6 +14,8 @@ import net from "node:net";
 import { chromium } from "@playwright/test";
 import { config as loadDotenv } from "dotenv";
 
+import { resolvePublicStorageStateCaptureConfig } from "../src/lib/e2e/public-storage-state-config";
+
 for (const envPath of [
   path.join(process.cwd(), ".env.test.local"),
   path.join(process.cwd(), ".env.local"),
@@ -28,10 +30,11 @@ for (const envPath of [
 }
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const storageStatePath = path.resolve(
-  process.cwd(),
-  process.env.E2E_PUBLIC_STORAGE_STATE ?? path.join("playwright", ".auth", "public.json"),
-);
+const storageStatePath = resolvePublicStorageStateCaptureConfig({
+  cwd: process.cwd(),
+  baseURL,
+  configuredStorageStatePath: process.env.E2E_PUBLIC_STORAGE_STATE,
+}).storageStatePath;
 const email = process.env.E2E_PUBLIC_EMAIL?.trim();
 const password = process.env.E2E_PUBLIC_PASSWORD?.trim();
 const headless = process.env.E2E_CAPTURE_HEADLESS !== "0";

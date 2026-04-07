@@ -14,6 +14,7 @@ import { and, count, eq } from "drizzle-orm";
 import { authAccounts, categories, comments, posts, profiles, users } from "../src/drizzle/schema";
 import { getDb, getDbClient } from "../src/lib/db-core";
 import { findSupabaseAuthUserByEmail } from "../src/lib/e2e/public-auth-fixture";
+import { assertSafeSupabaseSeedTarget } from "../src/lib/e2e/public-e2e-target-guard";
 import { loadEnvironmentFiles } from "../src/lib/env-loader";
 
 loadEnvironmentFiles();
@@ -108,6 +109,8 @@ async function ensurePublicAuthFixture(): Promise<{ email: string; password: str
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required to provision the public E2E auth fixture.");
   }
+
+  assertSafeSupabaseSeedTarget(process.env);
 
   const password = getPublicFixturePassword();
   const supabase = createClient(supabaseUrl, serviceRoleKey, {

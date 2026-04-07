@@ -1,4 +1,8 @@
 import { expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { canRunAuthenticatedPublicFlows } from "@/lib/e2e/public-authenticated-guard";
+import { createIsolatedPublicRequestHeaders } from "@/lib/e2e/public-request-headers";
 
 import {
   configuredPublicEmail,
@@ -7,6 +11,11 @@ import {
   hasPublicStorageState,
   publicTest,
 } from "./helpers/public";
+
+const canRunAuthenticatedFlows = canRunAuthenticatedPublicFlows({
+  hasPublicStorageState,
+  configuredPublicEmail,
+});
 
 function isCommentCreateResponse(response: { request(): { method(): string }; url(): string; ok(): boolean }) {
   return response.request().method() === "POST"
@@ -37,8 +46,14 @@ function getRetryAfterDelayMs(retryAfterHeader: string | undefined): number {
   return 1500;
 }
 
+async function setPublicRequestScope(page: Page, scope: string): Promise<void> {
+  await page.context().setExtraHTTPHeaders(createIsolatedPublicRequestHeaders(scope));
+}
+
 publicTest.describe("authenticated public-user flows", () => {
-  publicTest.skip(!hasPublicStorageState, getPublicStorageStateHint());
+  publicTest.skip(!canRunAuthenticatedFlows, configuredPublicEmail
+    ? getPublicStorageStateHint()
+    : "Run bun run seed:e2e to provision the public E2E email fixture.");
 
   publicTest("signed-in user can save a post and see it in bookmarks", async ({ page }) => {
     publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
@@ -63,8 +78,6 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can load account settings", async ({ page }) => {
-    publicTest.skip(!configuredPublicEmail, "Run bun run seed:e2e to provision the public E2E email fixture.");
-
     if (!configuredPublicEmail) {
       throw new Error("Missing E2E_PUBLIC_EMAIL for authenticated public account smoke coverage.");
     }
@@ -173,6 +186,8 @@ publicTest.describe("authenticated public-user flows", () => {
   publicTest("signed-in user can post a comment on the seeded fixture post", async ({ page }) => {
     publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
 
+    await setPublicRequestScope(page, "post-comment");
+
     const commentContent = `E2E public comment ${Date.now()}`;
 
     await page.goto(`/posts/${configuredPublicPostSlug}`);
@@ -197,6 +212,8 @@ publicTest.describe("authenticated public-user flows", () => {
 
   publicTest("signed-in user can reply to a comment on the seeded fixture post", async ({ page }) => {
     publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+
+    await setPublicRequestScope(page, "reply-comment");
 
     const parentCommentContent = `E2E public parent comment ${Date.now()}`;
     const replyCommentContent = `E2E public reply ${Date.now()}`;
@@ -238,6 +255,8 @@ publicTest.describe("authenticated public-user flows", () => {
 
   publicTest("signed-in user can like and unlike a freshly created comment on the seeded fixture post", async ({ page }) => {
     publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+
+    await setPublicRequestScope(page, "like-comment");
 
     const commentContent = `E2E public like target ${Date.now()}`;
 
@@ -289,6 +308,8 @@ publicTest.describe("authenticated public-user flows", () => {
     publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
     publicTest.setTimeout(90_000);
 
+    await setPublicRequestScope(page, "delete-own-comment");
+
     const commentContent = `E2E public delete target ${Date.now()}`;
 
     await page.goto(`/posts/${configuredPublicPostSlug}`);
@@ -298,35 +319,15 @@ publicTest.describe("authenticated public-user flows", () => {
 
     const commentField = page.getByPlaceholder("Share your thoughts...");
     await expect(commentField).toBeVisible({ timeout: 15_000 });
-    let createResponse: Awaited<ReturnType<typeof page.waitForResponse>> | null = null;
+    await commentField.fill(commentContent);
 
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      await commentField.fill(commentContent);
-
-      const currentCreateResponse = await Promise.all([
-        page.waitForResponse((response) => {
-          return response.request().method() === "POST"
-            && /\/api\/posts\/[^/]+\/comments$/.test(new URL(response.url()).pathname);
-        }),
-        page.getByRole("button", { name: "Post comment" }).click(),
-      ]).then(([response]) => response);
-
-      createResponse = currentCreateResponse;
-
-      if (currentCreateResponse.ok()) {
-        break;
-      }
-
-      expect(currentCreateResponse.status()).toBe(429);
-      expect(attempt).toBe(0);
-
-      await page.waitForTimeout(getRetryAfterDelayMs(currentCreateResponse.headers()["retry-after"]));
-    }
-
-    expect(createResponse).not.toBeNull();
-    if (!createResponse) {
-      throw new Error("Comment creation did not produce a response.");
-    }
+    const createResponse = await Promise.all([
+      page.waitForResponse((response) => {
+        return response.request().method() === "POST"
+          && /\/api\/posts\/[^/]+\/comments$/.test(new URL(response.url()).pathname);
+      }),
+      page.getByRole("button", { name: "Post comment" }).click(),
+    ]).then(([response]) => response);
 
     expect(createResponse.ok()).toBe(true);
 
