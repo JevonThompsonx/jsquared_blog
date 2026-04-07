@@ -23,11 +23,11 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
-import { GET } from "@/app/api/account/profile/route";
+import { GET, PATCH } from "@/app/api/account/profile/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
-import { getProfileByUserId } from "@/server/dal/profiles";
+import { getProfileByUserId, updateProfileFields } from "@/server/dal/profiles";
 
 function makeSupabaseUser(id = "supabase-user-1"): User {
   return {
@@ -199,6 +199,198 @@ describe("GET /api/account/profile", () => {
         themePreference: null,
         email: "reader@example.com",
       },
+    });
+  });
+});
+
+describe("PATCH /api/account/profile", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ displayName: "Reader" }),
+    }));
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  it("returns throttled response when rate limited", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: false,
+      limit: 20,
+      remaining: 0,
+      resetAt: Date.now() + 60_000,
+    });
+    const throttled = NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    vi.mocked(tooManyRequests).mockReturnValue(throttled);
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ displayName: "Reader" }),
+    }));
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ error: "Too many requests" });
+    expect(vi.mocked(ensurePublicAppUser)).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for invalid JSON", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: "{",
+      headers: { "content-type": "application/json" },
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid JSON" });
+    expect(vi.mocked(updateProfileFields)).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for schema rejection", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ displayName: "" }),
+      headers: { "content-type": "application/json" },
+    }));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error.displayName).toEqual(expect.any(Array));
+    expect(body.error.displayName.length).toBeGreaterThan(0);
+    expect(vi.mocked(updateProfileFields)).not.toHaveBeenCalled();
+  });
+
+  it("does not clear omitted optional fields", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(updateProfileFields).mockResolvedValue(undefined);
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ displayName: "Updated Reader" }),
+      headers: { "content-type": "application/json" },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(vi.mocked(updateProfileFields)).toHaveBeenCalledWith("public-user-1", {
+      displayName: "Updated Reader",
+    });
+  });
+
+  it("passes explicit null-clearing fields through to updateProfileFields", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(updateProfileFields).mockResolvedValue(undefined);
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ avatarUrl: null, themePreference: null }),
+      headers: { "content-type": "application/json" },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(vi.mocked(updateProfileFields)).toHaveBeenCalledWith("public-user-1", {
+      avatarUrl: null,
+      themePreference: null,
+    });
+  });
+
+  it("returns 200 and forwards successful profile updates", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(updateProfileFields).mockResolvedValue(undefined);
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: JSON.stringify({
+        displayName: "Updated Reader",
+        avatarUrl: "https://example.com/avatar.png",
+        themePreference: "dark",
+      }),
+      headers: { "content-type": "application/json" },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(vi.mocked(updateProfileFields)).toHaveBeenCalledWith("public-user-1", {
+      displayName: "Updated Reader",
+      avatarUrl: "https://example.com/avatar.png",
+      themePreference: "dark",
     });
   });
 });
