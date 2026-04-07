@@ -181,31 +181,29 @@ const galleryEntrySchema = z.object({
   exifIso: z.number().nullable().optional(),
 });
 
-function parseGalleryEntries(value: string) {
-  try {
-    const parsed = z.array(galleryEntrySchema).parse(parseUnknownJson(value));
+const galleryEntriesSchema = z.array(galleryEntrySchema);
 
-    return parsed
-      .filter((entry) => Boolean(entry.imageUrl?.trim()))
-      .map((entry, index) => ({
-        imageUrl: entry.imageUrl ?? "",
-        altText: entry.altText?.trim() || null,
-        sortOrder: typeof entry.sortOrder === "number" ? entry.sortOrder : index,
-        focalX: typeof entry.focalX === "number" ? entry.focalX : null,
-        focalY: typeof entry.focalY === "number" ? entry.focalY : null,
-        exifTakenAt: typeof entry.exifTakenAt === "number" ? new Date(entry.exifTakenAt) : null,
-        exifLat: typeof entry.exifLat === "number" ? entry.exifLat : null,
-        exifLng: typeof entry.exifLng === "number" ? entry.exifLng : null,
-        exifCameraMake: entry.exifCameraMake?.trim() || null,
-        exifCameraModel: entry.exifCameraModel?.trim() || null,
-        exifLensModel: entry.exifLensModel?.trim() || null,
-        exifAperture: typeof entry.exifAperture === "number" ? entry.exifAperture : null,
-        exifShutterSpeed: entry.exifShutterSpeed?.trim() || null,
-        exifIso: typeof entry.exifIso === "number" ? Math.round(entry.exifIso) : null,
-      }));
-  } catch {
-    return [];
-  }
+function parseGalleryEntries(value: string) {
+  const parsed = galleryEntriesSchema.parse(parseUnknownJson(value));
+
+  return parsed
+    .filter((entry) => Boolean(entry.imageUrl?.trim()))
+    .map((entry, index) => ({
+      imageUrl: entry.imageUrl ?? "",
+      altText: entry.altText?.trim() || null,
+      sortOrder: typeof entry.sortOrder === "number" ? entry.sortOrder : index,
+      focalX: typeof entry.focalX === "number" ? entry.focalX : null,
+      focalY: typeof entry.focalY === "number" ? entry.focalY : null,
+      exifTakenAt: typeof entry.exifTakenAt === "number" ? new Date(entry.exifTakenAt) : null,
+      exifLat: typeof entry.exifLat === "number" ? entry.exifLat : null,
+      exifLng: typeof entry.exifLng === "number" ? entry.exifLng : null,
+      exifCameraMake: entry.exifCameraMake?.trim() || null,
+      exifCameraModel: entry.exifCameraModel?.trim() || null,
+      exifLensModel: entry.exifLensModel?.trim() || null,
+      exifAperture: typeof entry.exifAperture === "number" ? entry.exifAperture : null,
+      exifShutterSpeed: entry.exifShutterSpeed?.trim() || null,
+      exifIso: typeof entry.exifIso === "number" ? Math.round(entry.exifIso) : null,
+    }));
 }
 
 function getMediaProvider(imageUrl: string): "cloudinary" | "supabase" {
@@ -385,6 +383,7 @@ function buildPostSavePayload(values: ReturnType<typeof parseFormData>) {
 export async function createAdminPostAction(formData: FormData) {
   const authorId = await ensureAdmin();
   const values = parseFormData(formData);
+  const galleryEntries = parseGalleryEntries(values.galleryEntries);
   const { derivedContent, scheduledPublishTime } = buildPostSavePayload(values);
   const db = getDb();
   const [seriesId, geo, slug] = await Promise.all([
@@ -434,7 +433,7 @@ export async function createAdminPostAction(formData: FormData) {
       authorId,
       featuredImageUrl: values.featuredImageUrl,
       featuredImageAlt: values.featuredImageAlt,
-      galleryEntries: parseGalleryEntries(values.galleryEntries),
+      galleryEntries,
     });
   });
 
@@ -451,6 +450,7 @@ export async function createAdminPostAction(formData: FormData) {
 export async function updateAdminPostAction(postId: string, formData: FormData) {
   const authorId = await ensureAdmin();
   const values = parseFormData(formData);
+  const galleryEntries = parseGalleryEntries(values.galleryEntries);
   const { derivedContent, scheduledPublishTime } = buildPostSavePayload(values);
   const db = getDb();
   const [existingPost, seriesId, geo, slug] = await Promise.all([
@@ -500,7 +500,7 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
       authorId,
       featuredImageUrl: values.featuredImageUrl,
       featuredImageAlt: values.featuredImageAlt,
-      galleryEntries: parseGalleryEntries(values.galleryEntries),
+      galleryEntries,
     });
   });
 

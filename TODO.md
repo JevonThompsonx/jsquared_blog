@@ -287,11 +287,11 @@ Statuses:
 
 ### Phase 1: Baseline Assessment
 
-- [ ] Run security baseline across auth, APIs, uploads, and content rendering.
-- [ ] Run code-quality baseline across `web/src`, tests, and config surfaces.
-- [ ] Run refactor-clean discovery for dead code and duplicate logic.
-- [ ] Run E2E coverage audit for critical user journeys.
-- [ ] Consolidate findings into one ranked remediation backlog.
+- [x] Run security baseline across auth, APIs, uploads, and content rendering.
+- [x] Run code-quality baseline across `web/src`, tests, and config surfaces.
+- [x] Run refactor-clean discovery for dead code and duplicate logic.
+- [x] Run E2E coverage audit for critical user journeys.
+- [x] Consolidate findings into one ranked remediation backlog.
 
 ### Phase 2: Security Hardening
 
@@ -307,6 +307,10 @@ Statuses:
 - [ ] Reduce typing risk in high-churn modules.
 - [ ] Add tests around fragile logic before restructuring.
 - [ ] Normalize error-handling patterns in touched areas.
+
+Completed slice:
+
+- [x] Prevent malformed admin `galleryEntries` payloads from silently erasing existing post media during save/update.
 
 ### Phase 4: Refactor and Cleanup
 
@@ -330,17 +334,33 @@ Statuses:
 
 ## Active Batch
 
-### Batch: Whole-project baseline assessment
-- Goal: produce a ranked, evidence-backed backlog across security, correctness, cleanup, and E2E.
-- Scope: `web/` app plus immediate supporting docs/config needed to assess behavior.
-- Files expected to change: this file and any focused docs created only if the assessment produces durable findings.
-- RED target: not applicable for the assessment-only stage.
-- GREEN target: complete a consolidated baseline with clear remediation order.
-- Refactor boundary: no production refactors during baseline discovery.
-- Security impact: high, because the baseline sets remediation order for auth and trust boundaries.
-- E2E impact: high, because missing critical-flow coverage must be identified early.
-- Verification commands: targeted read/search only during baseline; defer app verification until implementation batches start.
+### Batch: HTML sanitization hardening
+- Goal: replace the current regex-based rich-text HTML sanitization contract at raw HTML render sinks.
+- Scope: content sanitization utilities, render callers, and focused regression tests in `web/`.
+- Files expected to change: `web/src/lib/content.ts`, related render callers, and targeted tests.
+- RED target: prove unsafe or structurally invalid HTML is still being accepted by the current sanitizer boundary.
+- GREEN target: all raw HTML rendering routes through a vetted allowlist sanitizer with focused regression coverage.
+- Refactor boundary: no unrelated content-model or editor refactors.
+- Security impact: high, because this protects a direct `dangerouslySetInnerHTML` sink.
+- E2E impact: low for the initial slice; unit and integration coverage first.
+- Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`, and broader app verification if the sanitizer swap changes shared rendering behavior.
 - Status: in_progress
+
+## Ranked Remediation Backlog
+
+1. Replace regex HTML sanitization in `web/src/lib/content.ts` and all raw HTML sinks with a vetted allowlist sanitizer.
+2. Make deployed rate limiting fail closed or explicitly dev-only when Upstash credentials are missing.
+3. Harden upload/media validation with server-side content checks instead of trusting only client MIME and size.
+4. Fix admin identity mapping inconsistencies in `web/src/server/auth/admin-users.ts` and related auth consumers.
+5. Add a reusable public-user Playwright fixture, then cover post detail, comments, bookmarks, and account settings flows.
+6. Land safe cleanup items only after tests protect behavior-sensitive auth, theme, admin, comments, PWA, and map surfaces.
+
+## Baseline Findings Snapshot
+
+- Security: high-risk issue is regex-based HTML sanitization feeding raw HTML rendering; medium-risk issues include silent production rate-limit fallback and upload validation trusting client metadata.
+- Correctness: high-risk issue was malformed admin gallery payloads deleting existing media; this slice is now fixed. Additional high-risk findings remain around the HTML sanitizer contract and admin identity mapping.
+- Cleanup: safe removals include unused `web/src/lib/errors.ts`, `web/src/components/blog/post-card.tsx`, `web/src/lib/auth/identities.ts`, and `web/src/lib/auth/public.ts`; defer cleanup in auth, theme, admin, comments, map, and PWA surfaces until covered by tests.
+- E2E: admin shell coverage exists, but public signed-in flows are the main gap. Missing critical journeys include post detail, comments, bookmarks, successful public auth, account settings, media workflows, map, tag page UI, and mobile smoke coverage.
 
 ## Known Likely Blockers
 
@@ -369,3 +389,5 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-06: Created root `TODO.md` as the canonical model-facing tracker because `README.md` already references it and no equivalent file existed.
 - 2026-04-06: Chose skills and direct agents as the primary workflow source; treat most `commands/` docs as legacy shims unless they contain unique maintained logic.
 - 2026-04-06: Set the initial active batch to whole-project baseline assessment before remediation, with `tdd-guide` acting as the control layer for later implementation slices.
+- 2026-04-06: Completed the whole-project baseline across security, code review, cleanup discovery, and E2E coverage; consolidated the first ranked remediation backlog in this tracker.
+- 2026-04-06: Fixed a high-severity admin save-path bug by making `createAdminPostAction` and `updateAdminPostAction` fail fast on invalid `galleryEntries` payloads before any media-replacement transaction side effects run.

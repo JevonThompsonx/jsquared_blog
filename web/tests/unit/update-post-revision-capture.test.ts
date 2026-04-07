@@ -93,7 +93,7 @@ vi.mock("@/server/posts/content", () => ({
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth/session";
 import { createPostRevision } from "@/server/dal/post-revisions";
-import { updateAdminPostAction } from "@/app/admin/actions";
+import { createAdminPostAction, updateAdminPostAction } from "@/app/admin/actions";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -211,4 +211,33 @@ describe("updateAdminPostAction — revision capture", () => {
       expect.objectContaining({ excerpt: null }),
     );
   });
+
+  it.each(["{not-json}", "{}"]) (
+    "aborts before starting the transaction when update gallery entries are invalid: %s",
+    async (galleryEntries) => {
+      vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+      mockFindFirst.mockResolvedValue(EXISTING_POST);
+
+      await expect(
+        updateAdminPostAction("post-1", buildFormData({ galleryEntries })),
+      ).rejects.toThrow();
+
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+      expect(vi.mocked(createPostRevision)).not.toHaveBeenCalled();
+      expect(vi.mocked(redirect)).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["{not-json}", "{}"]) (
+    "aborts before starting the transaction when create gallery entries are invalid: %s",
+    async (galleryEntries) => {
+      vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+
+      await expect(createAdminPostAction(buildFormData({ galleryEntries }))).rejects.toThrow();
+
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+      expect(vi.mocked(createPostRevision)).not.toHaveBeenCalled();
+      expect(vi.mocked(redirect)).not.toHaveBeenCalled();
+    },
+  );
 });
