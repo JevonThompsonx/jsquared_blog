@@ -12,4 +12,10 @@ describe("sanitizeNodeOptionsForBuild", () => {
   it("returns undefined when only inspector flags are present", () => {
     expect(sanitizeNodeOptionsForBuild("--inspect --inspect-port=0")).toBeUndefined();
   });
+
+  it("removes inspector flag values passed as separate tokens", () => {
+    expect(
+      sanitizeNodeOptionsForBuild("--inspect-port 0 --enable-source-maps --max-old-space-size=4096"),
+    ).toBe("--enable-source-maps --max-old-space-size=4096");
+  });
 });

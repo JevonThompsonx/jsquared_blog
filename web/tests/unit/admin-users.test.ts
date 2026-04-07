@@ -52,4 +52,34 @@ describe("admin GitHub identity mapping", () => {
       providerUserId: "12345",
     });
   });
+
+  it("locks persisted admin profile attribution to the shared site identity", async () => {
+    const identity = {
+      providerUserId: "54321",
+      login: "second-admin",
+      email: null,
+      name: "Second Admin",
+      avatarUrl: "https://avatars.example.com/second-admin.png",
+    };
+
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const created = await ensureGitHubAdminUser(identity);
+
+    expect(created).toMatchObject({
+      userId: "github-user-54321",
+      providerUserId: "54321",
+      displayName: "Jevon + Jessica",
+      avatarUrl: "/images/us.webp",
+      email: "second-admin@users.noreply.github.com",
+    });
+    expect(mockExecute).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        args: ["github-user-54321", "Jevon + Jessica", "/images/us.webp", expect.any(Number), expect.any(Number)],
+      }),
+    );
+  });
 });

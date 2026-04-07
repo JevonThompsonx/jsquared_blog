@@ -25,7 +25,7 @@ describe("buildAdminAuthOptions", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps githubLogin sourced from the GitHub profile login", async () => {
+  it("keeps githubLogin sourced from the GitHub profile login while using the persisted shared admin avatar", async () => {
     vi.mocked(getAdminAccountByGitHubId).mockResolvedValue({
       userId: "github-user-12345",
       role: "admin",
@@ -60,7 +60,7 @@ describe("buildAdminAuthOptions", () => {
       userId: "github-user-12345",
       role: "admin",
       githubLogin: "octocat",
-      avatarUrl: "https://avatars.example.com/octocat.png",
+      avatarUrl: "/images/us.webp",
     });
   });
 });
