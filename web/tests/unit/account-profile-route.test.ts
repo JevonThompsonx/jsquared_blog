@@ -26,7 +26,7 @@ vi.mock("@/lib/rate-limit", () => ({
 import { GET } from "@/app/api/account/profile/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
-import { getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
+import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
 import { getProfileByUserId } from "@/server/dal/profiles";
 
 function makeSupabaseUser(id = "supabase-user-1"): User {
@@ -95,6 +95,46 @@ describe("GET /api/account/profile", () => {
     const response = await GET(new Request("http://localhost/api/account/profile"));
 
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      profile: {
+        userId: "public-user-1",
+        displayName: "Reader",
+        avatarUrl: null,
+        themePreference: null,
+        email: "reader@example.com",
+      },
+    });
+  });
+
+  it("provisions the public app user on first authenticated profile fetch", async () => {
+    const supabaseUser = makeSupabaseUser();
+
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(supabaseUser);
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(getPublicAppUserBySupabaseId).mockResolvedValueOnce(null);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(getProfileByUserId).mockResolvedValue({
+      userId: "public-user-1",
+      displayName: "Reader",
+      avatarUrl: null,
+      themePreference: null,
+    });
+
+    const response = await GET(new Request("http://localhost/api/account/profile"));
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(ensurePublicAppUser)).toHaveBeenCalledWith(supabaseUser);
     expect(await response.json()).toEqual({
       profile: {
         userId: "public-user-1",

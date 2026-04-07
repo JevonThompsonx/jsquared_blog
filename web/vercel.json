@@ -3,5 +3,8 @@
   "buildCommand": "bun run build",
   "outputDirectory": ".next",
   "installCommand": "bun install",
-  "crons": [{ "path": "/api/cron/publish-scheduled", "schedule": "0 0 * * *" }]
+  "crons": [
+    { "path": "/api/cron/publish-scheduled", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/keep-supabase-awake", "schedule": "0 */6 * * *" }
+  ]
 }

@@ -102,7 +102,7 @@ if (!isNextBuild) {
   if (isDeployedEnvironment(process.env)) {
     if (!process.env.CRON_SECRET) {
       console.warn(
-        "[env] CRON_SECRET is not set. The /api/cron/publish-scheduled endpoint will return 500.",
+        "[env] CRON_SECRET is not set. Cron endpoints such as /api/cron/publish-scheduled and /api/cron/keep-supabase-awake will return 500.",
       );
     }
   }

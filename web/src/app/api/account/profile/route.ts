@@ -17,10 +17,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
-  const appUser = await getPublicAppUserBySupabaseId(supabaseUser.id);
-  if (!appUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
+  const existingAppUser = await getPublicAppUserBySupabaseId(supabaseUser.id);
+  const appUser = existingAppUser ?? await ensurePublicAppUser(supabaseUser);
 
   const profile = await getProfileByUserId(appUser.id);
   if (!profile) {

@@ -6,14 +6,26 @@
  */
 
 import { mkdir } from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import net from "node:net";
 
 import { chromium } from "@playwright/test";
+import { config as loadDotenv } from "dotenv";
 
-import { loadEnvironmentFiles } from "../src/lib/env-loader";
-
-loadEnvironmentFiles();
+for (const envPath of [
+  path.join(process.cwd(), ".env.test.local"),
+  path.join(process.cwd(), ".env.local"),
+  path.join(process.cwd(), ".env"),
+  path.join(path.resolve(process.cwd(), ".."), ".env.test.local"),
+  path.join(path.resolve(process.cwd(), ".."), ".env.local"),
+  path.join(path.resolve(process.cwd(), ".."), ".env"),
+]) {
+  if (fs.existsSync(envPath)) {
+    loadDotenv({ path: envPath, override: false, quiet: true });
+  }
+}
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const storageStatePath = path.resolve(
@@ -24,24 +36,97 @@ const email = process.env.E2E_PUBLIC_EMAIL?.trim();
 const password = process.env.E2E_PUBLIC_PASSWORD?.trim();
 const headless = process.env.E2E_CAPTURE_HEADLESS !== "0";
 
+async function isBaseUrlReachable(urlValue: string): Promise<boolean> {
+  try {
+    const parsedUrl = new URL(urlValue);
+    const port = Number(parsedUrl.port || (parsedUrl.protocol === "https:" ? "443" : "80"));
+
+    return await new Promise<boolean>((resolve) => {
+      const socket = net.createConnection({
+        host: parsedUrl.hostname,
+        port,
+      });
+
+      socket.once("connect", () => {
+        socket.destroy();
+        resolve(true);
+      });
+
+      socket.once("error", () => {
+        socket.destroy();
+        resolve(false);
+      });
+
+      socket.setTimeout(5_000, () => {
+        socket.destroy();
+        resolve(false);
+      });
+    });
+  } catch {
+    return false;
+  }
+}
+
 async function main(): Promise<void> {
   if (!email || !password) {
     throw new Error("E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD must be set before capturing public storage state.");
   }
 
+  if (!(await isBaseUrlReachable(baseURL))) {
+    throw new Error(`No app server is reachable at ${baseURL}. Start the app first (for example: bun run dev).`);
+  }
+
   const browser = await chromium.launch({ headless });
   const context = await browser.newContext({ baseURL });
   const page = await context.newPage();
+  const emailInput = page.locator("#email");
+  const passwordInput = page.locator("#password");
+  const signInButton = page.getByRole("button", { name: "Sign in" });
 
   console.log(`Signing in public E2E user at ${baseURL}/login?redirectTo=/account`);
 
   await page.goto("/login?redirectTo=/account", { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await emailInput.waitFor({ state: "visible", timeout: 30_000 });
+  await passwordInput.waitFor({ state: "visible", timeout: 30_000 });
+
+  await emailInput.fill(email);
+  await page.waitForFunction((expectedValue) => {
+    const input = document.querySelector<HTMLInputElement>("#email");
+    return input?.value === expectedValue;
+  }, email);
+
+  await passwordInput.fill(password);
+  await page.waitForFunction((expectedValue) => {
+    const input = document.querySelector<HTMLInputElement>("#password");
+    return input?.value === expectedValue;
+  }, password);
+
+  await signInButton.waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const button = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+      .find((candidate) => candidate.textContent?.trim() === "Sign in");
+    return button ? !button.disabled : false;
+  });
+
+  await signInButton.click();
 
   await page.waitForURL((url) => url.pathname === "/account", { timeout: 30_000 });
-  await page.getByRole("heading", { name: "Account Settings" }).waitFor({ state: "visible", timeout: 30_000 });
+
+  const accountHeading = page.getByRole("heading", { name: "Account Settings" });
+  const profileHeading = page.getByRole("heading", { name: "Profile" });
+  const signOutHeading = page.getByRole("heading", { name: "Sign out" });
+  const loadErrorMessage = page.getByText("Failed to load profile. Please refresh.");
+
+  const signedInState = await Promise.race([
+    accountHeading.waitFor({ state: "visible", timeout: 30_000 }).then(() => "account-heading"),
+    profileHeading.waitFor({ state: "visible", timeout: 30_000 }).then(() => "profile-heading"),
+    signOutHeading.waitFor({ state: "visible", timeout: 30_000 }).then(() => "sign-out-heading"),
+    loadErrorMessage.waitFor({ state: "visible", timeout: 30_000 }).then(() => "load-error"),
+  ]);
+
+  if (signedInState === "load-error") {
+    throw new Error("Account page loaded after sign-in but profile fetch failed. Check /api/account/profile and browser auth state.");
+  }
 
   await mkdir(path.dirname(storageStatePath), { recursive: true });
   await context.storageState({ path: storageStatePath });

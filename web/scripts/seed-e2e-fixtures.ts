@@ -6,7 +6,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
+import { createClient } from "@supabase/supabase-js";
 import { and, count, eq } from "drizzle-orm";
 
 import { authAccounts, categories, comments, posts, profiles, users } from "../src/drizzle/schema";
@@ -24,6 +26,8 @@ const FIXTURE_COMMENTER_ID = "e2e-commenter";
 const FIXTURE_COMMENTER_ACCOUNT_ID = "e2e-commenter-supabase-account";
 const FIXTURE_PARENT_COMMENT_ID = "e2e-comment-parent";
 const FIXTURE_REPLY_COMMENT_ID = "e2e-comment-reply";
+const FIXTURE_PUBLIC_EMAIL = "e2e-public@jsquaredadventures.test";
+const FIXTURE_PUBLIC_DISPLAY_NAME = "E2E Public User";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
@@ -71,6 +75,89 @@ async function writeEnvValue(key: string, value: string): Promise<void> {
 
   await mkdir(path.dirname(ENV_FILE_PATH), { recursive: true });
   await writeFile(ENV_FILE_PATH, `${lines.join("\n")}\n`, "utf8");
+}
+
+function readEnvValue(key: string): string | null {
+  return readExistingEnvFile().get(key) ?? null;
+}
+
+function getPublicFixturePassword(): string {
+  const existingPassword = readEnvValue("E2E_PUBLIC_PASSWORD");
+  if (existingPassword && isCompliantFixturePassword(existingPassword)) {
+    return existingPassword;
+  }
+
+  const uniqueSuffix = randomUUID().replace(/-/g, "").slice(0, 12);
+  return `E2e!Fixture-${uniqueSuffix}`;
+}
+
+function isCompliantFixturePassword(value: string): boolean {
+  return (
+    /[a-z]/.test(value)
+    && /[A-Z]/.test(value)
+    && /[0-9]/.test(value)
+    && /[!@#$%^&*()_+\-=[\]{};'":|<>?,./`~]/.test(value)
+  );
+}
+
+async function ensurePublicAuthFixture(): Promise<{ email: string; password: string }> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required to provision the public E2E auth fixture.");
+  }
+
+  const password = getPublicFixturePassword();
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  const existingUsers = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+  if (existingUsers.error) {
+    throw new Error(`Failed to list Supabase users for E2E fixture setup: ${existingUsers.error.message}`);
+  }
+
+  const existingUser = existingUsers.data.users.find((user) => user.email?.toLowerCase() === FIXTURE_PUBLIC_EMAIL);
+
+  if (existingUser) {
+    const updateResult = await supabase.auth.admin.updateUserById(existingUser.id, {
+      email: FIXTURE_PUBLIC_EMAIL,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: FIXTURE_PUBLIC_DISPLAY_NAME,
+      },
+    });
+
+    if (updateResult.error) {
+      throw new Error(`Failed to update Supabase E2E public user: ${updateResult.error.message}`);
+    }
+  } else {
+    const createResult = await supabase.auth.admin.createUser({
+      email: FIXTURE_PUBLIC_EMAIL,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: FIXTURE_PUBLIC_DISPLAY_NAME,
+      },
+    });
+
+    if (createResult.error) {
+      throw new Error(`Failed to create Supabase E2E public user: ${createResult.error.message}`);
+    }
+  }
+
+  await writeEnvValue("E2E_PUBLIC_EMAIL", FIXTURE_PUBLIC_EMAIL);
+  await writeEnvValue("E2E_PUBLIC_PASSWORD", password);
+
+  return {
+    email: FIXTURE_PUBLIC_EMAIL,
+    password,
+  };
 }
 
 async function ensureAdminAuthor(): Promise<void> {
@@ -309,9 +396,12 @@ async function main(): Promise<void> {
 
   await ensureAdminAuthor();
   await ensurePublicCommenter();
+  const publicAuthFixture = await ensurePublicAuthFixture();
   await ensureFixturePost();
   await ensureFixtureComments();
   await writeEnvValue("E2E_ADMIN_POST_ID", FIXTURE_POST_ID);
+  await writeEnvValue("E2E_PUBLIC_EMAIL", publicAuthFixture.email);
+  await writeEnvValue("E2E_PUBLIC_PASSWORD", publicAuthFixture.password);
   await writeEnvValue("E2E_PUBLIC_POST_SLUG", FIXTURE_POST_SLUG);
 
   const commentCountRows = await db
@@ -321,6 +411,7 @@ async function main(): Promise<void> {
 
   console.log(`Seeded E2E fixture post ${FIXTURE_POST_ID} with ${Number(commentCountRows[0]?.total ?? 0)} visible comments.`);
   console.log(`Wrote E2E_ADMIN_POST_ID to ${ENV_FILE_PATH}`);
+  console.log(`Wrote E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD to ${ENV_FILE_PATH}`);
   console.log(`Wrote E2E_PUBLIC_POST_SLUG to ${ENV_FILE_PATH}`);
 }
 
