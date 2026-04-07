@@ -295,7 +295,7 @@ Statuses:
 
 ### Phase 2: Security Hardening
 
-- [-] Close any CRITICAL or HIGH security findings first.
+- [x] Close any CRITICAL or HIGH security findings first.
 - [ ] Ensure all trust boundaries use Zod validation.
 - [ ] Verify authorization checks across public and admin flows.
 - [ ] Verify upload and media routes are constrained and logged safely.
@@ -304,6 +304,7 @@ Statuses:
 Completed slice:
 
 - [x] Replace regex-based rich-text HTML sanitization with a vetted allowlist sanitizer and add regression coverage for legacy HTML and raw render sinks.
+- [x] Make deployed rate limiting fail closed when Upstash credentials are missing, while keeping in-memory fallback only for local dev and test.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -360,6 +361,18 @@ Completed slice:
 - Security impact: medium-high, because this affects abuse protection on public endpoints.
 - E2E impact: none for the initial slice.
 - Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`.
+- Status: complete
+
+### Batch: upload validation hardening
+- Goal: constrain upload and media routes with stronger server-side validation instead of trusting client-provided MIME and size metadata alone.
+- Scope: avatar upload, admin image upload, shared Cloudinary upload helpers, and focused regression tests in `web/`.
+- Files expected to change: `web/src/app/api/account/avatar/route.ts`, `web/src/app/api/admin/uploads/images/route.ts`, `web/src/lib/cloudinary/uploads.ts`, and targeted tests.
+- RED target: prove server upload paths accept files that pass client metadata checks but fail stronger server-side validation requirements.
+- GREEN target: server upload paths reject invalid content with focused regression coverage and safe error responses.
+- Refactor boundary: no unrelated media UI or editor work.
+- Security impact: medium-high, because uploads are a direct untrusted input surface.
+- E2E impact: none for the initial slice; unit and route coverage first.
+- Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`.
 - Status: in_progress
 
 ## Ranked Remediation Backlog
@@ -408,3 +421,4 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-06: Completed the whole-project baseline across security, code review, cleanup discovery, and E2E coverage; consolidated the first ranked remediation backlog in this tracker.
 - 2026-04-06: Fixed a high-severity admin save-path bug by making `createAdminPostAction` and `updateAdminPostAction` fail fast on invalid `galleryEntries` payloads before any media-replacement transaction side effects run.
 - 2026-04-06: Replaced regex-based rich-text sanitization in `web/src/lib/content.ts` with a `sanitize-html` allowlist policy so legacy HTML and other raw render paths normalize links, strip unsupported attributes, and discard disallowed elements before `dangerouslySetInnerHTML` sinks.
+- 2026-04-06: Changed rate limiting to fail closed in deployed environments unless `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set, while preserving the in-memory fallback only for local development and test.

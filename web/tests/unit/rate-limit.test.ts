@@ -15,6 +15,9 @@ const REQUIRED_SERVER_ENV: Record<string, string> = {
 
 async function importRateLimitModule() {
   vi.resetModules();
+  vi.doMock("@/lib/env-loader", () => ({
+    loadEnvironmentFiles: () => {},
+  }));
   return import("@/lib/rate-limit");
 }
 
@@ -29,7 +32,7 @@ function applyBaseEnv(): void {
 
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
-  delete process.env.CRON_SECRET;
+  vi.stubEnv("CRON_SECRET", "1234567890abcdef");
 }
 
 describe("checkRateLimit", () => {
