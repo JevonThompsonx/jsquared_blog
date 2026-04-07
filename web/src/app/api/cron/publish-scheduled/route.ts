@@ -1,7 +1,21 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { publishDueScheduledPosts } from "@/server/posts/publish";
+
+function secureEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
 
 // GET /api/cron/publish-scheduled
 // Input: Authorization: Bearer {CRON_SECRET}
@@ -20,6 +34,11 @@ import { publishDueScheduledPosts } from "@/server/posts/publish";
  * Schedule: daily at midnight UTC (cron: "0 0 * * *") — configured in vercel.json.
  */
 export async function GET(request: Request): Promise<NextResponse> {
+  const rl = await checkRateLimit(`cron-publish-scheduled:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   const cronSecret = process.env.CRON_SECRET;
   const isLocalDev = process.env.NODE_ENV === "development";
 
@@ -32,7 +51,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     // Local dev without a secret: allow through so developers can test locally.
   } else {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token || !secureEquals(token, cronSecret)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }

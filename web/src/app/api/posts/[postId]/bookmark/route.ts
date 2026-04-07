@@ -22,6 +22,12 @@ export async function GET(
   if (!supabaseUser) {
     return NextResponse.json({ bookmarked: false });
   }
+
+  const rl = await checkRateLimit(`bookmark-status:${supabaseUser.id}:${getClientIp(request)}`, 60, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   const publicUser = await ensurePublicAppUser(supabaseUser);
   const bookmarked = await isPostBookmarked(postId, publicUser.id);
   return NextResponse.json({ bookmarked });

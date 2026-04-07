@@ -12,6 +12,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rl = await checkRateLimit(`account-profile-get:${supabaseUser.id}:${getClientIp(request)}`, 60, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   const appUser = await getPublicAppUserBySupabaseId(supabaseUser.id);
   if (!appUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });

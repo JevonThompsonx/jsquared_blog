@@ -13,6 +13,11 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
     return NextResponse.json({ error: "Invalid post id" }, { status: 400 });
   }
 
+  const rl = await checkRateLimit(`comments-list:${getClientIp(request)}`, 120, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
+  }
+
   const { postId } = paramsParse.data;
   const url = new URL(request.url);
   const sortParse = commentSortSchema.safeParse(url.searchParams.get("sort") ?? "likes");
