@@ -298,13 +298,14 @@ Statuses:
 - [x] Close any CRITICAL or HIGH security findings first.
 - [ ] Ensure all trust boundaries use Zod validation.
 - [ ] Verify authorization checks across public and admin flows.
-- [ ] Verify upload and media routes are constrained and logged safely.
+- [x] Verify upload and media routes are constrained and logged safely.
 - [ ] Confirm no sensitive error leakage.
 
 Completed slice:
 
 - [x] Replace regex-based rich-text HTML sanitization with a vetted allowlist sanitizer and add regression coverage for legacy HTML and raw render sinks.
 - [x] Make deployed rate limiting fail closed when Upstash credentials are missing, while keeping in-memory fallback only for local dev and test.
+- [x] Harden avatar and admin image uploads with shared server-side byte-signature validation so spoofed image MIME types are rejected before Cloudinary upload.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -373,6 +374,18 @@ Completed slice:
 - Security impact: medium-high, because uploads are a direct untrusted input surface.
 - E2E impact: none for the initial slice; unit and route coverage first.
 - Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`.
+- Status: complete
+
+### Batch: admin identity mapping cleanup
+- Goal: fix inconsistent admin identity mapping so authorization checks rely on one clear source of truth across admin flows.
+- Scope: admin auth identity helpers and the main consumers called out by the backlog.
+- Files expected to change: `web/src/server/auth/admin-users.ts`, `web/src/lib/auth/admin.ts`, and targeted tests.
+- RED target: prove current admin identity mapping can disagree across helper boundaries or consumer flows.
+- GREEN target: admin identity resolution is normalized behind one consistent contract with focused regression coverage.
+- Refactor boundary: no broader auth redesign or public-user flow changes.
+- Security impact: medium-high, because this affects admin authorization correctness.
+- E2E impact: low for the initial slice; unit coverage first.
+- Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`.
 - Status: in_progress
 
 ## Ranked Remediation Backlog
@@ -422,3 +435,4 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-06: Fixed a high-severity admin save-path bug by making `createAdminPostAction` and `updateAdminPostAction` fail fast on invalid `galleryEntries` payloads before any media-replacement transaction side effects run.
 - 2026-04-06: Replaced regex-based rich-text sanitization in `web/src/lib/content.ts` with a `sanitize-html` allowlist policy so legacy HTML and other raw render paths normalize links, strip unsupported attributes, and discard disallowed elements before `dangerouslySetInnerHTML` sinks.
 - 2026-04-06: Changed rate limiting to fail closed in deployed environments unless `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set, while preserving the in-memory fallback only for local development and test.
+- 2026-04-06: Added shared server-side upload validation in `web/src/lib/cloudinary/uploads.ts` that checks allowed MIME type, byte size, and basic file signatures for JPEG, PNG, WebP, and GIF before avatar or editorial uploads are sent to Cloudinary.

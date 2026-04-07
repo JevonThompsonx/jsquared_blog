@@ -34,6 +34,86 @@ const editorialUploadResponseSchema = z.object({
     .optional(),
 });
 
+const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+
+const uploadValidationOptionsSchema = z.object({
+  allowedTypes: z.array(z.enum(SUPPORTED_IMAGE_TYPES)).nonempty().readonly(),
+  maxBytes: z.number().int().positive(),
+});
+
+type UploadValidationOptions = z.infer<typeof uploadValidationOptionsSchema>;
+
+function hasPngSignature(bytes: Uint8Array): boolean {
+  return bytes.length >= 8
+    && bytes[0] === 0x89
+    && bytes[1] === 0x50
+    && bytes[2] === 0x4e
+    && bytes[3] === 0x47
+    && bytes[4] === 0x0d
+    && bytes[5] === 0x0a
+    && bytes[6] === 0x1a
+    && bytes[7] === 0x0a;
+}
+
+function hasJpegSignature(bytes: Uint8Array): boolean {
+  return bytes.length >= 3
+    && bytes[0] === 0xff
+    && bytes[1] === 0xd8
+    && bytes[2] === 0xff;
+}
+
+function hasGifSignature(bytes: Uint8Array): boolean {
+  if (bytes.length < 6) {
+    return false;
+  }
+
+  const header = String.fromCharCode(...bytes.slice(0, 6));
+  return header === "GIF87a" || header === "GIF89a";
+}
+
+function hasWebpSignature(bytes: Uint8Array): boolean {
+  if (bytes.length < 12) {
+    return false;
+  }
+
+  const riff = String.fromCharCode(...bytes.slice(0, 4));
+  const webp = String.fromCharCode(...bytes.slice(8, 12));
+  return riff === "RIFF" && webp === "WEBP";
+}
+
+function matchesImageSignature(type: string, bytes: Uint8Array): boolean {
+  switch (type) {
+    case "image/jpeg":
+      return hasJpegSignature(bytes);
+    case "image/png":
+      return hasPngSignature(bytes);
+    case "image/webp":
+      return hasWebpSignature(bytes);
+    case "image/gif":
+      return hasGifSignature(bytes);
+    default:
+      return false;
+  }
+}
+
+export async function validateUploadedImage(file: File, options: UploadValidationOptions): Promise<void> {
+  const parsedOptions = uploadValidationOptionsSchema.parse(options);
+
+  if (!parsedOptions.allowedTypes.includes(file.type as (typeof SUPPORTED_IMAGE_TYPES)[number])) {
+    throw new Error("Only JPEG, PNG, WebP, or GIF images are allowed");
+  }
+
+  if (file.size > parsedOptions.maxBytes) {
+    const maxMb = parsedOptions.maxBytes / (1024 * 1024);
+    throw new Error(`Image must be under ${Number.isInteger(maxMb) ? maxMb : maxMb.toFixed(1)} MB`);
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!matchesImageSignature(file.type, bytes)) {
+    throw new Error("Uploaded file content does not match a supported image format");
+  }
+}
+
 export async function uploadAvatarImage(file: File) {
   const config = getCloudinaryConfig();
   const timestamp = Math.floor(Date.now() / 1000);
