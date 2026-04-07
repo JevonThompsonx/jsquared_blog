@@ -3,8 +3,6 @@
  * Run: bun run seed:e2e
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -14,6 +12,7 @@ import { and, count, eq } from "drizzle-orm";
 import { authAccounts, categories, comments, posts, profiles, users } from "../src/drizzle/schema";
 import { getDb, getDbClient } from "../src/lib/db-core";
 import { findSupabaseAuthUserByEmail } from "../src/lib/e2e/public-auth-fixture";
+import { readEnvFileValue, writeEnvFileValues } from "../src/lib/e2e/env-file";
 import { createPublicEnvArtifactMetadata } from "../src/lib/e2e/public-env-artifact";
 import { assertSafeSupabaseSeedTarget } from "../src/lib/e2e/public-e2e-target-guard";
 import { loadEnvironmentFiles } from "../src/lib/env-loader";
@@ -41,47 +40,12 @@ async function hasPostViewCountColumn(): Promise<boolean> {
   return result.rows.some((row) => isRecord(row) && row["name"] === "view_count");
 }
 
-function readExistingEnvFile(): Map<string, string> {
-  if (!existsSync(ENV_FILE_PATH)) {
-    return new Map();
-  }
-
-  const lines = readFileSync(ENV_FILE_PATH, "utf8").split(/\r?\n/);
-  const values = new Map<string, string>();
-
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    if (!trimmedLine || trimmedLine.startsWith("#")) {
-      continue;
-    }
-
-    const separatorIndex = trimmedLine.indexOf("=");
-    if (separatorIndex <= 0) {
-      continue;
-    }
-
-    const key = trimmedLine.slice(0, separatorIndex).trim();
-    const value = trimmedLine.slice(separatorIndex + 1);
-    values.set(key, value);
-  }
-
-  return values;
-}
-
 async function writeEnvValue(key: string, value: string): Promise<void> {
-  const values = readExistingEnvFile();
-  values.set(key, value);
-
-  const lines = Array.from(values.entries())
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([entryKey, entryValue]) => `${entryKey}=${entryValue}`);
-
-  await mkdir(path.dirname(ENV_FILE_PATH), { recursive: true });
-  await writeFile(ENV_FILE_PATH, `${lines.join("\n")}\n`, "utf8");
+  await writeEnvFileValues(ENV_FILE_PATH, [[key, value]]);
 }
 
 function readEnvValue(key: string): string | null {
-  return readExistingEnvFile().get(key) ?? null;
+  return readEnvFileValue(ENV_FILE_PATH, key);
 }
 
 function getPublicFixturePassword(): string {
@@ -410,8 +374,6 @@ async function main(): Promise<void> {
   });
 
   await writeEnvValue("E2E_ADMIN_POST_ID", FIXTURE_POST_ID);
-  await writeEnvValue("E2E_PUBLIC_EMAIL", publicAuthFixture.email);
-  await writeEnvValue("E2E_PUBLIC_PASSWORD", publicAuthFixture.password);
   await writeEnvValue("E2E_PUBLIC_POST_SLUG", FIXTURE_POST_SLUG);
   await writeEnvValue("E2E_PUBLIC_FIXTURE_GENERATED_AT", fixtureGeneratedAt);
   await writeEnvValue("E2E_PUBLIC_ENV_METADATA", JSON.stringify(publicEnvMetadata));

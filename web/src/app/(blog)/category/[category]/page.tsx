@@ -134,7 +134,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent)]">Category</p>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-secondary)]">Category</p>
               <h1 className="mt-1 text-balance text-3xl font-bold leading-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
                 {label}
               </h1>

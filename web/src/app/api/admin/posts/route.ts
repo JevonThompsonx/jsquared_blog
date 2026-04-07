@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
@@ -22,15 +23,25 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const url = new URL(request.url);
-  const filters = parseAdminPostListSearchParams({
-    search: url.searchParams.get("search") ?? undefined,
-    query: url.searchParams.get("query") ?? undefined,
-    category: url.searchParams.get("category") ?? undefined,
-    status: url.searchParams.get("status") ?? undefined,
-    page: url.searchParams.get("page") ?? undefined,
-    pageSize: url.searchParams.get("pageSize") ?? undefined,
-    sort: url.searchParams.get("sort") ?? undefined,
-  });
+  let filters: ReturnType<typeof parseAdminPostListSearchParams>;
+
+  try {
+    filters = parseAdminPostListSearchParams({
+      search: url.searchParams.get("search") ?? undefined,
+      query: url.searchParams.get("query") ?? undefined,
+      category: url.searchParams.get("category") ?? undefined,
+      status: url.searchParams.get("status") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+      sort: url.searchParams.get("sort") ?? undefined,
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: "Invalid query parameters" }, { status: 400 });
+    }
+
+    throw error;
+  }
 
   return NextResponse.json(await listAdminPostRecords(filters));
 }

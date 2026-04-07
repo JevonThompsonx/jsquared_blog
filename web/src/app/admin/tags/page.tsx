@@ -59,7 +59,11 @@ export default async function AdminTagsPage() {
                         </p>
                       </div>
 
-                      <form action={updateTagDescriptionAction} className="flex w-full flex-col gap-3 md:flex-row md:items-start">
+                      <form
+                        key={`${tag.id}:${tag.description ?? ""}`}
+                        action={updateTagDescriptionAction}
+                        className="flex w-full flex-col gap-3 md:flex-row md:items-start"
+                      >
                         <input name="tagId" type="hidden" value={tag.id} />
                         <textarea
                           className="min-h-[96px] flex-1 resize-y rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-3 text-sm leading-6 text-[var(--input-text)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"

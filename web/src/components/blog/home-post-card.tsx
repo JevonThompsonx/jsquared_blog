@@ -140,7 +140,7 @@ export function HomePostCard({
       <div className={`${gridClass} group relative`}>
         <Link aria-label={`Read post: ${post.title}`} className="absolute inset-0 z-[1] rounded-lg focus:outline-2 focus:outline-[var(--primary)]" href={href} tabIndex={-1} />
         <article className="post-card-shell relative flex h-full flex-col overflow-hidden rounded-lg border shadow-lg transition-all duration-300 md:flex-row bg-[var(--card-bg)]">
-          {statusBadge ? <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--card-bg)] px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-[var(--primary)] shadow-md">{statusBadge}</div> : null}
+          {statusBadge ? <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--card-bg)] px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-[var(--text-primary)] shadow-md">{statusBadge}</div> : null}
           <div className="relative h-64 overflow-hidden md:h-auto md:min-h-[240px] md:w-1/2 bg-[var(--accent-soft)]">
             <Image 
               alt={post.title} 
@@ -204,7 +204,7 @@ export function HomePostCard({
     <div className={`${gridClass} group relative`}>
       <Link aria-label={`Read post: ${post.title}`} className="absolute inset-0 z-[1] rounded-lg focus:outline-2 focus:outline-[var(--primary)]" href={href} tabIndex={-1} />
       <article className="post-card-shell relative flex h-full flex-col overflow-hidden rounded-lg border shadow-lg transition-all duration-300">
-        {statusBadge ? <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--card-bg)] px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-[var(--primary)] shadow-md">{statusBadge}</div> : null}
+        {statusBadge ? <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--card-bg)] px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-[var(--text-primary)] shadow-md">{statusBadge}</div> : null}
         <div className="relative h-56 overflow-hidden sm:h-60 bg-[var(--accent-soft)]">
           <Image 
             alt={post.title} 

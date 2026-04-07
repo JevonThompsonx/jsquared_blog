@@ -8,7 +8,6 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 vi.mock("@/server/services/newsletter", () => ({
-  getNewsletterEnvSetupInstructions: vi.fn(() => ["Set RESEND_API_KEY", "Set RESEND_NEWSLETTER_SEGMENT_ID"]),
   isNewsletterConfigured: vi.fn(),
   subscribeToNewsletter: vi.fn(),
 }));
@@ -16,7 +15,6 @@ vi.mock("@/server/services/newsletter", () => ({
 import { POST } from "@/app/api/newsletter/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import {
-  getNewsletterEnvSetupInstructions,
   isNewsletterConfigured,
   subscribeToNewsletter,
 } from "@/server/services/newsletter";
@@ -48,10 +46,11 @@ describe("POST /api/newsletter", () => {
     );
 
     expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid newsletter signup request" });
     expect(vi.mocked(subscribeToNewsletter)).not.toHaveBeenCalled();
   });
 
-  it("returns setup instructions when config is missing", async () => {
+  it("does not disclose setup instructions when config is missing", async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
     vi.mocked(isNewsletterConfigured).mockReturnValue(false);
 
@@ -67,7 +66,6 @@ describe("POST /api/newsletter", () => {
     expect(await response.json()).toEqual({
       status: "skipped",
       reason: "missing-config",
-      setup: ["Set RESEND_API_KEY", "Set RESEND_NEWSLETTER_SEGMENT_ID"],
     });
   });
 

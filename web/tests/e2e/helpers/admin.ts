@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test as base } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { getStorageStateHint, resolveExistingStorageStatePath } from "@/lib/e2e/storage-state-helper";
 import { loadEnvironmentFiles } from "../../../src/lib/env-loader";
 
 loadEnvironmentFiles();
@@ -21,19 +22,11 @@ function isLocalTarget(urlValue: string): boolean {
 }
 
 function resolveAdminStorageStatePath(): string | null {
-  const configuredPath = process.env.E2E_ADMIN_STORAGE_STATE?.trim();
-
-  if (configuredPath) {
-    const absoluteConfiguredPath = path.resolve(process.cwd(), configuredPath);
-
-    return existsSync(absoluteConfiguredPath) ? absoluteConfiguredPath : null;
-  }
-
-  if (existsSync(defaultAdminStorageStatePath)) {
-    return defaultAdminStorageStatePath;
-  }
-
-  return null;
+  return resolveExistingStorageStatePath({
+    configuredPath: process.env.E2E_ADMIN_STORAGE_STATE,
+    defaultPath: defaultAdminStorageStatePath,
+    hasStorageState: existsSync,
+  });
 }
 
 export const configuredAdminPostId = process.env.E2E_ADMIN_POST_ID?.trim() || null;
@@ -47,7 +40,10 @@ if (adminStorageStatePath) {
 }
 
 export function getAdminStorageStateHint(): string {
-  return `Set E2E_ADMIN_STORAGE_STATE or create playwright/.auth/admin.json with \`bun run e2e:capture-admin-state\`.`;
+  return getStorageStateHint({
+    command: "bun run e2e:capture-admin-state",
+    label: "playwright/.auth/admin.json",
+  });
 }
 
 export function getAdminMutationHint(): string {

@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { subscribeToNewsletterSchema } from "@/server/forms/newsletter";
-import {
-  getNewsletterEnvSetupInstructions,
-  isNewsletterConfigured,
-  subscribeToNewsletter,
-} from "@/server/services/newsletter";
+import { isNewsletterConfigured, subscribeToNewsletter } from "@/server/services/newsletter";
 
 // POST /api/newsletter
 // Body: { email: string, firstName?: string, lastName?: string, source?: string }
@@ -27,7 +23,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const parse = subscribeToNewsletterSchema.safeParse(payload);
   if (!parse.success) {
-    return NextResponse.json({ error: parse.error.flatten().fieldErrors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid newsletter signup request" }, { status: 400 });
   }
 
   if (!isNewsletterConfigured()) {
@@ -35,7 +31,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       {
         status: "skipped",
         reason: "missing-config",
-        setup: getNewsletterEnvSetupInstructions(),
       },
       { status: 202 },
     );

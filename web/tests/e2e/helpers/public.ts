@@ -4,6 +4,7 @@ import path from "node:path";
 import { test as base } from "@playwright/test";
 
 import { isPublicEnvArtifactMetadata } from "@/lib/e2e/public-env-artifact";
+import { getStorageStateHint } from "@/lib/e2e/storage-state-helper";
 import { loadEnvironmentFiles } from "../../../src/lib/env-loader";
 import {
   createPublicAuthArtifactFingerprint,
@@ -110,5 +111,8 @@ if (publicStorageStatePath) {
 }
 
 export function getPublicStorageStateHint(): string {
-  return "Set E2E_PUBLIC_STORAGE_STATE or create playwright/.auth/public.json with `bun run e2e:capture-public-state` after configuring E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD, and regenerate the matching metadata when fixtures change.";
+  return `${getStorageStateHint({
+    command: "bun run e2e:capture-public-state",
+    label: "playwright/.auth/public.json",
+  })} after configuring E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD, and regenerate the matching metadata when fixtures change.`;
 }

@@ -22,6 +22,11 @@ const statusOptionLabels: Record<"published" | "draft" | "scheduled", string> = 
   scheduled: "Scheduled",
 };
 
+function getFirstMatchedPath(html: string, pattern: RegExp): string | null {
+  const match = html.match(pattern);
+  return match?.[1] ?? null;
+}
+
 test.describe("public pages smoke tests", () => {
 
   test("homepage loads with post feed", async ({ page }) => {
@@ -106,9 +111,38 @@ test.describe("public pages smoke tests", () => {
     await expect(page.getByRole("region", { name: "Filtered stories feed" })).toBeVisible();
   });
 
+  test("about page loads", async ({ page }) => {
+    await page.goto("/about");
+    await expect(page.locator("header")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "The story behind J²" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Browse stories →" })).toBeVisible();
+  });
+
+  test("map page loads its shell", async ({ page }) => {
+    await page.goto("/map");
+    await expect(page.getByRole("main").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Adventure Map" })).toBeVisible();
+    await expect(page.getByText(/story|stories pinned to the map|Stories will appear here as locations are added\./i)).toBeVisible();
+  });
+
+  test("published post detail page loads when a public story exists", async ({ page, request }) => {
+    const homepageResponse = await request.get("/");
+    expect(homepageResponse.status()).toBe(200);
+
+    const homepageHtml = await homepageResponse.text();
+    const postPath = getFirstMatchedPath(homepageHtml, /href="(\/posts\/[^"?#]+)"/);
+
+    test.skip(!postPath, "No public post links were available to verify a published story page.");
+
+    await page.goto(postPath!);
+    await expect(page.locator("article")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByText(/min read/)).toBeVisible();
+  });
+
   test("search page is accessible", async ({ page }) => {
     await page.goto("/?search=adventure");
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByRole("main").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: /Results for/i })).toBeVisible();
   });
 
@@ -117,6 +151,13 @@ test.describe("public pages smoke tests", () => {
     await expect(page.locator("main")).toBeVisible();
     // Should have an email input
     await expect(page.locator('input[type="email"]')).toBeVisible();
+  });
+
+  test("bookmarks prompts unauthenticated users to sign in", async ({ page }) => {
+    await page.goto("/bookmarks");
+    await expect(page.getByRole("heading", { name: "Saved posts" })).toBeVisible();
+    await expect(page.getByText("Sign in to see your saved posts")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login?redirectTo=/bookmarks");
   });
 
   // 6.A.1: axe-core accessibility checks on key public pages
@@ -153,6 +194,16 @@ test.describe("public pages smoke tests", () => {
     const context = await browser.newContext({ storageState: undefined });
     const page = await context.newPage();
     await page.goto("/admin");
+    await expect(page).toHaveURL(/\/admin(?:\?.*)?$/, { timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Editorial control center" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
+    await context.close();
+  });
+
+  test("admin new-post route redirects to sign-in when unauthenticated", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: undefined });
+    const page = await context.newPage();
+    await page.goto("/admin/posts/new");
     await expect(page).toHaveURL(/\/admin(?:\?.*)?$/, { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: "Editorial control center" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
@@ -225,6 +276,14 @@ adminTest.describe("authenticated admin smoke tests", () => {
     const rows = page.getByTestId("admin-post-row");
     await expect(rows.first()).toBeVisible({ timeout: 15_000 });
     await expect(rows.first().getByRole("link", { name: "Moderate comments" })).toBeVisible();
+  });
+
+  adminTest("admin create-post page renders for authenticated admins", async ({ page }) => {
+    await page.goto("/admin/posts/new");
+
+    await expect(page.getByRole("heading", { name: "Create post" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Back to dashboard" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create post" })).toBeVisible();
   });
 
   adminTest("admin tags page renders editing controls", async ({ page }) => {

@@ -15,20 +15,14 @@ import { chromium } from "@playwright/test";
 import { config as loadDotenv } from "dotenv";
 
 import { resolvePublicStorageStateCaptureConfig } from "../src/lib/e2e/public-storage-state-config";
+import { getEnvironmentFilePaths } from "../src/lib/env-loader";
 import {
   assertPublicStorageStateCapturePreconditions,
   createPublicAuthArtifactFingerprint,
   createPublicStorageStateMetadata,
 } from "../src/lib/e2e/public-storage-state-config";
 
-for (const envPath of [
-  path.join(process.cwd(), ".env.test.local"),
-  path.join(process.cwd(), ".env.local"),
-  path.join(process.cwd(), ".env"),
-  path.join(path.resolve(process.cwd(), ".."), ".env.test.local"),
-  path.join(path.resolve(process.cwd(), ".."), ".env.local"),
-  path.join(path.resolve(process.cwd(), ".."), ".env"),
-]) {
+for (const envPath of getEnvironmentFilePaths({ cwd: process.cwd(), includeDevVars: false })) {
   if (fs.existsSync(envPath)) {
     loadDotenv({ path: envPath, override: false, quiet: true });
   }
