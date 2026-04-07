@@ -345,6 +345,7 @@ Completed slice:
 - [x] Normalize admin GitHub identity mapping around the persisted provider user id so auth helpers no longer disagree about the same admin account.
 - [x] Harden `PATCH /api/account/profile` and `GET /api/posts` so invalid input now returns generic `400` responses instead of leaking raw Zod field maps to public callers.
 - [x] Harden `POST /api/posts/[postId]/comments` so invalid public comment payloads now return a generic `400` response instead of leaking raw Zod field maps, and lock the route with focused write-path coverage.
+- [x] Harden bookmark route contracts so authenticated bookmark toggles throttle by user-plus-IP and both bookmark endpoints are pinned with direct unit coverage.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -365,6 +366,7 @@ Completed slice:
 - [x] Locked the shared admin-profile attribution policy in tests and docs: admin accounts remain keyed by GitHub provider user id, `githubLogin` stays sourced from the live GitHub profile for operator attribution, and the persisted display/avatar identity intentionally stays the shared site-owner branding.
 - [x] Hardened `GET /api/admin/posts` against malformed query input by returning a safe `400` for invalid admin filters instead of letting Zod validation errors escape the route boundary; added focused route coverage for invalid status, pagination, oversized query input, and unexpected non-Zod failures.
 - [x] Added direct route coverage for `DELETE /api/comments/[commentId]`, `POST /api/comments/[commentId]/like`, `POST /api/admin/posts/clone`, and `POST /api/admin/posts/bulk-status` so public/admin mutation contracts are pinned before later cleanup or refactor work.
+- [x] Normalized blank admin tag descriptions to `null` in the server action boundary and added focused action coverage for auth redirect, invalid payload rejection, normalization, and revalidation behavior.
 
 ### Phase 4: Refactor and Cleanup
 
@@ -925,14 +927,88 @@ Planner review note:
   - Lint: `npx eslint "src/app/api/posts/[postId]/comments/route.ts" "tests/unit/post-comments-route.test.ts" "tests/unit/comment-delete-route.test.ts" "tests/unit/comment-like-route.test.ts" "tests/unit/admin-post-clone-route.test.ts" "tests/unit/admin-post-bulk-status-route.test.ts"` passed.
   - Typecheck: `bunx tsc --noEmit` passed.
   - Build: skipped because this slice only added focused route tests.
-  - Security review: reviewed during the slice; no new issues were introduced and the new tests now pin the expected auth and validation behavior on these endpoints.
+- Security review: reviewed during the slice; no new issues were introduced and the new tests now pin the expected auth and validation behavior on these endpoints.
+- Status: complete
+
+### Batch: bookmark route contract hardening
+- Goal: pin the public bookmark route contracts before the blocked Playwright bookmark-removal rerun and close a rate-limit correctness gap in the authenticated mutation path.
+- User journey or failure being protected: signed-in public users should keep receiving stable auth, throttling, and toggle behavior on bookmark status/list/mutation routes, and one user should not consume another user's bookmark toggle budget behind the same IP.
+- Scope: `TODO.md`, `web/src/app/api/posts/[postId]/bookmark/route.ts`, `web/src/app/api/bookmarks/route.ts`, `web/tests/unit/post-bookmark-route.test.ts`, and `web/tests/unit/bookmarks-route.test.ts`.
+- Files expected to change: `TODO.md`, `web/src/app/api/posts/[postId]/bookmark/route.ts`, `web/tests/unit/post-bookmark-route.test.ts`, `web/tests/unit/bookmarks-route.test.ts`.
+- Tests to add or update first: POST invalid-id, unauthorized, throttled, user-plus-IP rate-limit key, created vs removed toggle status, plus direct `GET /api/bookmarks` coverage for unauthorized, throttled, and image-transform happy path.
+- RED command: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts`
+- Expected RED test(s): the new POST throttling assertion fails because the route still keys the limiter as IP-only.
+- Why this RED proves the right problem: the public bookmark status/list routes already scope rate limiting to the authenticated user and client IP, so a failing POST assertion shows the mutation path still disagrees with the intended multi-user contract.
+- GREEN target: bookmark status/list/mutation contracts are covered directly, and authenticated bookmark toggles throttle by `supabaseUser.id` plus client IP while preserving current unauthorized and toggle semantics.
+- GREEN command: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts`
+- Refactor boundary: no bookmark UI, Playwright, or DAL refactor in this slice.
+- Refactor proof command(s): `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts`
+- Security impact: medium, because this is an authenticated public mutation surface and shared-IP abuse boundary.
+- Required security assertions: unauthenticated POST still returns `401`; invalid post ids stay `400`; throttled calls still return `429`; list route still requires auth; bookmark image URLs still pass through the CDN transform helper.
+- E2E impact: low direct browser impact, medium confidence gain for the blocked bookmark-removal lane.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: removes direct route-coverage blind spots around the bookmark status/list/mutation API contract.
+- Verification commands: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts`, `npx eslint "src/app/api/posts/[postId]/bookmark/route.ts" "tests/unit/post-bookmark-route.test.ts" "tests/unit/bookmarks-route.test.ts"`, `bunx tsc --noEmit`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts`
+  - Result: the new authenticated POST throttling test failed because the route still called `checkRateLimit("bookmark:127.0.0.1", 20, 60000)` instead of scoping the key to the authenticated user plus client IP.
+  - Why this RED proved the right problem: it showed the bookmark mutation path still disagreed with the already-user-scoped bookmark read endpoints, which could let one signed-in user behind a shared IP consume another's toggle budget.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts`
+  - Result: 13 focused bookmark-route tests passed after the POST limiter key was scoped to `supabaseUser.id` plus client IP and the new list-route contract suite was added.
+- REFACTOR evidence:
+  - No broader refactor followed GREEN; the slice stayed inside the route contract plus new focused tests.
+- Verification evidence:
+  - Tests: included in the final focused bookmark/tag batch (`bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/admin-tag-actions.test.ts`) which passed with 17 tests across 3 files.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/bookmark/route.ts" "src/app/admin/tags/actions.ts" "tests/unit/post-bookmark-route.test.ts" "tests/unit/bookmarks-route.test.ts" "tests/unit/admin-tag-actions.test.ts"` passed.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Build: skipped because this was a focused route/test slice with no broader compilation or routing risk beyond typecheck.
+  - Security review: reviewed during the slice; no new issues were introduced and the authenticated bookmark mutation boundary now throttles more precisely under shared-IP conditions.
+- Status: complete
+
+### Batch: admin tag description action normalization
+- Goal: harden the admin tag description server-action boundary so blank submissions clear intentionally and the mutation contract is pinned before further admin cleanup.
+- User journey or failure being protected: an authenticated admin can clear a tag description without persisting meaningless whitespace, while unauthenticated and invalid submissions still fail safely.
+- Scope: `TODO.md`, `web/src/app/admin/tags/actions.ts`, and `web/tests/unit/admin-tag-actions.test.ts`.
+- Files expected to change: `TODO.md`, `web/src/app/admin/tags/actions.ts`, `web/tests/unit/admin-tag-actions.test.ts`.
+- Tests to add or update first: unauthenticated redirect, invalid payload no-op, whitespace-to-null normalization, non-empty persistence, and revalidation assertions.
+- RED command: `bunx vitest run tests/unit/admin-tag-actions.test.ts`
+- Expected RED test(s): the new normalization assertion fails because the action still forwards raw whitespace to the DAL.
+- Why this RED proves the right problem: the admin tag form posts raw textarea content, so a failing server-action assertion shows the trust boundary still treats meaningless whitespace as a real description update.
+- GREEN target: blank tag descriptions normalize to `null`, valid text still persists unchanged, and the action keeps its auth redirect and revalidation behavior.
+- GREEN command: `bunx vitest run tests/unit/admin-tag-actions.test.ts`
+- Refactor boundary: no admin tag page or DAL refactor beyond the minimal action-boundary normalization.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-tag-actions.test.ts`
+- Security impact: low-medium, because this is an authenticated admin mutation surface.
+- Required security assertions: unauthenticated callers still redirect to `/admin?error=AccessDenied`; invalid payloads still no-op safely; successful writes still revalidate `/admin/tags` and `/tag/[slug]`.
+- E2E impact: none.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: adds the first direct unit coverage for the admin tag description server action.
+- Verification commands: `bunx vitest run tests/unit/admin-tag-actions.test.ts`, `npx eslint "src/app/admin/tags/actions.ts" "tests/unit/admin-tag-actions.test.ts"`, `bunx tsc --noEmit`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-tag-actions.test.ts`
+  - Result: the new normalization test failed because `updateTagDescription("tag-1", "   ")` was still called instead of clearing the description to `null`.
+  - Why this RED proved the right problem: it showed the server-action trust boundary still persisted meaningless whitespace from the admin textarea rather than treating it as an explicit clear operation.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-tag-actions.test.ts`
+  - Result: 4 focused action tests passed after blank descriptions were normalized to `null` and valid descriptions remained unchanged.
+- REFACTOR evidence:
+  - No broader refactor followed GREEN; the slice stayed inside the action boundary and new focused test file.
+- Verification evidence:
+  - Tests: included in the final focused bookmark/tag batch (`bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/admin-tag-actions.test.ts`) which passed with 17 tests across 3 files.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/bookmark/route.ts" "src/app/admin/tags/actions.ts" "tests/unit/post-bookmark-route.test.ts" "tests/unit/bookmarks-route.test.ts" "tests/unit/admin-tag-actions.test.ts"` passed.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Build: skipped because this was a focused server-action/test slice.
+  - Security review: reviewed during the slice; no new issues were introduced and blank admin submissions now clear predictably instead of persisting whitespace-only content.
 - Status: complete
 
 ## Ranked Remediation Backlog
 
 1. Rerun the hardened public auth bootstrap live (`bun run seed:e2e`, `bun run e2e:capture-public-state`, targeted `public-authenticated.spec.ts`) once a loopback or explicitly approved non-production Supabase target is available in the shell.
 2. Run the targeted bookmark save/remove Playwright slice against that safe fixture environment, then continue broader authenticated public smoke coverage.
-3. Continue hardening remaining trust boundaries so they return safe failures instead of leaking uncaught validation errors; next candidates are selected admin server actions and any remaining public write routes not yet covered directly.
+3. Continue hardening remaining trust boundaries so they return safe failures instead of leaking uncaught validation errors; next candidates are selected admin read routes and remaining admin leaf server actions not yet pinned directly.
 4. Confirm no remaining sensitive error leakage across public/admin write surfaces and operational endpoints.
 5. Add consumer-level coverage where needed if any UI or client helper still depends on removed field-level validation payloads from the newly hardened public routes.
 
@@ -944,6 +1020,8 @@ Planner review note:
 - Security: the public newsletter signup route now returns generic validation and missing-config responses instead of exposing schema field maps or setup/env guidance.
 - Security: the public comment-create route now returns a generic invalid-payload response instead of exposing raw field-level validation details.
 - Correctness: direct route coverage now protects public comment deletion/like mutations plus admin post clone/bulk-status behavior, reducing mutation-surface blind spots before later refactors.
+- Correctness: bookmark status/list/mutation routes are now pinned with direct unit coverage, and authenticated bookmark toggle throttling is scoped to the signed-in user plus client IP instead of IP-only.
+- Correctness: the admin tag description server action now treats whitespace-only submissions as an explicit clear-to-null operation, with direct auth and revalidation coverage.
 - E2E: admin shell coverage exists, public route smoke now includes `/about`, `/map`, discovered post detail, and unauthenticated `/bookmarks`, and admin route smoke now covers unauthenticated and authenticated `/admin/posts/new`; the next gating step before broader signed-in public expansion is still a live rerun of the hardened public bootstrap lane against a clearly safe target.
 
 ## Known Likely Blockers
@@ -1033,6 +1111,8 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-07: Added the next authenticated public Playwright slice for bookmark removal and serialized the signed-in public flow block to avoid shared bookmark-state races; the live browser rerun is still blocked on a clearly safe local public-auth fixture environment.
 - 2026-04-07: Hardened `POST /api/posts/[postId]/comments` so invalid public comment payloads now return a generic `400` response, and added focused route coverage for unauthorized, invalid JSON, parent-comment validation, and success paths.
 - 2026-04-07: Added direct unit coverage for `DELETE /api/comments/[commentId]`, `POST /api/comments/[commentId]/like`, `POST /api/admin/posts/clone`, and `POST /api/admin/posts/bulk-status` so those public/admin mutation contracts are pinned before future cleanup work.
+- 2026-04-07: Hardened bookmark route contracts by scoping authenticated bookmark-toggle throttling to `supabaseUser.id` plus client IP, and added direct unit coverage for `GET/POST /api/posts/[postId]/bookmark` plus `GET /api/bookmarks`.
+- 2026-04-07: Hardened `updateTagDescriptionAction` so whitespace-only admin tag descriptions normalize to `null`, and added focused action coverage for auth redirect, invalid payload no-op, normalization, and revalidation behavior.
 
 ## Planned Feature Expansion
 

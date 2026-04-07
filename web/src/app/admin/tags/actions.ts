@@ -27,7 +27,9 @@ export async function updateTagDescriptionAction(formData: FormData): Promise<vo
     return;
   }
 
-  await updateTagDescription(raw.data.tagId, raw.data.description);
+  const normalizedDescription = raw.data.description?.trim() ? raw.data.description.trim() : null;
+
+  await updateTagDescription(raw.data.tagId, normalizedDescription);
   revalidatePath("/admin/tags");
   revalidatePath("/tag/[slug]", "page");
 }

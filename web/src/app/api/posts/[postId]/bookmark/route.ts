@@ -44,14 +44,15 @@ export async function POST(
   }
   const postId = parsedPostId.data;
 
-  // 20 bookmark toggles per minute per IP
-  const rl = await checkRateLimit(`bookmark:${getClientIp(request)}`, 20, 60_000);
-  if (!rl.allowed) return tooManyRequests(rl);
-
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Scope mutation throttling to the authenticated user and client IP.
+  const rl = await checkRateLimit(`bookmark:${supabaseUser.id}:${getClientIp(request)}`, 20, 60_000);
+  if (!rl.allowed) return tooManyRequests(rl);
+
   const publicUser = await ensurePublicAppUser(supabaseUser);
   const result = await togglePostBookmark(postId, publicUser.id);
   return NextResponse.json(result, { status: result.bookmarked ? 201 : 200 });

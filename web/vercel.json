@@ -5,6 +5,6 @@
   "installCommand": "bun install",
   "crons": [
     { "path": "/api/cron/publish-scheduled", "schedule": "0 0 * * *" },
-    { "path": "/api/cron/keep-supabase-awake", "schedule": "0 */6 * * *" }
+    { "path": "/api/cron/keep-supabase-awake", "schedule": "0 6 * * *" }
   ]
 }
