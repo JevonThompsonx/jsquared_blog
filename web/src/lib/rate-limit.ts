@@ -11,6 +11,8 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
+import { hasUpstashRedisCredentials, isDeployedEnvironment } from "@/lib/env";
+
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
@@ -145,9 +147,7 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
 // ---------------------------------------------------------------------------
 
 function isUpstashConfigured(): boolean {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  return typeof url === "string" && url.length > 0 && typeof token === "string" && token.length > 0;
+  return hasUpstashRedisCredentials(process.env);
 }
 
 /**
@@ -168,5 +168,12 @@ export async function checkRateLimit(
   if (isUpstashConfigured()) {
     return checkUpstash(key, limit, windowMs);
   }
+
+  if (isDeployedEnvironment(process.env)) {
+    throw new Error(
+      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in deployed environments for rate limiting.",
+    );
+  }
+
   return checkInMemory(key, limit, windowMs);
 }

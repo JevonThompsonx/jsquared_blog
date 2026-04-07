@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { getReadingTimeMinutes, getWordCount, htmlToPlainText, processHeadings, renderTiptapJson } from "@/lib/content";
+import {
+  getReadingTimeMinutes,
+  getWordCount,
+  htmlToPlainText,
+  processHeadings,
+  renderTiptapJson,
+  sanitizeRichTextHtml,
+} from "@/lib/content";
 
 describe("htmlToPlainText", () => {
   it("strips HTML tags", () => {
@@ -125,6 +132,42 @@ describe("renderTiptapJson", () => {
     });
     const result = renderTiptapJson(json);
     expect(result).not.toContain("<script>");
+  });
+});
+
+describe("sanitizeRichTextHtml", () => {
+  it("removes dangerous attributes that regex stripping misses", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<img src="https://example.com/road.jpg" alt="Road" srcset="https://example.com/road.jpg 1x, https://example.com/road-2x.jpg 2x" style="position:fixed" data-evil="1" />',
+    );
+
+    expect(sanitized).toContain('src="https://example.com/road.jpg"');
+    expect(sanitized).toContain('alt="Road"');
+    expect(sanitized).toContain('loading="lazy"');
+    expect(sanitized).not.toContain("srcset=");
+    expect(sanitized).not.toContain("style=");
+    expect(sanitized).not.toContain("data-evil=");
+  });
+
+  it("drops unsafe nested content while preserving allowed markup", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<p>Trail <span style="color:red"><a href="https://example.com" onclick="alert(1)">guide</a></span><svg><script>alert(1)</script></svg></p>',
+    );
+
+    expect(sanitized).toBe('<p>Trail <a href="https://example.com" target="_blank" rel="noreferrer">guide</a></p>');
+  });
+
+  it("normalizes legacy html links to the safe allowlist", () => {
+    const result = renderTiptapJson(
+      JSON.stringify({
+        type: "legacy-html",
+        html: '<p><a href="mailto:hello@example.com" class="cta" target="_self">Email me</a></p>',
+      }),
+    );
+
+    expect(result).toBe(
+      '<p><a href="mailto:hello@example.com" target="_blank" rel="noreferrer">Email me</a></p>',
+    );
   });
 });
 

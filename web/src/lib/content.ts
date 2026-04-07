@@ -1,14 +1,5 @@
+import sanitizeHtml, { type Attributes, type IFrame } from "sanitize-html";
 import { z } from "zod";
-
-// Dangerous element names whose tags and inner content should be stripped.
-const DANGEROUS_BLOCK_RE =
-  /<(script|style|iframe|object|embed|form|meta|link|base)([\s>][\s\S]*?<\/\1>|\s*\/>)/gi;
-// Self-closing or void dangerous tags not caught by the block pattern.
-const DANGEROUS_VOID_RE =
-  /<(input|button|select|textarea|meta|link|base)[^>]*\/?>/gi;
-// Inline event handlers (onclick, onload, …) and javascript: URIs.
-const EVENT_HANDLER_RE = /\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi;
-const JS_URI_RE = /(href|src|action)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi;
 
 const tiptapMarkSchema = z.object({
   type: z.string().optional(),
@@ -125,6 +116,93 @@ function sanitizeImageSrc(value: unknown): string | null {
 
   return null;
 }
+
+const RICH_TEXT_ALLOWED_TAGS = [
+  "a",
+  "blockquote",
+  "br",
+  "code",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "img",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "s",
+  "strong",
+  "ul",
+] as const;
+
+const EMPTY_HTML_ATTRIBUTES: Attributes = {};
+
+const richTextSanitizerOptions: sanitizeHtml.IOptions = {
+  allowedTags: [...RICH_TEXT_ALLOWED_TAGS],
+  allowedAttributes: {
+    a: ["href", "target", "rel"],
+    img: ["src", "alt", "title", "loading"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+  allowedSchemesAppliedToAttributes: ["href", "src"],
+  allowProtocolRelative: false,
+  disallowedTagsMode: "discard",
+  enforceHtmlBoundary: true,
+  nonBooleanAttributes: sanitizeHtml.defaults.nonBooleanAttributes.filter((attribute: string) => attribute !== "loading"),
+  parseStyleAttributes: false,
+  transformTags: {
+    a: (_tagName: string, attributes: Attributes) => {
+      const href = sanitizeHref(attributes.href);
+      if (!href) {
+        return { tagName: "a", attribs: EMPTY_HTML_ATTRIBUTES };
+      }
+
+      return {
+        tagName: "a",
+        attribs: {
+          href,
+          target: "_blank",
+          rel: "noreferrer",
+        },
+      };
+    },
+    img: (_tagName: string, attributes: Attributes) => {
+      const src = sanitizeImageSrc(attributes.src);
+      if (!src) {
+        return { tagName: "img", attribs: EMPTY_HTML_ATTRIBUTES };
+      }
+
+      const alt = typeof attributes.alt === "string" ? attributes.alt : "";
+      const title = typeof attributes.title === "string" ? attributes.title : undefined;
+
+      return {
+        tagName: "img",
+        attribs: {
+          src,
+          alt,
+          ...(title ? { title } : {}),
+          loading: "lazy",
+        },
+      };
+    },
+  },
+  exclusiveFilter(frame: IFrame) {
+    if (frame.tag === "a" && !frame.attribs.href) {
+      return "excludeTag";
+    }
+
+    if (frame.tag === "img" && !frame.attribs.src) {
+      return true;
+    }
+
+    return false;
+  },
+};
 
 function applyMarks(text: string, marks?: TiptapMark[]): string {
   if (!marks || marks.length === 0) {
@@ -306,11 +384,7 @@ export function sanitizeRichTextHtml(html: string | null | undefined): string {
     return "<p>This story is still being migrated.</p>";
   }
 
-  return html
-    .replace(DANGEROUS_BLOCK_RE, "")
-    .replace(DANGEROUS_VOID_RE, "")
-    .replace(EVENT_HANDLER_RE, "")
-    .replace(JS_URI_RE, "");
+  return sanitizeHtml(html, richTextSanitizerOptions);
 }
 
 export function htmlToPlainText(html: string | null | undefined): string {

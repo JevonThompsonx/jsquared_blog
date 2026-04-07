@@ -17,8 +17,9 @@ if (!process.env.NEXTAUTH_URL) {
 //   AUTH_ADMIN_GITHUB_IDS  — can be absent (disables admin access) but not a crash
 //   NEXT_PUBLIC_STADIA_MAPS_API_KEY — map degrades gracefully if unset
 //   CRON_SECRET — optional in local dev; required in all deployed environments
-//   UPSTASH_REDIS_REST_URL / _TOKEN — optional; without them rate limiting falls
-//     back to in-process memory (not consistent across Vercel instances)
+//   UPSTASH_REDIS_REST_URL / _TOKEN — optional in local dev and test only;
+//     deployed environments must provide them because rate limiting cannot fall
+//     back to in-process memory safely
 const serverEnvSchema = z.object({
   TURSO_DATABASE_URL: z.string().url("must be a valid libsql:// or https:// URL"),
   TURSO_AUTH_TOKEN: z.string().min(1, "required"),
@@ -35,7 +36,7 @@ const serverEnvSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email().optional(),
   COMMENT_NOTIFICATION_TO_EMAIL: z.string().email().optional(),
   RESEND_NEWSLETTER_SEGMENT_ID: z.string().min(1).optional(),
-  // Rate limiter — optional but logged as a warning when absent in non-dev environments
+  // Rate limiter — optional in local dev/test only
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   // Cron endpoint secret — optional in local dev only (enforced by the route handler)
@@ -56,6 +57,22 @@ const publicEnvSchema = z.object({
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
+
+export function isDeployedEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.VERCEL === "1" || env.NODE_ENV === "production";
+}
+
+export function hasUpstashRedisCredentials(env: NodeJS.ProcessEnv = process.env): boolean {
+  return Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
+}
+
+function assertRateLimitConfiguration(env: NodeJS.ProcessEnv = process.env): void {
+  if (isDeployedEnvironment(env) && !hasUpstashRedisCredentials(env)) {
+    throw new Error(
+      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in deployed environments because rate limiting cannot fall back to in-process memory.",
+    );
+  }
+}
 
 // Validate all required server vars at module load time.
 // Next.js sets NEXT_PHASE="phase-production-build" during `next build` static
@@ -80,16 +97,9 @@ if (!isNextBuild) {
     );
   }
 
-  // Warn (non-fatal) when Upstash is absent in a deployed environment: rate limiting
-  // will fall back to in-process memory which is not consistent across instances.
-  const isDeployed = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
-  if (isDeployed) {
-    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-      console.warn(
-        "[env] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are not set. " +
-        "Rate limiting will use in-process memory and will NOT be consistent across instances.",
-      );
-    }
+  assertRateLimitConfiguration(process.env);
+
+  if (isDeployedEnvironment(process.env)) {
     if (!process.env.CRON_SECRET) {
       console.warn(
         "[env] CRON_SECRET is not set. The /api/cron/publish-scheduled endpoint will return 500.",

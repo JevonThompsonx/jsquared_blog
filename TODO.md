@@ -295,11 +295,15 @@ Statuses:
 
 ### Phase 2: Security Hardening
 
-- [ ] Close any CRITICAL or HIGH security findings first.
+- [-] Close any CRITICAL or HIGH security findings first.
 - [ ] Ensure all trust boundaries use Zod validation.
 - [ ] Verify authorization checks across public and admin flows.
 - [ ] Verify upload and media routes are constrained and logged safely.
 - [ ] Confirm no sensitive error leakage.
+
+Completed slice:
+
+- [x] Replace regex-based rich-text HTML sanitization with a vetted allowlist sanitizer and add regression coverage for legacy HTML and raw render sinks.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -344,6 +348,18 @@ Completed slice:
 - Security impact: high, because this protects a direct `dangerouslySetInnerHTML` sink.
 - E2E impact: low for the initial slice; unit and integration coverage first.
 - Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`, and broader app verification if the sanitizer swap changes shared rendering behavior.
+- Status: complete
+
+### Batch: rate-limit fail-closed behavior
+- Goal: prevent production deployments from silently degrading to permissive in-memory rate limiting when Upstash credentials are missing.
+- Scope: rate-limit env handling, runtime behavior, and focused regression tests in `web/`.
+- Files expected to change: `web/src/lib/rate-limit.ts`, `web/src/lib/env.ts`, and targeted tests.
+- RED target: prove production-like configuration still permits degraded fallback behavior when required rate-limit credentials are absent.
+- GREEN target: production behavior either fails closed or is explicitly limited to local development, with focused regression coverage.
+- Refactor boundary: no unrelated env or middleware cleanup.
+- Security impact: medium-high, because this affects abuse protection on public endpoints.
+- E2E impact: none for the initial slice.
+- Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`.
 - Status: in_progress
 
 ## Ranked Remediation Backlog
@@ -391,3 +407,4 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-06: Set the initial active batch to whole-project baseline assessment before remediation, with `tdd-guide` acting as the control layer for later implementation slices.
 - 2026-04-06: Completed the whole-project baseline across security, code review, cleanup discovery, and E2E coverage; consolidated the first ranked remediation backlog in this tracker.
 - 2026-04-06: Fixed a high-severity admin save-path bug by making `createAdminPostAction` and `updateAdminPostAction` fail fast on invalid `galleryEntries` payloads before any media-replacement transaction side effects run.
+- 2026-04-06: Replaced regex-based rich-text sanitization in `web/src/lib/content.ts` with a `sanitize-html` allowlist policy so legacy HTML and other raw render paths normalize links, strip unsupported attributes, and discard disallowed elements before `dangerouslySetInnerHTML` sinks.
