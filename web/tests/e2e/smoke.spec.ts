@@ -125,6 +125,13 @@ test.describe("public pages smoke tests", () => {
     await expect(page.getByText(/story|stories pinned to the map|Stories will appear here as locations are added\./i)).toBeVisible();
   });
 
+  test("wishlist page loads its shell", async ({ page }) => {
+    await page.goto("/wishlist");
+    await expect(page.getByRole("main").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Travel Wishlist" })).toBeVisible();
+    await expect(page.getByText(/destination is on the public wishlist|destinations are on the public wishlist|No destinations are on the public wishlist yet\./i)).toBeVisible();
+  });
+
   test("published post detail page loads when a public story exists", async ({ page, request }) => {
     const homepageResponse = await request.get("/");
     expect(homepageResponse.status()).toBe(200);

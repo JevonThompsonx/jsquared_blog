@@ -174,6 +174,30 @@ export const tags = sqliteTable("tags", {
   description: text("description"),
 });
 
+export const wishlistPlaces = sqliteTable(
+  "wishlist_places",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    locationName: text("location_name").notNull(),
+    locationLat: real("location_lat").notNull(),
+    locationLng: real("location_lng").notNull(),
+    locationZoom: integer("location_zoom").notNull().default(8),
+    sortOrder: integer("sort_order").notNull().default(0),
+    visited: integer("visited", { mode: "boolean" }).notNull().default(false),
+    isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
+    externalUrl: text("external_url"),
+    createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    createdByUserIdIdx: index("wishlist_places_created_by_user_id_idx").on(table.createdByUserId),
+    sortOrderIdx: index("wishlist_places_sort_order_idx").on(table.sortOrder),
+    isPublicIdx: index("wishlist_places_is_public_idx").on(table.isPublic),
+  }),
+);
+
 export const postTags = sqliteTable(
   "post_tags",
   {

@@ -1,0 +1,56 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const mockOrderBy = vi.fn().mockResolvedValue([]);
+const mockWhere = vi.fn(() => ({ orderBy: mockOrderBy }));
+const mockFrom = vi.fn(() => ({ where: mockWhere }));
+const mockSelect = vi.fn(() => ({ from: mockFrom }));
+
+const mockDb = {
+  select: mockSelect,
+};
+
+vi.mock("@/lib/db", () => ({
+  getDb: vi.fn(() => mockDb),
+}));
+
+import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
+
+describe("listPublicWishlistPlaces", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns only public wishlist places in sort order", async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      {
+        id: "place-1",
+        name: "Glacier National Park",
+        locationName: "West Glacier, Montana",
+        locationLat: 48.7596,
+        locationLng: -113.787,
+        locationZoom: 8,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: "https://example.com/glacier",
+      },
+    ]);
+
+    await expect(listPublicWishlistPlaces()).resolves.toEqual([
+      {
+        id: "place-1",
+        name: "Glacier National Park",
+        locationName: "West Glacier, Montana",
+        locationLat: 48.7596,
+        locationLng: -113.787,
+        locationZoom: 8,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: "https://example.com/glacier",
+      },
+    ]);
+
+    expect(mockSelect).toHaveBeenCalledOnce();
+    expect(mockWhere).toHaveBeenCalledOnce();
+    expect(mockOrderBy).toHaveBeenCalledOnce();
+  });
+});

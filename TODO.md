@@ -1711,7 +1711,25 @@ Do not run in parallel:
 - Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
 - Coverage impact: adds coverage around new schema-backed admin flows.
 - Verification commands: targeted wishlist tests, migration sanity checks, `bunx tsc --noEmit`, relevant lint, and focused Playwright if enabled.
-- Status: pending
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts`
+  - Result: all three new suites failed immediately because `@/server/forms/admin-wishlist-place`, `@/server/dal/admin-wishlist-places`, and `@/app/admin/wishlist/actions` did not exist yet.
+  - Why this RED proved the right problem: it showed the repo still had no wishlist schema-backed validation, persistence layer, or admin write boundary, which are the exact prerequisites for every later wishlist/map/planner slice.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts`
+  - Result: 12 focused tests passed after adding `wishlist_places`, a dedicated admin wishlist form schema, DAL create/list helpers, an admin create action, and a minimal `/admin/wishlist` page.
+- REFACTOR evidence:
+  - Refactor stayed minimal: this slice used new dedicated wishlist modules instead of extending the oversized shared admin action surface, and the admin page stayed server-rendered with a native form/list layout.
+  - Refactor proof command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts` passed with 12 tests across 3 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/drizzle/schema.ts" "src/server/forms/admin-wishlist-place.ts" "src/server/dal/admin-wishlist-places.ts" "src/app/admin/wishlist/actions.ts" "src/app/admin/wishlist/page.tsx" "tests/unit/wishlist-place-form.test.ts" "tests/unit/admin-wishlist-actions.test.ts" "tests/unit/admin-wishlist-places.test.ts"` passed.
+  - Build: skipped because this pass stayed in one new schema lane, a small admin page, and focused unit tests; typecheck covered the touched app/server code.
+  - E2E: deferred; admin CRUD browser coverage is still a follow-up once a stable admin fixture path is chosen for wishlist data.
+  - Code review: one blocking finding surfaced during review and was fixed in the same slice by rejecting blank coordinate strings instead of coercing them to `(0, 0)` and constraining zoom to a sane range.
+  - Security review: no blocking auth or link-rendering findings remained after the validation fix; residual risk is defense-in-depth only because DAL/database-level constraints do not yet duplicate all form-layer invariants.
+- Status: complete
 
 ### Batch: public wishlist travel map
 - Goal: add a second public map page dedicated to wishlist places with both map and list presentations.
@@ -1733,7 +1751,24 @@ Do not run in parallel:
 - Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
 - Coverage impact: adds coverage around a new public route and map/list presentation.
 - Verification commands: targeted public wishlist tests, `bunx tsc --noEmit`, relevant lint, and focused Playwright if enabled.
-- Status: pending
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`
+  - Result: the new public wishlist query/page suites failed because `@/server/queries/wishlist` and `@/app/(blog)/wishlist/page` did not exist.
+  - Why this RED proved the right problem: it isolated the missing read-only public travel surface independently from admin CRUD and route planning.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`
+  - Result: 3 focused tests passed after adding a public wishlist query plus a `/wishlist` page with empty/populated states, safe outbound links, and map reuse when the Stadia key is configured.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the page reuses `WorldMap` instead of forking another map stack, and the public query exposes only the fields the route needs.
+  - Refactor proof command: `bunx vitest run tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts` passed with 3 tests across 2 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/server/queries/wishlist.ts" "src/app/(blog)/wishlist/page.tsx" "tests/unit/public-wishlist.test.ts" "tests/unit/wishlist-page.test.ts"` passed.
+  - Build: skipped because this was a focused route/query/test slice and typecheck covered the new page.
+  - E2E: added a `/wishlist` shell smoke assertion to `web/tests/e2e/smoke.spec.ts`; browser execution is still pending in the next broader smoke pass.
+  - Security review: only `isPublic = true` rows are exposed by the public query, and optional links still render as validated HTTPS anchors with `rel="noreferrer"`.
+- Status: complete
 
 ### Batch: travel route planner over wishlist stops
 - Goal: plan routes between a start and end location and suggest wishlist stops along the route, with a visited toggle.
@@ -1755,7 +1790,11 @@ Do not run in parallel:
 - Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
 - Coverage impact: adds coverage around a new public API and public route.
 - Verification commands: targeted route-planner tests, `bunx tsc --noEmit`, relevant lint, and focused Playwright if enabled.
-- Status: pending
+- Status: blocked
+
+Blocked note:
+
+- The route-planner lane remains intentionally blocked because the TODO prerequisite is still unresolved: the project has Nominatim geocoding and Stadia/MapLibre display primitives, but no existing routing provider integration, route polyline support, or approved provider/env contract yet. Do not start production planner code until the provider choice and runtime constraints are recorded under Phase 7.
 
 ### Batch: post song metadata
 - Goal: let each post carry structured song metadata and show the associated song on the public post page.
@@ -1825,3 +1864,9 @@ Reasoning:
 4. The public wishlist map is lower risk than the route planner and validates the data model visually.
 5. The route planner is the highest-complexity feature and should build on stable wishlist data.
 6. Post-song metadata is small, but it still touches the shared post schema and can be scheduled after the travel lane if desired.
+
+## Session Notes
+
+- 2026-04-07: Completed the first wishlist foundation batch in `web/` by adding a dedicated `wishlist_places` schema/table, dedicated admin wishlist validation and DAL modules, a minimal `/admin/wishlist` create/list page, and focused RED->GREEN coverage for form validation, admin action auth/normalization, and DAL create/list behavior.
+- 2026-04-07: Completed the public wishlist read surface by adding `listPublicWishlistPlaces()`, a new `/wishlist` page that reuses `WorldMap` when configured and falls back cleanly to a list/empty state, focused unit coverage for the query and page, and a new `/wishlist` shell smoke assertion in `web/tests/e2e/smoke.spec.ts`.
+- 2026-04-07: The route planner remains blocked on the explicit provider-selection prerequisite. Existing repo support is limited to Nominatim geocoding plus Stadia/MapLibre display; no routing provider contract exists yet.

@@ -78,6 +78,13 @@
       "when": 1742565600000,
       "tag": "0010_phase6_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1774478400000,
+      "tag": "0012_wishlist_places",
+      "breakpoints": true
     }
   ]
 }
