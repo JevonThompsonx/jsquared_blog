@@ -56,7 +56,7 @@ bun install
 
 ### 2. Configure Environment Variables
 
-Create `web/.env.local` with the variables documented in `web/src/lib/env.ts` and `docs/deployment.md`.
+Copy `web/.env.example` to `web/.env.local` and fill in the values your environment needs.
 
 Required app/runtime variables:
 
@@ -67,6 +67,7 @@ SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SITE_URL=...
 AUTH_SECRET=...
 AUTH_GITHUB_ID=...
 AUTH_GITHUB_SECRET=...
@@ -88,6 +89,7 @@ UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 CRON_SECRET=...
 NEXT_PUBLIC_SENTRY_DSN=...
+SENTRY_AUTH_TOKEN=...
 SUPABASE_SERVICE_ROLE_KEY=... # tooling / seed / import scripts
 ```
 
@@ -95,6 +97,8 @@ Notes:
 - `CRON_SECRET` is optional only for local loopback development, but required for deployed cron routes.
 - Upstash credentials are required in deployed environments because rate limiting fails closed there.
 - Newsletter signup safely returns a non-fatal skipped result when Resend newsletter config is absent.
+- `SENTRY_AUTH_TOKEN` is only needed when uploading source maps during production builds.
+- Optional Playwright/E2E helper variables also live in `web/.env.example`; `bun run seed:e2e` writes managed fixture values to `web/.env.test.local`.
 
 ### 3. Run Development Server
 ```bash
@@ -143,6 +147,7 @@ bun run e2e:capture-public-state
 - Seasonal homepage hero and grouped feed sections
 - Reading progress, related posts, breadcrumbs, and reduced-motion support
 - Map/location blocks for geotagged stories
+- Optional per-story song metadata block with external listen link
 - Per-post view tracking with cookie dedupe
 
 ### User Profiles
@@ -237,7 +242,7 @@ bun run ./scripts/seed-rich-content.ts
 
 ## Deployment
 
-The live app deploys from `web/` to Vercel. See `docs/deployment.md` for the full environment-variable checklist, cutover cleanup, and dashboard notes.
+The live app deploys from `web/` to Vercel. Use `web/.env.example`, `web/src/lib/env.ts`, and `web/next.config.ts` as the current source of truth for runtime, build, and observability variables.
 
 ---
 
@@ -317,9 +322,9 @@ GET  /feed.xml
 | [CLAUDE.md](./CLAUDE.md) | Complete technical reference |
 | [AGENTS.md](./AGENTS.md) | Model ownership and coordination |
 | [TODO.md](./TODO.md) | Feature tracker & roadmap |
-| [docs/handoff.md](./docs/handoff.md) | Current verified status and open work |
-| [docs/PLAN.md](./docs/PLAN.md) | Phase/task plan |
-| [docs/deployment.md](./docs/deployment.md) | Deployment and dashboard notes |
+| [docs/COMMAND-AGENT-MAP.md](./docs/COMMAND-AGENT-MAP.md) | Command and agent routing reference |
+| [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) | Common setup and workflow fixes |
+| [docs/ARCHITECTURE-IMPROVEMENTS.md](./docs/ARCHITECTURE-IMPROVEMENTS.md) | Architecture notes and follow-up ideas |
 
 ---
 
