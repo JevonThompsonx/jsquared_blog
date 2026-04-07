@@ -52,6 +52,9 @@ export type AdminEditablePostRecord = AdminPostRecord & {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  songTitle: string | null;
+  songArtist: string | null;
+  songUrl: string | null;
   tags: Array<{ id: string; name: string; slug: string }>;
   galleryImages: Array<{
     id: string;
@@ -248,6 +251,9 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       locationLng: posts.locationLng,
       locationZoom: posts.locationZoom,
       iovanderUrl: posts.iovanderUrl,
+      songTitle: posts.songTitle,
+      songArtist: posts.songArtist,
+      songUrl: posts.songUrl,
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -305,6 +311,9 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    songTitle: post.songTitle ?? null,
+    songArtist: post.songArtist ?? null,
+    songUrl: post.songUrl ?? null,
     tags: postTagRows,
     galleryImages: galleryRows,
   };

@@ -25,10 +25,19 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
     return NextResponse.json({ error: "Invalid sort option" }, { status: 400 });
   }
 
-  const supabaseUser = await getRequestSupabaseUser(request);
-  const currentUser = supabaseUser ? await getPublicAppUserBySupabaseId(supabaseUser.id) : null;
-  const comments = await listCommentsForPost(postId, currentUser?.id ?? null, sortParse.data);
-  return NextResponse.json({ comments });
+  try {
+    if (!(await canCommentOnPost(postId))) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    const supabaseUser = await getRequestSupabaseUser(request);
+    const currentUser = supabaseUser ? await getPublicAppUserBySupabaseId(supabaseUser.id) : null;
+    const comments = await listCommentsForPost(postId, currentUser?.id ?? null, sortParse.data);
+    return NextResponse.json({ comments });
+  } catch (error) {
+    console.error("[post-comments] Failed to load comments", { postId, sort: sortParse.data, error });
+    return NextResponse.json({ error: "Failed to load comments" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request, context: { params: Promise<{ postId: string }> }): Promise<NextResponse> {
@@ -39,18 +48,14 @@ export async function POST(request: Request, context: { params: Promise<{ postId
 
   const { postId } = paramsParse.data;
 
-  // 5 new comments per minute per IP
-  const rl = await checkRateLimit(`comment:${getClientIp(request)}`, 5, 60_000);
-  if (!rl.allowed) return tooManyRequests(rl);
-
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!(await canCommentOnPost(postId))) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
-  }
+  // 5 new comments per minute per authenticated user and IP
+  const rl = await checkRateLimit(`comment:${supabaseUser.id}:${getClientIp(request)}`, 5, 60_000);
+  if (!rl.allowed) return tooManyRequests(rl);
 
   let payload: unknown;
   try {
@@ -64,16 +69,35 @@ export async function POST(request: Request, context: { params: Promise<{ postId
     return NextResponse.json({ error: "Invalid comment payload" }, { status: 400 });
   }
 
-  if (parse.data.parentId) {
-    const canReply = await canReplyToComment(postId, parse.data.parentId);
-    if (!canReply) {
-      return NextResponse.json({ error: "Parent comment not found" }, { status: 404 });
+  try {
+    if (!(await canCommentOnPost(postId))) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-  }
 
-  const publicUser = await ensurePublicAppUser(supabaseUser);
-  const comment = await createCommentRecord(postId, publicUser.id, parse.data.content, parse.data.parentId ?? null);
-  await sendCommentNotification(comment);
-  const comments = await listCommentsForPost(postId, publicUser.id, "newest");
-  return NextResponse.json({ comments }, { status: 201 });
+    if (parse.data.parentId) {
+      const canReply = await canReplyToComment(postId, parse.data.parentId);
+      if (!canReply) {
+        return NextResponse.json({ error: "Parent comment not found" }, { status: 404 });
+      }
+    }
+
+    const publicUser = await ensurePublicAppUser(supabaseUser);
+    const comment = await createCommentRecord(postId, publicUser.id, parse.data.content, parse.data.parentId ?? null);
+    try {
+      await sendCommentNotification(comment);
+    } catch (error) {
+      console.error(`[post-comments] Failed to send notification for post ${postId}`, error);
+    }
+
+    try {
+      const comments = await listCommentsForPost(postId, publicUser.id, "newest");
+      return NextResponse.json({ comments }, { status: 201 });
+    } catch (error) {
+      console.error(`[post-comments] Failed to refresh comments after create for post ${postId}`, error);
+      return NextResponse.json({}, { status: 201 });
+    }
+  } catch (error) {
+    console.error(`[post-comments] Failed to create comment for post ${postId}`, error);
+    return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
+  }
 }

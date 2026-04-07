@@ -201,6 +201,63 @@ describe("GET /api/account/profile", () => {
       },
     });
   });
+
+  it("returns 404 when the profile is still missing after reprovisioning", async () => {
+    const supabaseUser = makeSupabaseUser();
+
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(supabaseUser);
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(getPublicAppUserBySupabaseId).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Traveler",
+      avatarUrl: null,
+    });
+    vi.mocked(getProfileByUserId)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+
+    const response = await GET(new Request("http://localhost/api/account/profile"));
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Profile not found" });
+  });
+
+  it("returns a safe 500 when profile lookup fails unexpectedly", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(getPublicAppUserBySupabaseId).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(getProfileByUserId).mockRejectedValue(new Error("database offline"));
+
+    const response = await GET(new Request("http://localhost/api/account/profile"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load profile" });
+  });
 });
 
 describe("PATCH /api/account/profile", () => {
@@ -390,5 +447,32 @@ describe("PATCH /api/account/profile", () => {
       avatarUrl: "https://example.com/avatar.png",
       themePreference: "dark",
     });
+  });
+
+  it("returns a safe 500 when profile updates fail unexpectedly", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(updateProfileFields).mockRejectedValue(new Error("write failed"));
+
+    const response = await PATCH(new Request("http://localhost/api/account/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ displayName: "Updated Reader" }),
+      headers: { "content-type": "application/json" },
+    }));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to update profile" });
   });
 });

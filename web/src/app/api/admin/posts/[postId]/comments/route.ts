@@ -32,6 +32,11 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
     return NextResponse.json({ error: "Invalid sort option" }, { status: 400 });
   }
 
-  const comments = await listCommentsForAdmin(postId, sortParse.data);
-  return NextResponse.json({ comments });
+  try {
+    const comments = await listCommentsForAdmin(postId, sortParse.data);
+    return NextResponse.json({ comments });
+  } catch (error) {
+    console.error("[admin post comments] failed to load comments", { postId, sort: sortParse.data, error });
+    return NextResponse.json({ error: "Failed to load comments" }, { status: 500 });
+  }
 }

@@ -96,6 +96,30 @@ describe("POST /api/admin/posts/warnings", () => {
     expect(await response.json()).toEqual({ error: "Invalid warnings request" });
   });
 
+  it("returns a safe 400 for invalid editor content after request validation", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(derivePostContent).mockImplementation(() => {
+      throw new Error("Content must be valid Tiptap JSON");
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/warnings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentJson: "{}", excerpt: null }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid warnings request" });
+  });
+
   it("returns derived warnings for valid requests", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
     vi.mocked(checkRateLimit).mockResolvedValue({
@@ -141,5 +165,29 @@ describe("POST /api/admin/posts/warnings", () => {
       ],
       excerpt: "Sample",
     });
+  });
+
+  it("returns a safe 500 when warning derivation fails after validation", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(derivePostContent).mockImplementation(() => {
+      throw new Error("Renderer exploded");
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/warnings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentJson: "{}", excerpt: null }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to validate warnings" });
   });
 });

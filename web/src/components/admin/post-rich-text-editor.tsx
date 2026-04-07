@@ -13,6 +13,7 @@ import imageCompression from "browser-image-compression";
 
 import { validatePostContentWarningsAction } from "@/app/admin/actions";
 import { getReadingTimeMinutes, getWordCount, type TiptapImageAltWarning } from "@/lib/content";
+import { ThoughtsBlock } from "@/lib/tiptap/thoughts-block";
 
 type EditorUploadResponse = {
   error?: string;
@@ -352,6 +353,13 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
           >
             Quote
           </MenuButton>
+          <MenuButton
+            active={editor.isActive("thoughtsBlock")}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).insertThoughtsBlock().run()}
+            title="Insert thoughts block"
+          >
+            Thoughts
+          </MenuButton>
 
           <ToolbarDivider />
 
@@ -553,6 +561,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
         class: "rounded-xl my-4 max-w-full",
       },
     }),
+    ThoughtsBlock,
     Placeholder.configure({
       placeholder: "Start writing your adventure...",
     }),

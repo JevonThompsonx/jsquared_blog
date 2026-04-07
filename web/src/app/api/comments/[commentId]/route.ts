@@ -29,11 +29,20 @@ export async function DELETE(
     return tooManyRequests(rl);
   }
 
-  const publicUser = await ensurePublicAppUser(supabaseUser);
-  const deleted = await deleteCommentRecord(commentId, publicUser.id);
-  if (!deleted) {
-    return NextResponse.json({ error: "Comment not found" }, { status: 404 });
-  }
+  try {
+    const publicUser = await ensurePublicAppUser(supabaseUser);
+    const deleted = await deleteCommentRecord(commentId, publicUser.id);
+    if (!deleted) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+    }
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("[comment delete] failed to delete comment", {
+      commentId,
+      supabaseUserId: supabaseUser.id,
+      error,
+    });
+    return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 });
+  }
 }

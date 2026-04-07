@@ -8,6 +8,7 @@ import { getAuthorHref } from "@/lib/utils";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 
+import { resolveCommentMutationComments } from "@/lib/comment-mutation-response";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CommentSortOption = "likes" | "newest" | "oldest";
@@ -335,7 +336,11 @@ export function Comments({ postId }: { postId: string }) {
       if (!response.ok) throw new Error("Failed to post comment");
 
       const payload = commentsResponseSchema.parse(await response.json());
-      setAllComments(payload.comments ?? []);
+      const mutationResult = resolveCommentMutationComments(allComments, payload.comments);
+      setAllComments(mutationResult.comments);
+      if (mutationResult.shouldRefetch) {
+        await fetchComments();
+      }
       setNewComment("");
       setSortBy("newest");
     } catch {
@@ -361,7 +366,11 @@ export function Comments({ postId }: { postId: string }) {
       if (!response.ok) throw new Error("Failed to post reply");
 
       const payload = commentsResponseSchema.parse(await response.json());
-      setAllComments(payload.comments ?? []);
+      const mutationResult = resolveCommentMutationComments(allComments, payload.comments);
+      setAllComments(mutationResult.comments);
+      if (mutationResult.shouldRefetch) {
+        await fetchComments();
+      }
       setReplyContent("");
       setReplyingTo(null);
     } catch {

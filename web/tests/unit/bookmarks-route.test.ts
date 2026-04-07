@@ -144,4 +144,44 @@ describe("GET /api/bookmarks", () => {
       ],
     });
   });
+
+  it("returns a safe generic error when ensuring the public app user fails", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockRejectedValue(new Error("profile repair failed"));
+
+    const response = await GET(new Request("http://localhost/api/bookmarks"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load bookmarks" });
+    expect(vi.mocked(listBookmarkedPosts)).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe generic error when listing bookmarks fails unexpectedly", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(listBookmarkedPosts).mockRejectedValue(new Error("database offline"));
+
+    const response = await GET(new Request("http://localhost/api/bookmarks"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load bookmarks" });
+  });
 });

@@ -21,11 +21,24 @@ export async function POST(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
+  let body: { commentIds: string[]; action: "hide" | "unhide" | "delete" | "flag" | "unflag" };
+
   try {
-    const body = moderateCommentsSchema.parse(await request.json());
-    const result = await moderateCommentsByIds(body.commentIds, body.action, session.user.id);
-    return NextResponse.json(result);
+    body = moderateCommentsSchema.parse(await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid moderation request" }, { status: 400 });
+  }
+
+  try {
+    const result = await moderateCommentsByIds(body.commentIds, body.action, session.user.id);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[admin comment moderation] failed to moderate comments", {
+      action: body.action,
+      commentIds: body.commentIds,
+      adminUserId: session.user.id,
+      error,
+    });
+    return NextResponse.json({ error: "Failed to moderate comments" }, { status: 500 });
   }
 }

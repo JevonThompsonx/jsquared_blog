@@ -36,6 +36,22 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const result = await subscribeToNewsletter(parse.data);
-  return NextResponse.json(result, { status: result.status === "already-subscribed" ? 200 : 201 });
+  try {
+    const result = await subscribeToNewsletter(parse.data);
+
+    switch (result.status) {
+      case "subscribed":
+        return NextResponse.json(result, { status: 201 });
+      case "already-subscribed":
+        return NextResponse.json(result, { status: 200 });
+      case "skipped":
+        return NextResponse.json(result, { status: 202 });
+      default:
+        console.error("[newsletter] Unexpected subscribe result", result);
+        return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
+    }
+  } catch (error) {
+    console.error("[newsletter] Failed to subscribe contact", error);
+    return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
+  }
 }

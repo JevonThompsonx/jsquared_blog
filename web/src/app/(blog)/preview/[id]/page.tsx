@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { AuthorCard } from "@/components/blog/author-card";
 import { PostGallery } from "@/components/blog/post-gallery";
 import { PostMap } from "@/components/blog/post-map";
+import { PostSongMetadata } from "@/components/blog/post-song-metadata";
 import { ProseContent } from "@/components/blog/prose-content";
 import { ReadingProgressBar } from "@/components/blog/reading-progress-bar";
 import { SeriesNav } from "@/components/blog/series-nav";
@@ -194,6 +195,7 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
             <div className="mx-auto max-w-[68ch]">
               {seriesNav ? <SeriesNav nav={seriesNav} /> : null}
               {headings.length >= 2 ? <TableOfContents headings={headings} /> : null}
+              <PostSongMetadata song={post.song ?? null} />
               <ProseContent
                 className="prose-content text-[1.0625rem] leading-[1.85]"
                 html={proseHtml}

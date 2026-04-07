@@ -69,6 +69,40 @@ describe("POST /api/newsletter", () => {
     });
   });
 
+  it("returns 200 when the contact is already subscribed", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(isNewsletterConfigured).mockReturnValue(true);
+    vi.mocked(subscribeToNewsletter).mockResolvedValue({ status: "already-subscribed" });
+
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reader@example.com" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "already-subscribed" });
+  });
+
+  it("returns 202 when the newsletter service skips the request", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(isNewsletterConfigured).mockReturnValue(true);
+    vi.mocked(subscribeToNewsletter).mockResolvedValue({ status: "skipped", reason: "missing-config" });
+
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reader@example.com" }),
+      }),
+    );
+
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ status: "skipped", reason: "missing-config" });
+  });
+
   it("creates a subscription when configured", async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
     vi.mocked(isNewsletterConfigured).mockReturnValue(true);
@@ -90,5 +124,39 @@ describe("POST /api/newsletter", () => {
       source: "footer-form",
     });
     expect(await response.json()).toEqual({ status: "subscribed", source: "created" });
+  });
+
+  it("returns a safe 500 when the newsletter provider fails unexpectedly", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(isNewsletterConfigured).mockReturnValue(true);
+    vi.mocked(subscribeToNewsletter).mockRejectedValue(new Error("provider offline"));
+
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reader@example.com" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to subscribe" });
+  });
+
+  it("returns a safe 500 when the newsletter service returns an unexpected status", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(isNewsletterConfigured).mockReturnValue(true);
+    vi.mocked(subscribeToNewsletter).mockResolvedValue({ status: "unexpected" } as never);
+
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reader@example.com" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to subscribe" });
   });
 });

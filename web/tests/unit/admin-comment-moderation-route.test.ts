@@ -113,4 +113,20 @@ describe("POST /api/admin/comments/moderate", () => {
       ],
     });
   });
+
+  it("returns a safe 500 when moderation fails after validation", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(moderateCommentsByIds).mockRejectedValue(new Error("database offline"));
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/comments/moderate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentIds: [crypto.randomUUID()], action: "hide" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to moderate comments" });
+  });
 });

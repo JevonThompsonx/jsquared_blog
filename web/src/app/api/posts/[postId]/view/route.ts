@@ -6,7 +6,7 @@ import { incrementPostViewCount } from "@/server/dal/posts";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 const paramsSchema = z.object({
-  postId: z.string().trim().min(1),
+  postId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
 });
 
 const VIEWER_COOKIE_NAME = "j2-viewer-id";
@@ -43,7 +43,15 @@ export async function POST(_request: Request, context: { params: Promise<unknown
     return tooManyRequests(rateLimit);
   }
 
-  await incrementPostViewCount(postId);
+  try {
+    await incrementPostViewCount(postId);
+  } catch (error) {
+    console.error("[api/posts/[postId]/view] Failed to increment post view count", {
+      postId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json({ error: "Failed to record post view" }, { status: 500 });
+  }
 
   if (!existingViewerId) {
     cookieStore.set(VIEWER_COOKIE_NAME, viewerId, {

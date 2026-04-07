@@ -1,6 +1,8 @@
 import sanitizeHtml, { type Attributes, type IFrame } from "sanitize-html";
 import { z } from "zod";
 
+import { normalizeThoughtsBlockSummary } from "@/lib/tiptap/thoughts-block";
+
 const tiptapMarkSchema = z.object({
   type: z.string().optional(),
   attrs: z.record(z.string(), z.unknown()).optional(),
@@ -122,6 +124,7 @@ const RICH_TEXT_ALLOWED_TAGS = [
   "blockquote",
   "br",
   "code",
+  "details",
   "em",
   "h1",
   "h2",
@@ -137,6 +140,7 @@ const RICH_TEXT_ALLOWED_TAGS = [
   "pre",
   "s",
   "strong",
+  "summary",
   "ul",
 ] as const;
 
@@ -258,6 +262,12 @@ function renderTiptapNode(node: TiptapNode): string {
       return `<li>${renderChildren(node.content)}</li>`;
     case "blockquote":
       return `<blockquote>${renderChildren(node.content)}</blockquote>`;
+    case "thoughtsBlock": {
+      const summary = normalizeThoughtsBlockSummary(
+        typeof node.attrs?.summary === "string" ? node.attrs.summary : null,
+      );
+      return `<details><summary>${escapeHtml(summary)}</summary>${renderChildren(node.content)}</details>`;
+    }
     case "codeBlock":
       return `<pre><code>${renderChildren(node.content)}</code></pre>`;
     case "hardBreak":

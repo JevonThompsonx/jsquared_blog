@@ -2,28 +2,48 @@ import "server-only";
 
 import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
-import { getDb, getDbClient } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { categories, comments, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
-
-let postViewCountColumnPromise: Promise<boolean> | null = null;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+import { getPostColumnCapabilities, type PostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 
 export async function hasPostViewCountColumn(): Promise<boolean> {
-  if (!postViewCountColumnPromise) {
-    postViewCountColumnPromise = getDbClient()
-      .execute("PRAGMA table_info('posts')")
-      .then((result) => result.rows.some((row) => isRecord(row) && row.name === "view_count"))
-      .catch(() => false);
-  }
-
-  return postViewCountColumnPromise;
+  return (await getPostColumnCapabilities()).viewCount;
 }
 
 function getViewCountSelection(hasViewCount: boolean) {
   return hasViewCount ? posts.viewCount : sql<number>`0`;
+}
+
+function getNullableSelection<TColumn>(isAvailable: boolean, column: TColumn) {
+  return isAvailable ? column : sql<null>`null`;
+}
+
+function getPublishedPostSummarySelect(capabilities: PostColumnCapabilities) {
+  return {
+    id: posts.id,
+    slug: posts.slug,
+    title: posts.title,
+    excerpt: posts.excerpt,
+    contentJson: posts.contentJson,
+    contentFormat: posts.contentFormat,
+    contentHtml: posts.contentHtml,
+    contentPlainText: posts.contentPlainText,
+    category: categories.name,
+    imageUrl: mediaAssets.secureUrl,
+    layoutType: getNullableSelection(capabilities.layoutType, posts.layoutType),
+    createdAt: posts.createdAt,
+    updatedAt: posts.updatedAt,
+    publishedAt: posts.publishedAt,
+    locationName: getNullableSelection(capabilities.locationName, posts.locationName),
+    locationLat: getNullableSelection(capabilities.locationLat, posts.locationLat),
+    locationLng: getNullableSelection(capabilities.locationLng, posts.locationLng),
+    locationZoom: getNullableSelection(capabilities.locationZoom, posts.locationZoom),
+    iovanderUrl: getNullableSelection(capabilities.iovanderUrl, posts.iovanderUrl),
+    songTitle: getNullableSelection(capabilities.songTitle, posts.songTitle),
+    songArtist: getNullableSelection(capabilities.songArtist, posts.songArtist),
+    songUrl: getNullableSelection(capabilities.songUrl, posts.songUrl),
+    viewCount: getViewCountSelection(capabilities.viewCount),
+  };
 }
 
 export type TagRecord = {
@@ -53,6 +73,9 @@ export type PublishedPostRecord = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  songTitle: string | null;
+  songArtist: string | null;
+  songUrl: string | null;
   viewCount: number;
   authorId?: string;
 };
@@ -82,31 +105,10 @@ export type PublishedPostImageRecord = {
 
 export async function listPublishedPostRecords(limit: number, offset = 0): Promise<PublishedPostRecord[]> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const capabilities = await getPostColumnCapabilities();
 
   return db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      contentJson: posts.contentJson,
-      contentFormat: posts.contentFormat,
-      contentHtml: posts.contentHtml,
-      contentPlainText: posts.contentPlainText,
-      category: categories.name,
-      imageUrl: mediaAssets.secureUrl,
-      layoutType: posts.layoutType,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-      publishedAt: posts.publishedAt,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      viewCount: getViewCountSelection(hasViewCount),
-    })
+    .select(getPublishedPostSummarySelect(capabilities))
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
@@ -118,31 +120,10 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
 
 export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord[]> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const capabilities = await getPostColumnCapabilities();
 
   return db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      contentJson: posts.contentJson,
-      contentFormat: posts.contentFormat,
-      contentHtml: posts.contentHtml,
-      contentPlainText: posts.contentPlainText,
-      category: categories.name,
-      imageUrl: mediaAssets.secureUrl,
-      layoutType: posts.layoutType,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-      publishedAt: posts.publishedAt,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      viewCount: getViewCountSelection(hasViewCount),
-    })
+    .select(getPublishedPostSummarySelect(capabilities))
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
@@ -152,34 +133,13 @@ export async function listAllPublishedPostRecords(): Promise<PublishedPostRecord
 
 export async function listRecentPublishedPostRecords(limit: number, excludePostId?: string): Promise<PublishedPostRecord[]> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const capabilities = await getPostColumnCapabilities();
   const whereClause = excludePostId
     ? and(eq(posts.status, "published"), ne(posts.id, excludePostId))
     : eq(posts.status, "published");
 
   return db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      contentJson: posts.contentJson,
-      contentFormat: posts.contentFormat,
-      contentHtml: posts.contentHtml,
-      contentPlainText: posts.contentPlainText,
-      category: categories.name,
-      imageUrl: mediaAssets.secureUrl,
-      layoutType: posts.layoutType,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-      publishedAt: posts.publishedAt,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      viewCount: getViewCountSelection(hasViewCount),
-    })
+    .select(getPublishedPostSummarySelect(capabilities))
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
@@ -222,36 +182,17 @@ export async function listCommentCountsByPostIds(postIds: string[]): Promise<Map
   return new Map(rows.map((row) => [row.postId, row.commentCount]));
 }
 
-function getPostDetailSelect(hasViewCount: boolean) {
+function getPostDetailSelect(capabilities: PostColumnCapabilities) {
   return {
-  id: posts.id,
-  slug: posts.slug,
-  title: posts.title,
-  excerpt: posts.excerpt,
-  contentJson: posts.contentJson,
-  contentFormat: posts.contentFormat,
-  contentHtml: posts.contentHtml,
-  contentPlainText: posts.contentPlainText,
-  category: categories.name,
-  imageUrl: mediaAssets.secureUrl,
-  layoutType: posts.layoutType,
-  createdAt: posts.createdAt,
-  updatedAt: posts.updatedAt,
-  publishedAt: posts.publishedAt,
-  locationName: posts.locationName,
-  locationLat: posts.locationLat,
-  locationLng: posts.locationLng,
-  locationZoom: posts.locationZoom,
-  iovanderUrl: posts.iovanderUrl,
-  viewCount: getViewCountSelection(hasViewCount),
-  authorId: posts.authorId,
+    ...getPublishedPostSummarySelect(capabilities),
+    authorId: posts.authorId,
   };
 }
 
 export async function getPublishedPostRecordBySlug(slug: string): Promise<PublishedPostRecord | null> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
-  const postDetailSelect = getPostDetailSelect(hasViewCount);
+  const capabilities = await getPostColumnCapabilities();
+  const postDetailSelect = getPostDetailSelect(capabilities);
 
   // Exact match (fast, indexed)
   const exactRows = await db
@@ -303,30 +244,9 @@ export async function listPublishedPostRecordsByCategory(
   offset = 0,
 ): Promise<PublishedPostRecord[]> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const capabilities = await getPostColumnCapabilities();
   return db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      contentJson: posts.contentJson,
-      contentFormat: posts.contentFormat,
-      contentHtml: posts.contentHtml,
-      contentPlainText: posts.contentPlainText,
-      category: categories.name,
-      imageUrl: mediaAssets.secureUrl,
-      layoutType: posts.layoutType,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-      publishedAt: posts.publishedAt,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      viewCount: getViewCountSelection(hasViewCount),
-    })
+    .select(getPublishedPostSummarySelect(capabilities))
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
@@ -352,30 +272,9 @@ export async function listPublishedPostRecordsByTagSlug(
   offset = 0,
 ): Promise<PublishedPostRecord[]> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const capabilities = await getPostColumnCapabilities();
   return db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      contentJson: posts.contentJson,
-      contentFormat: posts.contentFormat,
-      contentHtml: posts.contentHtml,
-      contentPlainText: posts.contentPlainText,
-      category: categories.name,
-      imageUrl: mediaAssets.secureUrl,
-      layoutType: posts.layoutType,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-      publishedAt: posts.publishedAt,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      viewCount: getViewCountSelection(hasViewCount),
-    })
+    .select(getPublishedPostSummarySelect(capabilities))
     .from(posts)
     .innerJoin(postTags, eq(postTags.postId, posts.id))
     .innerJoin(tags, eq(postTags.tagId, tags.id))
@@ -397,34 +296,13 @@ export async function listPublishedPostRecordsByTagSlugs(
   }
 
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const capabilities = await getPostColumnCapabilities();
   const whereClause = excludePostId
     ? and(eq(posts.status, "published"), inArray(tags.slug, tagSlugs), ne(posts.id, excludePostId))
     : and(eq(posts.status, "published"), inArray(tags.slug, tagSlugs));
 
   return db
-    .selectDistinct({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      contentJson: posts.contentJson,
-      contentFormat: posts.contentFormat,
-      contentHtml: posts.contentHtml,
-      contentPlainText: posts.contentPlainText,
-      category: categories.name,
-      imageUrl: mediaAssets.secureUrl,
-      layoutType: posts.layoutType,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-      publishedAt: posts.publishedAt,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      viewCount: getViewCountSelection(hasViewCount),
-    })
+    .selectDistinct(getPublishedPostSummarySelect(capabilities))
     .from(posts)
     .innerJoin(postTags, eq(postTags.postId, posts.id))
     .innerJoin(tags, eq(postTags.tagId, tags.id))
@@ -468,13 +346,16 @@ export type AnyStatusPostRecord = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  songTitle: string | null;
+  songArtist: string | null;
+  songUrl: string | null;
   viewCount: number;
   authorId: string;
 };
 
 export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRecord | null> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const capabilities = await getPostColumnCapabilities();
 
   const rows = await db
     .select({
@@ -490,16 +371,19 @@ export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRec
       scheduledPublishTime: posts.scheduledPublishTime,
       category: categories.name,
       imageUrl: mediaAssets.secureUrl,
-      layoutType: posts.layoutType,
+      layoutType: getNullableSelection(capabilities.layoutType, posts.layoutType),
       createdAt: posts.createdAt,
       updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      viewCount: getViewCountSelection(hasViewCount),
+      locationName: getNullableSelection(capabilities.locationName, posts.locationName),
+      locationLat: getNullableSelection(capabilities.locationLat, posts.locationLat),
+      locationLng: getNullableSelection(capabilities.locationLng, posts.locationLng),
+      locationZoom: getNullableSelection(capabilities.locationZoom, posts.locationZoom),
+      iovanderUrl: getNullableSelection(capabilities.iovanderUrl, posts.iovanderUrl),
+      songTitle: getNullableSelection(capabilities.songTitle, posts.songTitle),
+      songArtist: getNullableSelection(capabilities.songArtist, posts.songArtist),
+      songUrl: getNullableSelection(capabilities.songUrl, posts.songUrl),
+      viewCount: getViewCountSelection(capabilities.viewCount),
       authorId: posts.authorId,
     })
     .from(posts)

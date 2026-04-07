@@ -26,11 +26,26 @@ export async function POST(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
+  let body: z.infer<typeof postWarningsSchema>;
+
   try {
-    const body = postWarningsSchema.parse(await request.json());
-    const content = derivePostContent(body.contentJson, body.excerpt ?? null);
-    return NextResponse.json({ warnings: content.imageAltWarnings, excerpt: content.excerpt });
+    body = postWarningsSchema.parse(await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid warnings request" }, { status: 400 });
+  }
+
+  try {
+    const content = derivePostContent(body.contentJson, body.excerpt ?? null);
+    return NextResponse.json({ warnings: content.imageAltWarnings, excerpt: content.excerpt });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Content must be valid Tiptap JSON") {
+      return NextResponse.json({ error: "Invalid warnings request" }, { status: 400 });
+    }
+
+    console.error("[admin post warnings] failed to derive warnings", {
+      adminUserId: session.user.id,
+      error,
+    });
+    return NextResponse.json({ error: "Failed to validate warnings" }, { status: 500 });
   }
 }

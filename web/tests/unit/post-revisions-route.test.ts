@@ -79,6 +79,17 @@ describe("GET /api/admin/posts/[postId]/revisions", () => {
     expect(await response.json()).toEqual({ error: "Invalid post id" });
   });
 
+  it("returns 400 for a whitespace-only post id", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
+
+    const response = await GET(new Request("http://localhost/api/admin/posts/%20%20%20/revisions"), {
+      params: Promise.resolve({ postId: "   " }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid post id" });
+  });
+
   it("returns the throttled response when rate limited", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 120, remaining: 0, resetAt: Date.now() + 60_000 });
@@ -103,6 +114,32 @@ describe("GET /api/admin/posts/[postId]/revisions", () => {
 
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "Post not found" });
+  });
+
+  it("returns 500 when post lookup fails unexpectedly", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
+    vi.mocked(postExistsById).mockRejectedValue(new Error("database offline"));
+
+    const response = await GET(new Request("http://localhost/api/admin/posts/post-1/revisions"), {
+      params: Promise.resolve({ postId: "post-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load revisions" });
+  });
+
+  it("returns 500 when revision listing fails unexpectedly", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
+    vi.mocked(postExistsById).mockResolvedValue(true);
+    vi.mocked(listPostRevisions).mockRejectedValue(new Error("query failed"));
+    vi.mocked(countPostRevisions).mockResolvedValue(2);
+
+    const response = await GET(new Request("http://localhost/api/admin/posts/post-1/revisions"), {
+      params: Promise.resolve({ postId: "post-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load revisions" });
   });
 
   it("returns paginated revisions for a valid post", async () => {

@@ -12,6 +12,7 @@ import { CopyLinkButton } from "@/components/blog/copy-link-button";
 import { ShareButtons } from "@/components/blog/share-buttons";
 import { PostGallery } from "@/components/blog/post-gallery";
 import { PostMap } from "@/components/blog/post-map";
+import { PostSongMetadata } from "@/components/blog/post-song-metadata";
 import { ProseContent } from "@/components/blog/prose-content";
 import { ReadingProgressBar } from "@/components/blog/reading-progress-bar";
 import { PostViewTracker } from "@/components/blog/post-view-tracker";
@@ -211,6 +212,7 @@ export default async function PostPage({ params }: PostPageProps) {
             <div className="mx-auto max-w-[68ch]">
               {seriesNav ? <SeriesNav nav={seriesNav} /> : null}
               {headings.length >= 2 ? <TableOfContents headings={headings} /> : null}
+              <PostSongMetadata song={post.song ?? null} />
               <ProseContent
                 className="prose-content text-[1.0625rem] leading-[1.85]"
                 html={proseHtml}

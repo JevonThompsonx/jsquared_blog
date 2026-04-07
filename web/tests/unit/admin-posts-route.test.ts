@@ -168,7 +168,7 @@ describe("GET /api/admin/posts", () => {
     });
   });
 
-  it("rethrows unexpected query parsing failures", async () => {
+  it("returns a safe 500 for unexpected query parsing failures", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: true,
@@ -180,10 +180,27 @@ describe("GET /api/admin/posts", () => {
       throw new Error("unexpected parse failure");
     });
 
-    await expect(GET(new Request("http://localhost/api/admin/posts?search=trip"))).rejects.toThrow(
-      "unexpected parse failure",
-    );
+    const response = await GET(new Request("http://localhost/api/admin/posts?search=trip"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load posts" });
 
     parseSpy.mockRestore();
+  });
+
+  it("returns a safe 500 for unexpected list failures", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 120,
+      remaining: 119,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(listAdminPostRecords).mockRejectedValue(new Error("database offline"));
+
+    const response = await GET(new Request("http://localhost/api/admin/posts?search=trip"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load posts" });
   });
 });

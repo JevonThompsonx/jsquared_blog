@@ -220,6 +220,39 @@ export function PostEditorForm({
             <span className="mt-2 block text-xs text-[var(--text-secondary)]">This powers cards, previews, and search context. Aim for one vivid sentence rather than a paragraph.</span>
           </label>
 
+          <section className="rounded-lg border border-[var(--border)] bg-[var(--background)]/40 p-4">
+            <p className="text-sm font-semibold text-[var(--foreground)]">Song metadata</p>
+            <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">Optional structured music context for the story. Use plain text and a direct HTTPS link only.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="block sm:col-span-1">
+                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Song title</span>
+                <input
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                  defaultValue={post?.songTitle ?? ""}
+                  name="songTitle"
+                />
+              </label>
+              <label className="block sm:col-span-1">
+                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Artist</span>
+                <input
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                  defaultValue={post?.songArtist ?? ""}
+                  name="songArtist"
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Song link</span>
+                <input
+                  className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                  defaultValue={post?.songUrl ?? ""}
+                  name="songUrl"
+                  placeholder="https://open.spotify.com/track/..."
+                  type="url"
+                />
+              </label>
+            </div>
+          </section>
+
           <div>
             <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Tags</span>
             <TagMultiSelect

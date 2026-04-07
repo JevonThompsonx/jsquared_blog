@@ -20,6 +20,12 @@ export type BlogImage = {
   exifIso?: number | null;
 };
 
+export type BlogSongMetadata = {
+  title: string;
+  artist: string;
+  url: string;
+};
+
 export type BlogPost = {
   id: string;
   slug: string;
@@ -41,6 +47,7 @@ export type BlogPost = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  song?: BlogSongMetadata | null;
   viewCount?: number;
   commentCount: number;
   authorId?: string;

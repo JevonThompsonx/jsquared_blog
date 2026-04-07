@@ -16,20 +16,29 @@ export async function POST(request: Request, context: { params: Promise<{ commen
   }
   const commentId = parsedCommentId.data;
 
-  // 30 like toggles per minute per IP (generous to allow rapid clicking)
-  const rl = await checkRateLimit(`like:${getClientIp(request)}`, 30, 60_000);
-  if (!rl.allowed) return tooManyRequests(rl);
-
   const supabaseUser = await getRequestSupabaseUser(request);
   if (!supabaseUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!(await commentExists(commentId))) {
-    return NextResponse.json({ error: "Comment not found" }, { status: 404 });
-  }
+  // 30 like toggles per minute per authenticated user and IP
+  const rl = await checkRateLimit(`like:${supabaseUser.id}:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.allowed) return tooManyRequests(rl);
 
-  const publicUser = await ensurePublicAppUser(supabaseUser);
-  const result = await toggleCommentLikeRecord(commentId, publicUser.id);
-  return NextResponse.json(result, { status: result.liked ? 201 : 200 });
+  try {
+    if (!(await commentExists(commentId))) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+    }
+
+    const publicUser = await ensurePublicAppUser(supabaseUser);
+    const result = await toggleCommentLikeRecord(commentId, publicUser.id);
+    return NextResponse.json(result, { status: result.liked ? 201 : 200 });
+  } catch (error) {
+    console.error("[comment like] failed to toggle comment like", {
+      commentId,
+      supabaseUserId: supabaseUser.id,
+      error,
+    });
+    return NextResponse.json({ error: "Failed to update comment like" }, { status: 500 });
+  }
 }

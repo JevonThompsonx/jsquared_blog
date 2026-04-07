@@ -252,6 +252,216 @@ publicTest.describe("authenticated public-user flows", () => {
     await expect(commentsSection.getByText(commentContent, { exact: true })).toBeVisible();
   });
 
+  publicTest("signed-in user still sees a newly posted comment when the mutation response omits refreshed comments", async ({ page }) => {
+    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+
+    await setPublicRequestScope(page, "post-comment-refetch-fallback");
+
+    const commentContent = `E2E public refetch fallback ${Date.now()}`;
+    let postIntercepted = false;
+
+    await page.route(/\/api\/posts\/[^/]+\/comments$/, async (route) => {
+      const request = route.request();
+      if (request.method() !== "POST") {
+        await route.continue();
+        return;
+      }
+
+      const response = await route.fetch();
+      const payload = await response.json() as { comment?: unknown; comments?: unknown };
+      postIntercepted = true;
+
+      await route.fulfill({
+        response,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...payload,
+          comments: undefined,
+        }),
+      });
+    });
+
+    await page.goto(`/posts/${configuredPublicPostSlug}`);
+
+    const commentsHeading = page.getByRole("heading", { name: /^Comments\b/i });
+    await expect(commentsHeading).toBeVisible();
+
+    const commentField = page.getByPlaceholder("Share your thoughts...");
+    await expect(commentField).toBeVisible({ timeout: 15_000 });
+    await commentField.fill(commentContent);
+
+    await Promise.all([
+      page.waitForResponse(isCommentCreateResponse),
+      page.waitForResponse((response) => {
+        if (!postIntercepted) {
+          return false;
+        }
+
+        return response.request().method() === "GET"
+          && /\/api\/posts\/[^/]+\/comments$/.test(new URL(response.url()).pathname)
+          && response.ok();
+      }),
+      page.getByRole("button", { name: "Post comment" }).click(),
+    ]);
+
+    await expect(commentField).toHaveValue("");
+
+    const commentsSection = page.locator("section").filter({ has: commentsHeading });
+    await expect(commentsSection.getByText(commentContent, { exact: true })).toBeVisible();
+  });
+
+  publicTest("signed-in user still sees a newly posted reply when the mutation response omits refreshed comments", async ({ page }) => {
+    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+
+    await setPublicRequestScope(page, "reply-comment-refetch-fallback");
+
+    const parentCommentContent = `E2E public fallback parent ${Date.now()}`;
+    const replyCommentContent = `E2E public fallback reply ${Date.now()}`;
+    let replyPostIntercepted = false;
+
+    await page.route(/\/api\/posts\/[^/]+\/comments$/, async (route) => {
+      const request = route.request();
+      if (request.method() !== "POST") {
+        await route.continue();
+        return;
+      }
+
+      const requestBody = request.postDataJSON() as { parentId?: string } | null;
+      if (!requestBody?.parentId) {
+        await route.continue();
+        return;
+      }
+
+      const response = await route.fetch();
+      const payload = await response.json() as { comment?: unknown; comments?: unknown };
+      replyPostIntercepted = true;
+
+      await route.fulfill({
+        response,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...payload,
+          comments: undefined,
+        }),
+      });
+    });
+
+    await page.goto(`/posts/${configuredPublicPostSlug}`);
+
+    const commentsHeading = page.getByRole("heading", { name: /^Comments\b/i });
+    await expect(commentsHeading).toBeVisible();
+
+    const commentField = page.getByPlaceholder("Share your thoughts...");
+    await expect(commentField).toBeVisible({ timeout: 15_000 });
+    await commentField.fill(parentCommentContent);
+
+    await Promise.all([
+      page.waitForResponse(isCommentCreateResponse),
+      page.getByRole("button", { name: "Post comment" }).click(),
+    ]);
+
+    const parentCommentBody = page.getByText(parentCommentContent, { exact: true }).first();
+    const parentComment = parentCommentBody.locator("xpath=ancestor::article[1]");
+    const parentThread = parentComment.locator("xpath=..");
+    await expect(parentComment).toBeVisible();
+
+    await parentComment.getByRole("button", { name: "Reply" }).click();
+
+    const replyField = parentComment.getByRole("textbox");
+    await expect(replyField).toBeVisible();
+    await replyField.fill(replyCommentContent);
+
+    await Promise.all([
+      page.waitForResponse(isCommentCreateResponse),
+      page.waitForResponse((response) => {
+        if (!replyPostIntercepted) {
+          return false;
+        }
+
+        return response.request().method() === "GET"
+          && /\/api\/posts\/[^/]+\/comments$/.test(new URL(response.url()).pathname)
+          && response.ok();
+      }),
+      parentComment.getByRole("button", { name: "Post reply" }).click(),
+    ]);
+
+    await expect(replyField).not.toBeVisible();
+    await expect(parentThread.getByText(replyCommentContent, { exact: true })).toBeVisible();
+    await expect(page.getByText("Reply could not be posted.", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Comments could not be loaded right now.", { exact: true })).toHaveCount(0);
+  });
+
+  publicTest("signed-in user sees a non-fatal load error when comment refetch fails after a successful post", async ({ page }) => {
+    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+
+    await setPublicRequestScope(page, "post-comment-refetch-failure");
+
+    const commentContent = `E2E public refetch failure ${Date.now()}`;
+    let shouldFailRefetch = false;
+
+    await page.route(/\/api\/posts\/[^/]+\/comments(?:\?.*)?$/, async (route) => {
+      const request = route.request();
+
+      if (request.method() === "POST") {
+        const response = await route.fetch();
+        const payload = await response.json() as { comment?: unknown; comments?: unknown };
+        shouldFailRefetch = true;
+
+        await route.fulfill({
+          response,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ...payload,
+            comments: undefined,
+          }),
+        });
+        return;
+      }
+
+      if (request.method() === "GET" && shouldFailRefetch) {
+        shouldFailRefetch = false;
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Failed to load comments" }),
+        });
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await page.goto(`/posts/${configuredPublicPostSlug}`);
+
+    const commentsHeading = page.getByRole("heading", { name: /^Comments\b/i });
+    await expect(commentsHeading).toBeVisible();
+
+    const commentField = page.getByPlaceholder("Share your thoughts...");
+    await expect(commentField).toBeVisible({ timeout: 15_000 });
+    await commentField.fill(commentContent);
+
+    await Promise.all([
+      page.waitForResponse(isCommentCreateResponse),
+      page.waitForResponse((response) => {
+        if (!shouldFailRefetch) {
+          return false;
+        }
+
+        return response.request().method() === "GET"
+          && /\/api\/posts\/[^/]+\/comments$/.test(new URL(response.url()).pathname)
+          && response.status() === 500;
+      }),
+      page.getByRole("button", { name: "Post comment" }).click(),
+    ]);
+
+    await expect(commentField).toHaveValue("");
+    await expect(page.getByText("Comments could not be loaded right now.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Comment could not be posted.", { exact: true })).toHaveCount(0);
+
+    const commentsSection = page.locator("section").filter({ has: commentsHeading });
+    await expect(commentsSection.getByText(commentContent, { exact: true })).toHaveCount(0);
+  });
+
   publicTest("signed-in user can reply to a comment on the seeded fixture post", async ({ page }) => {
     publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
 

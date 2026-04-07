@@ -52,7 +52,6 @@ describe("POST /api/posts/[postId]/comments", () => {
   });
 
   it("returns 401 when the caller is unauthenticated", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
     vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
 
     const response = await POST(
@@ -66,6 +65,7 @@ describe("POST /api/posts/[postId]/comments", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(vi.mocked(checkRateLimit)).not.toHaveBeenCalled();
   });
 
   it("returns 400 for invalid JSON payloads", async () => {
@@ -124,6 +124,43 @@ describe("POST /api/posts/[postId]/comments", () => {
     expect(vi.mocked(createCommentRecord)).not.toHaveBeenCalled();
   });
 
+  it("returns a safe 500 when post visibility lookup fails unexpectedly", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockRejectedValue(new Error("post lookup failed"));
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Looks great" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to create comment" });
+  });
+
+  it("returns a safe 500 when parent lookup fails unexpectedly", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+    vi.mocked(canReplyToComment).mockRejectedValue(new Error("reply lookup failed"));
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Replying here", parentId: "comment-root-1" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to create comment" });
+  });
+
   it("returns success and sends notifications for top-level comments", async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
     vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
@@ -162,6 +199,7 @@ describe("POST /api/posts/[postId]/comments", () => {
     expect(response.status).toBe(201);
     expect(vi.mocked(createCommentRecord)).toHaveBeenCalledWith("post-1", "public-user-1", "Looks great", null);
     expect(vi.mocked(sendCommentNotification)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("comment:supabase-user-1:127.0.0.1", 5, 60_000);
   });
 
   it("returns success when notification delivery fails after comment persistence", async () => {
@@ -204,5 +242,109 @@ describe("POST /api/posts/[postId]/comments", () => {
     expect(vi.mocked(canReplyToComment)).toHaveBeenCalledWith("post-1", "comment-root-1");
     expect(vi.mocked(sendCommentNotification)).toHaveBeenCalledTimes(1);
     expect(await response.json()).toEqual({ comments: [] });
+  });
+
+  it("returns success when notification sending throws after comment persistence", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(createCommentRecord).mockResolvedValue({
+      id: "comment-1",
+      content: "Looks great",
+      parentId: null,
+      createdAt: new Date("2026-03-19T12:00:00.000Z"),
+      authorDisplayName: "Reader",
+      post: {
+        id: "post-1",
+        title: "Patagonia Notes",
+        slug: "patagonia-notes",
+      },
+    });
+    vi.mocked(sendCommentNotification).mockRejectedValue(new Error("email offline"));
+    vi.mocked(listCommentsForPost).mockResolvedValue([]);
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Looks great" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ comments: [] });
+  });
+
+  it("returns a safe 500 when comment creation fails unexpectedly", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(createCommentRecord).mockRejectedValue(new Error("database offline"));
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Looks great" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to create comment" });
+  });
+
+  it("returns success without replacing comments when listing fails unexpectedly after creation", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(createCommentRecord).mockResolvedValue({
+      id: "comment-1",
+      content: "Looks great",
+      parentId: null,
+      createdAt: new Date("2026-03-19T12:00:00.000Z"),
+      authorDisplayName: "Reader",
+      post: {
+        id: "post-1",
+        title: "Patagonia Notes",
+        slug: "patagonia-notes",
+      },
+    });
+    vi.mocked(sendCommentNotification).mockResolvedValue({ status: "sent" });
+    vi.mocked(listCommentsForPost).mockRejectedValue(new Error("list failed"));
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Looks great" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({});
   });
 });

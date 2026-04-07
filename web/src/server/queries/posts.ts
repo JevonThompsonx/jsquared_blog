@@ -2,6 +2,7 @@ import "server-only";
 
 import { getReadingTimeMinutes, renderTiptapJson } from "@/lib/content";
 import { cdnImageUrl } from "@/lib/cloudinary/transform";
+import { getSongMetadata } from "@/lib/post-song-metadata";
 import { rankRelatedPosts } from "@/lib/related-posts";
 import {
   getAnyPostRecordById,
@@ -87,6 +88,7 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    song: getSongMetadata(post),
     viewCount: post.viewCount,
     commentCount: commentCounts.get(post.id) ?? 0,
     readingTimeMinutes: getPostReadingTime(post),
@@ -161,6 +163,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    song: getSongMetadata(post),
     viewCount: post.viewCount,
     commentCount: 0,
     authorId: post.authorId,
@@ -246,6 +249,7 @@ export async function getPostForPreview(id: string): Promise<BlogPost | null> {
     locationLng: post.locationLng ?? null,
     locationZoom: post.locationZoom ?? null,
     iovanderUrl: post.iovanderUrl ?? null,
+    song: getSongMetadata(post),
     viewCount: post.viewCount,
     commentCount: 0,
     authorId: post.authorId,

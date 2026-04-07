@@ -6,7 +6,7 @@ import { requireAdminSession } from "@/lib/auth/session";
 import { publishPosts, unpublishPosts } from "@/server/posts/publish";
 
 const bulkStatusSchema = z.object({
-  postIds: z.array(z.string().min(1)).min(1).max(100),
+  postIds: z.array(z.string().trim().min(1)).min(1).max(100),
   status: z.enum(["published", "draft"]),
 });
 

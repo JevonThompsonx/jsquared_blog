@@ -98,6 +98,29 @@ describe("POST /api/admin/posts/bulk-status", () => {
     expect(await response.json()).toEqual({ error: "Invalid bulk update request" });
   });
 
+  it("rejects whitespace-only bulk post ids with a safe validation error", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postIds: ["   "], status: "published" }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid bulk update request" });
+    expect(vi.mocked(publishPosts)).not.toHaveBeenCalled();
+    expect(vi.mocked(unpublishPosts)).not.toHaveBeenCalled();
+  });
+
   it("publishes posts when the requested status is published", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
     vi.mocked(checkRateLimit).mockResolvedValue({
@@ -138,6 +161,38 @@ describe("POST /api/admin/posts/bulk-status", () => {
       updatedPostIds: ["post-1", "post-2"],
       unchangedPostIds: [],
     });
+  });
+
+  it("trims valid bulk post ids before delegating", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(publishPosts).mockResolvedValue({
+      operation: "publish",
+      requestedCount: 2,
+      updated: 2,
+      updatedCount: 2,
+      unchangedCount: 0,
+      missingIds: [],
+      updatedPostIds: ["post-1", "post-2"],
+      unchangedPostIds: [],
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postIds: ["  post-1  ", "post-2"], status: "published" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(publishPosts)).toHaveBeenCalledWith(["post-1", "post-2"]);
+    expect(vi.mocked(unpublishPosts)).not.toHaveBeenCalled();
   });
 
   it("unpublishes posts when the requested status is draft", async () => {

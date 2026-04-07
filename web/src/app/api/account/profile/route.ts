@@ -17,28 +17,33 @@ export async function GET(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
-  const existingAppUser = await getPublicAppUserBySupabaseId(supabaseUser.id);
-  let appUser = existingAppUser ?? await ensurePublicAppUser(supabaseUser);
+  try {
+    const existingAppUser = await getPublicAppUserBySupabaseId(supabaseUser.id);
+    let appUser = existingAppUser ?? await ensurePublicAppUser(supabaseUser);
 
-  let profile = await getProfileByUserId(appUser.id);
-  if (!profile) {
-    appUser = await ensurePublicAppUser(supabaseUser);
-    profile = await getProfileByUserId(appUser.id);
+    let profile = await getProfileByUserId(appUser.id);
+    if (!profile) {
+      appUser = await ensurePublicAppUser(supabaseUser);
+      profile = await getProfileByUserId(appUser.id);
+    }
+
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      profile: {
+        userId: profile.userId,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        themePreference: profile.themePreference,
+        email: appUser.email,
+      },
+    });
+  } catch (error) {
+    console.error(`[account-profile] Failed to load profile for ${supabaseUser.id}`, error);
+    return NextResponse.json({ error: "Failed to load profile" }, { status: 500 });
   }
-
-  if (!profile) {
-    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({
-    profile: {
-      userId: profile.userId,
-      displayName: profile.displayName,
-      avatarUrl: profile.avatarUrl,
-      themePreference: profile.themePreference,
-      email: appUser.email,
-    },
-  });
 }
 
 export async function PATCH(request: Request): Promise<NextResponse> {
@@ -51,9 +56,6 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
-
-  // ensurePublicAppUser creates the user+profile record if it doesn't exist yet
-  const appUser = await ensurePublicAppUser(supabaseUser);
 
   let payload: unknown;
   try {
@@ -69,11 +71,19 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
   const { displayName, avatarUrl, themePreference } = parse.data;
 
-  await updateProfileFields(appUser.id, {
-    ...(displayName !== undefined && { displayName }),
-    ...("avatarUrl" in parse.data && { avatarUrl: avatarUrl ?? null }),
-    ...("themePreference" in parse.data && { themePreference: themePreference ?? null }),
-  });
+  try {
+    // ensurePublicAppUser creates the user+profile record if it doesn't exist yet
+    const appUser = await ensurePublicAppUser(supabaseUser);
 
-  return NextResponse.json({ ok: true });
+    await updateProfileFields(appUser.id, {
+      ...(displayName !== undefined && { displayName }),
+      ...("avatarUrl" in parse.data && { avatarUrl: avatarUrl ?? null }),
+      ...("themePreference" in parse.data && { themePreference: themePreference ?? null }),
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error(`[account-profile] Failed to update profile for ${supabaseUser.id}`, error);
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+  }
 }

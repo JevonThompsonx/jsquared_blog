@@ -6,7 +6,7 @@ import { requireAdminSession } from "@/lib/auth/session";
 import { createPostPreviewAccess } from "@/server/posts/preview";
 
 const createPreviewSchema = z.object({
-  postId: z.string().min(1),
+  postId: z.string().trim().min(1),
 });
 
 // POST /api/admin/posts/preview
@@ -25,12 +25,28 @@ export async function POST(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
+  let body: z.infer<typeof createPreviewSchema>;
+
   try {
-    const body = createPreviewSchema.parse(await request.json());
+    body = createPreviewSchema.parse(await request.json());
+  } catch {
+    return NextResponse.json({ error: "Invalid preview request" }, { status: 400 });
+  }
+
+  try {
     const preview = await createPostPreviewAccess(body.postId, session.user.id);
     return NextResponse.json(preview, { status: 201 });
   } catch (error) {
     const isNotFound = error instanceof Error && error.message.toLowerCase().includes("not found");
-    return NextResponse.json({ error: isNotFound ? "Post not found" : "Invalid preview request" }, { status: isNotFound ? 404 : 400 });
+    if (isNotFound) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    console.error("[admin post preview] failed to create preview", {
+      postId: body.postId,
+      adminUserId: session.user.id,
+      error,
+    });
+    return NextResponse.json({ error: "Failed to create preview" }, { status: 500 });
   }
 }

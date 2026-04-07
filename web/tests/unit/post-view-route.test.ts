@@ -54,6 +54,15 @@ describe("POST /api/posts/[postId]/view", () => {
     expect(await response.json()).toEqual({ error: "Invalid post id" });
   });
 
+  it("rejects malformed post ids before using them in cookie names", async () => {
+    const response = await POST(new Request("http://localhost/api/posts/test/view", { method: "POST" }), {
+      params: Promise.resolve({ postId: "invalid id" }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid post id" });
+  });
+
   it("does not increment when the post was already viewed this session", async () => {
     const cookieStore = makeCookieStore({
       "j2-viewed-post-post-1": "1",
@@ -112,6 +121,28 @@ describe("POST /api/posts/[postId]/view", () => {
       "j2-viewed-post-post-1",
       "1",
       expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/" }),
+    );
+  });
+
+  it("returns a safe generic error when the view counter fails unexpectedly", async () => {
+    const cookieStore = makeCookieStore({
+      "j2-viewer-id": "viewer-123",
+    });
+
+    cookiesMock.mockResolvedValue(cookieStore);
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
+    vi.mocked(incrementPostViewCount).mockRejectedValue(new Error("database offline"));
+
+    const response = await POST(new Request("http://localhost/api/posts/post-1/view", { method: "POST" }), {
+      params: Promise.resolve({ postId: "post-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to record post view" });
+    expect(cookieStore.set).not.toHaveBeenCalledWith(
+      "j2-viewed-post-post-1",
+      "1",
+      expect.any(Object),
     );
   });
 });

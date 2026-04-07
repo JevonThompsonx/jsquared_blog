@@ -5,7 +5,7 @@ import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { countPostRevisions, listPostRevisions, postExistsById } from "@/server/dal/post-revisions";
 
-const postIdParamsSchema = z.object({ postId: z.string().min(1).max(128) });
+const postIdParamsSchema = z.object({ postId: z.string().trim().min(1).max(128) });
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -48,33 +48,38 @@ export async function GET(
 
   const { page, pageSize } = paginationParse.data;
 
-  const exists = await postExistsById(postId);
-  if (!exists) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  try {
+    const exists = await postExistsById(postId);
+    if (!exists) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    const offset = (page - 1) * pageSize;
+    const [revisions, total] = await Promise.all([
+      listPostRevisions(postId, pageSize, offset),
+      countPostRevisions(postId),
+    ]);
+
+    const totalPages = Math.ceil(total / pageSize);
+
+    return NextResponse.json({
+      revisions: revisions.map((r) => ({
+        id: r.id,
+        postId: r.postId,
+        revisionNum: r.revisionNum,
+        title: r.title,
+        excerpt: r.excerpt,
+        savedByUserId: r.savedByUserId,
+        savedAt: r.savedAt.toISOString(),
+        label: r.label,
+      })),
+      total,
+      page,
+      pageSize,
+      totalPages,
+    });
+  } catch (error) {
+    console.error("[admin post revisions] failed to load revisions", { postId, page, pageSize, error });
+    return NextResponse.json({ error: "Failed to load revisions" }, { status: 500 });
   }
-
-  const offset = (page - 1) * pageSize;
-  const [revisions, total] = await Promise.all([
-    listPostRevisions(postId, pageSize, offset),
-    countPostRevisions(postId),
-  ]);
-
-  const totalPages = Math.ceil(total / pageSize);
-
-  return NextResponse.json({
-    revisions: revisions.map((r) => ({
-      id: r.id,
-      postId: r.postId,
-      revisionNum: r.revisionNum,
-      title: r.title,
-      excerpt: r.excerpt,
-      savedByUserId: r.savedByUserId,
-      savedAt: r.savedAt.toISOString(),
-      label: r.label,
-    })),
-    total,
-    page,
-    pageSize,
-    totalPages,
-  });
 }

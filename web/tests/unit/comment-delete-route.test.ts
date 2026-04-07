@@ -97,6 +97,39 @@ describe("DELETE /api/comments/[commentId]", () => {
     expect(await response.json()).toEqual({ error: "Comment not found" });
   });
 
+  it("returns 500 when public-user resolution fails unexpectedly", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
+    vi.mocked(ensurePublicAppUser).mockRejectedValue(new Error("lookup failed"));
+
+    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
+      params: Promise.resolve({ commentId: "comment-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to delete comment" });
+  });
+
+  it("returns 500 when delete fails unexpectedly", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(deleteCommentRecord).mockRejectedValue(new Error("delete failed"));
+
+    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
+      params: Promise.resolve({ commentId: "comment-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to delete comment" });
+  });
+
   it("returns success when the caller deletes their own comment", async () => {
     vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });

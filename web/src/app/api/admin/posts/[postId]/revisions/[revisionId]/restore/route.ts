@@ -5,10 +5,8 @@ import { z } from "zod";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import {
-  applyRevisionContentToPost,
-  createPostRevision,
-  getPostContentSnapshot,
   getPostRevisionById,
+  restorePostRevisionAtomically,
 } from "@/server/dal/post-revisions";
 import { derivePostContent } from "@/server/posts/content";
 
@@ -22,8 +20,8 @@ import { derivePostContent } from "@/server/posts/content";
 // admin can undo the restore if needed.
 
 const restoreParamsSchema = z.object({
-  postId: z.string().min(1).max(128),
-  revisionId: z.string().min(1).max(128),
+  postId: z.string().trim().min(1).max(128),
+  revisionId: z.string().trim().min(1).max(128),
 });
 
 export async function POST(
@@ -47,58 +45,56 @@ export async function POST(
 
   const { postId, revisionId } = paramsParse.data;
 
-  // Fetch the revision to restore (scoped to postId for safety)
-  const revision = await getPostRevisionById(postId, revisionId);
-  if (!revision) {
-    return NextResponse.json({ error: "Revision not found" }, { status: 404 });
-  }
-
-  // Fetch the current post state so we can snapshot it before overwriting
-  const currentSnapshot = await getPostContentSnapshot(postId);
-  if (!currentSnapshot) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
-  }
-
-  // Derive HTML + plain-text from the revision's contentJson.
-  // If the contentJson is invalid Tiptap, derivePostContent throws — return 422.
-  let derived: ReturnType<typeof derivePostContent>;
   try {
-    derived = derivePostContent(revision.contentJson, revision.excerpt);
-  } catch {
-    return NextResponse.json(
-      { error: "Revision content is not valid Tiptap JSON and cannot be restored" },
-      { status: 422 },
-    );
+    // Fetch the revision to restore (scoped to postId for safety)
+    const revision = await getPostRevisionById(postId, revisionId);
+    if (!revision) {
+      return NextResponse.json({ error: "Revision not found" }, { status: 404 });
+    }
+
+    // Derive HTML + plain-text from the revision's contentJson.
+    // If the contentJson is invalid Tiptap, derivePostContent throws — return 422.
+    let derived: ReturnType<typeof derivePostContent>;
+    try {
+      derived = derivePostContent(revision.contentJson, revision.excerpt);
+    } catch {
+      return NextResponse.json(
+        { error: "Revision content is not valid Tiptap JSON and cannot be restored" },
+        { status: 422 },
+      );
+    }
+
+    const restoreResult = await restorePostRevisionAtomically({
+      postId,
+      revision,
+      derivedContent: {
+        canonicalContentJson: derived.canonicalContentJson,
+        contentHtml: derived.contentHtml,
+        contentPlainText: derived.contentPlainText,
+        excerpt: derived.excerpt,
+      },
+      savedByUserId: session.user.id,
+    });
+
+    if (!restoreResult) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    try {
+      revalidatePath("/");
+      revalidatePath("/admin");
+      revalidatePath(`/posts/${restoreResult.slug}`);
+    } catch (error) {
+      console.error("[admin revision restore] failed to revalidate after restore", { postId, revisionId, error });
+    }
+
+    return NextResponse.json({
+      postId,
+      restoredRevisionId: revisionId,
+      newRevisionId: restoreResult.newRevisionId,
+    });
+  } catch (error) {
+    console.error("[admin revision restore] failed to restore revision", { postId, revisionId, error });
+    return NextResponse.json({ error: "Failed to restore revision" }, { status: 500 });
   }
-
-  // Create a pre-restore snapshot of the current state (undo point).
-  const preRestoreRevision = await createPostRevision({
-    postId,
-    title: currentSnapshot.title,
-    contentJson: currentSnapshot.contentJson,
-    excerpt: currentSnapshot.excerpt,
-    savedByUserId: session.user.id,
-    label: `Before restore to revision ${revision.revisionNum}`,
-  });
-
-  // Apply the historical revision's content to the live post.
-  const now = new Date();
-  await applyRevisionContentToPost(postId, {
-    title: revision.title,
-    contentJson: derived.canonicalContentJson,
-    contentHtml: derived.contentHtml,
-    contentPlainText: derived.contentPlainText,
-    excerpt: derived.excerpt,
-    updatedAt: now,
-  });
-
-  revalidatePath("/");
-  revalidatePath("/admin");
-  revalidatePath(`/posts/${currentSnapshot.slug}`);
-
-  return NextResponse.json({
-    postId,
-    restoredRevisionId: revisionId,
-    newRevisionId: preRestoreRevision.id,
-  });
 }

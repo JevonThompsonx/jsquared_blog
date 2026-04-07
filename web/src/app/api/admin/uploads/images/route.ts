@@ -18,8 +18,14 @@ export async function POST(request: Request) {
     return tooManyRequests(rl);
   }
 
+  let formData: FormData;
   try {
-    const formData = await request.formData();
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  }
+
+  try {
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
@@ -35,7 +41,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(upload, { status: 201 });
   } catch (error) {
-    console.error("[cloudinary upload]", error);
+    console.error("[api/admin/uploads/images] Upload failed", {
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
     if (error instanceof Error) {
       if (error.message === "Only JPEG, PNG, WebP, or GIF images are allowed" || error.message === "Image must be under 10 MB" || error.message === "Uploaded file content does not match a supported image format") {
         return NextResponse.json({ error: error.message }, { status: 400 });

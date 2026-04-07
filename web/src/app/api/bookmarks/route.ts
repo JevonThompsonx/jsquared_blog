@@ -17,11 +17,19 @@ export async function GET(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
-  const publicUser = await ensurePublicAppUser(supabaseUser);
-  const rawPosts = await listBookmarkedPosts(publicUser.id);
-  const posts = rawPosts.map((post) => ({
-    ...post,
-    imageUrl: cdnImageUrl(post.imageUrl),
-  }));
-  return NextResponse.json({ posts });
+  try {
+    const publicUser = await ensurePublicAppUser(supabaseUser);
+    const rawPosts = await listBookmarkedPosts(publicUser.id);
+    const posts = rawPosts.map((post) => ({
+      ...post,
+      imageUrl: cdnImageUrl(post.imageUrl),
+    }));
+    return NextResponse.json({ posts });
+  } catch (error) {
+    console.error("[api/bookmarks] Failed to load bookmarks", {
+      supabaseUserId: supabaseUser.id,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json({ error: "Failed to load bookmarks" }, { status: 500 });
+  }
 }

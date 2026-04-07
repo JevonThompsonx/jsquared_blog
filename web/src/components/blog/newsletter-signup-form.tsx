@@ -2,6 +2,38 @@
 
 import { useState } from "react";
 
+type NewsletterResponseState = {
+  status: "success" | "error";
+  message: string;
+};
+
+type NewsletterApiResponse = {
+  status?: "subscribed" | "already-subscribed" | "skipped";
+  reason?: "missing-config";
+  source?: "created" | "updated";
+};
+
+export function getNewsletterResponseState(statusCode: number, data: NewsletterApiResponse): NewsletterResponseState {
+  if (statusCode === 202 || data.status === "skipped") {
+    return {
+      status: "error",
+      message: "Newsletter signup is not available right now.",
+    };
+  }
+
+  if (data.status === "already-subscribed") {
+    return {
+      status: "success",
+      message: "You're already on the list!",
+    };
+  }
+
+  return {
+    status: "success",
+    message: "You're subscribed!",
+  };
+}
+
 function SubmitButton({ loading }: { loading: boolean }) {
   return (
     <button
@@ -57,12 +89,8 @@ export function NewsletterSignupForm({ source = "footer" }: { source?: string })
         return;
       }
 
-      const data = await res.json();
-      if (data.status === "already-subscribed") {
-        setState({ status: "success", message: "You're already on the list!" });
-      } else {
-        setState({ status: "success", message: "You're subscribed!" });
-      }
+      const data = (await res.json()) as NewsletterApiResponse;
+      setState(getNewsletterResponseState(res.status, data));
     } catch {
       setState({ status: "error", message: "Something went wrong. Please try again." });
     }

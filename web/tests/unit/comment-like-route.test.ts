@@ -53,7 +53,6 @@ describe("POST /api/comments/[commentId]/like", () => {
   });
 
   it("returns 401 when the caller is unauthenticated", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
     vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
 
     const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
@@ -62,6 +61,7 @@ describe("POST /api/comments/[commentId]/like", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(vi.mocked(checkRateLimit)).not.toHaveBeenCalled();
     expect(vi.mocked(commentExists)).not.toHaveBeenCalled();
   });
 
@@ -76,6 +76,54 @@ describe("POST /api/comments/[commentId]/like", () => {
 
     expect(response.status).toBe(404);
     expect(vi.mocked(toggleCommentLikeRecord)).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when comment lookup fails unexpectedly", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(commentExists).mockRejectedValue(new Error("lookup failed"));
+
+    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
+      params: Promise.resolve({ commentId: "comment-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to update comment like" });
+  });
+
+  it("returns 500 when public-user resolution fails unexpectedly", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(commentExists).mockResolvedValue(true);
+    vi.mocked(ensurePublicAppUser).mockRejectedValue(new Error("lookup failed"));
+
+    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
+      params: Promise.resolve({ commentId: "comment-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to update comment like" });
+  });
+
+  it("returns 500 when the like toggle fails unexpectedly", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(commentExists).mockResolvedValue(true);
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(toggleCommentLikeRecord).mockRejectedValue(new Error("toggle failed"));
+
+    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
+      params: Promise.resolve({ commentId: "comment-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to update comment like" });
   });
 
   it("toggles likes for visible comments", async () => {
@@ -97,6 +145,7 @@ describe("POST /api/comments/[commentId]/like", () => {
 
     expect(response.status).toBe(201);
     expect(vi.mocked(toggleCommentLikeRecord)).toHaveBeenCalledWith("comment-1", "public-user-1");
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("like:supabase-user-1:127.0.0.1", 30, 60_000);
     expect(await response.json()).toEqual({ liked: true });
   });
 
@@ -110,6 +159,6 @@ describe("POST /api/comments/[commentId]/like", () => {
     });
 
     expect(response).toBe(throttledResponse);
-    expect(vi.mocked(getRequestSupabaseUser)).not.toHaveBeenCalled();
+    expect(vi.mocked(getRequestSupabaseUser)).toHaveBeenCalledTimes(1);
   });
 });

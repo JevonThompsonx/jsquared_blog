@@ -15,10 +15,8 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 vi.mock("@/server/dal/post-revisions", () => ({
-  applyRevisionContentToPost: vi.fn(),
-  createPostRevision: vi.fn(),
-  getPostContentSnapshot: vi.fn(),
   getPostRevisionById: vi.fn(),
+  restorePostRevisionAtomically: vi.fn(),
 }));
 
 vi.mock("@/server/posts/content", () => ({
@@ -27,11 +25,10 @@ vi.mock("@/server/posts/content", () => ({
 
 import { POST } from "@/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route";
 import { requireAdminSession } from "@/lib/auth/session";
+import { revalidatePath } from "next/cache";
 import {
-  applyRevisionContentToPost,
-  createPostRevision,
-  getPostContentSnapshot,
   getPostRevisionById,
+  restorePostRevisionAtomically,
 } from "@/server/dal/post-revisions";
 import { derivePostContent } from "@/server/posts/content";
 
@@ -47,6 +44,9 @@ const MOCK_REVISION = {
   title: "Historical Title",
   contentJson: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"old content"}]}]}',
   excerpt: "old excerpt",
+  songTitle: "Old Song",
+  songArtist: "Old Artist",
+  songUrl: "https://open.spotify.com/track/old-song",
   savedByUserId: "admin-1",
   savedAt: new Date("2026-03-15T10:00:00Z"),
   label: null,
@@ -57,6 +57,9 @@ const MOCK_CURRENT_SNAPSHOT = {
   slug: "current-title",
   contentJson: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"current content"}]}]}',
   excerpt: "current excerpt",
+  songTitle: "Current Song",
+  songArtist: "Current Artist",
+  songUrl: "https://open.spotify.com/track/current-song",
 };
 
 const MOCK_DERIVED = {
@@ -66,18 +69,6 @@ const MOCK_DERIVED = {
   contentPlainText: "old content",
   excerpt: "old excerpt",
   imageAltWarnings: [],
-};
-
-const MOCK_PRE_RESTORE_REVISION = {
-  id: "rev-pre-restore",
-  postId: "post-1",
-  revisionNum: 4,
-  title: MOCK_CURRENT_SNAPSHOT.title,
-  contentJson: MOCK_CURRENT_SNAPSHOT.contentJson,
-  excerpt: MOCK_CURRENT_SNAPSHOT.excerpt,
-  savedByUserId: "admin-1",
-  savedAt: new Date(),
-  label: "Before restore to revision 3",
 };
 
 function makeRequest(postId = "post-1", revisionId = "rev-3"): [Request, { params: Promise<{ postId: string; revisionId: string }> }] {
@@ -138,7 +129,8 @@ describe("POST /api/admin/posts/[postId]/revisions/[revisionId]/restore", () => 
   it("returns 404 when the post does not exist", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
     vi.mocked(getPostRevisionById).mockResolvedValue(MOCK_REVISION);
-    vi.mocked(getPostContentSnapshot).mockResolvedValue(null);
+    vi.mocked(derivePostContent).mockReturnValue(MOCK_DERIVED);
+    vi.mocked(restorePostRevisionAtomically).mockResolvedValue(null);
 
     const [req, ctx] = makeRequest("post-1", "rev-3");
     const response = await POST(req, ctx);
@@ -150,7 +142,6 @@ describe("POST /api/admin/posts/[postId]/revisions/[revisionId]/restore", () => 
   it("returns 422 when the revision contentJson is invalid Tiptap", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
     vi.mocked(getPostRevisionById).mockResolvedValue(MOCK_REVISION);
-    vi.mocked(getPostContentSnapshot).mockResolvedValue(MOCK_CURRENT_SNAPSHOT);
     vi.mocked(derivePostContent).mockImplementation(() => {
       throw new Error("Content must be valid Tiptap JSON");
     });
@@ -166,54 +157,44 @@ describe("POST /api/admin/posts/[postId]/revisions/[revisionId]/restore", () => 
   it("creates a pre-restore revision of the current state, then applies the historical revision", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
     vi.mocked(getPostRevisionById).mockResolvedValue(MOCK_REVISION);
-    vi.mocked(getPostContentSnapshot).mockResolvedValue(MOCK_CURRENT_SNAPSHOT);
     vi.mocked(derivePostContent).mockReturnValue(MOCK_DERIVED);
-    vi.mocked(createPostRevision).mockResolvedValue(MOCK_PRE_RESTORE_REVISION);
-    vi.mocked(applyRevisionContentToPost).mockResolvedValue(undefined);
+    vi.mocked(restorePostRevisionAtomically).mockResolvedValue({
+      newRevisionId: "rev-pre-restore",
+      slug: "current-title",
+    });
 
     const [req, ctx] = makeRequest();
     const response = await POST(req, ctx);
 
     expect(response.status).toBe(200);
 
-    // Should snapshot the CURRENT state before overwriting
-    expect(vi.mocked(createPostRevision)).toHaveBeenCalledOnce();
-    expect(vi.mocked(createPostRevision)).toHaveBeenCalledWith({
+    expect(vi.mocked(restorePostRevisionAtomically)).toHaveBeenCalledOnce();
+    expect(vi.mocked(restorePostRevisionAtomically)).toHaveBeenCalledWith({
       postId: "post-1",
-      title: MOCK_CURRENT_SNAPSHOT.title,
-      contentJson: MOCK_CURRENT_SNAPSHOT.contentJson,
-      excerpt: MOCK_CURRENT_SNAPSHOT.excerpt,
-      savedByUserId: "admin-1",
-      label: "Before restore to revision 3",
-    });
-
-    // Should derive content from the REVISION's contentJson
-    expect(vi.mocked(derivePostContent)).toHaveBeenCalledWith(
-      MOCK_REVISION.contentJson,
-      MOCK_REVISION.excerpt,
-    );
-
-    // Should apply the derived content to the post
-    expect(vi.mocked(applyRevisionContentToPost)).toHaveBeenCalledOnce();
-    expect(vi.mocked(applyRevisionContentToPost)).toHaveBeenCalledWith(
-      "post-1",
-      expect.objectContaining({
-        title: MOCK_REVISION.title,
-        contentJson: MOCK_DERIVED.canonicalContentJson,
+      revision: MOCK_REVISION,
+      derivedContent: {
+        canonicalContentJson: MOCK_DERIVED.canonicalContentJson,
         contentHtml: MOCK_DERIVED.contentHtml,
         contentPlainText: MOCK_DERIVED.contentPlainText,
         excerpt: MOCK_DERIVED.excerpt,
-      }),
+      },
+      savedByUserId: "admin-1",
+    });
+
+    expect(vi.mocked(derivePostContent)).toHaveBeenCalledWith(
+      MOCK_REVISION.contentJson,
+      MOCK_REVISION.excerpt,
     );
   });
 
   it("returns the correct response body on success", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
     vi.mocked(getPostRevisionById).mockResolvedValue(MOCK_REVISION);
-    vi.mocked(getPostContentSnapshot).mockResolvedValue(MOCK_CURRENT_SNAPSHOT);
     vi.mocked(derivePostContent).mockReturnValue(MOCK_DERIVED);
-    vi.mocked(createPostRevision).mockResolvedValue(MOCK_PRE_RESTORE_REVISION);
-    vi.mocked(applyRevisionContentToPost).mockResolvedValue(undefined);
+    vi.mocked(restorePostRevisionAtomically).mockResolvedValue({
+      newRevisionId: "rev-pre-restore",
+      slug: "current-title",
+    });
 
     const [req, ctx] = makeRequest();
     const response = await POST(req, ctx);
@@ -224,22 +205,44 @@ describe("POST /api/admin/posts/[postId]/revisions/[revisionId]/restore", () => 
     expect(body).toEqual({
       postId: "post-1",
       restoredRevisionId: "rev-3",
-      newRevisionId: MOCK_PRE_RESTORE_REVISION.id,
+      newRevisionId: "rev-pre-restore",
     });
   });
 
-  it("does not apply content if the pre-restore revision creation fails", async () => {
-    // If createPostRevision throws, the restore must abort — we do not want a
-    // partial state where the post is overwritten but no undo-point revision exists.
+  it("returns 500 when the atomic restore helper fails", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
     vi.mocked(getPostRevisionById).mockResolvedValue(MOCK_REVISION);
-    vi.mocked(getPostContentSnapshot).mockResolvedValue(MOCK_CURRENT_SNAPSHOT);
     vi.mocked(derivePostContent).mockReturnValue(MOCK_DERIVED);
-    vi.mocked(createPostRevision).mockRejectedValue(new Error("DB write failed"));
+    vi.mocked(restorePostRevisionAtomically).mockRejectedValue(new Error("transaction failed"));
 
     const [req, ctx] = makeRequest();
+    const response = await POST(req, ctx);
 
-    await expect(POST(req, ctx)).rejects.toThrow("DB write failed");
-    expect(vi.mocked(applyRevisionContentToPost)).not.toHaveBeenCalled();
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to restore revision" });
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
+  it("still returns success if cache revalidation fails after the restore commits", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(MOCK_ADMIN_SESSION);
+    vi.mocked(getPostRevisionById).mockResolvedValue(MOCK_REVISION);
+    vi.mocked(derivePostContent).mockReturnValue(MOCK_DERIVED);
+    vi.mocked(restorePostRevisionAtomically).mockResolvedValue({
+      newRevisionId: "rev-pre-restore",
+      slug: "current-title",
+    });
+    vi.mocked(revalidatePath).mockImplementation(() => {
+      throw new Error("cache backend unavailable");
+    });
+
+    const [req, ctx] = makeRequest();
+    const response = await POST(req, ctx);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      postId: "post-1",
+      restoredRevisionId: "rev-3",
+      newRevisionId: "rev-pre-restore",
+    });
   });
 });

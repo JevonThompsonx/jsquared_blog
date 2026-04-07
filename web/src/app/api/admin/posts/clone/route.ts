@@ -6,7 +6,7 @@ import { requireAdminSession } from "@/lib/auth/session";
 import { clonePostById } from "@/server/posts/clone";
 
 const clonePostSchema = z.object({
-  postId: z.string().min(1),
+  postId: z.string().trim().min(1),
 });
 
 // POST /api/admin/posts/clone
@@ -25,12 +25,28 @@ export async function POST(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
+  let body: z.infer<typeof clonePostSchema>;
+
   try {
-    const body = clonePostSchema.parse(await request.json());
+    body = clonePostSchema.parse(await request.json());
+  } catch {
+    return NextResponse.json({ error: "Invalid clone request" }, { status: 400 });
+  }
+
+  try {
     const result = await clonePostById(body.postId);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     const isNotFound = error instanceof Error && error.message.toLowerCase().includes("not found");
-    return NextResponse.json({ error: isNotFound ? "Post not found" : "Invalid clone request" }, { status: isNotFound ? 404 : 400 });
+    if (isNotFound) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    console.error("[admin post clone] failed to clone post", {
+      postId: body.postId,
+      adminUserId: session.user.id,
+      error,
+    });
+    return NextResponse.json({ error: "Failed to clone post" }, { status: 500 });
   }
 }

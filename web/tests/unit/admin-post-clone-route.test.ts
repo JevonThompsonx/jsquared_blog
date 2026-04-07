@@ -96,6 +96,28 @@ describe("POST /api/admin/posts/clone", () => {
     expect(await response.json()).toEqual({ error: "Invalid clone request" });
   });
 
+  it("rejects whitespace-only post ids with a safe validation error", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: "   " }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid clone request" });
+    expect(vi.mocked(clonePostById)).not.toHaveBeenCalled();
+  });
+
   it("returns not found without exposing internal details", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
     vi.mocked(checkRateLimit).mockResolvedValue({
@@ -149,5 +171,54 @@ describe("POST /api/admin/posts/clone", () => {
       title: "Copy of Patagonia Notes",
       status: "draft",
     });
+  });
+
+  it("trims valid clone post ids before delegating", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(clonePostById).mockResolvedValue({
+      postId: "cloned-post-1",
+      slug: "patagonia-notes-copy",
+      title: "Copy of Patagonia Notes",
+      status: "draft",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: "  post-1  " }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(vi.mocked(clonePostById)).toHaveBeenCalledWith("post-1");
+  });
+
+  it("returns a safe 500 when cloning fails unexpectedly", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(clonePostById).mockRejectedValue(new Error("constraint violation on clone"));
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: "post-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to clone post" });
   });
 });

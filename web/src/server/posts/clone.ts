@@ -87,13 +87,16 @@ export async function clonePostById(postId: string): Promise<ClonedPostResult> {
       externalGalleryUrl: source.externalGalleryUrl,
       externalGalleryLabel: source.externalGalleryLabel,
       locationName: source.locationName,
-      locationLat: source.locationLat,
-      locationLng: source.locationLng,
-      locationZoom: source.locationZoom,
-      iovanderUrl: source.iovanderUrl,
-      createdAt: now,
-      updatedAt: now,
-    });
+        locationLat: source.locationLat,
+        locationLng: source.locationLng,
+        locationZoom: source.locationZoom,
+        iovanderUrl: source.iovanderUrl,
+        songTitle: source.songTitle,
+        songArtist: source.songArtist,
+        songUrl: source.songUrl,
+        createdAt: now,
+        updatedAt: now,
+      });
 
     for (const sourceTag of sourceTags) {
       await tx.insert(postTags).values({ postId: clonedPostId, tagId: sourceTag.tagId }).onConflictDoNothing();

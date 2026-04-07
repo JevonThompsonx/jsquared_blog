@@ -97,6 +97,28 @@ describe("POST /api/admin/posts/preview", () => {
     expect(await response.json()).toEqual({ error: "Post not found" });
   });
 
+  it("rejects whitespace-only post ids with a safe validation error", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: "   " }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid preview request" });
+    expect(vi.mocked(createPostPreviewAccess)).not.toHaveBeenCalled();
+  });
+
   it("returns preview payload for valid requests", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
     vi.mocked(checkRateLimit).mockResolvedValue({
@@ -128,5 +150,54 @@ describe("POST /api/admin/posts/preview", () => {
       previewPath: "/preview/abc123",
       expiresAt: "2099-01-01T00:05:00.000Z",
     });
+  });
+
+  it("trims valid preview post ids before delegating", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(createPostPreviewAccess).mockResolvedValue({
+      postId: "post-1",
+      token: "token-1",
+      previewPath: "/preview/abc123",
+      expiresAt: "2099-01-01T00:05:00.000Z",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: "  post-1  " }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(vi.mocked(createPostPreviewAccess)).toHaveBeenCalledWith("post-1", "admin-1");
+  });
+
+  it("returns a safe 500 when preview creation fails unexpectedly", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(makeAdminSession());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(createPostPreviewAccess).mockRejectedValue(new Error("token service offline"));
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/posts/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: "post-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to create preview" });
   });
 });

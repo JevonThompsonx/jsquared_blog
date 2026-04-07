@@ -333,7 +333,7 @@ Statuses:
 - [ ] Ensure all trust boundaries use Zod validation.
 - [x] Verify authorization checks across public and admin flows.
 - [x] Verify upload and media routes are constrained and logged safely.
-- [ ] Confirm no sensitive error leakage.
+- [-] Confirm no sensitive error leakage.
 - [x] Fail closed `bun run seed:e2e` unless an explicit non-production opt-in is present and the target Supabase project/base URL matches an approved safe allowlist; add refusal-path tests before changing the script.
 - [x] Decide and enforce the persistence policy for public E2E auth artifacts (`web/.env.test.local`, `web/playwright/.auth/public.json`) so reusable credentials/session state are explicit, rotated, cleaned up, and never depended on implicitly.
 
@@ -346,6 +346,16 @@ Completed slice:
 - [x] Harden `PATCH /api/account/profile` and `GET /api/posts` so invalid input now returns generic `400` responses instead of leaking raw Zod field maps to public callers.
 - [x] Harden `POST /api/posts/[postId]/comments` so invalid public comment payloads now return a generic `400` response instead of leaking raw Zod field maps, and lock the route with focused write-path coverage.
 - [x] Harden bookmark route contracts so authenticated bookmark toggles throttle by user-plus-IP and both bookmark endpoints are pinned with direct unit coverage.
+- [x] Harden `GET /api/admin/posts`, `GET|PATCH /api/account/profile`, and `POST /api/newsletter` so unexpected backend failures return safe generic `500` responses with focused route coverage, and fail closed if the newsletter service returns an unknown status.
+- [x] Harden `POST /api/posts/[postId]/comments` so unexpected write/list failures now return safe generic `500` responses while preserving existing auth, validation, and notification semantics.
+- [x] Harden remaining content-derivation admin server actions so unexpected `derivePostContent()` failures no longer leak raw internals from create, update, or warning-generation flows.
+- [x] Harden remaining admin wrapper actions so clone, preview, delete, and bulk publish/unpublish no longer leak raw downstream service or DAL error text to the admin UI.
+- [x] Harden admin comment moderation, post warnings, preview, and clone API routes so unexpected backend failures now return safe generic `500` responses with focused route coverage while preserving current auth, validation, and not-found behavior.
+- [x] Harden `POST /api/posts/[postId]/view` and `GET /api/bookmarks` so unexpected backend failures now return safe generic `500`s with bounded logging, and constrain post-view `postId` before cookie-key use.
+- [x] Expand avatar and editorial image upload coverage to pin auth, throttling, invalid form-data, missing-file, provider-unavailable, and unexpected-failure behavior; align admin invalid-form-data handling to a safe `400`.
+- [x] Harden `GET /api/admin/posts/[postId]/revisions` so whitespace-only IDs fail fast and unexpected revision lookup/list failures return safe generic `500`s with bounded logging.
+- [x] Harden public comment routes so draft post comments do not leak, GET/POST/delete/like unexpected failures return safe generic `500`s, authenticated comment/like throttles key on user-plus-IP, and successful comment writes are not misreported as failures when follow-up refresh work breaks.
+- [x] Add browser-level coverage for the successful public comment mutation fallback path so the client refetches and renders the new comment even when the `POST /api/posts/[postId]/comments` response omits refreshed `comments`, including nested reply recovery and the successful-write-plus-failed-refetch error state.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -358,6 +368,8 @@ Completed slice:
 - [x] Make `bun run seed:e2e` find the public Supabase fixture user reliably across all auth-user pages or a direct lookup path instead of assuming the first `listUsers({ perPage: 200 })` page contains the fixture account.
 - [x] Clarify the admin-profile attribution contract in `web/src/server/auth/admin-users.ts`: either preserve per-admin display/avatar identity for multiple allowlisted GitHub admins or lock the shared site-owner identity assumption in tests and docs.
 - [x] Add focused `GET /api/posts` route coverage for throttling, generic invalid-query rejection, and basic happy-path pagination/search behavior before hardening the public error shape.
+- [x] Harden admin revision detail and restore routes so whitespace-only IDs fail fast, committed restores do not falsely fail on cache revalidation issues, and unexpected backend failures return safe generic `500` responses with server-side logging.
+- [x] Harden admin series part-number and post-comments lookup routes so unexpected backend failures return safe generic `500` responses with focused unit coverage.
 
 Completed slice:
 
@@ -367,6 +379,10 @@ Completed slice:
 - [x] Hardened `GET /api/admin/posts` against malformed query input by returning a safe `400` for invalid admin filters instead of letting Zod validation errors escape the route boundary; added focused route coverage for invalid status, pagination, oversized query input, and unexpected non-Zod failures.
 - [x] Added direct route coverage for `DELETE /api/comments/[commentId]`, `POST /api/comments/[commentId]/like`, `POST /api/admin/posts/clone`, and `POST /api/admin/posts/bulk-status` so public/admin mutation contracts are pinned before later cleanup or refactor work.
 - [x] Normalized blank admin tag descriptions to `null` in the server action boundary and added focused action coverage for auth redirect, invalid payload rejection, normalization, and revalidation behavior.
+- [x] Hardened remaining admin post server actions so bulk publish, bulk unpublish, delete, bulk delete, warnings, and create/update save parsing now return stable safe errors for malformed IDs, invalid form payloads, malformed gallery JSON, and invalid post content, while preserving current success semantics.
+- [x] Hardened matching admin preview, clone, and bulk-status API routes so whitespace-only IDs are rejected at the route boundary and trimmed valid IDs are forwarded consistently.
+- [x] Hardened admin revision detail and restore routes so whitespace-only IDs are rejected at the boundary, unexpected DAL failures no longer escape raw errors, committed restores still succeed if cache revalidation fails afterward, and server-side logging preserves operational visibility.
+- [x] Added direct route coverage for `GET /api/admin/posts/[postId]/revisions/[revisionId]`, `POST /api/admin/posts/[postId]/revisions/[revisionId]/restore` failure semantics, `GET /api/admin/series/[seriesId]/part-numbers`, and `GET /api/admin/posts/[postId]/comments` before further admin moderation/editor cleanup.
 
 ### Phase 4: Refactor and Cleanup
 
@@ -404,26 +420,83 @@ Completed slice:
 
 ## Active Batch
 
-### Batch: authenticated public bookmark removal coverage
-- Goal: extend the signed-in public Playwright lane with a stable bookmark removal flow on the seeded fixture post.
-- User journey or failure being protected: an authenticated public user can remove a saved post and see it disappear from `/bookmarks` without racing the existing bookmark-save flow.
-- Scope: `TODO.md` plus `web/tests/e2e/public-authenticated.spec.ts` only unless the live run exposes a real app bug.
-- Files expected to change: `TODO.md`, `web/tests/e2e/public-authenticated.spec.ts`.
-- Tests to add or update first: a signed-in removal flow that ensures the seeded post is saved, removes it, asserts the CTA flips back to save, and verifies the seeded link is absent on `/bookmarks`.
-- RED command: `bunx playwright test tests/e2e/public-authenticated.spec.ts --grep "save a post|remove a saved post" --project=chromium`
-- Expected RED test(s): the new removal assertion or shared bookmark state can fail until the authenticated flow block is isolated and the live fixture behavior is confirmed.
-- Why this RED proves the right problem: it exercises the reverse bookmark path against the same managed public fixture state the existing signed-in bookmark-save flow depends on.
-- GREEN target: bookmark save and remove flows both pass against the managed public fixture environment without cross-test state races.
-- GREEN command: `bunx playwright test tests/e2e/public-authenticated.spec.ts --grep "save a post|remove a saved post" --project=chromium`
-- Refactor boundary: no bookmark API, page, or button changes unless the live run exposes a real product bug.
-- Security impact: low direct code risk, medium confidence gain because this protects an authenticated public mutation flow.
-- Required security assertions: the managed public fixture state stays explicit; no fallback credentials or implicit seed assumptions are reintroduced.
-- E2E impact: high; this is an authenticated browser-only slice.
-- E2E prerequisites (seed, auth state, env): a safe local or explicitly approved non-production Supabase target, fresh public storage state, and a reachable app server at `E2E_BASE_URL`.
-- Artifact paths (trace/video/screenshot), if E2E: `web/test-results/`.
-- Coverage impact: adds the missing reverse bookmark journey after the existing save-path coverage.
-- Verification commands: the targeted Playwright run above plus `bunx tsc --noEmit` and touched-file lint if support code changes again.
-- Status: blocked
+### Batch: admin lookup and revision trust-boundary hardening
+- Goal: close remaining admin read/mutation trust-boundary gaps on untouched revision and moderation-support routes.
+- User journey or failure being protected: authenticated admins should get stable safe errors for malformed IDs and unexpected backend failures, while successful revision restores should not falsely fail if post-commit cache revalidation breaks.
+- Scope: `TODO.md`, `web/src/app/api/admin/posts/[postId]/revisions/[revisionId]/route.ts`, `web/src/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route.ts`, `web/src/app/api/admin/series/[seriesId]/part-numbers/route.ts`, `web/src/app/api/admin/posts/[postId]/comments/route.ts`, and focused route tests under `web/tests/unit/`.
+- Files expected to change: the four routes above, `web/tests/unit/post-revision-route.test.ts`, `web/tests/unit/post-revision-restore-route.test.ts`, `web/tests/unit/revision-route-error-handling.test.ts`, `web/tests/unit/admin-series-part-numbers-route.test.ts`, `web/tests/unit/admin-post-comments-route.test.ts`, and `TODO.md`.
+- Tests to add or update first: direct invalid-param and unexpected-backend-failure coverage for revision detail, revision restore, series part numbers, and admin post comments; add restore-path assertions for apply failure and post-commit revalidation failure semantics before changing route code.
+- RED command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
+- Expected RED test(s): whitespace-only revision IDs still pass through to `404`/success paths, unexpected DAL failures still reject with raw errors, and committed restores still return `500` if `revalidatePath()` throws after the write succeeds.
+- Why this RED proves the right problem: these tests hit the exact admin route boundaries that surface route errors to privileged UI callers, proving malformed IDs and backend exceptions were still leaking or being misreported at the HTTP boundary.
+- GREEN target: whitespace-only IDs fail with stable `400`s, unexpected backend failures return safe generic `500`s with server-side logging, and revision restores continue returning success once the DB mutation commits even if later revalidation fails.
+- GREEN command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
+- Refactor boundary: no DAL transaction redesign, no admin UI rewiring, and no broader moderation/editor feature changes.
+- Security impact: medium, because this is authenticated admin input handling and error-shape hardening.
+- Required security assertions: `requireAdminSession()` remains the auth gate, whitespace-only IDs are rejected before DAL calls, safe client error shapes do not expose internals, and server-side logging retains enough route context for operators.
+- E2E impact: none.
+- Coverage impact: adds direct trust-boundary coverage for previously untested admin revision detail, series part numbers, and post-comments routes, and tightens restore failure semantics.
+- Verification commands: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`, `bunx tsc --noEmit`, touched-file eslint, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-revision-route.test.ts`
+  - Result: whitespace-only revision params still fell through to `404`, and mocked revision-lookup failures still rejected raw `database offline` errors instead of returning a safe `500`.
+  - Command: `bunx vitest run tests/unit/revision-route-error-handling.test.ts`
+  - Result: whitespace-only restore params still reached the happy path, and mocked pre-restore snapshot failures still rejected raw `DB write failed` errors.
+  - Command: `bunx vitest run tests/unit/post-revision-restore-route.test.ts`
+  - Result: the added revalidation test failed because the route still returned `500` after `revalidatePath()` threw, even though the restore write had already committed.
+  - Command: `bunx vitest run tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
+  - Result: both routes still rejected raw backend failures, proving the admin lookup boundaries did not yet normalize unexpected DAL errors.
+  - Why this RED proved the right problem: it exercised the exact admin route boundaries and showed malformed IDs, backend exceptions, and post-commit revalidation failures still produced unsafe or misleading outcomes.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
+  - Result: 38 focused admin route tests passed across 6 files after the four routes switched to trimmed ID parsing, safe generic `500` responses with route-context logging, and best-effort revalidation after committed restores.
+- REFACTOR evidence:
+  - Refactor stayed minimal: route-local Zod schemas were tightened, generic error handling was added only at the route boundary, restore revalidation moved behind a best-effort nested `try/catch`, and no DAL contract changed.
+  - Refactor proof command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
+- Verification evidence:
+  - Tests: the full focused suite above passed with 38 tests across 6 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/admin/posts/[postId]/revisions/[revisionId]/route.ts" "src/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route.ts" "src/app/api/admin/series/[seriesId]/part-numbers/route.ts" "src/app/api/admin/posts/[postId]/comments/route.ts" "tests/unit/post-revision-route.test.ts" "tests/unit/revision-route-error-handling.test.ts" "tests/unit/post-revision-restore-route.test.ts" "tests/unit/post-revisions-route.test.ts" "tests/unit/admin-series-part-numbers-route.test.ts" "tests/unit/admin-post-comments-route.test.ts"` passed.
+  - Build: skipped because this was a focused route/test change with no broader routing or bundling risk beyond typecheck.
+  - Code review: follow-up review found and this slice fixed the false-`500` revalidation bug in the restore route; a later follow-up also moved the pre-restore snapshot and live-post overwrite into one DAL transaction so restore no longer leaves a misleading undo revision behind when the apply step fails, and restore now re-normalizes historical song metadata before writing it back to the live post row.
+  - Security review: reviewed after the slice; no auth bypass or client-visible leakage remained, and low-severity logging blind spots were resolved by adding server-side error logging in the new catch paths.
+- Status: complete
+
+### Batch: admin preview/clone/bulk-status route ID normalization
+- Goal: close the remaining whitespace-only ID gap on the matching admin mutation routes after the server-action layer was hardened.
+- User journey or failure being protected: authenticated admins should not be able to send whitespace-only IDs through preview, clone, or bulk publish routes, and valid IDs should be normalized consistently before delegation.
+- Scope: `TODO.md`, `web/src/app/api/admin/posts/preview/route.ts`, `web/src/app/api/admin/posts/clone/route.ts`, `web/src/app/api/admin/posts/bulk-status/route.ts`, and the existing focused route tests.
+- Files expected to change: `TODO.md`, the three route files above, and `web/tests/unit/admin-post-preview-route.test.ts`, `web/tests/unit/admin-post-clone-route.test.ts`, `web/tests/unit/admin-post-bulk-status-route.test.ts`.
+- Tests to add or update first: whitespace-only invalid-ID coverage for preview, clone, and bulk-status, plus trimmed-success delegation assertions.
+- RED command: `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+- Expected RED test(s): whitespace-only `postId` / `postIds` still pass route validation and reach downstream services.
+- Why this RED proves the right problem: these are the direct admin API entry points matching the hardened server-action contract, so failing route-level whitespace cases show the same malformed input can still slip through one layer lower.
+- GREEN target: whitespace-only IDs return the existing safe `400` responses and trimmed valid IDs are delegated downstream.
+- GREEN command: `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+- Refactor boundary: no service-layer changes, no new route semantics beyond ID normalization.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+- Security impact: medium, because this keeps malformed admin mutation input from reaching downstream privileged helpers.
+- Required security assertions: auth/rate-limit behavior stay unchanged; whitespace-only IDs fail with the existing generic route errors; trimmed valid IDs keep current success semantics.
+- E2E impact: none.
+- Coverage impact: tightens direct route coverage around malformed and normalized admin mutation IDs.
+- Verification commands: `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`, `bunx tsc --noEmit`, touched-file lint.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+  - Result: the new whitespace-only assertions failed because preview/clone still delegated `"   "` to downstream helpers and bulk-status still passed `["   "]` into `publishPosts`.
+  - Why this RED proved the right problem: it showed the route layer still accepted malformed IDs even after the matching server actions were hardened.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+  - Result: 20 focused admin route tests passed after the three route schemas switched to trimmed string IDs and the new trimmed-success assertions confirmed normalized delegation.
+- REFACTOR evidence:
+  - Refactor stayed minimal: only the three route-local Zod schemas were tightened with `.trim().min(1)`, with no downstream service changes.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts` passed with 20 tests across 3 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/admin/posts/preview/route.ts" "src/app/api/admin/posts/clone/route.ts" "src/app/api/admin/posts/bulk-status/route.ts" "tests/unit/admin-post-preview-route.test.ts" "tests/unit/admin-post-clone-route.test.ts" "tests/unit/admin-post-bulk-status-route.test.ts"` passed.
+  - Build: skipped because this was a focused route/test change with no broader compilation risk beyond typecheck.
+  - Security review: reviewed after the slice; no new validation-detail leakage was introduced. Residual risk: the routes still flatten unexpected non-validation backend failures into generic `400`/`404` responses, which is safe for callers but may hide operational regressions.
+- Status: complete
 
 ### Batch: HTML sanitization hardening
 - Goal: replace the current regex-based rich-text HTML sanitization contract at raw HTML render sinks.
@@ -1023,6 +1096,8 @@ Planner review note:
 - Correctness: bookmark status/list/mutation routes are now pinned with direct unit coverage, and authenticated bookmark toggle throttling is scoped to the signed-in user plus client IP instead of IP-only.
 - Correctness: the admin tag description server action now treats whitespace-only submissions as an explicit clear-to-null operation, with direct auth and revalidation coverage.
 - E2E: admin shell coverage exists, public route smoke now includes `/about`, `/map`, discovered post detail, and unauthenticated `/bookmarks`, and admin route smoke now covers unauthenticated and authenticated `/admin/posts/new`; the next gating step before broader signed-in public expansion is still a live rerun of the hardened public bootstrap lane against a clearly safe target.
+- Security: `POST /api/posts/[postId]/view` and `GET /api/bookmarks` now normalize unexpected backend failures to generic `500`s, and the post-view route constrains `postId` before using it in cookie names.
+- Correctness: avatar and editorial upload routes now have direct contract coverage for auth, rate-limit, invalid form-data, missing-file, spoofed-file, provider-unavailable, and unexpected-failure paths; the admin upload route now treats malformed form-data as a safe `400`.
 
 ## Known Likely Blockers
 
@@ -1113,6 +1188,10 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-07: Added direct unit coverage for `DELETE /api/comments/[commentId]`, `POST /api/comments/[commentId]/like`, `POST /api/admin/posts/clone`, and `POST /api/admin/posts/bulk-status` so those public/admin mutation contracts are pinned before future cleanup work.
 - 2026-04-07: Hardened bookmark route contracts by scoping authenticated bookmark-toggle throttling to `supabaseUser.id` plus client IP, and added direct unit coverage for `GET/POST /api/posts/[postId]/bookmark` plus `GET /api/bookmarks`.
 - 2026-04-07: Hardened `updateTagDescriptionAction` so whitespace-only admin tag descriptions normalize to `null`, and added focused action coverage for auth redirect, invalid payload no-op, normalization, and revalidation behavior.
+- 2026-04-07: Hardened the remaining malformed-input boundaries in `web/src/app/admin/actions.ts`: bulk publish/unpublish/delete and single delete now reject raw/whitespace-only IDs safely, `validatePostContentWarningsAction` now returns `Invalid post content` for known invalid editor payloads, and the create/update save paths now fail fast with stable `Invalid request` or `Invalid post content` errors for malformed ids, invalid form payloads, and malformed gallery JSON before any transaction work begins.
+- 2026-04-07: Tightened the matching admin preview, clone, and bulk-status API routes so whitespace-only IDs are rejected with the existing safe `400` responses and trimmed valid IDs are forwarded consistently to downstream helpers.
+- 2026-04-07: Hardened `POST /api/posts/[postId]/view` and `GET /api/bookmarks` so unexpected backend failures now return safe generic `500`s with bounded route-context logging, and tightened the post-view `postId` schema to the existing slug/id contract before cookie-key construction.
+- 2026-04-07: Expanded avatar and admin editorial upload route coverage to lock auth, throttling, invalid form-data, missing file, byte-signature rejection, provider misconfiguration, and unexpected-failure behavior; also fixed `POST /api/admin/uploads/images` so malformed form-data now returns a safe `400` instead of `500`.
 
 ## Planned Feature Expansion
 
@@ -1158,7 +1237,7 @@ Do not run in parallel:
 
 ### Phase 8: Planned Feature Batches
 
-- [ ] Plan and execute a newsletter subscribe correctness batch after the active remediation work is clear.
+- [x] Plan and execute a newsletter subscribe correctness batch after the active remediation work is clear.
 - [ ] Plan and execute a collapsible thoughts editor/rendering batch after the content HTML contract is rechecked.
 - [ ] Plan and execute a wishlist-place schema and admin CRUD batch before any public wishlist map UI work.
 - [ ] Plan and execute a public wishlist map batch after wishlist data contracts are stable.
@@ -1185,29 +1264,432 @@ Do not run in parallel:
 - Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
 - Coverage impact: adds coverage to an existing public conversion path.
 - Verification commands: targeted newsletter tests, `bunx tsc --noEmit`, relevant lint, and focused Playwright if enabled.
-- Status: pending
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/newsletter-route.test.ts tests/unit/newsletter-signup-form.test.ts`
+  - Result: `tests/unit/newsletter-signup-form.test.ts` failed because `getNewsletterResponseState` did not exist yet, and `tests/unit/newsletter-route.test.ts` failed because the route still returned `201` for a service result of `{ status: "skipped", reason: "missing-config" }`.
+  - Why this RED proved the right problem: it showed both sides of the contract gap directly, with the homepage form lacking explicit response-state handling and the route still classifying skipped outcomes as a successful create.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/newsletter-route.test.ts tests/unit/newsletter.test.ts tests/unit/newsletter-signup-form.test.ts`
+  - Result: 13 focused newsletter tests passed after the form began distinguishing skipped/already-subscribed/subscribed responses and the route mapped `subscribed` to `201`, `already-subscribed` to `200`, and `skipped` to `202`.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the slice extracted only a small `getNewsletterResponseState()` helper inside the form component and kept provider/service behavior unchanged aside from stronger route status mapping.
+  - Refactor proof command: `bunx vitest run tests/unit/newsletter-route.test.ts tests/unit/newsletter.test.ts tests/unit/newsletter-signup-form.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/newsletter-route.test.ts tests/unit/newsletter.test.ts tests/unit/newsletter-signup-form.test.ts` passed.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/components/blog/newsletter-signup-form.tsx" "src/app/api/newsletter/route.ts" "tests/unit/newsletter-route.test.ts" "tests/unit/newsletter.test.ts" "tests/unit/newsletter-signup-form.test.ts"` passed.
+  - Build: skipped because this was a focused component/route/test change with no routing or bundling change beyond typecheck.
+  - Security review: reviewed after the slice; no new issues were introduced, server-side validation and rate limiting stayed intact, and missing-config behavior still avoids setup/env leakage. Residual risk: the public API still uses `202` for skipped/unavailable behavior, so other generic `response.ok` callers could misclassify it until the route contract is revisited more broadly.
+- Status: complete
+
+### Batch: admin preview and clone server-action trust-boundary hardening
+- Goal: stop invalid admin preview/clone requests from surfacing raw validation internals through client toast messages.
+- User journey or failure being protected: an authenticated admin who triggers preview or clone with malformed input should receive a stable safe error instead of raw Zod messages leaking from the server-action boundary.
+- Scope: `TODO.md`, `web/src/app/admin/actions.ts`, and `web/tests/unit/admin-actions-trust-boundary.test.ts` only.
+- Files expected to change: `TODO.md`, `web/src/app/admin/actions.ts`, `web/tests/unit/admin-actions-trust-boundary.test.ts`.
+- Tests to add or update first: direct server-action tests for invalid preview/clone requests plus existing valid success paths.
+- RED command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Expected RED test(s): invalid preview and clone requests fail because the actions still surface raw `.parse()`/Zod errors instead of a stable safe message.
+- Why this RED proves the right problem: the admin dashboard and editor already display `err.message` from these server actions, so a failing invalid-input test demonstrates that internal validation text can leak directly into admin UI toasts.
+- GREEN target: `clonePost` and `createPostPreviewLinkAction` both convert invalid `postId` input into a stable `Error("Invalid request")` while preserving their success behavior.
+- GREEN command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Refactor boundary: no create/update form parsing, bulk action changes, or broader admin action redesign in the same pass.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Security impact: medium, because this hardens an authenticated admin trust boundary against validation-detail leakage.
+- Required security assertions: `requireAdminSession()` remains the auth gate, invalid preview/clone input returns only a stable safe error message, and valid preview/clone behavior stays unchanged.
+- E2E impact: none for this slice.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: adds the first direct tests for invalid-input handling on these client-invoked admin server actions.
+- Verification commands: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/admin/actions.ts" "tests/unit/admin-actions-trust-boundary.test.ts"`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+  - Result: the invalid preview/clone assertions failed because both actions still rejected with raw Zod issue payloads like `Too small: expected string to have >=1 characters` instead of a stable safe error.
+  - Why this RED proved the right problem: it showed that malformed admin input still crossed the server-action boundary as raw validation internals, which the admin UI would otherwise surface directly in toast/banner error messages.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+  - Result: all 4 focused server-action tests passed after both actions switched to `safeParse()` and now throw `Error("Invalid request")` for malformed `postId` values.
+- REFACTOR evidence:
+  - Refactor stayed minimal: only a small shared `parseActionPostId()` helper was introduced for the two touched actions.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts` passed.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/admin/actions.ts" "tests/unit/admin-actions-trust-boundary.test.ts"` passed.
+  - Build: skipped because this was a focused server-action/test change with no routing or bundling risk beyond typecheck.
+  - Security review: reviewed after the slice; no new issues were introduced in the touched actions, and invalid preview/clone requests no longer leak raw Zod details. Residual risk: other admin actions in the same file still use raw `parse()` or `JSON.parse()` and remain candidates for the next hardening slice.
+- Status: complete
 
 ### Batch: collapsible post thoughts block
 - Goal: add a toggleable side-thought block to the Tiptap post editor that renders collapsed by default on public posts.
 - User journey or failure being protected: an admin can add optional side thoughts to a post without exposing unsafe or broken markup in the public renderer.
 - Scope: editor extension, admin editor controls, content sanitization, public rendering, and focused accessibility/regression tests.
-- Files expected to change: `TODO.md`, `web/src/components/admin/post-rich-text-editor.tsx`, new Tiptap extension files as needed, `web/src/lib/content.ts`, `web/src/components/blog/prose-content.tsx`, and targeted tests.
+- Files expected to change: `TODO.md`, `web/src/components/admin/post-rich-text-editor.tsx`, new Tiptap extension files as needed, `web/src/lib/content.ts`, `web/src/lib/tiptap/thoughts-block.ts`, `web/src/components/blog/prose-content.tsx`, and targeted tests.
 - Tests to add or update first: parser/renderer sanitizer tests for the new block, editor command tests if present, and public render assertions that default state is collapsed.
-- RED command: targeted editor/content rendering tests.
+- RED command: `bunx vitest run tests/unit/content.test.ts tests/unit/thoughts-block.test.ts`
 - Expected RED test(s): the editor cannot create the block, the sanitizer strips it, or the public renderer fails to preserve the collapsed contract.
 - Why this RED proves the right problem: the feature depends on one end-to-end content contract across authoring, storage, sanitization, and rendering.
 - GREEN target: admins can author the block and public posts render it safely in the collapsed default state.
-- GREEN command: rerun the targeted content/editor tests.
+- GREEN command: `bunx vitest run tests/unit/content.test.ts tests/unit/thoughts-block.test.ts`
 - Refactor boundary: no broader editor toolbar cleanup or raw HTML rendering overhaul.
-- Refactor proof command(s): rerun the same targeted tests after any extension extraction.
+- Refactor proof command(s): `bunx vitest run tests/unit/content.test.ts tests/unit/thoughts-block.test.ts`
 - Security impact: high, because this touches rich-text HTML sanitization and public rendering.
 - Required security assertions: only allowlisted tags/attributes survive, unsafe nested HTML is stripped, and keyboard interaction stays accessible.
 - E2E impact: medium; add one admin authoring smoke test and one public post rendering smoke test after GREEN.
 - E2E prerequisites (seed, auth state, env): admin auth fixture and a safe draft/publish path.
 - Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
 - Coverage impact: adds regression coverage to the editor-renderer pipeline.
-- Verification commands: targeted editor/content tests, `bunx tsc --noEmit`, relevant lint, and focused Playwright if enabled.
-- Status: pending
+- Verification commands: `bunx vitest run tests/unit/content.test.ts tests/unit/thoughts-block.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/lib/content.ts" "src/lib/tiptap/thoughts-block.ts" "tests/unit/content.test.ts" "tests/unit/thoughts-block.test.ts"`, and focused Playwright if enabled later.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/content.test.ts`
+  - Result: the new thoughts-block assertions failed because `renderTiptapJson()` flattened the unknown `thoughtsBlock` node to plain paragraph content and `sanitizeRichTextHtml()` stripped `details`/`summary` entirely.
+  - Command: `bunx vitest run tests/unit/thoughts-block.test.ts`
+  - Result: the new helper suite failed because `@/lib/tiptap/thoughts-block` did not exist yet.
+  - Follow-up RED command: `bunx vitest run tests/unit/thoughts-block.test.ts`
+  - Follow-up result: the new editor-authoring assertions failed because `THOUGHTS_BLOCK_NODE_NAME` and the `ThoughtsBlock` Tiptap extension did not exist yet, proving the admin editor still could not author the canonical block shape.
+  - Why this RED proved the right problem: it showed both halves of the initial contract gap directly, with no canonical authoring helper yet and no safe render/sanitizer support for the persisted block shape.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/content.test.ts tests/unit/thoughts-block.test.ts`
+  - Result: 34 focused tests passed after the content pipeline learned the canonical `thoughtsBlock` node, safe `details`/`summary` tags were allowlisted, the shared helper grew a single-source Tiptap `ThoughtsBlock` extension with `insertThoughtsBlock()`, and the admin editor registered a dedicated toolbar action for authoring the block.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the completed slice kept the canonical JSON shape, summary normalization, and editor command single-sourced inside `web/src/lib/tiptap/thoughts-block.ts`, and the editor change was limited to one registered extension and one toolbar button.
+  - Refactor proof command: `bunx vitest run tests/unit/content.test.ts tests/unit/thoughts-block.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/content.test.ts tests/unit/thoughts-block.test.ts` passed with 34 tests across 2 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/lib/tiptap/thoughts-block.ts" "src/components/admin/post-rich-text-editor.tsx" "tests/unit/thoughts-block.test.ts"` passed.
+  - Build: skipped because this slice stayed inside shared content utilities and unit tests.
+  - E2E: skipped for this pass because there is not yet a dedicated admin authoring/public render smoke fixture covering thoughts-block creation and publish-preview verification; follow-up remains to add one admin editor smoke and one public post render smoke when that fixture path is selected.
+  - Security review: reviewed after the slice; no findings. `summary` text remains normalized as plain text data, the editor command inserts only the canonical node shape, and the existing safe `details`/`summary` allowlist contract stayed intact. Residual risk: no browser-level regression coverage exists yet for keyboard authoring and public-post rendering.
+- Status: complete
+
+### Batch: admin leaf-route unexpected-error hardening
+- Goal: close the remaining leaf-route trust-boundary gaps on selected admin mutation/support routes so unexpected backend failures no longer masquerade as validation errors.
+- User journey or failure being protected: authenticated admins should continue seeing stable validation and not-found responses for malformed or missing resources, but unexpected moderation, warning-derivation, preview, or clone failures should return safe generic `500`s with enough server-side context for operators.
+- Scope: `TODO.md`, `web/src/app/api/admin/comments/moderate/route.ts`, `web/src/app/api/admin/posts/warnings/route.ts`, `web/src/app/api/admin/posts/preview/route.ts`, `web/src/app/api/admin/posts/clone/route.ts`, and their focused route tests.
+- Files expected to change: `TODO.md`, the four routes above, plus `web/tests/unit/admin-comment-moderation-route.test.ts`, `web/tests/unit/admin-post-warnings-route.test.ts`, `web/tests/unit/admin-post-preview-route.test.ts`, and `web/tests/unit/admin-post-clone-route.test.ts`.
+- Tests to add or update first: add direct unexpected-backend-failure assertions for comment moderation, warning derivation, preview creation, and clone creation while preserving the existing auth, rate-limit, validation, and not-found expectations.
+- RED command: `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts`
+- Expected RED test(s): the four routes still collapse unexpected backend failures into `400` validation-style responses instead of returning safe generic `500`s after the intended trust boundary has already been crossed.
+- Why this RED proves the right problem: the new cases hit the exact admin HTTP boundary after auth, rate-limit, and request-shape validation have passed, showing that operational failures were still being misclassified and could hide real service regressions from callers and operators.
+- GREEN target: invalid requests still return their existing `400`s, not-found preview/clone requests still return `404`, but unexpected route-internal failures now log server-side and return route-specific generic `500` responses.
+- GREEN command: `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts`
+- Refactor boundary: no DAL/service contract changes, no admin UI rewiring, and no broader moderation/editor feature work in the same pass.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts`
+- Security impact: medium, because these are authenticated admin trust boundaries whose responses feed privileged UI flows.
+- Required security assertions: `requireAdminSession()` remains the auth gate, rate limiting stays unchanged, malformed input still fails fast with safe `400`s, not-found preview/clone cases still return safe `404`s, and unexpected internals no longer surface as misleading validation errors.
+- E2E impact: none.
+- Coverage impact: expands focused route coverage for four remaining admin leaf routes and tightens their operational failure semantics.
+- Verification commands: `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/api/admin/comments/moderate/route.ts" "src/app/api/admin/posts/warnings/route.ts" "src/app/api/admin/posts/preview/route.ts" "src/app/api/admin/posts/clone/route.ts" "tests/unit/admin-comment-moderation-route.test.ts" "tests/unit/admin-post-warnings-route.test.ts" "tests/unit/admin-post-preview-route.test.ts" "tests/unit/admin-post-clone-route.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts`
+  - Result: 4 new assertions failed because comment moderation, post warnings, preview creation, and clone creation still returned `400` responses when mocked downstream dependencies threw unexpected errors like `database offline`, `Renderer exploded`, `token service offline`, and `constraint violation on clone`.
+  - Why this RED proved the right problem: it showed the route layer still treated operational failures as malformed-request errors even after the admin caller had passed auth, throttling, and schema validation.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts`
+  - Result: 24 focused admin route tests passed across 4 files after the routes split validation parsing from downstream execution, logged operational failures with route context, and returned stable generic `500` responses for unexpected backend errors.
+- REFACTOR evidence:
+  - Refactor stayed minimal: each route only separated request parsing from the downstream call and added route-local logging plus generic `500` handling, without changing the underlying moderation, warning, preview, or clone services.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/admin-comment-moderation-route.test.ts tests/unit/admin-post-warnings-route.test.ts tests/unit/admin-post-preview-route.test.ts tests/unit/admin-post-clone-route.test.ts` passed with 24 tests across 4 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/admin/comments/moderate/route.ts" "src/app/api/admin/posts/warnings/route.ts" "src/app/api/admin/posts/preview/route.ts" "src/app/api/admin/posts/clone/route.ts" "tests/unit/admin-comment-moderation-route.test.ts" "tests/unit/admin-post-warnings-route.test.ts" "tests/unit/admin-post-preview-route.test.ts" "tests/unit/admin-post-clone-route.test.ts"` passed.
+  - Build: skipped because this was a focused route/test hardening slice with no broader routing or bundling change beyond typecheck.
+  - Code review: reviewed after the slice; no blocking issues found. Residual follow-up is to centralize repeated admin route error-normalization patterns only after more routes are covered with tests.
+  - Security review: reviewed after the slice; no auth bypass or client-visible internal error leakage remained in the touched routes. Residual low-severity risk remains that raw exception objects are still logged server-side for operator visibility.
+- Status: complete
+
+### Batch: public/admin route unexpected-error hardening
+- Goal: close remaining route-level error-leakage gaps on selected public/admin surfaces without changing their existing auth, validation, or happy-path behavior.
+- User journey or failure being protected: callers should receive stable safe `500` responses instead of raw internal exceptions when downstream data or provider calls fail after the request has already passed the intended trust boundary validation.
+- Scope: `TODO.md`, `web/src/app/api/admin/posts/route.ts`, `web/src/app/api/account/profile/route.ts`, `web/src/app/api/newsletter/route.ts`, `web/src/app/api/posts/[postId]/comments/route.ts`, and their focused route tests.
+- Files expected to change: `TODO.md`, the four route files above, and `web/tests/unit/admin-posts-route.test.ts`, `web/tests/unit/account-profile-route.test.ts`, `web/tests/unit/newsletter-route.test.ts`, `web/tests/unit/post-comments-route.test.ts`.
+- Tests to add or update first: direct unexpected-backend-failure assertions for admin post listing, account profile GET/PATCH, newsletter subscription, and public comment creation/list refresh; plus an exhaustiveness test for unknown newsletter service statuses and a `404` regression test for profile-missing-after-reprovision.
+- RED command: `bunx vitest run tests/unit/admin-posts-route.test.ts tests/unit/account-profile-route.test.ts tests/unit/newsletter-route.test.ts tests/unit/post-comments-route.test.ts`
+- Expected RED test(s): admin posts still rethrows unexpected parser/list failures, account profile GET/PATCH still rethrows raw DAL/auth errors, newsletter still rethrows provider failures and coerces unknown statuses to `202`, and post comments still rethrows raw create/list failures.
+- Why this RED proves the right problem: the new tests exercise the exact route boundaries after auth and schema checks have passed, proving internal exceptions were still escaping to callers instead of being normalized into safe generic route errors.
+- GREEN target: the touched routes preserve current `400`/`401`/`404`/`429`/success behavior, but unexpected downstream failures now log server-side and return stable route-specific generic `500` responses; newsletter only accepts known service statuses and fails closed otherwise.
+- GREEN command: `bunx vitest run tests/unit/admin-posts-route.test.ts tests/unit/account-profile-route.test.ts tests/unit/newsletter-route.test.ts tests/unit/post-comments-route.test.ts`
+- Refactor boundary: no DAL contract changes, no auth-policy redesign, no newsletter product-contract redesign, and no broader comment workflow refactor.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-posts-route.test.ts tests/unit/account-profile-route.test.ts tests/unit/newsletter-route.test.ts tests/unit/post-comments-route.test.ts`
+- Security impact: medium, because these are public/admin trust boundaries where raw internal errors or provider statuses could leak to callers.
+- Required security assertions: auth gates stay intact, existing validation behavior stays intact, client-visible errors expose only stable generic messages, and server-side logging preserves operational visibility.
+- E2E impact: none for this slice.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: expands focused route coverage across public/admin error normalization and exhaustiveness handling.
+- Verification commands: `bunx vitest run tests/unit/admin-posts-route.test.ts tests/unit/account-profile-route.test.ts tests/unit/newsletter-route.test.ts tests/unit/post-comments-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/api/admin/posts/route.ts" "src/app/api/account/profile/route.ts" "src/app/api/newsletter/route.ts" "src/app/api/posts/[postId]/comments/route.ts" "tests/unit/admin-posts-route.test.ts" "tests/unit/account-profile-route.test.ts" "tests/unit/newsletter-route.test.ts" "tests/unit/post-comments-route.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-posts-route.test.ts`
+  - Result: the new unexpected-list-failure assertion failed because `GET /api/admin/posts` still rejected with raw `database offline` errors instead of returning a safe `500`.
+  - Command: `bunx vitest run tests/unit/account-profile-route.test.ts`
+  - Result: the new profile-lookup and update-failure assertions failed because `GET|PATCH /api/account/profile` still rejected with raw `database offline` and `write failed` errors.
+  - Command: `bunx vitest run tests/unit/newsletter-route.test.ts`
+  - Result: the new provider-failure assertion failed because `POST /api/newsletter` still rejected with raw `provider offline`, and the review-follow-up assertion then failed because an unknown service status still mapped to `202` instead of failing closed.
+  - Command: `bunx vitest run tests/unit/post-comments-route.test.ts`
+  - Result: the new create/list failure assertions failed because `POST /api/posts/[postId]/comments` still rejected with raw `database offline` and `list failed` errors.
+  - Why this RED proved the right problem: it showed each touched route still leaked raw internal failures precisely at the HTTP boundary after the intended auth and validation checks had already passed.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-posts-route.test.ts tests/unit/account-profile-route.test.ts tests/unit/newsletter-route.test.ts tests/unit/post-comments-route.test.ts`
+  - Result: 45 focused route tests passed across the 4 files after the routes switched to safe generic `500` handling and the newsletter route enforced known statuses exhaustively.
+- REFACTOR evidence:
+  - Refactor stayed minimal: each route only gained route-local `try/catch` handling and server-side logging around operational failures, while the newsletter route switched from ternary status mapping to an exhaustive `switch`.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-posts-route.test.ts tests/unit/account-profile-route.test.ts tests/unit/newsletter-route.test.ts tests/unit/post-comments-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/admin-posts-route.test.ts tests/unit/account-profile-route.test.ts tests/unit/newsletter-route.test.ts tests/unit/post-comments-route.test.ts` passed with 45 tests across 4 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/admin/posts/route.ts" "src/app/api/account/profile/route.ts" "src/app/api/newsletter/route.ts" "src/app/api/posts/[postId]/comments/route.ts" "tests/unit/admin-posts-route.test.ts" "tests/unit/account-profile-route.test.ts" "tests/unit/newsletter-route.test.ts" "tests/unit/post-comments-route.test.ts"` passed.
+  - Build: skipped because this was a focused route/test hardening slice with no broader routing or bundling risk beyond typecheck.
+  - Code review: follow-up review found no blocking issues; the only notable follow-up was to fail closed on unknown newsletter statuses, which this slice also fixed. Residual risk remains that `POST /api/newsletter` still reveals subscription/config state by design and should be revisited as a product/security contract decision rather than changed opportunistically here.
+  - Security review: reviewed after the slice; no auth bypass or client-visible internal error leakage remained in the touched routes. Residual low-severity risk remains that raw exception objects are still logged server-side and the newsletter route continues to expose some state by contract.
+- Status: complete
+
+### Batch: admin content-derivation server-action hardening
+- Goal: close the remaining admin server-action error-leakage gap around content derivation without widening the batch into all downstream service wrappers.
+- User journey or failure being protected: an authenticated admin should receive stable safe errors when post content is malformed or the content-derivation layer fails unexpectedly during create, update, or warning-generation flows, instead of seeing raw internal exceptions in the UI.
+- Scope: `TODO.md`, `web/src/app/admin/actions.ts`, `web/tests/unit/update-post-revision-capture.test.ts`, and `web/tests/unit/admin-actions-trust-boundary.test.ts`.
+- Files expected to change: `TODO.md`, `web/src/app/admin/actions.ts`, `web/tests/unit/update-post-revision-capture.test.ts`, and `web/tests/unit/admin-actions-trust-boundary.test.ts`.
+- Tests to add or update first: add update-path malformed/invalid-content tests, convert existing raw unexpected-content-failure assertions to stable safe-error expectations for create/update, add a warnings-action unexpected-failure assertion, and extend preview/clone invalid-input coverage to include whitespace-only IDs.
+- RED command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/admin-actions-trust-boundary.test.ts`
+- Expected RED test(s): create and update actions still surface raw `Renderer exploded` errors from `derivePostContent()`, and `validatePostContentWarningsAction()` still leaks the same raw unexpected error instead of a stable safe message.
+- Why this RED proves the right problem: these tests hit the exact admin server-action boundary already consumed by the admin UI, proving unexpected content-processing failures could still leak internal implementation details after the initial validation pass.
+- GREEN target: malformed content still returns `Invalid post content`, but unexpected content-processing failures now log server-side and rethrow stable safe messages (`Failed to save post` or `Failed to validate post content`) for the three touched actions.
+- GREEN command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/admin-actions-trust-boundary.test.ts`
+- Refactor boundary: no broader admin action redesign, no DB/service wrapper normalization beyond content derivation, and no editor/UI changes.
+- Refactor proof command(s): `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/admin-actions-trust-boundary.test.ts`
+- Security impact: medium, because these are authenticated admin trust boundaries whose thrown errors are shown directly in the admin UI.
+- Required security assertions: `ensureAdmin()` remains the auth gate, invalid content remains distinguishable from internal failures, and unexpected internals are no longer exposed to the client.
+- E2E impact: none.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: expands direct server-action trust-boundary coverage for create, update, and warning-generation content paths.
+- Verification commands: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/admin-actions-trust-boundary.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/admin/actions.ts" "tests/unit/update-post-revision-capture.test.ts" "tests/unit/admin-actions-trust-boundary.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts`
+  - Result: the new create/update assertions failed because both actions still rejected with raw `Renderer exploded` errors instead of a stable safe save failure.
+  - Command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+  - Result: the new warnings-action assertion failed because `validatePostContentWarningsAction()` still leaked raw `Renderer exploded` rather than a stable safe validation failure.
+  - Why this RED proved the right problem: it showed the exact content-derivation trust boundary in the admin server-action layer still leaked raw internal exceptions to UI callers.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/admin-actions-trust-boundary.test.ts`
+  - Result: 31 focused admin-action tests passed after create/update now normalize unexpected content-derivation failures to `Failed to save post`, warnings normalization switched to `Failed to validate post content`, and preview/clone whitespace-only invalid-input coverage was added.
+- REFACTOR evidence:
+  - Refactor stayed minimal: `web/src/app/admin/actions.ts` only gained route-local error normalization around `buildPostSavePayload()` and unexpected warning derivation failures, plus a tiny helper for preserving the existing `Invalid post content` contract.
+  - Refactor proof command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/admin-actions-trust-boundary.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/admin-actions-trust-boundary.test.ts` passed with 31 tests across 2 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/admin/actions.ts" "tests/unit/update-post-revision-capture.test.ts" "tests/unit/admin-actions-trust-boundary.test.ts"` passed.
+  - Build: skipped because this was a focused server-action/test hardening slice with no routing or bundling change beyond typecheck.
+  - Code review: no blocking findings remained. Review noted a future cleanup to replace message-based invalid-content detection with a typed error and highlighted that broader downstream wrapper actions still need a later hardening batch.
+  - Security review: no auth bypass or client-visible raw error leakage remained in the touched content-derivation paths. Residual medium-risk follow-up remains for other admin actions that still allow unexpected downstream DB/service exceptions to bubble.
+- Status: complete
+
+### Batch: admin wrapper/downstream server-action hardening
+- Goal: close the remaining admin server-action error-leakage gap for wrapper actions that still surfaced raw downstream service or DAL exceptions.
+- User journey or failure being protected: when an authenticated admin triggers clone, preview, delete, or bulk publish/unpublish operations and a downstream dependency fails, the admin UI should receive a stable safe error instead of raw IDs, SQL text, or internal service details.
+- Scope: `TODO.md`, `web/src/app/admin/actions.ts`, and `web/tests/unit/admin-actions-trust-boundary.test.ts`.
+- Files expected to change: `TODO.md`, `web/src/app/admin/actions.ts`, and `web/tests/unit/admin-actions-trust-boundary.test.ts`.
+- Tests to add or update first: add clone/preview downstream failure assertions, add delete/publish/unpublish downstream failure assertions, and add a regression proving clone success is still returned even when `revalidatePath()` fails after the clone is already persisted.
+- RED command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Expected RED test(s): preview and clone actions still leak raw post IDs/internal dependency text from downstream exceptions, delete and bulk publish/unpublish still leak raw DB/service failure text, and clone incorrectly reports failure if admin revalidation throws after a successful clone.
+- Why this RED proves the right problem: the failing cases hit the exact server-action boundary consumed by the admin UI and demonstrate that downstream exception strings still crossed into user-visible error handling after the earlier invalid-input and content-derivation hardening work.
+- GREEN target: invalid-input behavior stays unchanged, but clone/preview/delete/publish/unpublish now normalize unexpected downstream failures into stable safe admin-facing errors, and clone success is not lost if revalidation fails after persistence.
+- GREEN command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Refactor boundary: no route-layer changes, no changes to underlying DAL/service implementations, and no thoughts-block/editor work in the same pass.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Security impact: medium, because these are authenticated admin trust boundaries whose thrown errors are surfaced directly in the admin UI.
+- Required security assertions: `ensureAdmin()` remains the auth gate, validation errors still map to `Invalid request`, client-visible wrapper failures are stable and generic, and successful clone persistence is not misreported as failure due to best-effort revalidation.
+- E2E impact: none.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: expands direct server-action trust-boundary coverage across the remaining admin wrapper actions.
+- Verification commands: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/admin/actions.ts" "tests/unit/admin-actions-trust-boundary.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+  - Result: the new preview/clone assertions failed because those actions still leaked raw downstream messages like `Post post-1 not found in drafts table`, `Media asset media-9 not found`, and raw constraint text, while the new delete/publish/unpublish assertions failed because those wrappers still leaked raw service-layer failure strings.
+  - Follow-up RED command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+  - Follow-up result: after the first wrapper hardening patch, a new regression test showed `clonePost()` still returned `Failed to clone post` if `revalidatePath()` threw after a successful clone.
+  - Why this RED proved the right problem: it showed both categories of wrapper issue directly at the admin action boundary: raw downstream leakage and success being masked by best-effort revalidation failure.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+  - Result: 25 focused admin-action tests passed after wrapper actions normalized downstream failures to stable safe errors and clone revalidation became best-effort outside the clone operation itself.
+- REFACTOR evidence:
+  - Refactor stayed minimal: `web/src/app/admin/actions.ts` only gained wrapper-local `try/catch` handling for clone/preview/delete/bulk publish/bulk unpublish plus a tiny `isPostNotFoundError()` helper, and clone revalidation was split from the persistence call.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/admin-actions-trust-boundary.test.ts` passed with 25 tests.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/admin/actions.ts" "tests/unit/admin-actions-trust-boundary.test.ts"` passed.
+  - Build: skipped because this was a focused server-action/test hardening slice with no broader routing or bundling change beyond typecheck.
+  - Code review: follow-up review found no blocking issues. It highlighted a future cleanup to replace message-based post-not-found detection with a typed error and noted that clone should not overcatch revalidation failures, which this slice then fixed.
+- Security review: no critical/high findings remained after the patch. Residual follow-up remains to add defense-in-depth role assertions inside `ensureAdmin()` and to reduce raw error-object logging where practical.
+- Status: complete
+
+### Batch: public post-view and bookmarks route unexpected-error hardening
+- Goal: close the remaining public route trust-boundary gap on post-view counting and bookmark listing so backend failures no longer escape raw internals.
+- User journey or failure being protected: public callers should keep the current invalid-id, auth, rate-limit, cookie, and happy-path behavior, but unexpected DAL or user-repair failures should return stable safe `500`s instead of raw internal errors.
+- Scope: `TODO.md`, `web/src/app/api/posts/[postId]/view/route.ts`, `web/src/app/api/bookmarks/route.ts`, `web/tests/unit/post-view-route.test.ts`, and `web/tests/unit/bookmarks-route.test.ts`.
+- Files expected to change: `TODO.md`, the two routes above, and the two focused unit test files.
+- Tests to add or update first: add direct unexpected-failure assertions for post-view count increment and bookmark user-repair/list calls; add a malformed `postId` route assertion for the view cookie boundary.
+- RED command: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts`
+- Expected RED test(s): post-view still rejects with raw `database offline`, and bookmarks still rejects with raw `profile repair failed` / `database offline` errors.
+- Why this RED proves the right problem: these cases exercise the public HTTP boundary after the intended request-shape and throttle checks, proving internal failures still escaped directly to callers.
+- GREEN target: post-view and bookmarks keep their existing `400`/`401`/`429`/success behavior, but unexpected backend failures now log bounded route context and return stable generic `500`s; post-view `postId` input is also constrained before cookie-key construction.
+- GREEN command: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+- Refactor boundary: no DAL changes, no bookmark UI changes, and no broader cookie/session redesign.
+- Refactor proof command(s): `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+- Security impact: medium, because these are public trust boundaries and one route writes per-post cookies.
+- Required security assertions: malformed `postId`s fail fast before cookie-key use; bookmark auth and throttling stay intact; client-visible errors remain generic; server-side logging stays bounded.
+- E2E impact: none.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: adds direct unexpected-failure coverage to the public post-view and bookmark-list routes.
+- Verification commands: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/api/posts/[postId]/view/route.ts" "src/app/api/bookmarks/route.ts" "src/app/api/admin/uploads/images/route.ts" "tests/unit/post-view-route.test.ts" "tests/unit/bookmarks-route.test.ts" "tests/unit/avatar-upload-route.test.ts" "tests/unit/admin-image-upload-route.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-view-route.test.ts`
+  - Result: the new unexpected-failure assertion failed because `POST /api/posts/[postId]/view` still rejected with raw `database offline` instead of a safe `500`.
+  - Command: `bunx vitest run tests/unit/bookmarks-route.test.ts`
+  - Result: the new route assertions failed because `GET /api/bookmarks` still rejected with raw `profile repair failed` and `database offline` errors from `ensurePublicAppUser()` and `listBookmarkedPosts()`.
+  - Why this RED proved the right problem: it showed both public route boundaries still leaked raw backend failures after passing auth/throttle/input validation.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+  - Result: the final focused verification suite passed with 25 tests across 4 files after route-local hardening normalized unexpected failures to generic `500`s and the post-view params schema was tightened to the existing post-id slug/id contract.
+- REFACTOR evidence:
+  - Refactor stayed minimal: both routes only gained route-local `try/catch` handling, bounded logging, and the small post-view params schema tightening; no DAL or cookie-policy redesign followed.
+  - Refactor proof command: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts` passed with 25 tests across 4 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/view/route.ts" "src/app/api/bookmarks/route.ts" "src/app/api/admin/uploads/images/route.ts" "tests/unit/post-view-route.test.ts" "tests/unit/bookmarks-route.test.ts" "tests/unit/avatar-upload-route.test.ts" "tests/unit/admin-image-upload-route.test.ts"` passed.
+  - Build: skipped because this was a focused route/test hardening slice with no broader routing or bundling risk beyond typecheck.
+  - Code review: final focused review found no remaining findings in scope.
+  - Security review: final focused signoff found no remaining findings after tightening `postId` validation and bounding route logging metadata.
+- Status: complete
+
+### Batch: public and admin upload route contract expansion
+- Goal: close the remaining upload-route blind spots so avatar and editorial image endpoints are pinned for safe auth, throttle, validation, and service-failure behavior.
+- User journey or failure being protected: public users and admins should keep receiving stable `401`/`429`/`400`/`503`/`500` responses on the upload surfaces, and malformed form-data should be treated as client error rather than a server fault.
+- Scope: `TODO.md`, `web/src/app/api/account/avatar/route.ts`, `web/src/app/api/admin/uploads/images/route.ts`, `web/tests/unit/avatar-upload-route.test.ts`, and `web/tests/unit/admin-image-upload-route.test.ts`.
+- Files expected to change: `TODO.md`, `web/src/app/api/admin/uploads/images/route.ts`, and the two focused upload-route test files.
+- Tests to add or update first: add auth, throttle, invalid form-data, missing file, provider-misconfiguration, and unexpected-failure assertions to both upload route suites.
+- RED command: `bunx vitest run tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+- Expected RED test(s): avatar/admin upload coverage is still missing on those branches; if a route disagrees with the intended contract, the new tests should expose it directly.
+- Why this RED proves the right problem: these are direct untrusted input surfaces and previously only spoofed-file rejection was pinned explicitly.
+- GREEN target: both upload route contracts are covered directly, and admin editorial upload now returns a safe `400` for malformed form-data instead of misclassifying it as `500`.
+- GREEN command: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+- Refactor boundary: no Cloudinary service-layer redesign, no profile/admin UI changes, and no media-model refactor.
+- Refactor proof command(s): `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+- Security impact: medium-high, because these are direct upload trust boundaries.
+- Required security assertions: auth/rate-limit gates remain intact; missing files and malformed form-data fail safely; spoofed byte-signatures stay rejected before upload; provider misconfiguration maps to `503`; unexpected failures stay generic.
+- E2E impact: none.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: removes focused contract blind spots on both upload endpoints.
+- Verification commands: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/api/posts/[postId]/view/route.ts" "src/app/api/bookmarks/route.ts" "src/app/api/admin/uploads/images/route.ts" "tests/unit/post-view-route.test.ts" "tests/unit/bookmarks-route.test.ts" "tests/unit/avatar-upload-route.test.ts" "tests/unit/admin-image-upload-route.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/avatar-upload-route.test.ts`
+  - Result: the expanded avatar route suite passed on the first run with 7 tests, proving the current public upload route already satisfied the intended auth/throttle/validation/provider-failure contract and closing the direct coverage gap without a production change.
+  - Command: `bunx vitest run tests/unit/admin-image-upload-route.test.ts`
+  - Result: the first expanded admin route suite also passed on the first run with 7 tests, proving the route matched the then-current tested contract.
+  - Follow-up RED command: `bunx vitest run tests/unit/admin-image-upload-route.test.ts`
+  - Follow-up result: after focused security review tightened the expected malformed-form-data contract, the suite failed because the admin upload route still returned `500` for invalid form data instead of a safe `400`.
+  - Why this RED proved the right problem: it showed the admin upload boundary still misclassified malformed client input as server failure even though the public avatar route already handled that path safely.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+  - Result: the final focused verification suite passed with 25 tests across 4 files after `POST /api/admin/uploads/images` moved invalid form-data parsing into its own safe `400` path and both upload suites stayed green on the expanded branch coverage.
+- REFACTOR evidence:
+  - Refactor stayed minimal: avatar upload stayed test-only, and admin editorial upload only split `request.formData()` failure handling into its own `400` branch plus bounded server-side logging.
+  - Refactor proof command: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/post-view-route.test.ts tests/unit/bookmarks-route.test.ts tests/unit/avatar-upload-route.test.ts tests/unit/admin-image-upload-route.test.ts` passed with 25 tests across 4 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/view/route.ts" "src/app/api/bookmarks/route.ts" "src/app/api/admin/uploads/images/route.ts" "tests/unit/post-view-route.test.ts" "tests/unit/bookmarks-route.test.ts" "tests/unit/avatar-upload-route.test.ts" "tests/unit/admin-image-upload-route.test.ts"` passed.
+  - Build: skipped because this was a focused route/test contract slice.
+  - Code review: final focused review found no remaining findings in scope.
+- Security review: final focused signoff found no remaining findings after admin malformed-form-data handling was corrected and upload-route logging was bounded.
+- Status: complete
+
+### Batch: admin revisions index unexpected-error hardening
+- Goal: close the remaining admin revisions-list trust-boundary gap so malformed IDs and unexpected DAL failures no longer fall through to misleading `404`s or raw errors.
+- User journey or failure being protected: authenticated admins should get stable `400` responses for whitespace-only post IDs and safe generic `500`s when revision existence/list/count queries fail unexpectedly.
+- Scope: `TODO.md`, `web/src/app/api/admin/posts/[postId]/revisions/route.ts`, and `web/tests/unit/post-revisions-route.test.ts`.
+- Files expected to change: `TODO.md`, the revisions route above, and the focused route test file.
+- Tests to add or update first: whitespace-only `postId`, unexpected `postExistsById()` failure, and unexpected revision-list failure coverage.
+- RED command: `bunx vitest run tests/unit/post-revisions-route.test.ts`
+- Expected RED test(s): whitespace-only `postId` still falls through to `404`, and unexpected revision lookup/list failures still reject raw errors instead of returning a safe `500` body.
+- Why this RED proves the right problem: it exercises the admin revisions index HTTP boundary directly and shows malformed IDs and backend exceptions still escape the route contract.
+- GREEN target: trimmed whitespace-only IDs return `400`, existing `404` behavior stays intact for missing posts, and unexpected backend failures log bounded route context and return `{ error: "Failed to load revisions" }` with `500`.
+- GREEN command: `bunx vitest run tests/unit/post-revisions-route.test.ts`
+- Refactor boundary: no DAL changes, no revision UI changes, and no admin auth redesign.
+- Refactor proof command(s): `bunx vitest run tests/unit/post-revisions-route.test.ts`
+- Security impact: medium, because this is an authenticated admin read boundary.
+- Required security assertions: `requireAdminSession()` remains the auth gate, malformed IDs fail before DAL access, and client-visible failures stay generic.
+- E2E impact: none.
+- Coverage impact: expands direct revisions-index route coverage for malformed IDs and unexpected backend failures.
+- Verification commands: `bunx vitest run tests/unit/post-revisions-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/api/admin/posts/[postId]/revisions/route.ts" "tests/unit/post-revisions-route.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-revisions-route.test.ts`
+  - Result: the new whitespace-only assertion failed because `GET /api/admin/posts/[postId]/revisions` still returned `404`, and the new unexpected-failure assertions failed because the route still rejected raw `database offline` / `query failed` errors.
+  - Why this RED proved the right problem: it showed the route boundary still accepted malformed IDs and leaked backend failures after auth and pagination validation.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-revisions-route.test.ts`
+  - Result: 11 focused revisions route tests passed after the params schema was trimmed and the route gained bounded logging plus a safe generic `500` catch.
+- REFACTOR evidence:
+  - Refactor stayed minimal: only the route-local `postId` schema and the route boundary error handling changed.
+  - Refactor proof command: `bunx vitest run tests/unit/post-revisions-route.test.ts`
+- Verification evidence:
+  - Tests: included in the final focused bundle `bunx vitest run tests/unit/comment-mutation-response.test.ts tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts`, which passed with 48 tests across 6 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/admin/posts/[postId]/revisions/route.ts" "tests/unit/post-revisions-route.test.ts"` passed.
+  - Build: skipped because this was a focused route/test hardening slice with no broader routing or bundling risk beyond typecheck.
+  - Code review: final focused review found no remaining findings in scope.
+  - Security review: final focused review found no remaining findings in scope.
+- Status: complete
+
+### Batch: public comment route trust-boundary and stale-state hardening
+- Goal: close the remaining public comment trust-boundary gaps across read/write/delete/like flows while preventing successful comment writes from being misreported as failures or silently clearing the UI when refresh work breaks.
+- User journey or failure being protected: readers should not be able to read comments for unpublished posts; authenticated users should get stable generic `500`s for unexpected comment-route failures; authenticated comment and like throttles should bind to user-plus-IP; and successful comment writes should remain successful even if notification delivery or follow-up list refresh fails.
+- Scope: `TODO.md`, `web/src/app/api/posts/[postId]/comments/route.ts`, `web/src/app/api/comments/[commentId]/route.ts`, `web/src/app/api/comments/[commentId]/like/route.ts`, `web/src/components/blog/comments.tsx`, `web/src/lib/comment-mutation-response.ts`, and focused unit coverage under `web/tests/unit/`.
+- Files expected to change: `TODO.md`, the three comment routes above, `web/src/components/blog/comments.tsx`, `web/src/lib/comment-mutation-response.ts`, `web/tests/unit/post-comments-get-route.test.ts`, `web/tests/unit/post-comments-route.test.ts`, `web/tests/unit/comment-delete-route.test.ts`, `web/tests/unit/comment-like-route.test.ts`, and `web/tests/unit/comment-mutation-response.test.ts`.
+- Tests to add or update first: GET coverage for unpublished posts and unexpected public-user/list/post-visibility failures; delete/like unexpected-failure coverage; POST coverage for `canCommentOnPost()` / `canReplyToComment()` failures, notification/list refresh failures after persistence, and the stale-state helper behavior when refreshed comments are omitted.
+- RED command: `bunx vitest run tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/comment-mutation-response.test.ts`
+- Expected RED test(s): draft post comments still load, delete/like still reject raw unexpected errors, comment-create still returns `500` after a committed write when notification or refresh work fails, and no helper exists yet to preserve client state when a successful mutation omits refreshed comments.
+- Why this RED proves the right problem: it hits the exact public trust boundaries and client follow-up behavior where stale state, raw backend failures, and duplicate-on-retry risk can surface to users.
+- GREEN target: public comment GET returns `404` for unpublished posts and safe generic `500`s for unexpected backend failures; delete/like keep their current auth/not-found behavior while catching unexpected failures safely; comment POST keeps committed writes successful even if notification or refresh work fails; the blog comments client preserves state and triggers a refetch when a successful mutation omits refreshed comments; and authenticated comment/like rate limits key on `userId + IP`.
+- GREEN command: `bunx vitest run tests/unit/comment-mutation-response.test.ts tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts`
+- Refactor boundary: no DAL contract redesign, no moderation model changes, and no broader comments UI rewrite.
+- Refactor proof command(s): `bunx vitest run tests/unit/comment-mutation-response.test.ts tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts`
+- Security impact: medium-high, because these are public read/write boundaries and authenticated mutation surfaces.
+- Required security assertions: unpublished posts do not expose comment threads; client-visible errors remain generic; authenticated delete/like/comment gates stay intact; and authenticated mutation throttles bind to user-plus-IP rather than a shared anonymous bucket.
+- E2E impact: none for this slice.
+- Coverage impact: expands direct route coverage across all public comment surfaces and adds a focused client helper test for the stale-success fallback path.
+- Verification commands: `bunx vitest run tests/unit/comment-mutation-response.test.ts tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/api/posts/[postId]/comments/route.ts" "src/app/api/comments/[commentId]/route.ts" "src/app/api/comments/[commentId]/like/route.ts" "src/components/blog/comments.tsx" "src/lib/comment-mutation-response.ts" "tests/unit/post-comments-get-route.test.ts" "tests/unit/post-comments-route.test.ts" "tests/unit/comment-delete-route.test.ts" "tests/unit/comment-like-route.test.ts" "tests/unit/comment-mutation-response.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-comments-get-route.test.ts`
+  - Result: the new GET assertions initially failed because invalid unsupported sort handling was unpinned, unpublished posts still returned `200`, and unexpected public-user/list failures still rejected raw errors.
+  - Command: `bunx vitest run tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts`
+  - Result: the new delete/like assertions failed because both routes still rejected raw `lookup failed`, `delete failed`, and `toggle failed` errors instead of returning safe generic `500`s.
+  - Command: `bunx vitest run tests/unit/post-comments-route.test.ts`
+  - Result: the new write-path assertions failed because `POST /api/posts/[postId]/comments` still returned `500` when notification sending or comment-list refresh threw after `createCommentRecord()` had already succeeded, and `canCommentOnPost()` / `canReplyToComment()` failures were still uncaught.
+  - Command: `bunx vitest run tests/unit/comment-mutation-response.test.ts`
+  - Result: the new helper suite initially failed because the mutation-response helper did not exist yet, leaving the successful-`201`-without-comments stale-state path unprotected.
+  - Why this RED proved the right problem: it showed both the server and client sides of the public comments flow still had real failure-mode gaps after the core happy paths succeeded.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/comment-mutation-response.test.ts tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts`
+  - Result: the final focused bundle passed with 48 tests across 6 files after route-local catches, unpublished-post guarding, user-plus-IP rate-limit keys, and the client refetch fallback helper were all in place.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the route changes remained local to the HTTP boundary and a tiny client helper was added so the comments UI can preserve state and trigger a refetch when a successful mutation omits a refreshed comment list.
+  - Refactor proof command: `bunx vitest run tests/unit/comment-mutation-response.test.ts tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/comment-mutation-response.test.ts tests/unit/post-comments-get-route.test.ts tests/unit/post-comments-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts` passed with 48 tests across 6 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/comments/route.ts" "src/app/api/comments/[commentId]/route.ts" "src/app/api/comments/[commentId]/like/route.ts" "src/components/blog/comments.tsx" "src/lib/comment-mutation-response.ts" "tests/unit/post-comments-get-route.test.ts" "tests/unit/post-comments-route.test.ts" "tests/unit/comment-delete-route.test.ts" "tests/unit/comment-like-route.test.ts" "tests/unit/comment-mutation-response.test.ts"` passed.
+  - Build: skipped because this slice stayed inside focused routes, one client component, and unit tests; typecheck covered the touched app code.
+  - Code review: final review found no blocking findings after the stale-success client refetch fallback was added. A later Playwright pass extended that coverage to top-level comment fallback success, nested reply fallback success, and the successful-write-plus-failed-refetch error state, and tightened the GET waiters so they only observe the post-submit refetch rather than the initial page-load comments fetch.
+  - Security review: final security review found no remaining findings in scope after unpublished-post guarding and user-plus-IP rate-limit keys were added. A follow-up component-level concern about hidden comment text was reviewed against the existing DAL contract and did not require a code change in this slice because the public route already redacts hidden/deleted comment content before the client renders it.
+- Status: complete
 
 ### Batch: wishlist places schema and admin CRUD
 - Goal: establish the travel wishlist data model and admin management flow before building public travel experiences.
@@ -1281,21 +1763,39 @@ Do not run in parallel:
 - Scope: post schema/data contracts, admin post form wiring, public post rendering, and focused tests.
 - Files expected to change: `TODO.md`, `web/src/drizzle/schema.ts`, migration files, post form/actions/DAL/query files, public post page or supporting components, and targeted tests.
 - Tests to add or update first: schema/form validation tests, admin save/update tests, query mapping tests, and public rendering tests.
-- RED command: targeted post-song tests.
-- Expected RED test(s): posts cannot persist song metadata or public post rendering ignores the new structured fields.
+- RED command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx`
+- Expected RED test(s): create/update flows do not persist song metadata, revision snapshot and restore parity ignore song fields, clone does not carry song metadata into the new draft, and the public post page has no safe song rendering component.
 - Why this RED proves the right problem: it locks the desired metadata contract before any UI-only implementation can drift.
 - GREEN target: posts can save structured song metadata and the public post page renders it safely.
-- GREEN command: rerun the targeted post-song tests.
+- GREEN command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx`
 - Refactor boundary: no broader post editor redesign or media/embed feature expansion.
-- Refactor proof command(s): rerun the same targeted post-song tests after any query/form extraction.
+- Refactor proof command(s): `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx`
 - Security impact: medium, because this adds user-visible outbound links and post-schema changes.
 - Required security assertions: song URLs are validated, rendered links are safe, and no arbitrary embed HTML is accepted.
 - E2E impact: medium; add one admin-create/public-view smoke flow after GREEN.
 - E2E prerequisites (seed, auth state, env): admin auth fixture and a draft/publish or edit-existing-post path.
 - Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
 - Coverage impact: adds coverage around post persistence and presentation.
-- Verification commands: targeted post-song tests, migration sanity checks, `bunx tsc --noEmit`, relevant lint, and focused Playwright if enabled.
-- Status: pending
+- Verification commands: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx`, `bunx tsc --noEmit`, `npx eslint "src/app/admin/actions.ts" "src/server/forms/admin-post-form.ts" "src/server/dal/post-revisions.ts" "src/server/posts/clone.ts" "src/server/dal/posts.ts" "src/server/queries/posts.ts" "src/server/dal/admin-posts.ts" "src/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route.ts" "src/components/admin/post-editor-form.tsx" "src/components/blog/post-song-metadata.tsx" "src/app/(blog)/posts/[slug]/page.tsx" "src/app/(blog)/preview/[id]/page.tsx" "src/lib/post-song-metadata.ts" "src/types/blog.ts" "tests/unit/update-post-revision-capture.test.ts" "tests/unit/post-revision-restore-route.test.ts" "tests/unit/clone-post.test.ts" "tests/unit/post-page-song.test.tsx"`, and focused Playwright when a dedicated admin-create/public-view fixture is selected.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx`
+  - Result: the new assertions failed because create/update actions ignored song fields, revision restore snapshots and restores did not include them, clone parity dropped them, and the safe public renderer did not exist yet.
+  - Why this RED proved the right problem: it pinned the full persistence lifecycle before any UI-only song display could drift from the stored post contract.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx`
+  - Result: 31 focused tests passed after nullable song columns were added to posts and post revisions, admin save/update flows normalized structured song metadata, revision restore and clone paths carried it through, and the public/preview post pages rendered a safe outbound song card.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the slice used one shared `normalizeSongMetadataFields()` helper, kept the DB contract as three nullable scalar columns instead of introducing a new JSON/blob abstraction, and isolated public rendering in `web/src/components/blog/post-song-metadata.tsx`.
+  - Refactor proof command: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/update-post-revision-capture.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/clone-post.test.ts tests/unit/post-page-song.test.tsx` passed with 31 tests across 4 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/admin/actions.ts" "src/server/forms/admin-post-form.ts" "src/server/dal/post-revisions.ts" "src/server/posts/clone.ts" "src/server/dal/posts.ts" "src/server/queries/posts.ts" "src/server/dal/admin-posts.ts" "src/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route.ts" "src/components/admin/post-editor-form.tsx" "src/components/blog/post-song-metadata.tsx" "src/app/(blog)/posts/[slug]/page.tsx" "src/app/(blog)/preview/[id]/page.tsx" "src/lib/post-song-metadata.ts" "src/types/blog.ts" "tests/unit/update-post-revision-capture.test.ts" "tests/unit/post-revision-restore-route.test.ts" "tests/unit/clone-post.test.ts" "tests/unit/post-page-song.test.tsx"` passed.
+  - Build: skipped for this pass because the change stayed within already-routed app surfaces and typecheck covered the touched server/client entry points.
+  - E2E: a dedicated admin-create/public-view song smoke is still pending because the current seeded fixture path does not yet author song metadata through the admin editor.
+  - Follow-up tests: `bunx vitest run tests/unit/post-song-metadata.test.ts tests/unit/post-page-song.test.tsx` passed with 6 focused helper/render tests covering blank normalization, trimming, partial-data rejection, HTTPS-only URL enforcement, and invalid persisted data collapsing to `null`.
+  - Security review: song metadata is validated as structured text plus HTTPS link data; the public renderer uses normal JSX anchors with `target="_blank"` and `rel="noreferrer"`, and no embed HTML was introduced.
+- Status: complete
 
 ### Planned Feature Risks
 

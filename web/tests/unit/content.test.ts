@@ -133,6 +133,54 @@ describe("renderTiptapJson", () => {
     const result = renderTiptapJson(json);
     expect(result).not.toContain("<script>");
   });
+
+  it("renders a collapsible thoughts block from canonical tiptap json", () => {
+    const json = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "thoughtsBlock",
+          attrs: { summary: "Post-trip thoughts" },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Pack lighter next time." }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = renderTiptapJson(json);
+
+    expect(result).toContain("<details>");
+    expect(result).toContain("<summary>Post-trip thoughts</summary>");
+    expect(result).toContain("<p>Pack lighter next time.</p>");
+    expect(result).toContain("</details>");
+  });
+
+  it("escapes html inside thoughts block summary text", () => {
+    const json = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "thoughtsBlock",
+          attrs: { summary: '<img src=x onerror=alert(1)>' },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Body" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = renderTiptapJson(json);
+
+    expect(result).toContain("<summary>&lt;img src=x onerror=alert(1)&gt;</summary>");
+    expect(result).not.toContain("<img src=x onerror=alert(1)>");
+  });
 });
 
 describe("sanitizeRichTextHtml", () => {
@@ -168,6 +216,14 @@ describe("sanitizeRichTextHtml", () => {
     expect(result).toBe(
       '<p><a href="mailto:hello@example.com" target="_blank" rel="noreferrer">Email me</a></p>',
     );
+  });
+
+  it("sanitizes collapsible thoughts block markup while preserving safe details and summary tags", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<details open onclick="alert(1)" class="x"><summary data-evil="1">Thoughts</summary><p>Safe copy</p><script>alert(1)</script></details>',
+    );
+
+    expect(sanitized).toBe("<details><summary>Thoughts</summary><p>Safe copy</p></details>");
   });
 });
 

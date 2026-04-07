@@ -8,6 +8,7 @@ import { z } from "zod";
 import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
+import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
 import { createPostRevision } from "@/server/dal/post-revisions";
 import { ensureSeriesId } from "@/server/dal/series";
 import { adminPostFormSchema } from "@/server/forms/admin-post-form";
@@ -93,7 +94,7 @@ async function ensureCategoryIdTx(tx: DbExecutor, categoryName: string | undefin
 }
 
 function parseFormData(formData: FormData) {
-  return adminPostFormSchema.parse({
+  const parsed = adminPostFormSchema.safeParse({
     title: formData.get("title"),
     slug: formData.get("slug"),
     excerpt: formData.get("excerpt"),
@@ -111,7 +112,23 @@ function parseFormData(formData: FormData) {
     seriesOrder: formData.get("seriesOrder"),
     locationName: formData.get("locationName"),
     iovanderUrl: formData.get("iovanderUrl"),
+    songTitle: formData.get("songTitle"),
+    songArtist: formData.get("songArtist"),
+    songUrl: formData.get("songUrl"),
   });
+
+  if (!parsed.success) {
+    const contentOnlyFailure = parsed.error.issues.length > 0
+      && parsed.error.issues.every((issue) => issue.path[0] === "contentJson");
+
+    if (contentOnlyFailure) {
+      throw new Error("Invalid post content");
+    }
+
+    throw new Error("Invalid request");
+  }
+
+  return parsed.data;
 }
 
 type GeoResult = {
@@ -163,6 +180,10 @@ function parseUnknownJson(value: string): unknown {
   return JSON.parse(value);
 }
 
+function isInvalidPostContentError(error: unknown) {
+  return error instanceof SyntaxError || (error instanceof Error && error.message === "Content must be valid Tiptap JSON");
+}
+
 const galleryEntrySchema = z.object({
   imageUrl: z.string().trim().optional(),
   altText: z.string().trim().nullable().optional(),
@@ -184,9 +205,21 @@ const galleryEntrySchema = z.object({
 const galleryEntriesSchema = z.array(galleryEntrySchema);
 
 function parseGalleryEntries(value: string) {
-  const parsed = galleryEntriesSchema.parse(parseUnknownJson(value));
+  let unknownJson: unknown;
 
-  return parsed
+  try {
+    unknownJson = parseUnknownJson(value);
+  } catch {
+    throw new Error("Invalid request");
+  }
+
+  const parsed = galleryEntriesSchema.safeParse(unknownJson);
+
+  if (!parsed.success) {
+    throw new Error("Invalid request");
+  }
+
+  return parsed.data
     .filter((entry) => Boolean(entry.imageUrl?.trim()))
     .map((entry, index) => ({
       imageUrl: entry.imageUrl ?? "",
@@ -363,16 +396,40 @@ async function replacePostMediaTx(tx: DbExecutor, options: {
 }
 
 function buildPostSavePayload(values: ReturnType<typeof parseFormData>) {
-  const derivedContent = derivePostContent(values.contentJson, values.excerpt);
+  let derivedContent: ReturnType<typeof derivePostContent>;
+  const songMetadata = normalizeSongMetadataFields(values);
+
+  try {
+    derivedContent = derivePostContent(values.contentJson, values.excerpt);
+  } catch (error) {
+    if (!isInvalidPostContentError(error)) {
+      throw error;
+    }
+
+    throw new Error("Invalid post content");
+  }
 
   return {
     derivedContent,
+    songMetadata,
     scheduledPublishTime: normalizeScheduledTimestamp(
       values.scheduledPublishTime,
       values.scheduledPublishOffsetMinutes,
       values.status,
     ),
   };
+}
+
+function isStablePostContentError(error: unknown) {
+  return error instanceof Error && error.message === "Invalid post content";
+}
+
+function isStableRequestValidationError(error: unknown) {
+  return error instanceof Error && error.message === "Invalid request";
+}
+
+function isPostNotFoundError(error: unknown) {
+  return error instanceof Error && error.message.toLowerCase().startsWith("post ") && error.message.toLowerCase().includes("not found");
 }
 
 // createAdminPostAction
@@ -384,7 +441,20 @@ export async function createAdminPostAction(formData: FormData) {
   const authorId = await ensureAdmin();
   const values = parseFormData(formData);
   const galleryEntries = parseGalleryEntries(values.galleryEntries);
-  const { derivedContent, scheduledPublishTime } = buildPostSavePayload(values);
+  let payload: ReturnType<typeof buildPostSavePayload>;
+
+  try {
+    payload = buildPostSavePayload(values);
+  } catch (error) {
+    if (!isStablePostContentError(error) && !isStableRequestValidationError(error)) {
+      console.error("[admin-actions] Failed to derive post content during create", error);
+      throw new Error("Failed to save post");
+    }
+
+    throw error;
+  }
+
+  const { derivedContent, scheduledPublishTime, songMetadata } = payload;
   const db = getDb();
   const [seriesId, geo, slug] = await Promise.all([
     ensureSeriesId(values.seriesTitle ?? ""),
@@ -423,6 +493,9 @@ export async function createAdminPostAction(formData: FormData) {
       locationLng: geo?.lng ?? null,
       locationZoom: geo?.zoom ?? null,
       iovanderUrl: values.iovanderUrl || null,
+      songTitle: songMetadata.songTitle,
+      songArtist: songMetadata.songArtist,
+      songUrl: songMetadata.songUrl,
       createdAt: now,
       updatedAt: now,
     });
@@ -449,18 +522,40 @@ export async function createAdminPostAction(formData: FormData) {
 // UI: submit editor form, invalidate preview links, keep edit page current
 export async function updateAdminPostAction(postId: string, formData: FormData) {
   const authorId = await ensureAdmin();
+  const validPostId = parseActionPostId(deletePostSchema, postId);
   const values = parseFormData(formData);
   const galleryEntries = parseGalleryEntries(values.galleryEntries);
-  const { derivedContent, scheduledPublishTime } = buildPostSavePayload(values);
+  let payload: ReturnType<typeof buildPostSavePayload>;
+
+  try {
+    payload = buildPostSavePayload(values);
+  } catch (error) {
+    if (!isStablePostContentError(error) && !isStableRequestValidationError(error)) {
+      console.error(`[admin-actions] Failed to derive post content during update for ${validPostId}`, error);
+      throw new Error("Failed to save post");
+    }
+
+    throw error;
+  }
+
+  const { derivedContent, scheduledPublishTime, songMetadata } = payload;
   const db = getDb();
   const [existingPost, seriesId, geo, slug] = await Promise.all([
     db.query.posts.findFirst({
-      where: eq(posts.id, postId),
-      columns: { publishedAt: true, title: true, contentJson: true, excerpt: true },
+      where: eq(posts.id, validPostId),
+      columns: {
+        publishedAt: true,
+        title: true,
+        contentJson: true,
+        excerpt: true,
+        songTitle: true,
+        songArtist: true,
+        songUrl: true,
+      },
     }),
     ensureSeriesId(values.seriesTitle ?? ""),
     values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
-    generateUniquePostSlug(values.slug.trim() || values.title, postId),
+    generateUniquePostSlug(values.slug.trim() || values.title, validPostId),
   ]);
   const now = new Date();
   const publishedAt = values.status === "published" ? (existingPost?.publishedAt ?? now) : null;
@@ -469,8 +564,8 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
     const categoryId = await ensureCategoryIdTx(tx, values.categoryName);
 
     await tx
-      .update(posts)
-      .set({
+        .update(posts)
+        .set({
         title: values.title,
         slug,
         contentJson: derivedContent.canonicalContentJson,
@@ -490,13 +585,16 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         locationLng: geo?.lng ?? null,
         locationZoom: geo?.zoom ?? null,
         iovanderUrl: values.iovanderUrl || null,
+        songTitle: songMetadata.songTitle,
+        songArtist: songMetadata.songArtist,
+        songUrl: songMetadata.songUrl,
         updatedAt: now,
-      })
-      .where(eq(posts.id, postId));
+        })
+        .where(eq(posts.id, validPostId));
 
-    await syncTagsForPostTx(tx, postId, parseTagNames(values.tagNames));
+    await syncTagsForPostTx(tx, validPostId, parseTagNames(values.tagNames));
     await replacePostMediaTx(tx, {
-      postId,
+      postId: validPostId,
       authorId,
       featuredImageUrl: values.featuredImageUrl,
       featuredImageAlt: values.featuredImageAlt,
@@ -509,29 +607,44 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   if (existingPost) {
     try {
       await createPostRevision({
-        postId,
+        postId: validPostId,
         title: existingPost.title,
         contentJson: existingPost.contentJson,
         excerpt: existingPost.excerpt ?? null,
+        songTitle: existingPost.songTitle ?? null,
+        songArtist: existingPost.songArtist ?? null,
+        songUrl: existingPost.songUrl ?? null,
         savedByUserId: authorId,
       });
     } catch {
       // Non-fatal: log to stderr so it's visible in Vercel logs but don't rethrow.
-      console.error(`[revisions] Failed to create revision for post ${postId}`);
+      console.error(`[revisions] Failed to create revision for post ${validPostId}`);
     }
   }
 
-  await revokePostPreviewTokens(postId);
+  await revokePostPreviewTokens(validPostId);
 
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath(`/posts/${slug}`);
-  redirect(`/admin/posts/${postId}/edit?saved=1`);
+  redirect(`/admin/posts/${validPostId}/edit?saved=1`);
 }
 
+const actionPostIdSchema = z.string().trim().min(1);
+
 const bulkPostIdsSchema = z.object({
-  postIds: z.array(z.string().min(1)).min(1).max(100),
+  postIds: z.array(actionPostIdSchema).min(1).max(100),
 });
+
+function parseActionPostIds(postIds: string[]) {
+  const parsed = bulkPostIdsSchema.safeParse({ postIds });
+
+  if (!parsed.success) {
+    throw new Error("Invalid request");
+  }
+
+  return parsed.data.postIds;
+}
 
 // bulkPublishPosts
 // Input: { postIds: string[] }
@@ -540,8 +653,14 @@ const bulkPostIdsSchema = z.object({
 // UI: allow mixed selection; show updated/unchanged/missing counts in bulk toolbar
 export async function bulkPublishPosts(postIds: string[]): Promise<PostPublishResult> {
   await ensureAdmin();
-  const { postIds: validPostIds } = bulkPostIdsSchema.parse({ postIds });
-  return publishPosts(validPostIds);
+  const validPostIds = parseActionPostIds(postIds);
+
+  try {
+    return await publishPosts(validPostIds);
+  } catch (error) {
+    console.error("[admin-actions] Failed to publish posts", error);
+    throw new Error("Failed to publish posts");
+  }
 }
 
 // bulkUnpublishPosts
@@ -551,13 +670,29 @@ export async function bulkPublishPosts(postIds: string[]): Promise<PostPublishRe
 // UI: allow mixed selection; show updated/unchanged/missing counts in bulk toolbar
 export async function bulkUnpublishPosts(postIds: string[]): Promise<PostPublishResult> {
   await ensureAdmin();
-  const { postIds: validPostIds } = bulkPostIdsSchema.parse({ postIds });
-  return unpublishPosts(validPostIds);
+  const validPostIds = parseActionPostIds(postIds);
+
+  try {
+    return await unpublishPosts(validPostIds);
+  } catch (error) {
+    console.error("[admin-actions] Failed to unpublish posts", error);
+    throw new Error("Failed to unpublish posts");
+  }
 }
 
 const clonePostSchema = z.object({
-  postId: z.string().min(1),
+  postId: actionPostIdSchema,
 });
+
+function parseActionPostId(schema: z.ZodObject<{ postId: z.ZodString }>, postId: string) {
+  const parsed = schema.safeParse({ postId });
+
+  if (!parsed.success) {
+    throw new Error("Invalid request");
+  }
+
+  return parsed.data.postId;
+}
 
 // clonePost
 // Input: { postId: string }
@@ -566,14 +701,31 @@ const clonePostSchema = z.object({
 // UI: clone content/taxonomy/media refs into a new draft, then redirect to the new edit page
 export async function clonePost(postId: string) {
   await ensureAdmin();
-  const { postId: validPostId } = clonePostSchema.parse({ postId });
-  const result = await clonePostById(validPostId);
-  revalidatePath("/admin");
+  const validPostId = parseActionPostId(clonePostSchema, postId);
+  let result: Awaited<ReturnType<typeof clonePostById>>;
+
+  try {
+    result = await clonePostById(validPostId);
+  } catch (error) {
+    if (isPostNotFoundError(error)) {
+      throw new Error("Post not found");
+    }
+
+    console.error(`[admin-actions] Failed to clone post ${validPostId}`, error);
+    throw new Error("Failed to clone post");
+  }
+
+  try {
+    revalidatePath("/admin");
+  } catch (error) {
+    console.error(`[admin-actions] Failed to revalidate admin after cloning ${validPostId}`, error);
+  }
+
   return result;
 }
 
 const postPreviewRequestSchema = z.object({
-  postId: z.string().min(1),
+  postId: actionPostIdSchema,
 });
 
 // createPostPreviewLinkAction
@@ -583,8 +735,18 @@ const postPreviewRequestSchema = z.object({
 // UI: call when user clicks Preview; open returned previewPath in a new tab and refresh after saves
 export async function createPostPreviewLinkAction(postId: string) {
   const adminUserId = await ensureAdmin();
-  const { postId: validPostId } = postPreviewRequestSchema.parse({ postId });
-  return createPostPreviewAccess(validPostId, adminUserId);
+  const validPostId = parseActionPostId(postPreviewRequestSchema, postId);
+
+  try {
+    return await createPostPreviewAccess(validPostId, adminUserId);
+  } catch (error) {
+    if (isPostNotFoundError(error)) {
+      throw new Error("Post not found");
+    }
+
+    console.error(`[admin-actions] Failed to create preview for ${validPostId}`, error);
+    throw new Error("Failed to create preview");
+  }
 }
 
 // validatePostContentWarningsAction
@@ -594,7 +756,19 @@ export async function createPostPreviewLinkAction(postId: string) {
 // UI: run during editor changes or pre-publish review to surface non-blocking alt-text warnings
 export async function validatePostContentWarningsAction(contentJson: string, excerpt?: string | null) {
   await ensureAdmin();
-  const payload = derivePostContent(contentJson, excerpt ?? null);
+  let payload: ReturnType<typeof derivePostContent>;
+
+  try {
+    payload = derivePostContent(contentJson, excerpt ?? null);
+  } catch (error) {
+    if (!isInvalidPostContentError(error)) {
+      console.error("[admin-actions] Failed to validate post content warnings", error);
+      throw new Error("Failed to validate post content");
+    }
+
+    throw new Error("Invalid post content");
+  }
+
   return {
     warnings: payload.imageAltWarnings,
     excerpt: payload.excerpt,
@@ -602,7 +776,7 @@ export async function validatePostContentWarningsAction(contentJson: string, exc
 }
 
 const deletePostSchema = z.object({
-  postId: z.string().min(1),
+  postId: actionPostIdSchema,
 });
 
 // deletePostAction
@@ -612,8 +786,14 @@ const deletePostSchema = z.object({
 // UI: single post delete from dashboard row action, with confirmation dialog
 export async function deletePostAction(postId: string): Promise<PostDeleteResult> {
   await ensureAdmin();
-  const { postId: validPostId } = deletePostSchema.parse({ postId });
-  return deletePosts([validPostId]);
+  const validPostId = parseActionPostId(deletePostSchema, postId);
+
+  try {
+    return await deletePosts([validPostId]);
+  } catch (error) {
+    console.error(`[admin-actions] Failed to delete post ${validPostId}`, error);
+    throw new Error("Failed to delete post");
+  }
 }
 
 // bulkDeletePosts
@@ -623,6 +803,12 @@ export async function deletePostAction(postId: string): Promise<PostDeleteResult
 // UI: bulk delete from dashboard toolbar, with confirmation dialog
 export async function bulkDeletePosts(postIds: string[]): Promise<PostDeleteResult> {
   await ensureAdmin();
-  const { postIds: validPostIds } = bulkPostIdsSchema.parse({ postIds });
-  return deletePosts(validPostIds);
+  const validPostIds = parseActionPostIds(postIds);
+
+  try {
+    return await deletePosts(validPostIds);
+  } catch (error) {
+    console.error("[admin-actions] Failed to delete posts", error);
+    throw new Error("Failed to delete posts");
+  }
 }

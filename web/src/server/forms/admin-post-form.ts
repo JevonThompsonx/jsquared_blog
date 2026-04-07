@@ -24,6 +24,9 @@ export const adminPostFormSchema = z
     ),
     locationName: z.string().trim().optional().default(""),
     iovanderUrl: z.string().trim().optional().default(""),
+    songTitle: z.string().trim().optional().default(""),
+    songArtist: z.string().trim().optional().default(""),
+    songUrl: z.string().trim().optional().default(""),
   })
   .superRefine((value, ctx) => {
     if (!parseCanonicalTiptapDocument(value.contentJson)) {

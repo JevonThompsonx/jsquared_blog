@@ -89,6 +89,28 @@ describe("newsletter service", () => {
     expect(vi.mocked(addResendContactToSegmentByEmail)).not.toHaveBeenCalled();
   });
 
+  it("adds the newsletter segment for active contacts that are not yet subscribed to it", async () => {
+    process.env.RESEND_NEWSLETTER_SEGMENT_ID = "segment-123";
+    vi.mocked(getResendApiKey).mockReturnValue("resend-key");
+    vi.mocked(getResendContactByEmail).mockResolvedValue({
+      id: "contact-1",
+      email: "reader@example.com",
+      unsubscribed: false,
+      firstName: "Jevon",
+      lastName: null,
+      createdAt: "2026-03-20T12:00:00.000Z",
+      properties: {},
+    });
+    vi.mocked(listResendContactSegmentsByEmail).mockResolvedValue([]);
+    vi.mocked(addResendContactToSegmentByEmail).mockResolvedValue({ id: "segment-123" });
+
+    const result = await subscribeToNewsletter({ email: "reader@example.com" });
+
+    expect(result).toEqual({ status: "subscribed", source: "updated" });
+    expect(vi.mocked(addResendContactToSegmentByEmail)).toHaveBeenCalledWith("reader@example.com", "segment-123");
+    expect(vi.mocked(updateResendContactByEmail)).not.toHaveBeenCalled();
+  });
+
   it("reactivates unsubscribed contacts and adds the segment when needed", async () => {
     process.env.RESEND_NEWSLETTER_SEGMENT_ID = "segment-123";
     vi.mocked(getResendApiKey).mockReturnValue("resend-key");

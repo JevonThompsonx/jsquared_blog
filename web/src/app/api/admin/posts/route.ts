@@ -40,8 +40,14 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ error: "Invalid query parameters" }, { status: 400 });
     }
 
-    throw error;
+    console.error("[admin-posts] Failed to parse list filters", error);
+    return NextResponse.json({ error: "Failed to load posts" }, { status: 500 });
   }
 
-  return NextResponse.json(await listAdminPostRecords(filters));
+  try {
+    return NextResponse.json(await listAdminPostRecords(filters));
+  } catch (error) {
+    console.error("[admin-posts] Failed to list posts", error);
+    return NextResponse.json({ error: "Failed to load posts" }, { status: 500 });
+  }
 }
