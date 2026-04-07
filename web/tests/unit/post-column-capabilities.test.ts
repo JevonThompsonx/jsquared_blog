@@ -4,6 +4,11 @@ let capturedSelection: Record<string, unknown> | null = null;
 let mockDb: { select: ReturnType<typeof vi.fn> };
 let mockExecute: ReturnType<typeof vi.fn>;
 
+vi.mock("@/lib/db", () => ({
+  getDb: vi.fn(() => mockDb),
+  getDbClient: vi.fn(() => ({ execute: mockExecute })),
+}));
+
 function setupDbMocks() {
   capturedSelection = null;
   mockExecute = vi.fn();
@@ -26,11 +31,6 @@ function setupDbMocks() {
 
 async function loadModule<T>(path: string): Promise<T> {
   vi.resetModules();
-  vi.doMock("@/lib/db", () => ({
-    getDb: vi.fn(() => mockDb),
-    getDbClient: vi.fn(() => ({ execute: mockExecute })),
-  }));
-
   return import(path) as Promise<T>;
 }
 
@@ -41,7 +41,6 @@ describe("post column capability detection", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
-    vi.doUnmock("@/lib/db");
   });
 
   it("marks song metadata columns as unavailable when they are missing locally", async () => {
