@@ -72,6 +72,60 @@ publicTest.describe("authenticated public-user flows", () => {
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
 
+  publicTest("signed-in user can update their display name and still see it after reload", async ({ page }) => {
+    await page.goto("/account");
+
+    await expect(page.getByRole("heading", { name: "Account Settings" })).toBeVisible();
+
+    const displayNameField = page.getByLabel("Display name");
+    const saveDisplayNameButton = page.getByRole("button", { name: "Save" }).first();
+    await expect(displayNameField).toBeVisible();
+
+    const originalDisplayName = (await displayNameField.inputValue()).trim();
+    expect(originalDisplayName.length).toBeGreaterThan(0);
+
+    const updatedDisplayName = `E2E Public ${Date.now()}`;
+
+    try {
+      await displayNameField.fill(updatedDisplayName);
+
+      await Promise.all([
+        page.waitForResponse((response) => {
+          return response.request().method() === "PATCH"
+            && new URL(response.url()).pathname === "/api/account/profile"
+            && response.ok();
+        }),
+        saveDisplayNameButton.click(),
+      ]);
+
+      await expect(page.getByText("Display name updated.", { exact: true })).toBeVisible();
+      await expect(displayNameField).toHaveValue(updatedDisplayName);
+
+      await page.reload();
+      await expect(page.getByRole("heading", { name: "Account Settings" })).toBeVisible();
+      await expect(page.getByLabel("Display name")).toHaveValue(updatedDisplayName);
+    } finally {
+      await page.goto("/account");
+      await expect(page.getByRole("heading", { name: "Account Settings" })).toBeVisible();
+
+      const restoredDisplayNameField = page.getByLabel("Display name");
+      if ((await restoredDisplayNameField.inputValue()).trim() !== originalDisplayName) {
+        await restoredDisplayNameField.fill(originalDisplayName);
+
+        await Promise.all([
+          page.waitForResponse((response) => {
+            return response.request().method() === "PATCH"
+              && new URL(response.url()).pathname === "/api/account/profile"
+              && response.ok();
+          }),
+          page.getByRole("button", { name: "Save" }).first().click(),
+        ]);
+
+        await expect(restoredDisplayNameField).toHaveValue(originalDisplayName);
+      }
+    }
+  });
+
   publicTest("signed-in user can sign out from account settings and return to a logged-out home state", async ({ page }) => {
     await page.goto("/account");
 
