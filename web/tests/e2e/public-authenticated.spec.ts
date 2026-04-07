@@ -14,6 +14,29 @@ function isCommentCreateResponse(response: { request(): { method(): string }; ur
     && response.ok();
 }
 
+function isCommentDeleteResponse(response: { request(): { method(): string }; url(): string; ok(): boolean }) {
+  return response.request().method() === "DELETE"
+    && /\/api\/comments\/[^/]+$/.test(new URL(response.url()).pathname);
+}
+
+function getRetryAfterDelayMs(retryAfterHeader: string | undefined): number {
+  if (!retryAfterHeader) {
+    return 1500;
+  }
+
+  const numericSeconds = Number(retryAfterHeader);
+  if (Number.isFinite(numericSeconds) && numericSeconds >= 0) {
+    return (numericSeconds * 1000) + 500;
+  }
+
+  const retryAfterDateMs = Date.parse(retryAfterHeader);
+  if (Number.isFinite(retryAfterDateMs)) {
+    return Math.max(retryAfterDateMs - Date.now(), 0) + 500;
+  }
+
+  return 1500;
+}
+
 publicTest.describe("authenticated public-user flows", () => {
   publicTest.skip(!hasPublicStorageState, getPublicStorageStateHint());
 
@@ -162,5 +185,73 @@ publicTest.describe("authenticated public-user flows", () => {
     ]);
 
     await expect(commentCard.getByRole("button", { name: /^Like\s+0$/i })).toBeVisible();
+  });
+
+  publicTest("signed-in user can delete one of their own comments on the seeded fixture post", async ({ page }) => {
+    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.setTimeout(90_000);
+
+    const commentContent = `E2E public delete target ${Date.now()}`;
+
+    await page.goto(`/posts/${configuredPublicPostSlug}`);
+
+    const commentsHeading = page.getByRole("heading", { name: /^Comments\b/i });
+    await expect(commentsHeading).toBeVisible();
+
+    const commentField = page.getByPlaceholder("Share your thoughts...");
+    await expect(commentField).toBeVisible({ timeout: 15_000 });
+    let createResponse: Awaited<ReturnType<typeof page.waitForResponse>> | null = null;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await commentField.fill(commentContent);
+
+      const currentCreateResponse = await Promise.all([
+        page.waitForResponse((response) => {
+          return response.request().method() === "POST"
+            && /\/api\/posts\/[^/]+\/comments$/.test(new URL(response.url()).pathname);
+        }),
+        page.getByRole("button", { name: "Post comment" }).click(),
+      ]).then(([response]) => response);
+
+      createResponse = currentCreateResponse;
+
+      if (currentCreateResponse.ok()) {
+        break;
+      }
+
+      expect(currentCreateResponse.status()).toBe(429);
+      expect(attempt).toBe(0);
+
+      await page.waitForTimeout(getRetryAfterDelayMs(currentCreateResponse.headers()["retry-after"]));
+    }
+
+    expect(createResponse).not.toBeNull();
+    if (!createResponse) {
+      throw new Error("Comment creation did not produce a response.");
+    }
+
+    expect(createResponse.ok()).toBe(true);
+
+    const commentCard = page.getByText(commentContent, { exact: true }).first().locator("xpath=ancestor::article[1]");
+    await expect(commentCard).toBeVisible();
+
+    await commentCard.getByRole("button", { name: "Delete" }).click();
+    const deleteConfirmation = commentCard.getByText("Delete comment?", { exact: true }).locator("xpath=ancestor::div[1]");
+    await expect(deleteConfirmation).toBeVisible();
+    const confirmDeleteButton = deleteConfirmation.getByRole("button", { name: "Delete" });
+
+    const [deleteRequest, deleteResponse] = await Promise.all([
+      page.waitForRequest((request) => {
+        return request.method() === "DELETE"
+          && /\/api\/comments\/[^/]+$/.test(new URL(request.url()).pathname);
+      }),
+      page.waitForResponse(isCommentDeleteResponse),
+      confirmDeleteButton.click(),
+    ]);
+
+    expect(deleteResponse.url()).toBe(deleteRequest.url());
+    expect(deleteResponse.ok()).toBe(true);
+
+    await expect(page.getByText(commentContent, { exact: true })).toHaveCount(0);
   });
 });
