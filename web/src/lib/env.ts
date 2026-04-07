@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 import { loadEnvironmentFiles } from "@/lib/env-loader";
+import { isDeployedEnvironment, shouldWarnAboutMissingCronSecret } from "@/lib/runtime-env";
+
+export { isDeployedEnvironment } from "@/lib/runtime-env";
 
 loadEnvironmentFiles();
 
@@ -58,10 +61,6 @@ const publicEnvSchema = z.object({
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
 
-export function isDeployedEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.VERCEL === "1" || env.NODE_ENV === "production";
-}
-
 export function hasUpstashRedisCredentials(env: NodeJS.ProcessEnv = process.env): boolean {
   return Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
 }
@@ -99,12 +98,10 @@ if (!isNextBuild) {
 
   assertRateLimitConfiguration(process.env);
 
-  if (isDeployedEnvironment(process.env)) {
-    if (!process.env.CRON_SECRET) {
-      console.warn(
-        "[env] CRON_SECRET is not set. Cron endpoints such as /api/cron/publish-scheduled and /api/cron/keep-supabase-awake will return 500.",
-      );
-    }
+  if (shouldWarnAboutMissingCronSecret(process.env)) {
+    console.warn(
+      "[env] CRON_SECRET is not set. Cron endpoints such as /api/cron/publish-scheduled and /api/cron/keep-supabase-awake will return 500.",
+    );
   }
 }
 

@@ -72,6 +72,20 @@ publicTest.describe("authenticated public-user flows", () => {
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
 
+  publicTest("signed-in user can sign out from account settings and return to a logged-out home state", async ({ page }) => {
+    await page.goto("/account");
+
+    await expect(page.getByRole("heading", { name: "Account Settings" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { name: "J²Adventures" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Account" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Saved" })).toHaveCount(0);
+  });
+
   publicTest("signed-in user can post a comment on the seeded fixture post", async ({ page }) => {
     publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
 
