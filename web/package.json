@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "e2e:capture-admin-state": "node --import tsx/esm ./scripts/capture-admin-storage-state.ts",
+    "e2e:capture-public-state": "node --import tsx/esm ./scripts/capture-public-storage-state.ts",
     "seed:e2e": "bun run ./scripts/seed-e2e-fixtures.ts"
   },
   "dependencies": {

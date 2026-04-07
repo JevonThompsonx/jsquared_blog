@@ -297,7 +297,7 @@ Statuses:
 
 - [x] Close any CRITICAL or HIGH security findings first.
 - [ ] Ensure all trust boundaries use Zod validation.
-- [ ] Verify authorization checks across public and admin flows.
+- [x] Verify authorization checks across public and admin flows.
 - [x] Verify upload and media routes are constrained and logged safely.
 - [ ] Confirm no sensitive error leakage.
 
@@ -306,6 +306,7 @@ Completed slice:
 - [x] Replace regex-based rich-text HTML sanitization with a vetted allowlist sanitizer and add regression coverage for legacy HTML and raw render sinks.
 - [x] Make deployed rate limiting fail closed when Upstash credentials are missing, while keeping in-memory fallback only for local dev and test.
 - [x] Harden avatar and admin image uploads with shared server-side byte-signature validation so spoofed image MIME types are rejected before Cloudinary upload.
+- [x] Normalize admin GitHub identity mapping around the persisted provider user id so auth helpers no longer disagree about the same admin account.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -329,6 +330,7 @@ Completed slice:
 
 - [ ] Add smoke coverage for all critical user-facing routes.
 - [ ] Add authenticated admin flow coverage.
+- [ ] Add authenticated public-user flow coverage.
 - [ ] Reduce or quarantine flaky tests with clear follow-up notes.
 - [ ] Ensure CI-ready artifact capture and failure diagnosis.
 
@@ -386,7 +388,19 @@ Completed slice:
 - Security impact: medium-high, because this affects admin authorization correctness.
 - E2E impact: low for the initial slice; unit coverage first.
 - Verification commands: targeted unit tests, touched-file lint, `bunx tsc --noEmit`.
-- Status: in_progress
+- Status: complete
+
+### Batch: public-user Playwright fixture and signed-in flow coverage
+- Goal: establish a reusable authenticated public-user test fixture and cover the highest-value missing signed-in user journeys.
+- Scope: Playwright auth fixture/state plus the first critical public signed-in flows from the backlog.
+- Files expected to change: Playwright config/helpers/fixtures and targeted E2E specs under `web/tests/e2e/`.
+- RED target: prove current E2E coverage lacks a reusable public-user auth path and misses one or more critical signed-in user journeys.
+- GREEN target: reusable public-user auth setup exists and at least one critical signed-in public flow is covered with stable assertions.
+- Refactor boundary: no broad frontend refactors while establishing coverage.
+- Security impact: low direct code risk, medium confidence impact because this protects authenticated user behavior.
+- E2E impact: high; this is the purpose of the batch.
+- Verification commands: targeted Playwright runs, touched-file lint if needed, `bunx tsc --noEmit` if TypeScript support files change.
+- Status: blocked
 
 ## Ranked Remediation Backlog
 
@@ -409,6 +423,7 @@ Completed slice:
 - [ ] Local env variables may be required for deep auth, upload, and E2E validation.
 - [ ] Admin Playwright state may need regeneration for authenticated smoke coverage.
 - [ ] Some high-value flows may depend on local seed data or specific DB contents.
+- [x] Public Playwright fixture support now exists, but real `E2E_PUBLIC_EMAIL` and `E2E_PUBLIC_PASSWORD` plus a captured `playwright/.auth/public.json` are still required before the new signed-in flow can run green.
 - [ ] Security and refactor work may intersect in the same files and require serialization.
 
 ## Update Protocol
@@ -436,3 +451,5 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-06: Replaced regex-based rich-text sanitization in `web/src/lib/content.ts` with a `sanitize-html` allowlist policy so legacy HTML and other raw render paths normalize links, strip unsupported attributes, and discard disallowed elements before `dangerouslySetInnerHTML` sinks.
 - 2026-04-06: Changed rate limiting to fail closed in deployed environments unless `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set, while preserving the in-memory fallback only for local development and test.
 - 2026-04-06: Added shared server-side upload validation in `web/src/lib/cloudinary/uploads.ts` that checks allowed MIME type, byte size, and basic file signatures for JPEG, PNG, WebP, and GIF before avatar or editorial uploads are sent to Cloudinary.
+- 2026-04-06: Normalized admin account identity helpers around the persisted GitHub `provider_user_id`; `githubLogin` now stays sourced from the live GitHub profile instead of incorrectly falling back to the numeric provider id.
+- 2026-04-06: Added a reusable public Playwright auth helper plus `bun run e2e:capture-public-state`, and targeted the first signed-in public flow at bookmarking the seeded fixture post and verifying it appears on `/bookmarks`; the batch remains blocked pending real public E2E credentials and captured storage state.

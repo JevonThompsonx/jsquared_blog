@@ -16,7 +16,7 @@ export type AdminAccountRecord = {
   displayName: string;
   avatarUrl: string | null;
   email: string;
-  login: string;
+  providerUserId: string;
 };
 
 function now(): number {
@@ -75,7 +75,7 @@ export async function getAdminAccountByGitHubId(providerUserId: string): Promise
     displayName: String(row.display_name ?? "GitHub Admin"),
     avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
     email: String(row.email),
-    login: String(row.provider_user_id),
+    providerUserId: String(row.provider_user_id),
   };
 }
 
@@ -128,6 +128,6 @@ export async function ensureGitHubAdminUser(identity: GitHubAdminIdentity): Prom
     displayName,
     avatarUrl: "/images/us.webp",
     email,
-    login: identity.login,
+    providerUserId: identity.providerUserId,
   };
 }

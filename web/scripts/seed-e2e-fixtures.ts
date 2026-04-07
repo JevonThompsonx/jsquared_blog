@@ -312,6 +312,7 @@ async function main(): Promise<void> {
   await ensureFixturePost();
   await ensureFixtureComments();
   await writeEnvValue("E2E_ADMIN_POST_ID", FIXTURE_POST_ID);
+  await writeEnvValue("E2E_PUBLIC_POST_SLUG", FIXTURE_POST_SLUG);
 
   const commentCountRows = await db
     .select({ total: count() })
@@ -320,6 +321,7 @@ async function main(): Promise<void> {
 
   console.log(`Seeded E2E fixture post ${FIXTURE_POST_ID} with ${Number(commentCountRows[0]?.total ?? 0)} visible comments.`);
   console.log(`Wrote E2E_ADMIN_POST_ID to ${ENV_FILE_PATH}`);
+  console.log(`Wrote E2E_PUBLIC_POST_SLUG to ${ENV_FILE_PATH}`);
 }
 
 main().catch((error: unknown) => {

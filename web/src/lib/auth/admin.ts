@@ -132,7 +132,7 @@ export function buildAdminAuthOptions(): NextAuthOptions {
               const nextToken: typeof token & AdminToken = token;
               nextToken.userId = adminAccount.userId;
               nextToken.role = adminAccount.role;
-              nextToken.githubLogin = githubProfile.login ?? adminAccount.login;
+              nextToken.githubLogin = githubProfile.login ?? undefined;
               nextToken.avatarUrl = githubProfile.avatarUrl ?? adminAccount.avatarUrl;
             }
           }
