@@ -61,7 +61,7 @@ export async function POST(request: Request, context: { params: Promise<{ postId
 
   const parse = createCommentSchema.safeParse(payload);
   if (!parse.success) {
-    return NextResponse.json({ error: parse.error.flatten().fieldErrors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid comment payload" }, { status: 400 });
   }
 
   if (parse.data.parentId) {

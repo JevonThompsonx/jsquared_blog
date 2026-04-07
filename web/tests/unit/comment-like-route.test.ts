@@ -43,6 +43,28 @@ describe("POST /api/comments/[commentId]/like", () => {
     vi.clearAllMocks();
   });
 
+  it("returns 400 for an invalid comment id", async () => {
+    const response = await POST(new Request("http://localhost/api/comments/invalid id/like", { method: "POST" }), {
+      params: Promise.resolve({ commentId: "invalid id" }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid comment ID" });
+  });
+
+  it("returns 401 when the caller is unauthenticated", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
+
+    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
+      params: Promise.resolve({ commentId: "comment-1" }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(vi.mocked(commentExists)).not.toHaveBeenCalled();
+  });
+
   it("rejects likes for non-visible comments", async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
     vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());

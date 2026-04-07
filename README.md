@@ -119,6 +119,12 @@ This writes `web/playwright/.auth/admin.json`, which `bun run test:e2e` will use
 - Theme preference persistence
 - Account settings page
 
+### Admin Auth Contract
+- Admin access is allowlisted by GitHub provider user id.
+- Persisted admin accounts stay distinct per GitHub provider user id.
+- Session `githubLogin` continues to come from the live GitHub profile for operator attribution.
+- Admin profile attribution is intentionally shared brand identity: persisted admin display name/avatar resolve to the site-owner profile instead of each admin's live GitHub avatar.
+
 ### Social Features
 - Comments with likes
 - Share buttons (copy link)

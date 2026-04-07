@@ -51,6 +51,79 @@ describe("POST /api/posts/[postId]/comments", () => {
     vi.clearAllMocks();
   });
 
+  it("returns 401 when the caller is unauthenticated", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Looks great" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  it("returns 400 for invalid JSON payloads", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid JSON payload" });
+  });
+
+  it("returns a generic 400 for invalid comment payloads", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid comment payload" });
+  });
+
+  it("returns 404 when the parent comment is missing", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(canCommentOnPost).mockResolvedValue(true);
+    vi.mocked(canReplyToComment).mockResolvedValue(false);
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Replying here", parentId: "comment-root-1" }),
+      }),
+      { params: Promise.resolve({ postId: "post-1" }) },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Parent comment not found" });
+    expect(vi.mocked(createCommentRecord)).not.toHaveBeenCalled();
+  });
+
   it("returns success and sends notifications for top-level comments", async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
     vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
