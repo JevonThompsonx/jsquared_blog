@@ -13,6 +13,7 @@ import { and, count, eq } from "drizzle-orm";
 
 import { authAccounts, categories, comments, posts, profiles, users } from "../src/drizzle/schema";
 import { getDb, getDbClient } from "../src/lib/db-core";
+import { findSupabaseAuthUserByEmail } from "../src/lib/e2e/public-auth-fixture";
 import { loadEnvironmentFiles } from "../src/lib/env-loader";
 
 loadEnvironmentFiles();
@@ -116,12 +117,10 @@ async function ensurePublicAuthFixture(): Promise<{ email: string; password: str
     },
   });
 
-  const existingUsers = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
-  if (existingUsers.error) {
-    throw new Error(`Failed to list Supabase users for E2E fixture setup: ${existingUsers.error.message}`);
-  }
-
-  const existingUser = existingUsers.data.users.find((user) => user.email?.toLowerCase() === FIXTURE_PUBLIC_EMAIL);
+  const existingUser = await findSupabaseAuthUserByEmail(
+    (pagination) => supabase.auth.admin.listUsers(pagination),
+    FIXTURE_PUBLIC_EMAIL,
+  );
 
   if (existingUser) {
     const updateResult = await supabase.auth.admin.updateUserById(existingUser.id, {

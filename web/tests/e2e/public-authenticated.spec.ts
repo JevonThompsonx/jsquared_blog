@@ -63,6 +63,12 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can load account settings", async ({ page }) => {
+    publicTest.skip(!configuredPublicEmail, "Run bun run seed:e2e to provision the public E2E email fixture.");
+
+    if (!configuredPublicEmail) {
+      throw new Error("Missing E2E_PUBLIC_EMAIL for authenticated public account smoke coverage.");
+    }
+
     await page.goto("/account");
 
     await expect(page.getByRole("heading", { name: "Account Settings" })).toBeVisible();
