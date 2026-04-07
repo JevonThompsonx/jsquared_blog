@@ -52,6 +52,17 @@ describe("GET /api/cron/publish-scheduled", () => {
     expect(vi.mocked(publishDueScheduledPosts)).not.toHaveBeenCalled();
   });
 
+  it("returns 500 when CRON_SECRET is missing outside local development", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("CRON_SECRET", "");
+
+    const response = await GET(new Request("http://localhost/api/cron/publish-scheduled"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Internal error" });
+    expect(vi.mocked(publishDueScheduledPosts)).not.toHaveBeenCalled();
+  });
+
   it("allows local development runs when CRON_SECRET is not set", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("CRON_SECRET", "");

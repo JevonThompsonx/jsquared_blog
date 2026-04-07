@@ -1,21 +1,8 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { NextResponse } from "next/server";
 
-import { isDeployedEnvironment } from "@/lib/env";
+import { requireCronAuthorization } from "@/lib/cron-auth";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { pingSupabaseKeepalive } from "@/server/supabase/keepalive";
-
-function secureEquals(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-
-  if (leftBuffer.length !== rightBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(leftBuffer, rightBuffer);
-}
 
 // GET /api/cron/keep-supabase-awake
 // Input: Authorization: Bearer {CRON_SECRET}
@@ -29,21 +16,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     return tooManyRequests(rl);
   }
 
-  const cronSecret = process.env.CRON_SECRET;
-  const requestUrl = new URL(request.url);
-  const isLoopbackRequest = ["localhost", "127.0.0.1", "::1"].includes(requestUrl.hostname);
-  const canBypassCronSecret = !isDeployedEnvironment(process.env) && isLoopbackRequest;
-
-  if (!cronSecret) {
-    if (!canBypassCronSecret) {
-      return NextResponse.json({ error: "Internal error" }, { status: 500 });
-    }
-  } else {
-    const authHeader = request.headers.get("authorization");
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!token || !secureEquals(token, cronSecret)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authError = requireCronAuthorization(request);
+  if (authError) {
+    return authError;
   }
 
   try {

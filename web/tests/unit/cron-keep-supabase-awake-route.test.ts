@@ -54,6 +54,17 @@ describe("GET /api/cron/keep-supabase-awake", () => {
     expect(vi.mocked(pingSupabaseKeepalive)).not.toHaveBeenCalled();
   });
 
+  it("returns 500 on localhost during test runs when CRON_SECRET is missing", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("CRON_SECRET", "");
+
+    const response = await GET(new Request("http://localhost/api/cron/keep-supabase-awake"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Internal error" });
+    expect(vi.mocked(pingSupabaseKeepalive)).not.toHaveBeenCalled();
+  });
+
   it("returns 401 when cron secret is configured but token is invalid", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("CRON_SECRET", "very-secret-token");
@@ -69,8 +80,8 @@ describe("GET /api/cron/keep-supabase-awake", () => {
     expect(vi.mocked(pingSupabaseKeepalive)).not.toHaveBeenCalled();
   });
 
-  it("allows local loopback runs when CRON_SECRET is not set", async () => {
-    vi.stubEnv("NODE_ENV", "test");
+  it("allows local loopback runs when CRON_SECRET is not set in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("CRON_SECRET", "");
 
     vi.mocked(pingSupabaseKeepalive).mockResolvedValue({
@@ -85,6 +96,26 @@ describe("GET /api/cron/keep-supabase-awake", () => {
     expect(await response.json()).toEqual({
       ok: true,
       nowIso: "2026-04-06T20:00:00.000Z",
+      service: "auth",
+    });
+  });
+
+  it("allows IPv6 loopback runs in development when CRON_SECRET is not set", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("CRON_SECRET", "");
+
+    vi.mocked(pingSupabaseKeepalive).mockResolvedValue({
+      ok: true,
+      nowIso: "2026-04-06T20:30:00.000Z",
+      service: "auth",
+    });
+
+    const response = await GET(new Request("http://[::1]/api/cron/keep-supabase-awake"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      ok: true,
+      nowIso: "2026-04-06T20:30:00.000Z",
       service: "auth",
     });
   });

@@ -291,9 +291,7 @@ describe("PATCH /api/account/profile", () => {
     }));
 
     expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.displayName).toEqual(expect.any(Array));
-    expect(body.error.displayName.length).toBeGreaterThan(0);
+    expect(await response.json()).toEqual({ error: "Invalid profile update" });
     expect(vi.mocked(updateProfileFields)).not.toHaveBeenCalled();
   });
 

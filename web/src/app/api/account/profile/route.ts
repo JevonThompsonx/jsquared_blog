@@ -64,7 +64,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
   const parse = patchProfileSchema.safeParse(payload);
   if (!parse.success) {
-    return NextResponse.json({ error: parse.error.flatten().fieldErrors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid profile update" }, { status: 400 });
   }
 
   const { displayName, avatarUrl, themePreference } = parse.data;

@@ -42,10 +42,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   });
 
   if (!parse.success) {
-    return NextResponse.json(
-      { error: "Invalid query parameters", details: parse.error.flatten().fieldErrors },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid query parameters" }, { status: 400 });
   }
 
   const { limit, offset, search, category, tag } = parse.data;

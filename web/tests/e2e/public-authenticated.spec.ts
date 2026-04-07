@@ -51,6 +51,8 @@ async function setPublicRequestScope(page: Page, scope: string): Promise<void> {
 }
 
 publicTest.describe("authenticated public-user flows", () => {
+  publicTest.describe.configure({ mode: "serial" });
+
   publicTest.skip(!canRunAuthenticatedFlows, configuredPublicEmail
     ? getPublicStorageStateHint()
     : "Run bun run seed:e2e to provision the public E2E email fixture.");
@@ -75,6 +77,46 @@ publicTest.describe("authenticated public-user flows", () => {
 
     await expect(page.getByRole("heading", { name: "Saved posts" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Read: E2E Admin Fixture Post/i })).toBeVisible();
+  });
+
+  publicTest("signed-in user can remove a saved post from bookmarks", async ({ page }) => {
+    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+
+    await page.goto(`/posts/${configuredPublicPostSlug}`);
+
+    const saveBookmarkButton = page.getByRole("button", { name: "Save this post" });
+    const removeBookmarkButton = page.getByRole("button", { name: "Remove bookmark from this post" });
+
+    await expect(saveBookmarkButton.or(removeBookmarkButton)).toBeVisible({ timeout: 15_000 });
+
+    if (await saveBookmarkButton.isVisible()) {
+      await Promise.all([
+        page.waitForResponse((response) => {
+          return response.request().method() === "POST"
+            && /\/api\/posts\/[^/]+\/bookmark$/.test(new URL(response.url()).pathname)
+            && response.ok();
+        }),
+        saveBookmarkButton.click(),
+      ]);
+    }
+
+    await expect(removeBookmarkButton).toBeVisible();
+
+    await Promise.all([
+      page.waitForResponse((response) => {
+        return response.request().method() === "POST"
+          && /\/api\/posts\/[^/]+\/bookmark$/.test(new URL(response.url()).pathname)
+          && response.ok();
+      }),
+      removeBookmarkButton.click(),
+    ]);
+
+    await expect(saveBookmarkButton).toBeVisible();
+
+    await page.goto("/bookmarks");
+
+    await expect(page.getByRole("heading", { name: "Saved posts" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Read: E2E Admin Fixture Post/i })).toHaveCount(0);
   });
 
   publicTest("signed-in user can load account settings", async ({ page }) => {
