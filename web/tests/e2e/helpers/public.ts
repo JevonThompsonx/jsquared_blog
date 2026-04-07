@@ -24,6 +24,7 @@ function resolvePublicStorageStatePath(): string | null {
   return null;
 }
 
+export const configuredPublicEmail = process.env.E2E_PUBLIC_EMAIL?.trim() || "e2e-public@jsquaredadventures.test";
 export const configuredPublicPostSlug = process.env.E2E_PUBLIC_POST_SLUG?.trim() || "e2e-admin-fixture-post";
 export const publicStorageStatePath = resolvePublicStorageStatePath();
 export const hasPublicStorageState = publicStorageStatePath !== null;
