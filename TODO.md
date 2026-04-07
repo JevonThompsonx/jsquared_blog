@@ -344,6 +344,7 @@ Completed slice:
 - [x] Harden avatar and admin image uploads with shared server-side byte-signature validation so spoofed image MIME types are rejected before Cloudinary upload.
 - [x] Normalize admin GitHub identity mapping around the persisted provider user id so auth helpers no longer disagree about the same admin account.
 - [x] Harden `PATCH /api/account/profile` and `GET /api/posts` so invalid input now returns generic `400` responses instead of leaking raw Zod field maps to public callers.
+- [x] Harden `POST /api/posts/[postId]/comments` so invalid public comment payloads now return a generic `400` response instead of leaking raw Zod field maps, and lock the route with focused write-path coverage.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -363,6 +364,7 @@ Completed slice:
 - [x] Locked `PATCH /api/account/profile` with focused route tests for unauthorized, rate-limited, invalid JSON, schema rejection, omitted-vs-null field semantics, and successful updates; the route already satisfied the contract so no production code change was required.
 - [x] Locked the shared admin-profile attribution policy in tests and docs: admin accounts remain keyed by GitHub provider user id, `githubLogin` stays sourced from the live GitHub profile for operator attribution, and the persisted display/avatar identity intentionally stays the shared site-owner branding.
 - [x] Hardened `GET /api/admin/posts` against malformed query input by returning a safe `400` for invalid admin filters instead of letting Zod validation errors escape the route boundary; added focused route coverage for invalid status, pagination, oversized query input, and unexpected non-Zod failures.
+- [x] Added direct route coverage for `DELETE /api/comments/[commentId]`, `POST /api/comments/[commentId]/like`, `POST /api/admin/posts/clone`, and `POST /api/admin/posts/bulk-status` so public/admin mutation contracts are pinned before later cleanup or refactor work.
 
 ### Phase 4: Refactor and Cleanup
 
@@ -852,11 +854,85 @@ Planner review note:
   - Security review: reviewed after the batch; no new security issues were found in the build/parity guardrail work.
 - Status: complete
 
+### Batch: public comment write-boundary hardening
+- Goal: stop the public comment-create route from leaking raw validation details and pin the remaining write-path contract before further comment work.
+- User journey or failure being protected: authenticated public users can submit comments safely while invalid payloads fail with a stable generic `400` response instead of exposing field-level validator internals.
+- Scope: `TODO.md`, `web/src/app/api/posts/[postId]/comments/route.ts`, and focused route tests in `web/tests/unit/post-comments-route.test.ts`.
+- Files expected to change: `TODO.md`, `web/src/app/api/posts/[postId]/comments/route.ts`, `web/tests/unit/post-comments-route.test.ts`.
+- Tests to add or update first: unauthorized POST, invalid JSON, generic invalid-payload rejection, missing-parent reply rejection, and the existing success paths.
+- RED command: `bunx vitest run tests/unit/post-comments-route.test.ts`
+- Expected RED test(s): the new invalid-payload assertion fails because the route still returns `parse.error.flatten().fieldErrors`.
+- Why this RED proves the right problem: it exercises the public comment trust boundary directly and shows validator structure is still exposed to callers.
+- GREEN target: invalid comment payloads return only `{ error: "Invalid comment payload" }` while the existing unauthorized, rate-limit, parent-validation, and success behavior stays intact.
+- GREEN command: `bunx vitest run tests/unit/post-comments-route.test.ts`
+- Refactor boundary: no comment UI, DAL, notification, or moderation changes.
+- Refactor proof command(s): `bunx vitest run tests/unit/post-comments-route.test.ts`
+- Security impact: medium, because this is a public authenticated write surface.
+- Required security assertions: unauthenticated requests stay `401`; invalid JSON stays `400`; parent-comment validation stays `404`; no field-level Zod details are returned publicly.
+- E2E impact: none for this slice.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: closes a remaining public error-shape gap and expands write-path contract coverage for comments.
+- Verification commands: `bunx vitest run tests/unit/post-comments-route.test.ts`, `npx eslint "src/app/api/posts/[postId]/comments/route.ts" "tests/unit/post-comments-route.test.ts"`, `bunx tsc --noEmit`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-comments-route.test.ts`
+  - Result: the new invalid-payload test failed because the route still returned `{ error: { content: ["Comment is required"] } }` from `parse.error.flatten().fieldErrors`.
+  - Why this RED proved the right problem: it showed the public comment POST route still leaked field-level validation structure across the API boundary.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-comments-route.test.ts`
+  - Result: all 6 focused comment-route tests passed after the route switched to a generic invalid-payload response.
+- REFACTOR evidence:
+  - No broader refactor followed GREEN; the slice stayed inside the route response contract and new tests.
+- Verification evidence:
+  - Tests: included in the final focused route batch (`bunx vitest run tests/unit/post-comments-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`) which passed with 26 tests across 5 files.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/comments/route.ts" "tests/unit/post-comments-route.test.ts" "tests/unit/comment-delete-route.test.ts" "tests/unit/comment-like-route.test.ts" "tests/unit/admin-post-clone-route.test.ts" "tests/unit/admin-post-bulk-status-route.test.ts"` passed.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Build: skipped because this was a focused route/test change with no broader compilation or routing risk beyond typecheck.
+  - Security review: reviewed during the slice; no new issues were introduced and the public response now leaks less validation detail.
+- Status: complete
+
+### Batch: public comment and admin post route contract coverage
+- Goal: add direct tests for public comment deletion/like mutations and untested admin clone/bulk-status routes so future cleanup work is protected by focused route coverage.
+- User journey or failure being protected: signed-in users and admins should keep receiving the same auth, throttle, validation, not-found, and success behavior on these mutation endpoints.
+- Scope: `TODO.md` plus new focused route test files only unless they expose a real route bug.
+- Files expected to change: `TODO.md`, `web/tests/unit/comment-delete-route.test.ts`, `web/tests/unit/comment-like-route.test.ts`, `web/tests/unit/admin-post-clone-route.test.ts`, `web/tests/unit/admin-post-bulk-status-route.test.ts`.
+- Tests to add or update first: invalid-id, unauthorized, rate-limited, not-found, and success cases for the public comment endpoints; unauthorized, throttled, validation, not-found, and happy-path cases for the admin clone/bulk-status endpoints.
+- RED command: `bunx vitest run tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+- Expected RED test(s): the new suites fail if any route disagrees with the intended auth/validation contract, or the run passes immediately and closes the current direct-coverage gap.
+- Why this RED proves the right problem: these routes had little or no direct contract coverage, so behavior-adjacent changes could regress silently.
+- GREEN target: the new focused suites pin the current public/admin mutation route contracts without requiring unrelated production changes.
+- GREEN command: `bunx vitest run tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+- Refactor boundary: no production refactor unless one of the new tests surfaces a real route bug.
+- Refactor proof command(s): rerun the same focused suites after any required route fix.
+- Security impact: medium confidence gain, because these tests cover authenticated public and admin mutation surfaces.
+- Required security assertions: invalid ids stay `400`; unauthenticated public/admin callers stay `401`; throttled requests return `429`; not-found and success contracts stay stable.
+- E2E impact: none.
+- E2E prerequisites (seed, auth state, env): none.
+- Artifact paths (trace/video/screenshot), if E2E: none.
+- Coverage impact: removes four direct route-coverage blind spots ahead of later refactor work.
+- Verification commands: `bunx vitest run tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`, touched-file lint, `bunx tsc --noEmit`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+  - Result: the newly added suites passed on the first run, proving the currently shipped route contracts already satisfy the intended auth/validation behavior.
+  - Why this still closed the right problem: the gap was missing direct protection on these mutation endpoints, so adding focused route tests first eliminated that blind spot even without a production bug.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`
+  - Result: 20 focused route tests passed across the four new/expanded suites.
+- REFACTOR evidence:
+  - No refactor or production change followed GREEN; this slice stayed test-only by design.
+- Verification evidence:
+  - Tests: included in the final focused route batch (`bunx vitest run tests/unit/post-comments-route.test.ts tests/unit/comment-delete-route.test.ts tests/unit/comment-like-route.test.ts tests/unit/admin-post-clone-route.test.ts tests/unit/admin-post-bulk-status-route.test.ts`) which passed with 26 tests across 5 files.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/comments/route.ts" "tests/unit/post-comments-route.test.ts" "tests/unit/comment-delete-route.test.ts" "tests/unit/comment-like-route.test.ts" "tests/unit/admin-post-clone-route.test.ts" "tests/unit/admin-post-bulk-status-route.test.ts"` passed.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Build: skipped because this slice only added focused route tests.
+  - Security review: reviewed during the slice; no new issues were introduced and the new tests now pin the expected auth and validation behavior on these endpoints.
+- Status: complete
+
 ## Ranked Remediation Backlog
 
 1. Rerun the hardened public auth bootstrap live (`bun run seed:e2e`, `bun run e2e:capture-public-state`, targeted `public-authenticated.spec.ts`) once a loopback or explicitly approved non-production Supabase target is available in the shell.
 2. Run the targeted bookmark save/remove Playwright slice against that safe fixture environment, then continue broader authenticated public smoke coverage.
-3. Continue hardening remaining trust boundaries so they return safe failures instead of leaking uncaught validation errors; next candidates are public comment POST and selected admin server actions.
+3. Continue hardening remaining trust boundaries so they return safe failures instead of leaking uncaught validation errors; next candidates are selected admin server actions and any remaining public write routes not yet covered directly.
 4. Confirm no remaining sensitive error leakage across public/admin write surfaces and operational endpoints.
 5. Add consumer-level coverage where needed if any UI or client helper still depends on removed field-level validation payloads from the newly hardened public routes.
 
@@ -866,6 +942,8 @@ Planner review note:
 - Correctness: public E2E helper preflight is now explicit, fixture-user lookup now paginates across Supabase auth pages, persisted public auth reuse now requires matching env/storage metadata, and authenticated public mutation flows now require the configured fixture email plus deterministic request-IP isolation instead of a built-in `429` retry.
 - Cleanup: the duplicate public E2E env writes, duplicated capture env-loading loop, repeated public/admin storage-state path-hint logic, and cron-auth helper drift are now removed or shared behind focused tests.
 - Security: the public newsletter signup route now returns generic validation and missing-config responses instead of exposing schema field maps or setup/env guidance.
+- Security: the public comment-create route now returns a generic invalid-payload response instead of exposing raw field-level validation details.
+- Correctness: direct route coverage now protects public comment deletion/like mutations plus admin post clone/bulk-status behavior, reducing mutation-surface blind spots before later refactors.
 - E2E: admin shell coverage exists, public route smoke now includes `/about`, `/map`, discovered post detail, and unauthenticated `/bookmarks`, and admin route smoke now covers unauthenticated and authenticated `/admin/posts/new`; the next gating step before broader signed-in public expansion is still a live rerun of the hardened public bootstrap lane against a clearly safe target.
 
 ## Known Likely Blockers
@@ -953,6 +1031,8 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-07: Hardened `PATCH /api/account/profile` and `GET /api/posts` so invalid public input now returns generic `400` responses instead of leaking raw Zod field maps, and added direct unit coverage for the public posts listing route.
 - 2026-04-07: Unified cron auth enforcement in `web/src/lib/cron-auth.ts`, kept missing-secret failures generic, limited the unauthenticated bypass to loopback development, normalized bracketed IPv6 loopback hostnames, and added direct helper coverage plus expanded parity tests for both cron routes.
 - 2026-04-07: Added the next authenticated public Playwright slice for bookmark removal and serialized the signed-in public flow block to avoid shared bookmark-state races; the live browser rerun is still blocked on a clearly safe local public-auth fixture environment.
+- 2026-04-07: Hardened `POST /api/posts/[postId]/comments` so invalid public comment payloads now return a generic `400` response, and added focused route coverage for unauthorized, invalid JSON, parent-comment validation, and success paths.
+- 2026-04-07: Added direct unit coverage for `DELETE /api/comments/[commentId]`, `POST /api/comments/[commentId]/like`, `POST /api/admin/posts/clone`, and `POST /api/admin/posts/bulk-status` so those public/admin mutation contracts are pinned before future cleanup work.
 
 ## Planned Feature Expansion
 
