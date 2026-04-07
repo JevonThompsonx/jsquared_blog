@@ -18,11 +18,11 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const existingAppUser = await getPublicAppUserBySupabaseId(supabaseUser.id);
-  const appUser = existingAppUser ?? await ensurePublicAppUser(supabaseUser);
+  let appUser = existingAppUser ?? await ensurePublicAppUser(supabaseUser);
 
   let profile = await getProfileByUserId(appUser.id);
   if (!profile) {
-    await ensurePublicAppUser(supabaseUser);
+    appUser = await ensurePublicAppUser(supabaseUser);
     profile = await getProfileByUserId(appUser.id);
   }
 
