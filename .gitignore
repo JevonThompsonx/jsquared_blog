@@ -53,6 +53,8 @@ lerna-debug.log*
 # Build outputs
 dist/
 build/
+!web/src/lib/build/
+!web/src/lib/build/**
 *.tsbuildinfo
 .cache/
 .next/
