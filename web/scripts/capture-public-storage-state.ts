@@ -15,6 +15,11 @@ import { chromium } from "@playwright/test";
 import { config as loadDotenv } from "dotenv";
 
 import { resolvePublicStorageStateCaptureConfig } from "../src/lib/e2e/public-storage-state-config";
+import {
+  assertPublicStorageStateCapturePreconditions,
+  createPublicAuthArtifactFingerprint,
+  createPublicStorageStateMetadata,
+} from "../src/lib/e2e/public-storage-state-config";
 
 for (const envPath of [
   path.join(process.cwd(), ".env.test.local"),
@@ -30,13 +35,18 @@ for (const envPath of [
 }
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const storageStatePath = resolvePublicStorageStateCaptureConfig({
+const captureConfig = resolvePublicStorageStateCaptureConfig({
   cwd: process.cwd(),
   baseURL,
   configuredStorageStatePath: process.env.E2E_PUBLIC_STORAGE_STATE,
-}).storageStatePath;
+  allowRemoteCapture: process.env.E2E_ALLOW_REMOTE_PUBLIC_CAPTURE === "1",
+});
+const storageStatePath = captureConfig.storageStatePath;
+const metadataPath = captureConfig.metadataPath;
 const email = process.env.E2E_PUBLIC_EMAIL?.trim();
 const password = process.env.E2E_PUBLIC_PASSWORD?.trim();
+const publicPostSlug = process.env.E2E_PUBLIC_POST_SLUG?.trim();
+const fixtureGeneratedAt = process.env.E2E_PUBLIC_FIXTURE_GENERATED_AT?.trim();
 const headless = process.env.E2E_CAPTURE_HEADLESS !== "0";
 
 async function isBaseUrlReachable(urlValue: string): Promise<boolean> {
@@ -74,6 +84,18 @@ async function main(): Promise<void> {
   if (!email || !password) {
     throw new Error("E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD must be set before capturing public storage state.");
   }
+
+  if (!publicPostSlug || !fixtureGeneratedAt) {
+    throw new Error(
+      "E2E_PUBLIC_POST_SLUG and E2E_PUBLIC_FIXTURE_GENERATED_AT must be set before capturing public storage state. Run bun run seed:e2e first.",
+    );
+  }
+
+  assertPublicStorageStateCapturePreconditions({
+    storageStatePath,
+    isExplicitStorageState: captureConfig.isExplicitStorageState,
+    storageStateExists: fs.existsSync(storageStatePath),
+  });
 
   if (!(await isBaseUrlReachable(baseURL))) {
     throw new Error(`No app server is reachable at ${baseURL}. Start the app first (for example: bun run dev).`);
@@ -133,8 +155,17 @@ async function main(): Promise<void> {
 
   await mkdir(path.dirname(storageStatePath), { recursive: true });
   await context.storageState({ path: storageStatePath });
+  await fs.promises.writeFile(metadataPath, JSON.stringify(createPublicStorageStateMetadata({
+    origin: new URL(baseURL).origin,
+    fingerprint: createPublicAuthArtifactFingerprint({
+      publicEmail: email,
+      publicPostSlug,
+      fixtureGeneratedAt,
+    }),
+  }), null, 2), "utf8");
 
   console.log(`Saved public storage state to ${storageStatePath}`);
+  console.log(`Saved public storage metadata to ${metadataPath}`);
 
   await context.close();
   await browser.close();

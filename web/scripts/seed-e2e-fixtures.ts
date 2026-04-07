@@ -14,6 +14,7 @@ import { and, count, eq } from "drizzle-orm";
 import { authAccounts, categories, comments, posts, profiles, users } from "../src/drizzle/schema";
 import { getDb, getDbClient } from "../src/lib/db-core";
 import { findSupabaseAuthUserByEmail } from "../src/lib/e2e/public-auth-fixture";
+import { createPublicEnvArtifactMetadata } from "../src/lib/e2e/public-env-artifact";
 import { assertSafeSupabaseSeedTarget } from "../src/lib/e2e/public-e2e-target-guard";
 import { loadEnvironmentFiles } from "../src/lib/env-loader";
 
@@ -384,6 +385,7 @@ async function ensureFixtureComments(): Promise<void> {
 
 async function main(): Promise<void> {
   const db = getDb();
+  const fixtureGeneratedAt = new Date().toISOString();
 
   const category = await db.query.categories.findFirst({
     where: eq(categories.id, FIXTURE_CATEGORY_ID),
@@ -401,10 +403,18 @@ async function main(): Promise<void> {
   const publicAuthFixture = await ensurePublicAuthFixture();
   await ensureFixturePost();
   await ensureFixtureComments();
+  const publicEnvMetadata = createPublicEnvArtifactMetadata({
+    publicEmail: publicAuthFixture.email,
+    publicPostSlug: FIXTURE_POST_SLUG,
+    createdAt: fixtureGeneratedAt,
+  });
+
   await writeEnvValue("E2E_ADMIN_POST_ID", FIXTURE_POST_ID);
   await writeEnvValue("E2E_PUBLIC_EMAIL", publicAuthFixture.email);
   await writeEnvValue("E2E_PUBLIC_PASSWORD", publicAuthFixture.password);
   await writeEnvValue("E2E_PUBLIC_POST_SLUG", FIXTURE_POST_SLUG);
+  await writeEnvValue("E2E_PUBLIC_FIXTURE_GENERATED_AT", fixtureGeneratedAt);
+  await writeEnvValue("E2E_PUBLIC_ENV_METADATA", JSON.stringify(publicEnvMetadata));
 
   const commentCountRows = await db
     .select({ total: count() })
@@ -415,6 +425,7 @@ async function main(): Promise<void> {
   console.log(`Wrote E2E_ADMIN_POST_ID to ${ENV_FILE_PATH}`);
   console.log(`Wrote E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD to ${ENV_FILE_PATH}`);
   console.log(`Wrote E2E_PUBLIC_POST_SLUG to ${ENV_FILE_PATH}`);
+  console.log(`Wrote public E2E artifact metadata to ${ENV_FILE_PATH}`);
 }
 
 main().catch((error: unknown) => {
