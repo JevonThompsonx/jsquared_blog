@@ -20,7 +20,12 @@ export async function GET(request: Request): Promise<NextResponse> {
   const existingAppUser = await getPublicAppUserBySupabaseId(supabaseUser.id);
   const appUser = existingAppUser ?? await ensurePublicAppUser(supabaseUser);
 
-  const profile = await getProfileByUserId(appUser.id);
+  let profile = await getProfileByUserId(appUser.id);
+  if (!profile) {
+    await ensurePublicAppUser(supabaseUser);
+    profile = await getProfileByUserId(appUser.id);
+  }
+
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }

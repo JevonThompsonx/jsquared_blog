@@ -95,13 +95,21 @@ export async function getPublicAppUserBySupabaseId(providerUserId: string): Prom
 }
 
 export async function ensurePublicAppUser(user: User): Promise<PublicAppUser> {
+  const db = getDb();
   const existing = await getPublicAppUserBySupabaseId(user.id);
   if (existing) {
-    return existing;
+    const profileRows = await db
+      .select({ userId: profiles.userId })
+      .from(profiles)
+      .where(eq(profiles.userId, existing.id))
+      .limit(1);
+
+    if (profileRows[0]) {
+      return existing;
+    }
   }
 
-  const db = getDb();
-  const userId = getSupabaseUserId(user.id);
+  const userId = existing?.id ?? getSupabaseUserId(user.id);
   const accountId = getSupabaseAccountId(user.id);
   const email = fallbackEmail(user);
   const displayName = getDisplayName(user);

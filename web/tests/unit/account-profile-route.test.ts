@@ -145,4 +145,60 @@ describe("GET /api/account/profile", () => {
       },
     });
   });
+
+  it("repairs a missing profile row when the auth account already exists", async () => {
+    const supabaseUser = makeSupabaseUser();
+
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(supabaseUser);
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(getPublicAppUserBySupabaseId)
+      .mockResolvedValueOnce({
+        id: "public-user-1",
+        supabaseUserId: "supabase-user-1",
+        email: "reader@example.com",
+        displayName: "Traveler",
+        avatarUrl: null,
+      })
+      .mockResolvedValueOnce({
+        id: "public-user-1",
+        supabaseUserId: "supabase-user-1",
+        email: "reader@example.com",
+        displayName: "Reader",
+        avatarUrl: null,
+      });
+    vi.mocked(getProfileByUserId)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        userId: "public-user-1",
+        displayName: "Reader",
+        avatarUrl: null,
+        themePreference: null,
+      });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+
+    const response = await GET(new Request("http://localhost/api/account/profile"));
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(ensurePublicAppUser)).toHaveBeenCalledWith(supabaseUser);
+    expect(await response.json()).toEqual({
+      profile: {
+        userId: "public-user-1",
+        displayName: "Reader",
+        avatarUrl: null,
+        themePreference: null,
+        email: "reader@example.com",
+      },
+    });
+  });
 });

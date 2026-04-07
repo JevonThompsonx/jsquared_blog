@@ -126,6 +126,30 @@ publicTest.describe("authenticated public-user flows", () => {
     }
   });
 
+  publicTest("signed-in user can open the seeded post author's public profile", async ({ page }) => {
+    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+
+    await page.goto(`/posts/${configuredPublicPostSlug}`);
+
+    const authorLink = page.getByRole("link", { name: /View .*'s profile/i }).first();
+    await expect(authorLink).toBeVisible();
+
+    const authorPath = await authorLink.getAttribute("href");
+    expect(authorPath).toMatch(/^\/author\//);
+
+    await authorLink.click();
+
+    await expect(page).toHaveURL(new RegExp(`${authorPath?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByText(/^Member since\b/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Recent comments" })).toBeVisible();
+    await expect(
+      page.locator("section").filter({ has: page.getByRole("heading", { name: "Recent comments" }) }).locator("article").first()
+        .or(page.getByText("No comments yet — check back later.", { exact: true })),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Browse stories →" })).toBeVisible();
+  });
+
   publicTest("signed-in user can sign out from account settings and return to a logged-out home state", async ({ page }) => {
     await page.goto("/account");
 
