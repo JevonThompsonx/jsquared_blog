@@ -51,13 +51,13 @@ export default async function AdminPage({
 
         {!authConfigured ? (
           <div className="mt-8 rounded-[1.5rem] border border-dashed border-[var(--border)] bg-[var(--surface-strong)] p-6 text-sm leading-7 text-[var(--muted)]">
-            Configure `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, and `AUTH_ADMIN_GITHUB_IDS` to enable admin sign-in.
+            Admin sign-in is not available right now.
           </div>
         ) : null}
 
         {resolvedSearchParams?.error ? (
           <div className="mt-6 rounded-2xl border border-[var(--color-warning-soft-border)] bg-[var(--color-warning-soft-bg)] px-4 py-3 text-sm text-[var(--color-warning-text)]">
-            Sign-in was denied. Make sure your numeric GitHub account ID is included in `AUTH_ADMIN_GITHUB_IDS`.
+            Sign-in was denied.
           </div>
         ) : null}
 

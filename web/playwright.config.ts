@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const isCI = Boolean(process.env.CI);
 
 function getLocalWebServerConfig() {
   try {
@@ -27,15 +28,23 @@ function getLocalWebServerConfig() {
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
-  retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? "github" : "list",
+  retries: isCI ? 1 : 0,
+  outputDir: "test-results",
+  reporter: isCI
+    ? [
+        ["github"],
+        ["html", { open: "never", outputFolder: "playwright-report" }],
+        ["json", { outputFile: "test-results/playwright-results.json" }],
+      ]
+    : "list",
 
   webServer: getLocalWebServerConfig(),
 
   use: {
     baseURL,
     screenshot: "only-on-failure",
-    trace: "on-first-retry",
+    trace: isCI ? "retain-on-failure" : "on-first-retry",
+    video: "off",
   },
 
   projects: [

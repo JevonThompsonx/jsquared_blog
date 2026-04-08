@@ -29,13 +29,20 @@ import { SeriesNav } from "@/components/blog/series-nav";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
 
 import PostHead from "./head";
+import { normalizePostSlug } from "./slug";
 
 type PostPageProps = {
   params: Promise<{ slug: string }>;
 };
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = normalizePostSlug(rawSlug);
+
+  if (!slug) {
+    return {};
+  }
+
   const post = await getPublishedPostBySlug(slug);
   if (!post) {
     return {};
@@ -61,7 +68,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = normalizePostSlug(rawSlug);
+
+  if (!slug) {
+    notFound();
+  }
+
   const [post, adminSession] = await Promise.all([
     getPublishedPostBySlug(slug),
     getAdminServerSession(),

@@ -3,6 +3,8 @@ import { getCanonicalPostUrl } from "@/lib/utils";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
 import { getPublishedPostBySlug } from "@/server/queries/posts";
 
+import { normalizePostSlug } from "./slug";
+
 type PostHeadProps = {
   params: Promise<{ slug: string }>;
 };
@@ -12,7 +14,13 @@ function serializeJsonLd(data: object): string {
 }
 
 export default async function Head({ params }: PostHeadProps) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = normalizePostSlug(rawSlug);
+
+  if (!slug) {
+    return null;
+  }
+
   const post = await getPublishedPostBySlug(slug);
 
   if (!post || post.status !== "published") {

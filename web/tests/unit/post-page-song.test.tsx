@@ -19,7 +19,8 @@ describe("PostSongMetadata", () => {
     expect(markup).toContain("Bon Iver");
     expect(markup).toContain('href="https://open.spotify.com/track/123"');
     expect(markup).toContain('target="_blank"');
-    expect(markup).toContain('rel="noreferrer"');
+    expect(markup).toContain('rel="noopener noreferrer"');
+    expect(markup).toContain('aria-label="Listen to Holocene by Bon Iver"');
   });
 
   it("does not render incomplete or unsafe song metadata", () => {

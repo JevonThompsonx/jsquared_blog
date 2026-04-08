@@ -12,10 +12,14 @@ export const metadata: Metadata = {
   description: "Every J²Adventures story, pinned to the place it happened.",
 };
 
+function hasMapCoordinates(post: { locationLat: number | null; locationLng: number | null }) {
+  return post.locationLat !== null && post.locationLng !== null;
+}
+
 export default async function MapPage() {
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   const allPosts = await listAllPublishedPosts();
-  const mappedCount = allPosts.filter((p) => p.locationLat !== null).length;
+  const mappedCount = allPosts.filter(hasMapCoordinates).length;
 
   return (
     <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>

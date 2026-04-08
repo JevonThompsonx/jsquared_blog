@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { derivePostContent } from "@/server/posts/content";
@@ -42,10 +43,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ error: "Invalid warnings request" }, { status: 400 });
     }
 
-    console.error("[admin post warnings] failed to derive warnings", {
+    logAdminRouteFailure("[admin post warnings] failed to derive warnings", {
       adminUserId: session.user.id,
       error,
     });
-    return NextResponse.json({ error: "Failed to validate warnings" }, { status: 500 });
+    return adminRouteFailureResponse("Failed to validate warnings");
   }
 }

@@ -356,6 +356,13 @@ Completed slice:
 - [x] Harden `GET /api/admin/posts/[postId]/revisions` so whitespace-only IDs fail fast and unexpected revision lookup/list failures return safe generic `500`s with bounded logging.
 - [x] Harden public comment routes so draft post comments do not leak, GET/POST/delete/like unexpected failures return safe generic `500`s, authenticated comment/like throttles key on user-plus-IP, and successful comment writes are not misreported as failures when follow-up refresh work breaks.
 - [x] Add browser-level coverage for the successful public comment mutation fallback path so the client refetches and renders the new comment even when the `POST /api/posts/[postId]/comments` response omits refreshed `comments`, including nested reply recovery and the successful-write-plus-failed-refetch error state.
+- [x] Harden the public `/preview/[id]` and `/author/[id]` page trust boundaries so whitespace-only or malformed ids now fail closed before token/DAL access, and trimmed valid ids are forwarded consistently under focused unit coverage.
+- [x] Harden the public category page and category RSS feed trust boundaries so malformed or encoded-whitespace category params fail closed before query work, while trimmed valid labels are decoded and forwarded consistently under focused unit coverage.
+- [x] Harden `GET|POST /api/posts/[postId]/bookmark` so unexpected auth/DAL failures now return safe generic `500`s under focused route coverage instead of escaping raw server errors.
+- [x] Move `GET /api/cron/publish-scheduled` cron-secret authorization ahead of rate limiting so invalid callers cannot spend the publish budget, and keep post-publish cache revalidation failures bounded per path without misreporting the publish operation itself as failed.
+- [x] Harden runtime env parsing so blank optional server/public values are treated as unset, migrate the security runtime from deprecated `middleware.ts` to `proxy.ts`, and remove the current Next/Sentry deprecation warnings under focused unit coverage plus a passing production build.
+- [x] Harden `POST /api/route-plans` with an early request-size guard on actual bytes read, explicit rate-limit-backend failure handling, and focused route coverage for oversized and unavailable-limiter paths.
+- [x] Harden admin wishlist server actions so DAL failures return generic save/delete errors, successful writes do not fail when `/admin/wishlist` revalidation throws, and focused tests use schema-valid payloads with isolated mocks.
 
 ### Phase 3: Correctness and Maintainability
 
@@ -373,6 +380,7 @@ Completed slice:
 
 Completed slice:
 
+- [x] Extracted a tiny shared admin-route unexpected-error helper for comment moderation, warnings, preview, and clone routes after the existing route suites were already green, preserving their current auth, validation, not-found, and generic `500` behavior while removing repeated `console.error(...)` plus `NextResponse.json(..., { status: 500 })` boilerplate.
 - [x] Prevent malformed admin `galleryEntries` payloads from silently erasing existing post media during save/update.
 - [x] Locked `PATCH /api/account/profile` with focused route tests for unauthorized, rate-limited, invalid JSON, schema rejection, omitted-vs-null field semantics, and successful updates; the route already satisfied the contract so no production code change was required.
 - [x] Locked the shared admin-profile attribution policy in tests and docs: admin accounts remain keyed by GitHub provider user id, `githubLogin` stays sourced from the live GitHub profile for operator attribution, and the persisted display/avatar identity intentionally stays the shared site-owner branding.
@@ -383,6 +391,11 @@ Completed slice:
 - [x] Hardened matching admin preview, clone, and bulk-status API routes so whitespace-only IDs are rejected at the route boundary and trimmed valid IDs are forwarded consistently.
 - [x] Hardened admin revision detail and restore routes so whitespace-only IDs are rejected at the boundary, unexpected DAL failures no longer escape raw errors, committed restores still succeed if cache revalidation fails afterward, and server-side logging preserves operational visibility.
 - [x] Added direct route coverage for `GET /api/admin/posts/[postId]/revisions/[revisionId]`, `POST /api/admin/posts/[postId]/revisions/[revisionId]/restore` failure semantics, `GET /api/admin/series/[seriesId]/part-numbers`, and `GET /api/admin/posts/[postId]/comments` before further admin moderation/editor cleanup.
+- [x] Extended the shared `web/src/lib/admin-route-errors.ts` helper into the already-covered admin revision detail, revision restore, series part-number, and post-comments routes after their focused suites were green, removing another safe block of duplicated `console.error(...)` plus generic `500` boilerplate without changing the route contracts.
+- [x] Remove env-variable-name leakage from the public admin landing page while adding direct unit coverage for the admin dashboard entry contract and the `api/auth/[...nextauth]` handler wiring.
+- [x] Harden public tag and series route params so whitespace-only slugs fail closed, trimmed valid slugs are forwarded consistently for metadata and page lookup, and `AccountSettings` now turns session/profile bootstrap failures into a stable retry message under direct unit coverage.
+- [x] Tighten additional small public safety and coverage gaps on clean files: newsletter client success-state handling now fails closed for ambiguous `2xx` and bare `202` responses, public wishlist query output exposes only trimmed `https:` outbound links, public song links add `rel="noopener noreferrer"` plus a descriptive label, the root `/feed.xml` route now has direct contract coverage, and the deterministic authenticated-public request-isolation helper lives only under the Playwright test harness.
+- [x] Harden `updateTagDescriptionAction` so successful admin tag saves do not fail when one cache revalidation throws, and both admin/public tag invalidations are still attempted under focused action coverage.
 
 ### Phase 4: Refactor and Cleanup
 
@@ -403,14 +416,19 @@ Completed slice:
 
 ### Phase 5: E2E Confidence
 
-- [ ] Add smoke coverage for all critical user-facing routes.
-- [ ] Add authenticated admin flow coverage.
-- [ ] Add authenticated public-user flow coverage.
+- [-] Add smoke coverage for all critical user-facing routes.
+- [-] Add authenticated admin flow coverage.
+- [-] Add authenticated public-user flow coverage.
 - [ ] Reduce or quarantine flaky tests with clear follow-up notes.
-- [ ] Ensure CI-ready artifact capture and failure diagnosis.
-- [-] Add signed-in bookmark removal coverage in `web/tests/e2e/public-authenticated.spec.ts` and verify it live against the managed public fixture environment.
+- [x] Ensure CI-ready artifact capture and failure diagnosis.
+- [-] Live-verify the existing signed-in bookmark removal coverage in `web/tests/e2e/public-authenticated.spec.ts` against the managed public fixture environment.
 - [x] Make the authenticated public comment-deletion smoke test deterministic by removing the built-in `429` retry path and isolating limiter/user state so the flow passes or fails in one attempt.
 - [x] Require explicit public E2E preflight checks for seed data, storage-state origin, and required env so missing setup fails before navigation instead of deep in the UI.
+
+Completed slice:
+
+- [x] Added direct unit coverage for the public `/login`, `/signup`, `/account`, and legacy `/settings` entry shells, and hardened the client `/bookmarks` page so expired auth, failed bookmark loads, rejected requests, and malformed payloads now land in stable unauthenticated or retry states instead of silently collapsing into the empty saved-posts UI.
+- [x] Added browser-level smoke coverage for `/route-planner` in a dedicated Playwright spec that mocks `POST /api/route-plans`, asserts the real request payload on success and empty-result flows, verifies a small-screen path stays usable without horizontal overflow, and fails if the page starts depending on unexpected external network requests.
 
 ### Phase 6: Ongoing Execution
 
@@ -420,46 +438,252 @@ Completed slice:
 
 ## Active Batch
 
-### Batch: admin lookup and revision trust-boundary hardening
-- Goal: close remaining admin read/mutation trust-boundary gaps on untouched revision and moderation-support routes.
-- User journey or failure being protected: authenticated admins should get stable safe errors for malformed IDs and unexpected backend failures, while successful revision restores should not falsely fail if post-commit cache revalidation breaks.
-- Scope: `TODO.md`, `web/src/app/api/admin/posts/[postId]/revisions/[revisionId]/route.ts`, `web/src/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route.ts`, `web/src/app/api/admin/series/[seriesId]/part-numbers/route.ts`, `web/src/app/api/admin/posts/[postId]/comments/route.ts`, and focused route tests under `web/tests/unit/`.
-- Files expected to change: the four routes above, `web/tests/unit/post-revision-route.test.ts`, `web/tests/unit/post-revision-restore-route.test.ts`, `web/tests/unit/revision-route-error-handling.test.ts`, `web/tests/unit/admin-series-part-numbers-route.test.ts`, `web/tests/unit/admin-post-comments-route.test.ts`, and `TODO.md`.
-- Tests to add or update first: direct invalid-param and unexpected-backend-failure coverage for revision detail, revision restore, series part numbers, and admin post comments; add restore-path assertions for apply failure and post-commit revalidation failure semantics before changing route code.
-- RED command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
-- Expected RED test(s): whitespace-only revision IDs still pass through to `404`/success paths, unexpected DAL failures still reject with raw errors, and committed restores still return `500` if `revalidatePath()` throws after the write succeeds.
-- Why this RED proves the right problem: these tests hit the exact admin route boundaries that surface route errors to privileged UI callers, proving malformed IDs and backend exceptions were still leaking or being misreported at the HTTP boundary.
-- GREEN target: whitespace-only IDs fail with stable `400`s, unexpected backend failures return safe generic `500`s with server-side logging, and revision restores continue returning success once the DB mutation commits even if later revalidation fails.
-- GREEN command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
-- Refactor boundary: no DAL transaction redesign, no admin UI rewiring, and no broader moderation/editor feature changes.
-- Security impact: medium, because this is authenticated admin input handling and error-shape hardening.
-- Required security assertions: `requireAdminSession()` remains the auth gate, whitespace-only IDs are rejected before DAL calls, safe client error shapes do not expose internals, and server-side logging retains enough route context for operators.
+### Batch: optional comment notification env should not crash unrelated app loads
+- Goal: stop invalid optional comment-notification email config from crashing unrelated page loads while preserving fail-closed validation where the email feature is actually used.
+- User journey or failure being protected: local dev and deployed page loads such as `/` should not 500 just because `COMMENT_NOTIFICATION_TO_EMAIL` is malformed, while comment notification sending should still skip safely or validate explicitly when invoked.
+- Scope: `TODO.md`, `web/src/lib/env.ts`, `web/tests/unit/env-runtime.test.ts`, and only the smallest email/comment-notification helper surface needed if runtime config parsing must be narrowed.
+- Files expected to change: `TODO.md`, `web/src/lib/env.ts`, `web/tests/unit/env-runtime.test.ts`, and possibly `web/src/server/services/comment-notifications.ts` or `web/src/lib/email/resend.ts` if the validation boundary moves there.
+- Tests to add or update first: direct env-runtime coverage proving invalid optional `COMMENT_NOTIFICATION_TO_EMAIL` does not crash unrelated runtime imports/page boot, while blank values still behave as unset and the notification path still fails closed or skips safely.
+- RED command: `bunx vitest run tests/unit/env-runtime.test.ts`
+- Expected RED test(s): a new env-runtime assertion fails because importing the runtime env module with `COMMENT_NOTIFICATION_TO_EMAIL=not-an-email` still throws and crashes unrelated app boot.
+- Why this RED proves the right problem: it matches the reported `/` runtime crash and shows an optional notification-recipient setting is still coupled to the global runtime env gate.
+- GREEN target: unrelated runtime imports no longer fail on malformed optional comment-notification email config, and the comment notification feature still handles missing or invalid config safely at its own boundary.
+- GREEN command: `bunx vitest run tests/unit/env-runtime.test.ts tests/unit/comment-notifications.test.ts`
+- Refactor boundary: no newsletter/provider redesign, no global weakening of required env validation, and no behavior change for required auth/DB/upload env.
+- Refactor proof command(s): `bunx vitest run tests/unit/env-runtime.test.ts tests/unit/comment-notifications.test.ts`
+- Security impact: medium, because this changes runtime env validation policy and notification-email handling.
+- Required security assertions: required env stays strict; malformed optional notification config no longer crashes unrelated routes; notification sending still skips or fails closed without exposing raw internals.
 - E2E impact: none.
-- Coverage impact: adds direct trust-boundary coverage for previously untested admin revision detail, series part numbers, and post-comments routes, and tightens restore failure semantics.
-- Verification commands: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`, `bunx tsc --noEmit`, touched-file eslint, code review, and security review.
+- Coverage impact: adds direct coverage for the reported runtime-crash regression and narrows optional email-config validation to the correct boundary.
+- Verification commands: `bunx vitest run tests/unit/env-runtime.test.ts tests/unit/comment-notifications.test.ts`, `bunx tsc --noEmit`, touched-file lint, and `bun run build` if the env-module contract changes broadly enough.
+- Status: in_progress
+
+### Batch: admin auth route build-time env isolation
+- Goal: let production builds analyze `/api/auth/[...nextauth]` without eagerly parsing runtime-only admin auth env, while keeping runtime auth validation fail-closed when the route is actually invoked.
+- User journey or failure being protected: Vercel and local production builds should not fail during `/api/auth/[...nextauth]` page-data collection just because runtime GitHub auth env is unavailable or partially invalid at build-analysis time.
+- Scope: `TODO.md`, `web/src/app/api/auth/[...nextauth]/route.ts`, `web/tests/unit/admin-auth-route.test.ts`, and only the smallest supporting auth/env file if the route-only change is insufficient.
+- Files expected to change: `TODO.md`, `web/src/app/api/auth/[...nextauth]/route.ts`, `web/tests/unit/admin-auth-route.test.ts`, `web/src/lib/env.ts`, `web/src/lib/db-core.ts`, `web/tests/unit/env-runtime.test.ts`.
+- Tests to add or update first: direct route-contract coverage proving the auth route does not build auth options at module import time and still reuses one lazily created handler for GET and POST requests; add env coverage proving DB-only build paths can read Turso env without being blocked by unrelated invalid optional integration env.
+- RED command: `bunx vitest run tests/unit/admin-auth-route.test.ts`
+- Expected RED test(s): the updated route contract test fails because importing the route still calls `buildAdminAuthOptions()` eagerly; the env split test fails because `getDatabaseEnv()` does not exist yet, so build-safe DB-only env access is still coupled to the full runtime schema.
+- Why this RED proves the right problem: it exercises the exact module boundary Vercel analyzes during build and the exact DB-backed build path that later hit `/sitemap.xml`, showing runtime env-sensitive work was still happening too early and too broadly.
+- GREEN target: importing the route no longer calls `buildAdminAuthOptions()` eagerly, GET and POST forward the App Router catch-all context through one lazily created handler, DB-only build paths read only the Turso env they need, and runtime auth behavior stays unchanged when requests actually hit the route.
+- GREEN command: `bunx vitest run tests/unit/admin-auth-route.test.ts tests/unit/admin-auth.test.ts tests/unit/env-runtime.test.ts`
+- Refactor boundary: no Auth.js provider redesign, no admin auth policy changes, and no broad env-schema weakening.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-auth-route.test.ts tests/unit/admin-auth.test.ts tests/unit/env-runtime.test.ts`
+- Security impact: medium, because this touches the admin auth entry surface and build/runtime env handling.
+- Required security assertions: runtime requests still validate auth env through the existing auth-option builder; builds stop failing from eager route evaluation only; no missing-auth env path becomes permissive at runtime; DB-only build access does not relax runtime validation for unrelated sensitive integrations.
+- E2E impact: none.
+- Coverage impact: strengthens the deploy/build contract around the admin auth route and DB-backed prerender paths without widening runtime auth behavior.
+- Verification commands: `bunx vitest run tests/unit/admin-auth-route.test.ts tests/unit/admin-auth.test.ts tests/unit/env-runtime.test.ts`, `bunx tsc --noEmit`, touched-file lint, then `bun run build`.
 - RED evidence:
-  - Command: `bunx vitest run tests/unit/post-revision-route.test.ts`
-  - Result: whitespace-only revision params still fell through to `404`, and mocked revision-lookup failures still rejected raw `database offline` errors instead of returning a safe `500`.
-  - Command: `bunx vitest run tests/unit/revision-route-error-handling.test.ts`
-  - Result: whitespace-only restore params still reached the happy path, and mocked pre-restore snapshot failures still rejected raw `DB write failed` errors.
-  - Command: `bunx vitest run tests/unit/post-revision-restore-route.test.ts`
-  - Result: the added revalidation test failed because the route still returned `500` after `revalidatePath()` threw, even though the restore write had already committed.
-  - Command: `bunx vitest run tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
-  - Result: both routes still rejected raw backend failures, proving the admin lookup boundaries did not yet normalize unexpected DAL errors.
-  - Why this RED proved the right problem: it exercised the exact admin route boundaries and showed malformed IDs, backend exceptions, and post-commit revalidation failures still produced unsafe or misleading outcomes.
+  - Command: `bunx vitest run tests/unit/admin-auth-route.test.ts`
+  - Result: the updated route test failed because importing `api/auth/[...nextauth]` still called `buildAdminAuthOptions()` eagerly at module load.
+  - Additional RED command: `bunx vitest run tests/unit/env-runtime.test.ts`
+  - Additional result: the new DB-only build test failed because `getDatabaseEnv()` did not exist yet, proving build-safe Turso access was still coupled to the full runtime env parser.
+  - Why this RED proved the right problem: it matched the two-step build progression seen locally after the Tiptap fix: first `/api/auth/[...nextauth]` failed from eager auth env work, then `/sitemap.xml` failed because unrelated optional integration env was still parsed on a DB-only build path.
 - GREEN evidence:
-  - Command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
-  - Result: 38 focused admin route tests passed across 6 files after the four routes switched to trimmed ID parsing, safe generic `500` responses with route-context logging, and best-effort revalidation after committed restores.
+  - Command: `bunx vitest run tests/unit/admin-auth-route.test.ts tests/unit/admin-auth.test.ts tests/unit/env-runtime.test.ts`
+  - Result: 6 focused tests passed after the auth route switched to lazy handler creation with forwarded App Router context and the env module gained `getDatabaseEnv()` for DB-only callers.
 - REFACTOR evidence:
-  - Refactor stayed minimal: route-local Zod schemas were tightened, generic error handling was added only at the route boundary, restore revalidation moved behind a best-effort nested `try/catch`, and no DAL contract changed.
-  - Refactor proof command: `bunx vitest run tests/unit/post-revision-route.test.ts tests/unit/revision-route-error-handling.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/post-revisions-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts`
+  - Refactor stayed minimal: lazy handler caching was kept inside the auth route, and only the DB path moved to the new scoped env accessor; the broader runtime schema stayed intact.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-auth-route.test.ts tests/unit/admin-auth.test.ts tests/unit/env-runtime.test.ts`
 - Verification evidence:
-  - Tests: the full focused suite above passed with 38 tests across 6 files.
+  - Tests: `bunx vitest run tests/unit/admin-auth-route.test.ts tests/unit/admin-auth.test.ts tests/unit/env-runtime.test.ts` passed with 6 tests across 3 files.
   - Typecheck: `bunx tsc --noEmit` passed.
-  - Lint: `npx eslint "src/app/api/admin/posts/[postId]/revisions/[revisionId]/route.ts" "src/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route.ts" "src/app/api/admin/series/[seriesId]/part-numbers/route.ts" "src/app/api/admin/posts/[postId]/comments/route.ts" "tests/unit/post-revision-route.test.ts" "tests/unit/revision-route-error-handling.test.ts" "tests/unit/post-revision-restore-route.test.ts" "tests/unit/post-revisions-route.test.ts" "tests/unit/admin-series-part-numbers-route.test.ts" "tests/unit/admin-post-comments-route.test.ts"` passed.
-  - Build: skipped because this was a focused route/test change with no broader routing or bundling risk beyond typecheck.
-  - Code review: follow-up review found and this slice fixed the false-`500` revalidation bug in the restore route; a later follow-up also moved the pre-restore snapshot and live-post overwrite into one DAL transaction so restore no longer leaves a misleading undo revision behind when the apply step fails, and restore now re-normalizes historical song metadata before writing it back to the live post row.
-  - Security review: reviewed after the slice; no auth bypass or client-visible leakage remained, and low-severity logging blind spots were resolved by adding server-side error logging in the new catch paths.
+  - Lint: `npx eslint "src/app/api/auth/[...nextauth]/route.ts" "src/lib/env.ts" "src/lib/db-core.ts" "tests/unit/admin-auth-route.test.ts" "tests/unit/env-runtime.test.ts"` passed.
+  - Build: `bun run build` moved past the original `/api/auth/[...nextauth]` failure and then past the later `/sitemap.xml` env-coupling failure, but the current local rerun now stops on a Windows-only `.next/static/...` `EPERM unlink` file lock rather than an app-level route/env error.
+  - Code review: follow-up review caught one regression in the first lazy-route draft because the App Router catch-all context was not forwarded to the Auth.js handler; that was fixed and pinned by the updated route test.
+  - Security review: no concrete findings remained after the final fix; runtime auth and env validation still fail closed.
+- Status: complete
+
+### Batch: admin edit and comments page `postId` trust-boundary hardening
+- Goal: fail closed on malformed admin page `postId` params before edit or moderation pages touch DAL reads or action wiring, while preserving current redirect and not-found behavior.
+- User journey or failure being protected: authenticated admins should never send whitespace-only page params into privileged edit/comments page data loads, and valid page params should be trimmed consistently before editor and moderation wiring.
+- Scope: `TODO.md`, `web/src/app/admin/posts/[postId]/edit/page.tsx`, `web/src/app/admin/posts/[postId]/comments/page.tsx`, `web/tests/unit/admin-post-edit-page.test.tsx`, `web/tests/unit/admin-post-comments-page.test.tsx`.
+- Files expected to change: the files above only.
+- Tests to add or update first: whitespace-only `postId` rejection, trimmed valid `postId` DAL forwarding, unauthenticated redirect behavior, and one happy-path assertion per page proving trimmed IDs reach the downstream editor action wiring or moderation panel props.
+- RED command: `bunx vitest run tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`
+- Expected RED test(s): both new suites fail because whitespace-only `postId` values still reach `getAdminEditablePostById`, and trimmed valid IDs are still forwarded with surrounding whitespace intact.
+- Why this RED proves the right problem: it exercises the exact admin page-entry trust boundaries and shows they still trusted raw route params even after the matching admin API and server-action layers had been hardened.
+- GREEN target: both admin pages reject malformed `postId` values through `notFound()` before downstream work, unauthenticated users still redirect to `/admin`, and trimmed valid IDs flow into the editor/moderation wiring consistently.
+- GREEN command: `bunx vitest run tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`
+- Refactor boundary: no editor UI refactor, no moderation UI redesign, and no DAL or action contract changes outside local page-param normalization.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`
+- Security impact: medium, because these are authenticated admin trust boundaries feeding privileged data loads and mutations.
+- Required security assertions: unauthenticated users still redirect; whitespace-only IDs fail closed before DAL work; trimmed valid IDs preserve current page behavior and downstream wiring.
+- E2E impact: none.
+- Coverage impact: adds the first direct unit coverage for the admin edit/comments page param boundaries.
+- Verification commands: `bunx vitest run tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`, `bunx tsc --noEmit`, `npx eslint "src/app/admin/posts/[postId]/edit/page.tsx" "src/app/admin/posts/[postId]/comments/page.tsx" "tests/unit/admin-post-edit-page.test.tsx" "tests/unit/admin-post-comments-page.test.tsx"`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`
+  - Result: 4 assertions failed because both pages still called `getAdminEditablePostById("   ")` for whitespace-only params and still forwarded `"  post-123  "` untrimmed.
+  - Why this RED proved the right problem: it showed the privileged admin page layer still accepted malformed route params even though the matching admin API/server-action layers had already been tightened.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`
+  - Result: 8 focused tests passed after both pages switched to local trimmed Zod param schemas and the new happy-path assertions confirmed the editor action wiring and moderation panel props receive normalized IDs.
+- REFACTOR evidence:
+  - Refactor stayed minimal: each page only gained a local `postId` param schema plus early `notFound()` handling.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`
+- Verification evidence:
+  - Tests: included in the final focused verification run (`bunx vitest run tests/unit/admin-auth-route.test.ts tests/unit/admin-auth.test.ts tests/unit/env-runtime.test.ts tests/unit/admin-post-edit-page.test.tsx tests/unit/admin-post-comments-page.test.tsx`) which passed with 15 tests across 5 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/admin/posts/[postId]/edit/page.tsx" "src/app/admin/posts/[postId]/comments/page.tsx" "tests/unit/admin-post-edit-page.test.tsx" "tests/unit/admin-post-comments-page.test.tsx"` passed.
+  - Build: skipped for this focused page/test slice because the broader build verification had already been exercised by the deploy-fix batch in the same session.
+  - Code review: no remaining findings on these page changes after follow-up testing pinned both the failure and success paths.
+  - Security review: no concrete findings remained after the final page-param validation was in place.
+- Status: complete
+
+### Batch: public page param trust-boundary hardening
+- Goal: fail closed on malformed public page ids before preview-token checks or author-profile DAL access, while preserving current not-found behavior for legitimate misses.
+- User journey or failure being protected: anonymous preview visitors and public author-profile visitors should never send whitespace-only or malformed route ids into token validation or DAL reads.
+- Scope: `TODO.md`, `web/src/app/(blog)/preview/[id]/page.tsx`, `web/src/app/(blog)/author/[id]/page.tsx`, `web/tests/unit/preview-page.test.tsx`, `web/tests/unit/author-page-validation.test.tsx`.
+- Files expected to change: the files above only.
+- Tests to add or update first: focused unit coverage for whitespace-only ids failing closed and trimmed valid ids reaching the downstream helper/DAL with normalized values.
+- RED command: `bunx vitest run tests/unit/author-page-validation.test.tsx`
+- Expected RED test(s): whitespace-only `id` values still reach `getPublicAuthorProfileById`, `listCommentsByUserId`, and `countCommentsByUserId`, and valid ids are forwarded untrimmed.
+- Why this RED proves the right problem: it exercises the real page entry trust boundary and shows raw route params were still passed directly into server-side data access.
+- GREEN target: both public pages reject malformed ids through `notFound()` before downstream work, and trimmed valid ids are forwarded consistently.
+- GREEN command: `bunx vitest run tests/unit/preview-page.test.tsx` and `bunx vitest run tests/unit/author-page-validation.test.tsx`
+- Refactor boundary: no preview token redesign, no author-page layout changes, and no DAL contract changes.
+- Refactor proof command(s): `bunx vitest run tests/unit/preview-page.test.tsx tests/unit/author-page-validation.test.tsx`
+- Security impact: medium, because both surfaces are direct public trust boundaries.
+- Required security assertions: malformed ids fail closed, no raw validation details are rendered, and valid normalized ids preserve existing not-found behavior.
+- E2E impact: none.
+- Coverage impact: adds direct contract coverage around two previously unvalidated public route-param boundaries.
+- Verification commands: `bunx vitest run tests/unit/preview-page.test.tsx tests/unit/author-page-validation.test.tsx`, `bunx tsc --noEmit`, `npx eslint "src/app/(blog)/preview/[id]/page.tsx" "src/app/(blog)/author/[id]/page.tsx" "tests/unit/preview-page.test.tsx" "tests/unit/author-page-validation.test.tsx"`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/author-page-validation.test.tsx`
+  - Result: both new assertions failed because whitespace-only author ids still reached the DAL and valid ids were forwarded with surrounding whitespace intact.
+  - Why this RED proved the right problem: it demonstrated the public page boundary still trusted raw route params instead of validating and normalizing them first.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/preview-page.test.tsx`
+  - Result: 2 focused preview-page tests passed after the page started validating `params.id` with a trimmed Zod schema and failing closed before token lookup.
+  - Command: `bunx vitest run tests/unit/author-page-validation.test.tsx`
+  - Result: 2 focused author-page validation tests passed after the page and metadata path normalized ids through a trimmed Zod schema and failed closed for malformed ids.
+- REFACTOR evidence:
+  - Refactor stayed minimal: both pages only gained route-param validation/normalization at the entry boundary.
+  - Refactor proof command: `bunx vitest run tests/unit/preview-page.test.tsx tests/unit/author-page-validation.test.tsx`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/preview-page.test.tsx tests/unit/admin-page.test.tsx tests/unit/admin-auth-route.test.ts tests/unit/author-page-validation.test.tsx` passed with 8 tests across 4 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/(blog)/preview/[id]/page.tsx" "src/app/(blog)/author/[id]/page.tsx" "src/app/admin/page.tsx" "tests/unit/preview-page.test.tsx" "tests/unit/admin-page.test.tsx" "tests/unit/admin-auth-route.test.ts" "tests/unit/author-page-validation.test.tsx"` passed.
+  - Build: skipped because this was a focused page/test hardening slice with no broader routing or bundling changes beyond typecheck.
+  - Security review: reviewed during the slice; no new leakage was introduced, and the public boundaries now fail closed earlier.
+  - Exceptions: the first draft of `tests/unit/preview-page.test.tsx` hit a Vitest mock-hoisting failure before reaching the intended assertions, so only the author-page suite produced the clean recorded RED state; the preview-page trust-boundary fix was still covered and verified green afterward.
+- Status: complete
+
+### Batch: admin entry surface contract coverage and guidance hardening
+- Goal: remove public-facing config-detail leakage from the admin landing page while pinning the admin entry contracts with direct unit coverage.
+- User journey or failure being protected: users visiting `/admin` should not see internal env-variable names or allowlist details, and the app should keep loading dashboard data only for real admin sessions while the Auth.js route keeps a single shared GET/POST handler.
+- Scope: `TODO.md`, `web/src/app/admin/page.tsx`, `web/tests/unit/admin-page.test.tsx`, `web/tests/unit/admin-auth-route.test.ts`.
+- Files expected to change: the files above only.
+- Tests to add or update first: direct unit coverage for generic unauthenticated guidance, admin-only dashboard loading, and the `api/auth/[...nextauth]` single-handler wiring contract.
+- RED command: `bunx vitest run tests/unit/admin-page.test.tsx`
+- Expected RED test(s): the new public-guidance assertion fails because the page still exposes raw env-variable names and allowlist implementation detail in the unauthenticated admin entry UI.
+- Why this RED proves the right problem: it exercises the real public admin entry shell and shows operational/auth configuration details were still being leaked to callers.
+- GREEN target: `/admin` shows generic sign-in availability/denial messaging, non-admin sessions do not trigger dashboard data loads, admin sessions still render the dashboard, and the Auth.js route contract is pinned.
+- GREEN command: `bunx vitest run tests/unit/admin-page.test.tsx` and `bunx vitest run tests/unit/admin-auth-route.test.ts`
+- Refactor boundary: no admin auth redesign, no dashboard UI refactor, and no provider configuration changes.
+- Refactor proof command(s): `bunx vitest run tests/unit/admin-page.test.tsx tests/unit/admin-auth-route.test.ts`
+- Security impact: medium, because `/admin` is a public auth-adjacent surface and the route test protects the admin auth entry wiring.
+- Required security assertions: no env-variable names or allowlist specifics leak to the page, dashboard data stays admin-only, and the auth route continues to reuse one handler for GET and POST.
+- E2E impact: none.
+- Coverage impact: adds the first direct unit coverage for the admin landing page contract and the auth route wiring.
+- Verification commands: `bunx vitest run tests/unit/admin-page.test.tsx tests/unit/admin-auth-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/admin/page.tsx" "tests/unit/admin-page.test.tsx" "tests/unit/admin-auth-route.test.ts"`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/admin-page.test.tsx`
+  - Result: the new public-guidance test failed because the page still rendered `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, and `AUTH_ADMIN_GITHUB_IDS`, plus allowlist-specific denial guidance.
+  - Why this RED proved the right problem: it showed the public admin entry shell still leaked internal auth-configuration detail.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/admin-page.test.tsx`
+  - Result: 3 focused admin-page tests passed after the page switched to generic sign-in availability and denial messaging while preserving admin-only dashboard loading.
+  - Command: `bunx vitest run tests/unit/admin-auth-route.test.ts`
+  - Result: 1 focused auth-route contract test passed after pinning the current single-handler GET/POST wiring.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the production change only replaced leaked page copy with generic messaging; the auth route slice was test-only.
+  - Refactor proof command: `bunx vitest run tests/unit/admin-page.test.tsx tests/unit/admin-auth-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/preview-page.test.tsx tests/unit/admin-page.test.tsx tests/unit/admin-auth-route.test.ts tests/unit/author-page-validation.test.tsx` passed with 8 tests across 4 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/(blog)/preview/[id]/page.tsx" "src/app/(blog)/author/[id]/page.tsx" "src/app/admin/page.tsx" "tests/unit/preview-page.test.tsx" "tests/unit/admin-page.test.tsx" "tests/unit/admin-auth-route.test.ts" "tests/unit/author-page-validation.test.tsx"` passed.
+  - Build: skipped because this was a focused page/test slice with no broader compilation risk beyond typecheck.
+  - Security review: reviewed during the slice; the public admin entry page now leaks less internal auth/config detail and no new auth-surface findings were introduced.
+- Status: complete
+
+### Batch: authenticated public route-shell coverage and bookmarks load-state hardening
+- Goal: keep expanding authenticated public-user confidence through isolated unit-backed slices while the live managed public-auth rerun remains blocked on environment safety.
+- User journey or failure being protected: public users should keep seeing the correct route shells for `/login`, `/signup`, `/account`, and `/settings`, and authenticated bookmark loading should distinguish real load failures or expired auth from the legitimate empty-state UI.
+- Scope: `TODO.md`, `web/src/app/(blog)/bookmarks/page.tsx`, `web/tests/unit/bookmarks-page.test.tsx`, `web/tests/unit/login-page.test.tsx`, `web/tests/unit/signup-page.test.tsx`, `web/tests/unit/account-page.test.tsx`, and `web/tests/unit/settings-page.test.ts`.
+- Files expected to change: the files above only.
+- Tests to add or update first: direct route-shell tests for `/login`, `/signup`, `/account`, and `/settings`; focused bookmarks-page tests for unauthenticated, empty, unauthorized, rejected-fetch, malformed-payload, and generic load-failure states.
+- RED command: `bunx vitest run tests/unit/bookmarks-page.test.tsx`
+- Expected RED test(s): the new bookmarks failure-state assertion fails because the client page still renders the empty saved-posts state when `/api/bookmarks` returns a non-OK response, and later reviewer-driven cases prove `401` responses and rejected or malformed bookmark loads still misclassify or hang instead of landing in stable UI states.
+- Why this RED proves the right problem: it exercises the real client-side authenticated bookmarks boundary and shows the page still conflated failed loading with the genuine no-bookmarks state, which could hide auth expiry or backend errors from signed-in users.
+- GREEN target: the route-shell contracts are directly pinned, bookmark loads still render the empty state only for real empty results, expired auth returns users to the sign-in prompt, and other load failures render a stable retry-style message.
+- GREEN command: `bunx vitest run tests/unit/bookmarks-page.test.tsx tests/unit/login-page.test.tsx tests/unit/signup-page.test.tsx tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+- Refactor boundary: no auth-provider changes, no API contract redesign, no bookmark mutation changes, and no broader page redesign.
+- Refactor proof command(s): `bunx vitest run tests/unit/bookmarks-page.test.tsx tests/unit/login-page.test.tsx tests/unit/signup-page.test.tsx tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+- Security impact: low-medium, because this is mostly route-shell coverage plus safer client classification of authenticated bookmark failures.
+- Required security assertions: the slice must not weaken auth, must keep `/bookmarks` unauthorized responses mapped away from misleading empty-state UX, and must not expose backend details in the retry message.
+- E2E impact: indirect confidence gain only; no live browser rerun in this slice because the safe public-auth target blocker remains open.
+- Coverage impact: adds direct shell coverage for public auth entry points and closes a client-side authenticated bookmarks correctness gap that broader E2E alone would not localize well.
+- Verification commands: `bunx vitest run tests/unit/bookmarks-page.test.tsx tests/unit/login-page.test.tsx tests/unit/signup-page.test.tsx tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/(blog)/bookmarks/page.tsx" "tests/unit/bookmarks-page.test.tsx" "tests/unit/login-page.test.tsx" "tests/unit/signup-page.test.tsx" "tests/unit/account-page.test.tsx" "tests/unit/settings-page.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/bookmarks-page.test.tsx`
+  - Result: the new failure-state test failed because `/bookmarks` still rendered `No saved posts yet` after a non-OK `/api/bookmarks` response instead of surfacing a retry-style load error.
+  - Additional RED command: `bunx vitest run tests/unit/bookmarks-page.test.tsx`
+  - Additional result: after the first fix, expanded reviewer-driven tests still failed because `401` bookmark responses were classified as generic load failures and rejected `fetch()` or malformed bookmark payloads still escaped the effect instead of resolving to stable UI state.
+  - Why this RED proved the right problem: it showed the authenticated client bookmarks surface still blurred expired auth, backend failures, and empty data into misleading or unstable UI outcomes.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/bookmarks-page.test.tsx tests/unit/login-page.test.tsx tests/unit/signup-page.test.tsx tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+  - Result: 14 focused tests passed across 5 files after adding the route-shell tests and hardening `/bookmarks` to handle unauthorized, rejected, malformed, and generic failed loads safely.
+- REFACTOR evidence:
+  - Refactor stayed minimal: `/bookmarks` only gained explicit `loadError` handling, unauthorized classification, catch-path stabilization, and post-await cancellation guards; the remaining route-shell additions were test-only.
+  - Refactor proof command: `bunx vitest run tests/unit/bookmarks-page.test.tsx tests/unit/login-page.test.tsx tests/unit/signup-page.test.tsx tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/bookmarks-page.test.tsx tests/unit/login-page.test.tsx tests/unit/signup-page.test.tsx tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts` passed with 14 tests across 5 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/(blog)/bookmarks/page.tsx" "tests/unit/bookmarks-page.test.tsx" "tests/unit/login-page.test.tsx" "tests/unit/signup-page.test.tsx" "tests/unit/account-page.test.tsx" "tests/unit/settings-page.test.ts"` passed.
+  - Build: skipped because this was a focused page/test slice with no routing or bundling change beyond typecheck.
+  - Code review: no remaining high-severity findings after follow-up fixes; residual gap is only that the new shell tests are intentionally shallow smoke coverage.
+  - Security review: no new scoped findings remained after the final slice; residual project risk is unchanged client-side bearer-token use on Supabase-authenticated pages, which this batch did not expand.
+- Status: complete
+
+### Batch: account route shell and legacy settings redirect coverage
+- Goal: close the small but real coverage gap around the public account route shell and the legacy `/settings` alias redirect.
+- User journey or failure being protected: signed-in users should keep reaching the account settings shell through `/account`, and any stale `/settings` link should keep redirecting to `/account` instead of silently drifting.
+- Scope: `TODO.md`, `web/tests/unit/account-page.test.tsx`, and `web/tests/unit/settings-page.test.ts` only.
+- Files expected to change: `TODO.md`, `web/tests/unit/account-page.test.tsx`, `web/tests/unit/settings-page.test.ts`.
+- Tests to add or update first: direct unit coverage for the account route shell metadata/dynamic contract and the `/settings` redirect target.
+- RED command: `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+- Expected RED test(s): both suites fail immediately because the focused route-shell and redirect contract tests do not exist yet.
+- Why this RED proves the right problem: these routes already back authenticated public flows, but without direct tests a simple redirect-target or shell regression could slip past the broader route and E2E suites.
+- GREEN target: the account route stays force-dynamic with the expected metadata and shell render, and `/settings` keeps redirecting to `/account`.
+- GREEN command: `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+- Refactor boundary: no account settings client refactor, no auth changes, and no broader navigation cleanup.
+- Refactor proof command(s): `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+- Security impact: low direct code risk, medium confidence gain because the covered routes sit on authenticated public-user navigation paths.
+- Required security assertions: the slice remains read-only/test-only; no auth or data-handling behavior changes.
+- E2E impact: none.
+- Coverage impact: adds direct contract coverage for two small but user-visible account entry points that previously relied on indirect coverage only.
+- Verification commands: `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`, `bunx tsc --noEmit`, `npx eslint "tests/unit/account-page.test.tsx" "tests/unit/settings-page.test.ts"`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+  - Result: the new suites did not exist before this slice, so the route-shell and redirect contracts were unpinned.
+  - Why this RED proved the right problem: it identified a real direct-coverage blind spot on authenticated public navigation surfaces without widening into app behavior changes.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+  - Result: 3 focused tests passed after adding direct account-shell and legacy-settings redirect coverage.
+- REFACTOR evidence:
+  - No production refactor followed GREEN; the slice stayed test-only.
+  - Refactor proof command: `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/account-page.test.tsx tests/unit/settings-page.test.ts` passed with 3 tests across 2 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "tests/unit/account-page.test.tsx" "tests/unit/settings-page.test.ts"` passed.
+  - Build: skipped because this was a focused test-only slice with no production code changes.
+  - Security review: no new findings; the slice only added route-contract tests.
 - Status: complete
 
 ### Batch: admin preview/clone/bulk-status route ID normalization
@@ -664,6 +888,34 @@ Completed slice:
 - E2E impact: high; this is the purpose of the batch.
 - Verification commands: targeted Playwright runs, touched-file lint if needed, `bunx tsc --noEmit` if TypeScript support files change.
 - Status: in_progress
+
+### Batch: tiptap direct-dependency Vercel build fix
+- Goal: restore the Vercel/Next 16 Turbopack production build by making the direct `@tiptap/core` dependency explicit and protecting that contract with a focused TDD slice.
+- User journey or failure being protected: production deploys should build cleanly when `web/src/lib/tiptap/thoughts-block.ts` imports `@tiptap/core`, instead of relying on local hoisting or transitive dependency accidents.
+- Scope: planning-only for now in `TODO.md`; expected execution scope is `web/package.json`, one focused unit or contract test under `web/tests/unit/`, and lockfile/install artifacts only if the implementing agent confirms they are required.
+- Files expected to change: `TODO.md` now; later `web/package.json`, `web/tests/unit/tiptap-dependency-contract.test.ts`, and Bun lock/install artifacts if needed.
+- Tests to add or update first: add a focused dependency-contract test that asserts `web/package.json` declares `@tiptap/core` directly because `web/src/lib/tiptap/thoughts-block.ts` imports it directly.
+- RED command: `bunx vitest run tests/unit/tiptap-dependency-contract.test.ts`
+- Expected RED test(s): the new contract test fails because `web/package.json` does not currently list `@tiptap/core` under `dependencies` even though `web/src/lib/tiptap/thoughts-block.ts` imports it.
+- Why this RED proves the right problem: Vercel's clean install/build does not guarantee access to undeclared direct imports, and a manifest-level regression test catches the exact dependency contract break even when local hoisting hides it.
+- GREEN target: `@tiptap/core` is declared directly, the contract test passes, and `bun run build` no longer fails on `Module not found: Can't resolve '@tiptap/core'`.
+- GREEN command: `bunx vitest run tests/unit/tiptap-dependency-contract.test.ts`, then `bun run build`
+- Refactor boundary: no editor behavior changes, no content-model refactor, and no broader Tiptap cleanup unless adding the dependency exposes a proven version-alignment failure.
+- Refactor proof command(s): `bunx vitest run tests/unit/tiptap-dependency-contract.test.ts`
+- Security impact: low.
+- Required security assertions: no secrets or env handling involved; keep the fix limited to dependency declaration and regression coverage.
+- E2E impact: none.
+- Coverage impact: adds focused coverage for a deployment-critical dependency contract that current tests do not pin.
+- Verification commands: `bunx vitest run tests/unit/tiptap-dependency-contract.test.ts`, `bun run build`, `bunx tsc --noEmit`, touched-file lint.
+- Dependencies: `web/src/lib/tiptap/thoughts-block.ts`, `web/package.json`, Bun install/lockfile behavior, and the existing `@tiptap/*` package set.
+- Risks:
+  - HIGH: local hoisting may mask the missing direct dependency, so the RED test must validate the manifest contract directly.
+  - MEDIUM: adding `@tiptap/core` may expose version skew within the existing `@tiptap/*` packages.
+  - MEDIUM: fixing the manifest without a regression test could allow the same production failure to return during future dependency cleanup.
+  - LOW: touching `thoughts-block.ts` itself would widen scope without evidence that its logic is wrong.
+- Estimated complexity: low-medium; expected implementation is about 30 to 60 minutes once the owning agent executes the slice.
+- Planning summary: confirmed the immediate mismatch locally by reading `web/src/lib/tiptap/thoughts-block.ts` and `web/package.json`; the module is imported directly but not declared directly.
+- Status: complete
 
 ### Batch: newsletter public error-shape hardening
 - Goal: stop the public newsletter endpoint from leaking validation structure or setup/env guidance.
@@ -1074,7 +1326,80 @@ Planner review note:
   - Lint: `npx eslint "src/app/api/posts/[postId]/bookmark/route.ts" "src/app/admin/tags/actions.ts" "tests/unit/post-bookmark-route.test.ts" "tests/unit/bookmarks-route.test.ts" "tests/unit/admin-tag-actions.test.ts"` passed.
   - Typecheck: `bunx tsc --noEmit` passed.
   - Build: skipped because this was a focused server-action/test slice.
-  - Security review: reviewed during the slice; no new issues were introduced and blank admin submissions now clear predictably instead of persisting whitespace-only content.
+- Security review: reviewed during the slice; no new issues were introduced and blank admin submissions now clear predictably instead of persisting whitespace-only content.
+- Status: complete
+
+### Batch: public category, tag, and series param validation plus account-settings bootstrap hardening
+- Goal: finish hardening remaining public route-param boundaries in the blog shell and make the authenticated account settings bootstrap fail closed on session/profile load failures instead of surfacing unhandled async errors.
+- User journey or failure being protected: malformed or whitespace-only public category, tag, and series params should never reach DAL/query work, valid params should be normalized consistently before metadata/page lookup, and signed-in users should see a stable retry message when account bootstrap data fails to load.
+- Scope: `TODO.md`, `web/src/app/(blog)/category/[category]/page.tsx`, `web/src/app/(blog)/tag/[slug]/page.tsx`, `web/src/app/(blog)/series/[slug]/page.tsx`, `web/src/app/account/account-settings.tsx`, `web/tests/unit/category-page.test.tsx`, `web/tests/unit/tag-page.test.tsx`, `web/tests/unit/series-page.test.tsx`, `web/tests/unit/account-settings.test.tsx`.
+- Files expected to change: the files above only.
+- Tests to add or update first: malformed and normalized route-param assertions for category/tag/series plus account-settings load-error coverage for rejected session/profile reads and malformed profile payloads.
+- RED command: `bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx`
+- Expected RED test(s): malformed category params still throw `URIError`, whitespace-only tag/series slugs still reach lookup helpers, trimmed valid tag/series slugs are forwarded with surrounding whitespace intact, and account-settings bootstrap failures escape the effect instead of rendering the retry message.
+- Why this RED proves the right problem: it exercises the real public entry boundaries and the authenticated account bootstrap effect directly, showing raw route params and async failures were still trusted too far into query/DAL or client initialization work.
+- GREEN target: category/tag/series params fail closed or normalize before downstream work, and account-settings bootstrap failures land in the existing stable retry state without leaking validator or transport errors.
+- GREEN command: `bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx`
+- Refactor boundary: no feed/query redesign, no route layout changes, no account UI redesign, and no theme-provider refactor beyond the minimal bootstrap error handling.
+- Refactor proof command(s): `bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx`
+- Security impact: medium, because this hardens public trust boundaries and an authenticated public-user bootstrap path.
+- Required security assertions: malformed or blank public params fail closed before query work; trimmed valid params preserve current behavior; account bootstrap failures show only the existing generic retry copy.
+- E2E impact: none.
+- Coverage impact: adds direct regression coverage for three public route-param boundaries and one authenticated client bootstrap failure path.
+- Verification commands: `bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx`, `bunx tsc --noEmit`, `npx eslint "src/app/(blog)/category/[category]/page.tsx" "src/app/(blog)/tag/[slug]/page.tsx" "src/app/(blog)/series/[slug]/page.tsx" "src/app/account/account-settings.tsx" "tests/unit/category-page.test.tsx" "tests/unit/tag-page.test.tsx" "tests/unit/series-page.test.tsx" "tests/unit/account-settings.test.tsx"`
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx`
+  - Result: 7 assertions failed because malformed category params still surfaced `URIError`, tag/series boundaries still forwarded raw whitespace, trimmed valid slugs stayed unnormalized, and rejected or malformed account bootstrap loads escaped the effect instead of rendering the retry state.
+  - Why this RED proved the right problem: it showed both the public route boundaries and the authenticated client bootstrap still trusted raw input or uncaught async failures too far.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx`
+  - Result: 18 focused tests passed after the route boundaries normalized/fail-closed appropriately and `AccountSettings` wrapped its bootstrap path in a safe catch.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the page changes only added local param-normalization helpers, and `AccountSettings` only wrapped the existing bootstrap sequence in bounded error handling.
+  - Refactor proof command: `bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx`
+- Verification evidence:
+  - Tests: included in the final focused verification run (`bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`) which passed with 23 tests across 6 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/(blog)/category/[category]/page.tsx" "src/app/(blog)/tag/[slug]/page.tsx" "src/app/(blog)/series/[slug]/page.tsx" "src/app/account/account-settings.tsx" "tests/unit/category-page.test.tsx" "tests/unit/tag-page.test.tsx" "tests/unit/series-page.test.tsx" "tests/unit/account-settings.test.tsx"` passed.
+  - Build: `bun run build` still fails during `/api/auth/[...nextauth]` page-data collection because the current shell has pre-existing invalid env values for `COMMENT_NOTIFICATION_TO_EMAIL`, `RESEND_NEWSLETTER_SEGMENT_ID`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `CRON_SECRET`; this slice did not touch env parsing or auth route build behavior.
+  - Code review: one real review finding surfaced during the slice because the first category implementation validated before `decodeURIComponent()`, which still allowed encoded whitespace; that regression is fixed and now pinned by direct tests.
+  - Security review: final review found no remaining issues in the landed diff after the category decode-order fix.
+- Status: complete
+
+### Batch: public category and tag feed param hardening
+- Goal: align public feed-route trust boundaries with the hardened page boundaries so malformed or blank params fail closed before feed queries/building.
+- User journey or failure being protected: RSS callers should receive safe `400` responses for malformed category/tag feed params, and valid trimmed params should build feeds using normalized values only.
+- Scope: `TODO.md`, `web/src/app/(blog)/category/[category]/feed.xml/route.ts`, `web/tests/unit/category-feed-route.test.ts`, `web/tests/unit/tag-feed-route.test.ts`.
+- Files expected to change: the files above only.
+- Tests to add or update first: malformed and encoded-whitespace category feed assertions, plus direct tag-feed trimming and invalid-slug coverage.
+- RED command: `bunx vitest run tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`
+- Expected RED test(s): category feed still throws on malformed percent-encoding and still accepts encoded whitespace-only params, while the new tag-feed contract tests pin the already-correct behavior.
+- Why this RED proves the right problem: it exercises the feed entry boundary directly and shows the category route still decodes after validation instead of rejecting invalid or empty decoded values before query work.
+- GREEN target: category and tag feed routes fail closed on malformed/blank params and trim valid params before lookup/feed generation.
+- GREEN command: `bunx vitest run tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`
+- Refactor boundary: no RSS helper redesign, no content/feed formatting changes, and no changes to the root feed route.
+- Refactor proof command(s): `bunx vitest run tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`
+- Security impact: medium, because RSS routes are public unauthenticated entry points.
+- Required security assertions: invalid feed params return safe `400`s; valid normalized params preserve current feed output contracts; no raw decode errors escape publicly.
+- E2E impact: none.
+- Coverage impact: adds the first direct route coverage for category/tag feed param validation and normalization.
+- Verification commands: `bunx vitest run tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/(blog)/category/[category]/feed.xml/route.ts" "tests/unit/category-feed-route.test.ts" "tests/unit/tag-feed-route.test.ts"`
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`
+  - Result: 2 category-feed assertions failed because malformed encoded input still threw `URIError` and encoded whitespace-only params still returned `200`; the tag-feed suite passed immediately and closed that direct coverage gap.
+  - Why this RED proved the right problem: it showed the category feed route still trusted decoded output without rechecking for invalid or empty values.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`
+  - Result: 5 focused feed-route tests passed after the category route switched to decode-first normalization with blank rejection.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the production change only introduced a small category feed param normalizer; the tag route remained production-green and gained direct tests only.
+  - Refactor proof command: `bunx vitest run tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`
+- Verification evidence:
+  - Tests: included in the final focused verification run (`bunx vitest run tests/unit/category-page.test.tsx tests/unit/tag-page.test.tsx tests/unit/series-page.test.tsx tests/unit/account-settings.test.tsx tests/unit/category-feed-route.test.ts tests/unit/tag-feed-route.test.ts`) which passed with 23 tests across 6 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/(blog)/category/[category]/feed.xml/route.ts" "tests/unit/category-feed-route.test.ts" "tests/unit/tag-feed-route.test.ts"` passed.
+  - Build: `bun run build` still fails during `/api/auth/[...nextauth]` page-data collection because of pre-existing invalid env values in the current shell, unrelated to these feed-route changes.
+  - Security review: final review found no remaining issues after the category feed decode-order fix; residual low risk is only that other public feed-like routes should keep this same decode-first pattern if their param surfaces expand later.
 - Status: complete
 
 ## Ranked Remediation Backlog
@@ -1084,6 +1409,7 @@ Planner review note:
 3. Continue hardening remaining trust boundaries so they return safe failures instead of leaking uncaught validation errors; next candidates are selected admin read routes and remaining admin leaf server actions not yet pinned directly.
 4. Confirm no remaining sensitive error leakage across public/admin write surfaces and operational endpoints.
 5. Add consumer-level coverage where needed if any UI or client helper still depends on removed field-level validation payloads from the newly hardened public routes.
+6. Decide whether to harden the local Windows build wrapper against transient `.next` `EPERM unlink` locks or treat that as a local-only filesystem issue outside the deploy lane.
 
 ## Baseline Findings Snapshot
 
@@ -1098,6 +1424,14 @@ Planner review note:
 - E2E: admin shell coverage exists, public route smoke now includes `/about`, `/map`, discovered post detail, and unauthenticated `/bookmarks`, and admin route smoke now covers unauthenticated and authenticated `/admin/posts/new`; the next gating step before broader signed-in public expansion is still a live rerun of the hardened public bootstrap lane against a clearly safe target.
 - Security: `POST /api/posts/[postId]/view` and `GET /api/bookmarks` now normalize unexpected backend failures to generic `500`s, and the post-view route constrains `postId` before using it in cookie names.
 - Correctness: avatar and editorial upload routes now have direct contract coverage for auth, rate-limit, invalid form-data, missing-file, spoofed-file, provider-unavailable, and unexpected-failure paths; the admin upload route now treats malformed form-data as a safe `400`.
+- Security: the public auth callback surface now rejects redirect targets with protocol-relative prefixes, control characters, or backslashes, and callback failures no longer expose raw provider/config details in the UI.
+- Correctness: public post-detail page rendering, metadata, and JSON-LD head generation now share one trimmed-slug boundary, and the post-detail loading shell has direct unit coverage.
+- Security: public category pages and category RSS feeds now reject malformed or encoded-whitespace params before query work, and tag/series pages now trim or fail closed on slug input consistently.
+- Correctness: authenticated `AccountSettings` bootstrap now converts rejected session/profile loads and malformed profile payloads into the existing stable retry state instead of surfacing unhandled async failures.
+- Deploy: the Vercel `Module not found: Can't resolve '@tiptap/core'` failure from commit `7757420` is already covered by the dedicated dependency-contract batch and fixed in the current local worktree.
+- Deploy: the later local `/api/auth/[...nextauth]` and `/sitemap.xml` build failures were caused by eager auth-route initialization and overly broad runtime env parsing on DB-only build paths; both are now fixed under focused unit coverage, and the local Windows `.next` `EPERM unlink` build-wrapper issue is now also fixed with a pre-clean plus one retry in `web/scripts/build.ts`.
+- Security: admin edit and admin comments pages now reject whitespace-only `postId` params before privileged DAL access and trim valid IDs consistently before editor/moderation wiring.
+- Correctness: the remaining reported local runtime env crash is now isolated to malformed optional `COMMENT_NOTIFICATION_TO_EMAIL` config in `web/.env`, specifically the current invalid value `comment@@mail.jsquaredadventures.com`; the next env slice should decide whether this belongs only to local config hygiene or to a narrower notification-specific validation boundary.
 
 ## Known Likely Blockers
 
@@ -1106,6 +1440,8 @@ Planner review note:
 - [ ] Some high-value flows may depend on local seed data or specific DB contents.
 - [ ] Supabase project auto-pause behavior may still depend on plan limits, so cron traffic may reduce cold starts without fully eliminating pauses.
 - [ ] The live public-auth bootstrap rerun is still blocked on environment safety: the current `web/.env` resolves `SUPABASE_URL` to `https://dklwwdsndzewxdpkkwif.supabase.co`, so `seed:e2e` should remain fail-closed until a loopback or explicitly approved non-production target is intentionally provided alongside `E2E_ALLOW_SUPABASE_SEED=1`.
+- [ ] Local dev still crashes on `/` when `COMMENT_NOTIFICATION_TO_EMAIL` is malformed in `web/.env.local` or inherited env; the currently observed bad local value is `comment@@mail.jsquaredadventures.com`, and the active batch should decide whether optional notification email validation moves out of the global runtime env gate.
+- [x] The local Windows-only `.next\static\...` `EPERM unlink` build failure is now hardened in `web/scripts/build.ts` with a Windows pre-clean plus one retry, and `bun run build` passes in the current shell.
 - [x] `bun run seed:e2e` no longer trusts whichever Supabase project the active service-role env points at; it now requires `E2E_ALLOW_SUPABASE_SEED=1` plus a loopback or explicitly approved `SUPABASE_URL`, and non-loopback HTTP targets are refused.
 - [x] Public E2E credential/session artifacts now persist only through an explicit managed policy: `seed:e2e` records public env metadata in `web/.env.test.local`, capture writes `playwright/.auth/public*.meta.json`, helper reuse is origin/fingerprint bound, implicit default overwrite is refused, unmanaged paths are ignored, and non-local capture requires `E2E_ALLOW_REMOTE_PUBLIC_CAPTURE=1`.
 - [x] Public Playwright fixture support now exists, and `bun run e2e:capture-public-state` now runs with a clear precondition failure if no app server is reachable at `E2E_BASE_URL`.
@@ -1122,7 +1458,8 @@ Planner review note:
 - [x] A ninth signed-in public flow now passes: authenticated navigation from the seeded post detail page into the author's public profile verifies the public profile shell and recent-comments view load successfully.
 - [x] Authenticated `/account` profile loading now repairs partial public-user records before failing, which removed the flaky `Failed to load profile` state exposed while verifying the new author-profile slice.
 - [ ] The staged signed-in bookmark-removal Playwright flow is now isolated in serial mode to avoid shared bookmark-state races, but the live run is still pending the same safe local public-auth bootstrap environment.
-- [ ] Remaining public signed-in flows still need coverage, with broader authenticated smoke coverage now the next likely slice.
+- [ ] Remaining public signed-in flows still need coverage, with broader authenticated smoke coverage still the next likely live slice; this batch only advanced the unit-backed public route-shell and bookmarks load-state lane while the managed public-auth rerun stays blocked.
+- [ ] The authenticated public Playwright lane is still environment-gated; this pass only tightened local support code by moving the synthetic request-isolation header helper into `web/tests/e2e/helpers/` and strengthening its deterministic coverage there.
 - [x] Public Playwright storage state is origin-bound, and `bun run e2e:capture-public-state` now requires an explicit `E2E_PUBLIC_STORAGE_STATE` path for non-local `E2E_BASE_URL` values instead of implicitly reusing the default local artifact path.
 - [x] The public helper no longer falls back to hardcoded email/post-slug values, so missing seed state now skips or fails fast during setup.
 - [x] The authenticated public owned-comment deletion smoke test no longer tolerates a built-in `429` retry path; the mutating comment flows now isolate request IP state so the flow passes or fails in one attempt.
@@ -1157,8 +1494,13 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-07: Hardened the public newsletter route so invalid input and missing Resend config now return generic responses without exposing Zod field maps or setup/env guidance.
 - 2026-04-07: Extracted a minimal shared Playwright storage-state helper for existing-path resolution and hint formatting, while intentionally keeping public metadata/fingerprint checks and admin remote-mutation policy separate.
 - 2026-04-07: Expanded smoke coverage across `/about`, `/map`, discovered post detail, unauthenticated `/bookmarks`, and `/admin/posts/new`, and fixed the admin tag editor refresh bug by remounting each tag form when the persisted description changes so saved values do not append stale textarea state.
+- 2026-04-07: Recorded the Vercel deploy report as two separate build concerns: the `@tiptap/core` module-resolution failure is already fixed locally and tracked by the dedicated dependency-contract batch, while the next active deploy slice is the remaining `/api/auth/[...nextauth]` build-time env-evaluation failure.
+- 2026-04-07: Fixed the remaining app-level local build blockers after the Tiptap dependency issue by lazily initializing the Auth.js catch-all route with forwarded App Router context and by splitting DB-only env access from the full runtime env parser so `/sitemap.xml` no longer depends on unrelated optional integration env validity during build analysis.
+- 2026-04-07: Hardened the admin post edit and admin post comments page boundaries so whitespace-only `postId` params now fail closed through `notFound()` before privileged DAL reads, while trimmed valid IDs are forwarded consistently into editor action binding and moderation panel props under direct unit coverage.
 - 2026-04-06: Added shared server-side upload validation in `web/src/lib/cloudinary/uploads.ts` that checks allowed MIME type, byte size, and basic file signatures for JPEG, PNG, WebP, and GIF before avatar or editorial uploads are sent to Cloudinary.
 - 2026-04-06: Normalized admin account identity helpers around the persisted GitHub `provider_user_id`; `githubLogin` now stays sourced from the live GitHub profile instead of incorrectly falling back to the numeric provider id.
+- 2026-04-07: Hardened the public auth callback client so public failures render generic expired-link messaging and redirect targets reject decoded control-character and backslash payloads instead of trusting any leading-slash string.
+- 2026-04-07: Normalized public post-detail slugs through a tiny shared helper so page rendering, metadata, and JSON-LD head paths all fail closed on whitespace-only slugs and trim legitimate values consistently before lookup.
 - 2026-04-06: Added a reusable public Playwright auth helper plus `bun run e2e:capture-public-state`, and targeted the first signed-in public flow at bookmarking the seeded fixture post and verifying it appears on `/bookmarks`; the batch remains blocked pending real public E2E credentials and captured storage state.
 - 2026-04-06: Fixed the public capture command so it now runs via `bunx tsx` and surfaces the real missing-credentials requirement; also extended `seed:e2e` to provision a Supabase public E2E user and persist public auth vars, but current progress is blocked by Supabase admin endpoint connectivity from this environment.
 - 2026-04-06: Fixed public E2E fixture seeding to generate a Supabase-compliant password and confirmed `seed:e2e` now writes the public auth vars locally; the remaining step is to run the app server and capture `playwright/.auth/public.json` before rerunning the new authenticated bookmark flow.
@@ -1192,6 +1534,183 @@ Do not create a second planning doc unless one of these is true:
 - 2026-04-07: Tightened the matching admin preview, clone, and bulk-status API routes so whitespace-only IDs are rejected with the existing safe `400` responses and trimmed valid IDs are forwarded consistently to downstream helpers.
 - 2026-04-07: Hardened `POST /api/posts/[postId]/view` and `GET /api/bookmarks` so unexpected backend failures now return safe generic `500`s with bounded route-context logging, and tightened the post-view `postId` schema to the existing slug/id contract before cookie-key construction.
 - 2026-04-07: Expanded avatar and admin editorial upload route coverage to lock auth, throttling, invalid form-data, missing file, byte-signature rejection, provider misconfiguration, and unexpected-failure behavior; also fixed `POST /api/admin/uploads/images` so malformed form-data now returns a safe `400` instead of `500`.
+- 2026-04-07: Hardened Playwright CI diagnostics by making `web/playwright.config.ts` emit durable `playwright-report/` HTML plus `test-results/playwright-results.json` in CI, keep failure traces under `test-results/`, leave video capture off for lower artifact sensitivity on admin flows, and pin the config with focused unit coverage for CI/non-CI reporter plus local-vs-remote managed web-server behavior.
+- 2026-04-07: Extended the shared admin-route unexpected-error helper into the already-covered revision detail, revision restore, series part-numbers, and admin post-comments routes so they share one logging plus generic `500` response pattern without changing auth, validation, or success behavior.
+- 2026-04-07: Added direct shell coverage for `/login`, `/signup`, `/account`, and legacy `/settings`, and hardened the client `/bookmarks` page so expired auth, rejected bookmark loads, malformed bookmark payloads, and generic fetch failures now resolve to stable unauthenticated or retry states instead of silently falling through to the empty saved-posts UI.
+- 2026-04-07: Added direct unit coverage for the `/account` route shell and the legacy `/settings` redirect so authenticated public navigation no longer depends only on broader E2E or indirect route coverage; also corrected stale Phase 7/8 checklist items in `TODO.md` that were still unchecked even though their detailed batches were already completed below.
+- 2026-04-07: Added direct unit coverage for nine previously untouched public route contracts: callback shell, about, map loading, map fallback and count copy, home landing and search branches, category/tag/series route wiring, and author-profile metadata plus empty/populated activity states; kept the batch test-only to avoid the active wishlist/admin worktree lanes, and tightened the new suites after typecheck plus reviewer feedback exposed loose fixtures and a wrong initial series URL assertion.
+- 2026-04-07: Hardened public category, tag, and series route params so malformed or blank values now fail closed before query work, trimmed valid values are forwarded consistently for metadata and page rendering, and `AccountSettings` now catches rejected or malformed bootstrap loads and renders the existing retry message instead of surfacing unhandled async errors.
+- 2026-04-07: Added direct route coverage for category and tag RSS feeds, and fixed the category feed boundary so malformed percent-encoding or encoded-whitespace params now return a safe `400` instead of throwing decode errors or querying blank categories.
+- 2026-04-07: Aligned the public map summary count with the actual mappable-post contract by counting only posts that have both latitude and longitude, normalized whitespace-only homepage `search` params back to the default landing/feed branch, and expanded `ensurePublicAppUser()` coverage for intact linked users plus fallback identity/upsert behavior.
+- 2026-04-07: Closed another clean-file follow-up pass without touching the active wishlist/admin lanes: newsletter client response handling now fails closed for ambiguous success states and no longer reflects raw `400` API text, public wishlist queries normalize outbound links to trimmed `https:` URLs only, public song links now include `noopener noreferrer` and an accessible label, the root `/feed.xml` route gained direct contract coverage, and the synthetic authenticated-public request-isolation helper moved from app source into the Playwright test harness with stronger deterministic coverage.
+- 2026-04-07: Recorded the travel route-planner provider contract and v1 execution plan in `TODO.md`: use Geoapify server-side for routing plus geocoding, keep Stadia + MapLibre for client rendering, require server-only provider envs plus Node runtime/timeouts/rate limiting, and defer implementation to a later TDD slice centered on a minimal `POST /api/route-plans` contract over existing public wishlist coordinates.
+- 2026-04-07: Completed the first route-planner delivery slice almost entirely in new files: added a validated `POST /api/route-plans` boundary, Geoapify-backed server-side provider abstraction with timeout/error normalization, wishlist-stop projection plus visited filtering over the existing public query contract, and a minimal `/route-planner` page plus client form shell under 20 focused green tests; deferred only richer map/polyline UI and Playwright smoke coverage.
+- 2026-04-07: Verified that the authenticated public bookmark-removal Playwright coverage already exists in `web/tests/e2e/public-authenticated.spec.ts`; the remaining live rerun blocker in this shell is `EADDRINUSE` on local port `3000`, so broader authenticated-public browser verification stays blocked until an explicit reachable app server is available.
+- 2026-04-07: Landed a clean-file resilience pass across three isolated surfaces without touching the active wishlist/admin implementation lanes: bookmark routes now convert unexpected auth/DAL failures into bounded generic `500`s under direct route coverage, `GET /api/cron/publish-scheduled` now authenticates before rate limiting and attempts `/` plus `/admin` revalidation independently after successful publish work, and `updateTagDescriptionAction` now treats post-save revalidation failures as non-fatal while still attempting both admin and public tag invalidations.
+- 2026-04-07: Fixed the current local build-wrapper blocker by making `web/scripts/build.ts` pre-clean `.next/static` on Windows and retry one transient `EPERM` unlink failure, which made `bun run build` pass locally after the earlier deploy/env fixes.
+- 2026-04-07: Finished the admin wishlist action hardening follow-up by keeping DAL failures behind generic save/delete errors, treating `/admin/wishlist` revalidation failures as non-fatal after successful mutations, and correcting the focused test suite to use schema-valid payloads plus isolated mock defaults before rerunning it green.
+- 2026-04-07: Captured a new env-runtime follow-up from a reported `/` crash: `COMMENT_NOTIFICATION_TO_EMAIL` is optional in behavior but still globally validated at runtime, and the currently observed local invalid value is `comment@@mail.jsquaredadventures.com`; the next env slice should determine whether validation belongs at the notification feature boundary instead of app boot.
+
+### Batch: public page correctness follow-ups
+- Goal: close two small but user-visible correctness gaps on public route shells without widening into broader page refactors.
+- User journey or failure being protected: map visitors should only see pinned-story counts for posts that can actually render on the map, and homepage visitors should not get shunted into the search-results branch for whitespace-only queries.
+- Scope: `TODO.md`, `web/src/app/(blog)/map/page.tsx`, `web/src/app/(blog)/page.tsx`, `web/tests/unit/map-page.test.tsx`, `web/tests/unit/home-page.test.tsx`.
+- Files expected to change: the files above only.
+- Tests to add or update first: update the map-page count test to reject lat-only posts and add a homepage test proving whitespace-only search behaves like the default landing shell.
+- RED command: `bunx vitest run tests/unit/map-page.test.tsx` and `bunx vitest run tests/unit/home-page.test.tsx`
+- Expected RED test(s): the new map summary assertion fails because the page still counts lat-only posts as pinned stories, and the new homepage assertion fails because the page still forwards raw whitespace search text into `listPublishedPosts()` and the search-results branch.
+- Why this RED proves the right problem: both tests hit real public route-entry behavior and show the page-level copy/branching contract still disagreed with the downstream map/search semantics.
+- GREEN target: the map summary count matches the same complete-coordinate predicate the map renderer uses, and whitespace-only homepage search params normalize to the default home/feed flow.
+- GREEN command: `bunx vitest run tests/unit/map-page.test.tsx tests/unit/home-page.test.tsx`
+- Refactor boundary: no map component refactor, no search API redesign, and no broader homepage visual changes.
+- Refactor proof command(s): `bunx vitest run tests/unit/map-page.test.tsx tests/unit/home-page.test.tsx`
+- Security impact: low.
+- Required security assertions: no new trust boundary or auth behavior is introduced; the slice only normalizes public display/query behavior.
+- E2E impact: none.
+- Coverage impact: adds direct regression coverage for two small public-route correctness contracts that broader smoke coverage would not localize well.
+- Verification commands: `bunx vitest run tests/unit/map-page.test.tsx tests/unit/home-page.test.tsx`, `bunx tsc --noEmit`, `npx eslint "src/app/(blog)/map/page.tsx" "src/app/(blog)/page.tsx" "tests/unit/map-page.test.tsx" "tests/unit/home-page.test.tsx"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/map-page.test.tsx`
+  - Result: the new map summary assertion failed because `MapPage` still rendered `1 story pinned to the map.` for a post with `locationLat` set and `locationLng` missing.
+  - Command: `bunx vitest run tests/unit/home-page.test.tsx`
+  - Result: the new homepage assertion failed because `HomePage` still called `listPublishedPosts(20, 0, "   ")` and entered the search-results branch for whitespace-only input.
+  - Why this RED proved the right problem: it showed both public pages still trusted looser page-local predicates than the actual rendering/query contract required.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/map-page.test.tsx tests/unit/home-page.test.tsx`
+  - Result: 7 focused page tests passed after `MapPage` switched to a shared complete-coordinate predicate and `HomePage` trimmed `searchParams.search` before branching or querying.
+- REFACTOR evidence:
+  - Refactor stayed minimal: `MapPage` gained one tiny coordinate predicate helper and `HomePage` only gained trimmed search normalization at the route boundary.
+  - Refactor proof command: `bunx vitest run tests/unit/map-page.test.tsx tests/unit/home-page.test.tsx`
+- Verification evidence:
+  - Tests: the final focused verification suite `bunx vitest run tests/unit/map-page.test.tsx tests/unit/home-page.test.tsx tests/unit/public-users.test.ts` passed with 13 tests across 3 files; the page-only rerun passed with 7 tests across 2 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/(blog)/map/page.tsx" "src/app/(blog)/page.tsx" "tests/unit/map-page.test.tsx" "tests/unit/home-page.test.tsx"` passed.
+  - Build: skipped because this was a focused page/test slice with no broader compilation risk beyond typecheck.
+  - Code review: reviewed after the slice; no findings.
+  - Security review: reviewed after the slice; no findings.
+- Status: complete
+
+### Batch: public app-user helper contract coverage expansion
+- Goal: expand focused protection around `ensurePublicAppUser()` before any future cleanup in this shared authenticated-public helper.
+- User journey or failure being protected: authenticated public users should continue getting stable app-user provisioning whether their linked rows are already intact, partially missing, or derived from sparse Supabase profile data.
+- Scope: `TODO.md` and `web/tests/unit/public-users.test.ts` only.
+- Files expected to change: the files above only.
+- Tests to add or update first: intact linked-user no-op behavior, fallback email generation, metadata precedence for display/avatar identity, the full fallback identity branch, the email-local-part branch, and the per-table upsert-target contract.
+- RED command: `bunx vitest run tests/unit/public-users.test.ts`
+- Expected RED test(s): the new helper-contract cases do not exist yet, leaving intact linked-user, fallback identity, and upsert-target behavior unpinned.
+- Why this RED proves the right problem: `ensurePublicAppUser()` is a shared auth-adjacent helper used by multiple public routes, so missing direct coverage leaves subtle identity-repair regressions easy to miss.
+- GREEN target: the helper contract is directly covered for intact, repaired, and newly provisioned users, including fallback identity derivation and per-table upsert targets.
+- GREEN command: `bunx vitest run tests/unit/public-users.test.ts`
+- Refactor boundary: no production helper rewrite in this slice unless new tests expose a real bug.
+- Refactor proof command(s): `bunx vitest run tests/unit/public-users.test.ts`
+- Security impact: low direct code risk, medium confidence gain because the helper sits on authenticated public-user provisioning paths.
+- Required security assertions: fallback identity remains deterministic, provider email stays `null` when Supabase email is absent, and no auth/account semantics widen.
+- E2E impact: none.
+- Coverage impact: materially expands direct helper coverage around linked-user no-op behavior, fallback identity derivation, metadata precedence, and upsert guarantees.
+- Verification commands: `bunx vitest run tests/unit/public-users.test.ts`, `bunx tsc --noEmit`, `npx eslint "tests/unit/public-users.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/public-users.test.ts`
+  - Result: before this slice, only the missing-profile repair path was directly covered; the intact linked-user, fallback email, metadata precedence, full fallback identity, email-local-part fallback, and upsert-target behaviors were unpinned.
+  - Why this RED proved the right problem: it identified a real coverage blind spot in a shared helper even though the already-implemented behavior mostly held.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/public-users.test.ts`
+  - Result: the expanded suite passed with 6 focused tests after adding direct assertions for no-op linked-user returns, fallback identities, trimmed metadata precedence, and per-table upsert targets.
+- REFACTOR evidence:
+  - No production refactor followed GREEN; the slice stayed test-only.
+  - Refactor proof command: `bunx vitest run tests/unit/public-users.test.ts`
+- Verification evidence:
+  - Tests: the final focused verification suite `bunx vitest run tests/unit/map-page.test.tsx tests/unit/home-page.test.tsx tests/unit/public-users.test.ts` passed with 13 tests across 3 files, and the helper-only rerun passed with 6 tests.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "tests/unit/public-users.test.ts"` passed.
+  - Build: skipped because this was a focused test-only slice with no production code changes.
+  - Code review: initial review flagged that the first draft of the new tests still under-specified persisted upsert targets and the true fallback-identity branch; the slice absorbed that feedback by tightening insert/upsert assertions and adding the missing fallback cases. Final review found no remaining scoped issues in the landed tests.
+- Security review: reviewed after the slice; no findings.
+- Status: complete
+
+### Batch: small public safety and coverage follow-ups
+- Goal: close several remaining small correctness and safety gaps on clean files while larger authenticated-public and planner lanes remain blocked or environment-gated.
+- User journey or failure being protected: homepage newsletter signup should not show success for ambiguous `2xx` responses, public wishlist and song links should expose only safe outbound URLs, root RSS should keep its canonical contract pinned directly, and authenticated public Playwright request isolation should stay test-harness-only instead of living under app source.
+- Scope: `TODO.md`, `web/src/components/blog/newsletter-signup-form.tsx`, `web/tests/unit/newsletter-signup-form.test.ts`, `web/src/server/queries/wishlist.ts`, `web/tests/unit/public-wishlist.test.ts`, `web/src/components/blog/post-song-metadata.tsx`, `web/tests/unit/post-page-song.test.tsx`, `web/src/app/feed.xml/route.ts`, `web/tests/unit/feed-route.test.ts`, `web/tests/e2e/helpers/public-request-headers.ts`, `web/tests/e2e/public-authenticated.spec.ts`, and `web/tests/unit/public-request-headers.test.ts`.
+- Files expected to change: the files above only.
+- Tests to add or update first: newsletter helper/control-flow assertions for ambiguous `2xx`, bare `202`, and bare `400`; wishlist query assertions for invalid/trimmable external URLs; direct root feed route coverage; song-link rel/label assertions; and stronger deterministic public request-header coverage including trim/empty-scope behavior.
+- RED command: `bunx vitest run tests/unit/newsletter-signup-form.test.ts`, `bunx vitest run tests/unit/public-wishlist.test.ts`, `bunx vitest run tests/unit/public-request-headers.test.ts`, `bunx vitest run tests/unit/post-page-song.test.tsx`
+- Expected RED test(s): newsletter still treated missing-status `200` responses as success, wishlist queries returned raw external URLs including non-HTTPS values, request-isolation helper accepted blank scopes, and song links still rendered `rel="noreferrer"` without the stronger outbound-link contract.
+- Why this RED proves the right problem: each target hit the exact boundary being tightened and demonstrated a real blind spot or unsafe fallback without widening into unrelated route/UI work.
+- GREEN target: newsletter response handling fails closed for ambiguous `2xx`/bare `202`/bare `400`, public wishlist output exposes only trimmed `https:` outbound links, song links use `noopener noreferrer` plus a descriptive label, the root feed route contract is directly pinned, and authenticated-public request-isolation helpers live only under the E2E test harness with explicit trim/empty-scope coverage.
+- GREEN command: `bunx vitest run tests/unit/newsletter-signup-form.test.ts tests/unit/public-wishlist.test.ts tests/unit/public-request-headers.test.ts tests/unit/feed-route.test.ts tests/unit/post-page-song.test.tsx`
+- Refactor boundary: no newsletter API/provider redesign, no wishlist page/admin CRUD changes, no public-auth environment changes, and no broader RSS or Playwright config refactor.
+- Refactor proof command(s): `bunx vitest run tests/unit/newsletter-signup-form.test.ts tests/unit/public-wishlist.test.ts tests/unit/public-request-headers.test.ts tests/unit/feed-route.test.ts tests/unit/post-page-song.test.tsx`
+- Security impact: medium, because this hardens public outbound-link handling and removes a spoofed forwarded-header helper from runtime source.
+- Required security assertions: newsletter UI no longer reflects raw `400` API text; public wishlist/song links fail closed on invalid or non-HTTPS URLs; `target="_blank"` links include `rel="noopener noreferrer"`; the synthetic forwarded-header helper is test-harness-only and rejects blank scopes.
+- E2E impact: low direct browser impact, medium support-code confidence gain for the authenticated public Playwright lane.
+- Coverage impact: adds direct coverage for root `/feed.xml`, strengthens newsletter client-state tests to include fetch control flow, expands public wishlist link normalization coverage, and strengthens the public request-isolation helper contract.
+- Verification commands: `bunx vitest run tests/unit/newsletter-signup-form.test.ts tests/unit/public-wishlist.test.ts tests/unit/public-request-headers.test.ts tests/unit/feed-route.test.ts tests/unit/post-page-song.test.tsx`, `bunx tsc --noEmit`, `npx eslint "src/components/blog/newsletter-signup-form.tsx" "src/server/queries/wishlist.ts" "src/app/feed.xml/route.ts" "src/components/blog/post-song-metadata.tsx" "tests/e2e/helpers/public-request-headers.ts" "tests/e2e/public-authenticated.spec.ts" "tests/unit/newsletter-signup-form.test.ts" "tests/unit/public-wishlist.test.ts" "tests/unit/public-request-headers.test.ts" "tests/unit/feed-route.test.ts" "tests/unit/post-page-song.test.tsx"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/newsletter-signup-form.test.ts`
+  - Result: the new missing-status assertion failed because `getNewsletterResponseState(200, {})` still returned `You're subscribed!`.
+  - Command: `bunx vitest run tests/unit/public-wishlist.test.ts`
+  - Result: the new normalization test failed because `listPublicWishlistPlaces()` still returned raw `javascript:` and whitespace-padded external URLs.
+  - Command: `bunx vitest run tests/unit/public-request-headers.test.ts`
+  - Result: the new validation test failed because the request-isolation helper still accepted empty and whitespace-only scopes.
+  - Command: `bunx vitest run tests/unit/post-page-song.test.tsx`
+  - Result: the new link assertion failed because `PostSongMetadata` still rendered `rel="noreferrer"` and had no descriptive `aria-label`.
+  - Why this RED proved the right problem: each failure was the intended boundary regression, not a harness/setup issue, and the root feed route still closed a real direct-coverage blind spot on its first focused run.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/newsletter-signup-form.test.ts tests/unit/public-wishlist.test.ts tests/unit/public-request-headers.test.ts tests/unit/feed-route.test.ts tests/unit/post-page-song.test.tsx`
+  - Result: 16 focused tests passed across 5 files after the boundary fixes and coverage additions landed.
+- REFACTOR evidence:
+  - Refactor stayed minimal: newsletter fetch-response branching was extracted into a small `getNewsletterSubmissionState()` helper for direct control-flow tests, wishlist URL normalization stayed local to the public query layer, the song-link change was attribute-only, and the synthetic forwarded-header helper moved into `tests/e2e/helpers/` without widening the public-auth flow behavior.
+  - Refactor proof command: `bunx vitest run tests/unit/newsletter-signup-form.test.ts tests/unit/public-wishlist.test.ts tests/unit/public-request-headers.test.ts tests/unit/feed-route.test.ts tests/unit/post-page-song.test.tsx`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/newsletter-signup-form.test.ts tests/unit/public-wishlist.test.ts tests/unit/public-request-headers.test.ts tests/unit/feed-route.test.ts tests/unit/post-page-song.test.tsx` passed with 16 tests across 5 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/components/blog/newsletter-signup-form.tsx" "src/server/queries/wishlist.ts" "src/app/feed.xml/route.ts" "src/components/blog/post-song-metadata.tsx" "tests/e2e/helpers/public-request-headers.ts" "tests/e2e/public-authenticated.spec.ts" "tests/unit/newsletter-signup-form.test.ts" "tests/unit/public-wishlist.test.ts" "tests/unit/public-request-headers.test.ts" "tests/unit/feed-route.test.ts" "tests/unit/post-page-song.test.tsx"` passed.
+  - Build: skipped because this pass stayed inside focused component/query/test and E2E support-code changes, with no broader routing or bundling risk beyond typecheck.
+  - Code review: final review found no remaining issues in the scoped diff.
+- Security review: final review found no remaining issues; notable wins were HTTPS-only wishlist links, `noopener noreferrer` on public song links, fail-closed newsletter client handling, and moving the synthetic forwarded-header helper out of runtime source.
+- Status: complete
+
+### Batch: bookmark, cron, and admin tag resilience follow-ups
+- Goal: close three clean-file correctness/security gaps by making bookmark and cron routes fail safely on unexpected backend errors, ensuring cron auth happens before rate limiting, and preventing post-success tag revalidation failures from misreporting saved admin edits as failed.
+- User journey or failure being protected: signed-in bookmark callers should never receive raw server errors from unexpected auth/DAL faults; scheduled publish runs should not let unauthorized callers burn the publish limiter and should keep attempting all cache invalidations after a successful publish; admin tag edits should persist even if one cache revalidation throws afterward.
+- Scope: `TODO.md`, `web/src/app/api/posts/[postId]/bookmark/route.ts`, `web/tests/unit/post-bookmark-route.test.ts`, `web/src/app/api/cron/publish-scheduled/route.ts`, `web/tests/unit/cron-publish-scheduled-route.test.ts`, `web/src/app/admin/tags/actions.ts`, `web/tests/unit/admin-tag-actions.test.ts`.
+- Files expected to change: the files above only.
+- Tests to add or update first: bookmark route tests for unexpected read/write failures; cron route tests for auth-before-rate-limit and per-path revalidation continuation; admin tag action test proving the save still resolves and both invalidations are attempted when the first revalidation throws.
+- RED command: `bunx vitest run tests/unit/post-bookmark-route.test.ts`, `bunx vitest run tests/unit/cron-publish-scheduled-route.test.ts`, `bunx vitest run tests/unit/admin-tag-actions.test.ts`
+- Expected RED test(s): bookmark GET/POST still throw raw dependency errors, cron still rate-limits before auth and stops after the first failed revalidation, and the admin tag action still rejects when revalidation throws after a successful save.
+- Why this RED proves the right problem: each failing test hits a real route/action boundary already in production and demonstrates a current contract gap rather than a setup problem.
+- GREEN target: bookmark routes return generic `500`s for unexpected helper/DAL failures; cron auth is enforced before rate limiting and both revalidations are attempted independently after publish success; admin tag saves still resolve and attempt both revalidations even if one fails.
+- GREEN command: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/cron-publish-scheduled-route.test.ts tests/unit/admin-tag-actions.test.ts`
+- Refactor boundary: no bookmark UI changes, no cron business-logic redesign beyond auth/revalidation ordering, and no admin tags page/UI redesign.
+- Refactor proof command(s): `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/cron-publish-scheduled-route.test.ts tests/unit/admin-tag-actions.test.ts`
+- Security impact: medium, because this touches an authenticated public mutation route and an operational cron auth boundary.
+- Required security assertions: bookmark routes leak no raw dependency errors; invalid cron callers cannot consume the publish rate-limit budget; successful state changes are not reported as failures solely because cache revalidation throws afterward.
+- E2E impact: none.
+- Coverage impact: expands direct route/action coverage for unexpected failure handling and pins the safer cron auth ordering.
+- Verification commands: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/cron-publish-scheduled-route.test.ts tests/unit/admin-tag-actions.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/app/api/posts/[postId]/bookmark/route.ts" "tests/unit/post-bookmark-route.test.ts" "src/app/api/cron/publish-scheduled/route.ts" "tests/unit/cron-publish-scheduled-route.test.ts" "src/app/admin/tags/actions.ts" "tests/unit/admin-tag-actions.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-bookmark-route.test.ts`
+  - Result: the two new bookmark error-path tests failed because unexpected `isPostBookmarked()` and `togglePostBookmark()` rejections still escaped the route boundary as raw thrown errors.
+  - Command: `bunx vitest run tests/unit/cron-publish-scheduled-route.test.ts`
+  - Result: the new cron resilience test failed because a thrown `revalidatePath("/")` stopped the later `/admin` invalidation and the auth-order follow-up assertion failed because rate limiting still ran before cron-secret authorization.
+  - Command: `bunx vitest run tests/unit/admin-tag-actions.test.ts`
+  - Result: the new admin tag action test failed because a thrown `revalidatePath("/admin/tags")` rejected the action after `updateTagDescription()` had already succeeded, and the later `/tag/[slug]` invalidation was never attempted.
+  - Why this RED proved the right problem: the failures showed three real boundary contracts still misclassified or leaked post-success faults instead of failing safely.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/cron-publish-scheduled-route.test.ts tests/unit/admin-tag-actions.test.ts`
+  - Result: 23 focused tests passed across 3 files after the bookmark routes added bounded generic `500` handling, cron auth moved ahead of rate limiting with per-path revalidation isolation, and the admin tag action isolated both revalidations.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the bookmark routes only gained bounded top-level error handling, the cron route only changed auth ordering and split revalidation attempts, and the admin tag action only split its revalidation calls after the save.
+  - Refactor proof command: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/cron-publish-scheduled-route.test.ts tests/unit/admin-tag-actions.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/post-bookmark-route.test.ts tests/unit/cron-publish-scheduled-route.test.ts tests/unit/admin-tag-actions.test.ts` passed with 23 tests across 3 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/app/api/posts/[postId]/bookmark/route.ts" "tests/unit/post-bookmark-route.test.ts" "src/app/api/cron/publish-scheduled/route.ts" "tests/unit/cron-publish-scheduled-route.test.ts" "src/app/admin/tags/actions.ts" "tests/unit/admin-tag-actions.test.ts"` passed.
+  - Build: skipped because this was a focused route/action/test slice with no broader compilation or routing risk beyond typecheck.
+  - Code review: follow-up review found no remaining scoped issues after auth-ordering and independent revalidation fixes landed.
+  - Security review: follow-up review closed the cron auth-order risk; residual low risk is that bookmark routes now flatten all unexpected helper failures to a generic `500`, which is safer for callers but still relies on server logs for operational diagnosis.
+  - Exceptions: none.
+- Status: complete
 
 ## Planned Feature Expansion
 
@@ -1230,19 +1749,20 @@ Do not run in parallel:
 
 ### Phase 7: Planned Feature Intake
 
-- [ ] Decide the routing/geocoding provider contract for the travel planner and record env/runtime constraints.
-- [ ] Confirm whether wishlist links are a structured array field, a simple optional URL list, or a richer relation.
-- [ ] Confirm the post-song metadata contract stays structured (`title`, `artist`, `url`, optional provider) and does not allow arbitrary embed HTML.
-- [ ] Confirm the collapsible thoughts block uses a safe `details` / `summary`-style render contract or another allowlisted equivalent.
+- [x] Decide the routing/geocoding provider contract for the travel planner and record env/runtime constraints.
+- [x] Confirm whether wishlist links are a structured array field, a simple optional URL list, or a richer relation.
+- [x] Confirm the post-song metadata contract stays structured (`title`, `artist`, `url`, optional provider) and does not allow arbitrary embed HTML.
+- [x] Confirm the collapsible thoughts block uses a safe `details` / `summary`-style render contract or another allowlisted equivalent.
 
 ### Phase 8: Planned Feature Batches
 
 - [x] Plan and execute a newsletter subscribe correctness batch after the active remediation work is clear.
-- [ ] Plan and execute a collapsible thoughts editor/rendering batch after the content HTML contract is rechecked.
-- [ ] Plan and execute a wishlist-place schema and admin CRUD batch before any public wishlist map UI work.
-- [ ] Plan and execute a public wishlist map batch after wishlist data contracts are stable.
-- [ ] Plan and execute a route planner batch after provider selection and wishlist query contracts are stable.
-- [ ] Plan and execute a post-song metadata batch after the post schema touch is scoped.
+- [x] Plan and execute a collapsible thoughts editor/rendering batch after the content HTML contract is rechecked.
+- [x] Plan and execute an admin post-editor emoji picker rendering fix after the editor test surface is confirmed.
+- [x] Plan and execute a wishlist-place schema and admin CRUD batch before any public wishlist map UI work.
+- [x] Plan and execute a public wishlist map batch after wishlist data contracts are stable.
+- [x] Plan and execute a route planner batch after provider selection and wishlist query contracts are stable.
+- [x] Plan and execute a post-song metadata batch after the post schema touch is scoped.
 
 ### Batch: homepage newsletter subscribe correctness
 - Goal: make the homepage subscribe flow reflect the real API outcome instead of treating any non-error response as success.
@@ -1280,6 +1800,57 @@ Do not run in parallel:
   - Lint: `npx eslint "src/components/blog/newsletter-signup-form.tsx" "src/app/api/newsletter/route.ts" "tests/unit/newsletter-route.test.ts" "tests/unit/newsletter.test.ts" "tests/unit/newsletter-signup-form.test.ts"` passed.
   - Build: skipped because this was a focused component/route/test change with no routing or bundling change beyond typecheck.
   - Security review: reviewed after the slice; no new issues were introduced, server-side validation and rate limiting stayed intact, and missing-config behavior still avoids setup/env leakage. Residual risk: the public API still uses `202` for skipped/unavailable behavior, so other generic `response.ok` callers could misclassify it until the route contract is revisited more broadly.
+- Status: complete
+
+### Batch: route planner provider contract and v1 stop-suggestion plan
+- Goal: lock the routing/geocoding provider contract for the planned travel route planner and record the smallest safe v1 execution batch before implementation starts.
+- User journey or failure being protected: future route-planner work should reuse the existing public wishlist coordinate data without exposing provider secrets client-side, and the implementation lane should stay small enough to validate with TDD before any map/polyline expansion.
+- Scope: `TODO.md` only for this planning slice; execution is deferred.
+- Files expected to change: `TODO.md` only.
+- Tests to add or update first: none in this planning slice; implementation must add focused form, service, route, and page tests before production code changes.
+- RED command: none; this was a planning-only batch to close an unchecked tracker dependency before implementation.
+- Expected RED test(s): none.
+- Why this planning batch is still necessary: the route-planner feature remained blocked on an unrecorded provider/runtime contract, which would otherwise force speculative implementation across auth, env, and public API surfaces.
+- GREEN target: the tracker records one provider decision, server-only env/runtime constraints, a minimal API contract, and a concrete v1 execution batch that can be picked up later under TDD.
+- GREEN command: none.
+- Refactor boundary: no production code, no schema changes, no provider SDK installation, and no map UI work in this pass.
+- Refactor proof command(s): none.
+- Security impact: medium planning impact, because this defines a future public input surface and upstream provider integration path.
+- Required security assertions:
+  - provider API keys stay server-only and never use `NEXT_PUBLIC_` envs
+  - route-planner requests must validate with Zod at the route boundary
+  - public callers must submit place ids or plain text origin/destination only; authoritative wishlist coordinates stay server-loaded from Turso
+  - provider failures and timeouts must return safe generic `502`/`503` responses
+  - the eventual public route must be rate limited and run on the Node runtime
+- E2E impact: none in this planning pass.
+- Coverage impact: unblocks a future TDD slice by defining the contracts the tests must pin first.
+- Verification commands: subagent planning review only; no code or config changed outside this tracker update.
+- Provider decision:
+  - Routing provider: Geoapify Routing API.
+  - Geocoding provider: Geoapify Geocoding API.
+  - Client map rendering remains on the existing Stadia + MapLibre stack.
+  - Rationale: one server-only key covers both routing and geocoding, aligns with the current map stack, avoids speculative multi-provider complexity, and is a better production fit than public Nominatim/OSRM endpoints.
+- Env/runtime constraints to honor during implementation:
+  - Add server-only envs: `ROUTING_PROVIDER=geoapify`, `GEOCODING_PROVIDER=geoapify`, `GEOAPIFY_API_KEY`, `ROUTE_PLANNER_TIMEOUT_MS`, `GEOCODING_TIMEOUT_MS`, and `ROUTE_PLANNER_MAX_STOPS`.
+  - Do not add any `NEXT_PUBLIC_` routing or geocoding secrets.
+  - The eventual route-planner endpoint should export `runtime = "nodejs"` and use server-side `fetch()` only.
+  - Use abort timeouts and public-route rate limiting because routing/geocoding are expensive upstream calls.
+  - Keep v1 bounded to 2-10 requested stops and fixed travel modes only.
+  - Public route planning must only use `wishlist_places` rows where `isPublic = true`.
+- Minimal v1 execution contract:
+  - Preferred endpoint: `POST /api/route-plans`.
+  - Request shape: `source: "public-wishlist"`, `placeIds: string[]` with uniqueness enforced, and `mode: "drive" | "walk" | "bike"`.
+  - Success shape: normalized response envelope with ordered waypoint metadata, provider name, distance/duration totals, and route geometry or stop suggestions.
+  - Error semantics: `422` for invalid payloads, `404` when fewer than two routable public places remain after validation/filtering, `429` for throttling, and safe `502`/`503` upstream failure responses.
+- Deferred from v1:
+  - no client-side provider calls
+  - no itinerary persistence
+  - no alternative routes or waypoint optimization
+  - no polyline-heavy UI work until the API/service layer is green
+  - no schema changes unless a later slice proves they are necessary
+- Next execution batch to pick up later:
+  - Smallest viable slice: a server-planned public route planner using existing wishlist coordinates, with focused tests for planner input validation, visited filtering, public-only filtering, ordered results, route error handling, and a minimal page shell.
+  - Suggested future files: `web/src/server/forms/route-planner.ts`, `web/src/server/services/route-planner-provider.ts`, `web/src/server/services/route-planner.ts`, `web/src/app/api/route-plans/route.ts`, `web/src/app/(blog)/route-planner/page.tsx`, `web/src/components/blog/route-planner-form.tsx`, and focused unit tests for form, service, route, and page behavior.
 - Status: complete
 
 ### Batch: admin preview and clone server-action trust-boundary hardening
@@ -1361,6 +1932,85 @@ Do not run in parallel:
   - Build: skipped because this slice stayed inside shared content utilities and unit tests.
   - E2E: skipped for this pass because there is not yet a dedicated admin authoring/public render smoke fixture covering thoughts-block creation and publish-preview verification; follow-up remains to add one admin editor smoke and one public post render smoke when that fixture path is selected.
   - Security review: reviewed after the slice; no findings. `summary` text remains normalized as plain text data, the editor command inserts only the canonical node shape, and the existing safe `details`/`summary` allowlist contract stayed intact. Residual risk: no browser-level regression coverage exists yet for keyboard authoring and public-post rendering.
+- Status: complete
+
+### Batch: admin post-editor emoji picker rendering fix
+- Goal: fix the admin post editor so clicking the emoji button shows visible emoji options instead of a blank picker, while preserving emoji insertion into the editor.
+- User journey or failure being protected: an authenticated admin composing or editing a post can open the emoji picker, see selectable emoji options, choose one, and have it inserted into the Tiptap editor without the picker rendering blank.
+- Scope: `TODO.md`, `web/src/components/admin/post-rich-text-editor.tsx`, `web/tests/unit/post-rich-text-editor-emoji.test.tsx`, and `web/vitest.config.ts` because the new `.test.tsx` regression had to be discoverable by the existing unit harness.
+- Files expected to change: `TODO.md`, `web/src/components/admin/post-rich-text-editor.tsx`, `web/tests/unit/post-rich-text-editor-emoji.test.tsx`, and `web/vitest.config.ts`.
+- Tests to add or update first: add a focused jsdom regression that opens the emoji picker, proves visible/selectable emoji options are absent unless the picker is configured for native rendering, and proves selected emoji insert into the editor and close the picker.
+- RED command: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx`
+- Expected RED test(s): opening the emoji picker reveals no visible/selectable emoji options in the new regression harness because the picker is not yet configured for native rendering, and the newly added `.test.tsx` file initially would not run at all because `vitest.config.ts` only included `tests/unit/**/*.test.ts`.
+- Why this RED proves the right problem: it targets the exact admin authoring behavior at the editor boundary, showing that the picker integration currently renders unusable options even though the control opens.
+- GREEN target: clicking the emoji button opens a visible picker, emoji options render and are selectable, choosing one inserts the emoji into the editor, and the picker closes cleanly.
+- GREEN command: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx tests/unit/admin-wishlist-page.test.tsx tests/unit/post-page-song.test.tsx`
+- Refactor boundary: no broader editor toolbar cleanup, no unrelated Tiptap extension changes, and no renderer/sanitizer work unless the root cause clearly crosses that boundary.
+- Refactor proof command(s): `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx tests/unit/admin-wishlist-page.test.tsx tests/unit/post-page-song.test.tsx`
+- Security impact: low, because this is an authenticated admin UI rendering/integration bug rather than a new trust boundary.
+- Required security assertions: no unsafe HTML insertion is introduced; emoji insertion continues through the existing editor content path only.
+- E2E impact: low for this slice; jsdom was sufficient to prove and lock the regression, so no browser pass was required yet.
+- E2E prerequisites (seed, auth state, env): working admin auth fixture and access to `/admin/posts/new`.
+- Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
+- Coverage impact: adds focused regression coverage to the admin post-editor emoji-picker interaction.
+- Verification commands: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx tests/unit/admin-wishlist-page.test.tsx tests/unit/post-page-song.test.tsx`, `bunx tsc --noEmit`, `npx eslint "src/components/admin/post-rich-text-editor.tsx" "vitest.config.ts" "tests/unit/post-rich-text-editor-emoji.test.tsx"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx`
+  - Result: the first run failed before executing the new regression because `vitest.config.ts` only included `tests/unit/**/*.test.ts`, proving `.test.tsx` coverage was silently skipped by the unit harness.
+  - Follow-up RED command: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx`
+  - Follow-up result: after widening the include pattern, both emoji-picker assertions failed because opening the picker still rendered no visible/selectable emoji options in the regression harness and no emoji button could be clicked for insertion.
+  - Why this RED proved the right problem: it first removed a real harness blind spot, then exercised the exact editor boundary and showed the picker opened but did not expose usable emoji content.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx tests/unit/admin-wishlist-page.test.tsx tests/unit/post-page-song.test.tsx`
+  - Result: 5 tests passed across 3 `.test.tsx` files after the editor switched the picker to `EmojiStyle.NATIVE`, making the emoji options visible in the regression harness and preserving insertion-plus-close behavior.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the production fix was one explicit `emojiStyle={EmojiStyle.NATIVE}` configuration on the existing picker, and the only support-code change was widening Vitest discovery so `.test.tsx` unit files are no longer skipped.
+  - Refactor proof command: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx tests/unit/admin-wishlist-page.test.tsx tests/unit/post-page-song.test.tsx`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/post-rich-text-editor-emoji.test.tsx tests/unit/admin-wishlist-page.test.tsx tests/unit/post-page-song.test.tsx` passed with 5 tests across 3 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/components/admin/post-rich-text-editor.tsx" "vitest.config.ts" "tests/unit/post-rich-text-editor-emoji.test.tsx"` passed.
+  - Build: skipped because this was a focused client component plus unit-harness change and typecheck covered the touched code.
+  - E2E: skipped because the jsdom regression was sufficient to prove the blank-picker issue and no browser-only behavior remained unverified in this slice.
+  - Code review: reviewed after the slice; no findings. Residual risk: no real-browser third-party picker smoke covers the library outside the jsdom regression harness yet.
+  - Security review: reviewed after the slice; no findings. Residual risk remains that this is still a jsdom contract test rather than a real-browser third-party picker render check.
+- Status: complete
+
+### Batch: Playwright CI artifact diagnostics hardening
+- Goal: make CI E2E failures leave durable diagnostic artifacts without over-retaining unnecessary sensitive browser media.
+- User journey or failure being protected: when Playwright fails in CI, maintainers should have stable HTML/JSON reports and failure traces to diagnose the run instead of relying only on ephemeral GitHub log annotations.
+- Scope: `TODO.md`, `web/playwright.config.ts`, and a focused config contract test at `web/tests/unit/playwright-config.test.ts`.
+- Files expected to change: `TODO.md`, `web/playwright.config.ts`, `web/tests/unit/playwright-config.test.ts`.
+- Tests to add or update first: add a focused config test for CI reporter/artifact behavior and managed local-vs-remote web-server behavior.
+- RED command: `bunx vitest run tests/unit/playwright-config.test.ts`
+- Expected RED test(s): the new CI diagnostics assertion fails because the config still uses only the `github` reporter, emits no durable HTML/JSON report configuration, and does not pin the intended output directory.
+- Why this RED proves the right problem: it exercises the config contract directly and shows CI currently lacks a durable artifact trail for failure diagnosis.
+- GREEN target: CI uses `github` plus HTML and JSON reporters, writes artifacts under stable report/output paths, retains failure traces, leaves screenshot capture on failure, and keeps video disabled to reduce sensitive artifact retention.
+- GREEN command: `bunx vitest run tests/unit/playwright-config.test.ts`
+- Refactor boundary: no E2E spec rewrites and no workflow-file changes in this slice.
+- Refactor proof command(s): `bunx vitest run tests/unit/playwright-config.test.ts`
+- Security impact: medium operational risk because CI artifact retention can capture privileged admin-page data.
+- Required security assertions: durable reports stay enabled for diagnosis, but video capture remains off so failures do not retain extra admin-surface footage; remote targets must not start a managed local dev server.
+- E2E impact: support-code only; no browser run required for the config contract slice.
+- Coverage impact: adds direct unit coverage for Playwright CI diagnostics and local/remote managed-server behavior.
+- Verification commands: `bunx vitest run tests/unit/playwright-config.test.ts`, `bunx tsc --noEmit`, `npx eslint "playwright.config.ts" "tests/unit/playwright-config.test.ts"`, code review, and security review.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/playwright-config.test.ts`
+  - Result: the new CI assertion failed because `playwright.config.ts` still returned only `"github"` for `reporter`, proving there was no durable HTML/JSON artifact configuration for CI failure diagnosis.
+  - Why this RED proved the right problem: it pinned the exact Playwright config surface responsible for reporter and artifact output in CI.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/playwright-config.test.ts`
+  - Result: 4 focused config tests passed after CI reporter output switched to `github` plus HTML/JSON reporters, `outputDir` stabilized at `test-results`, failure traces stayed enabled, video stayed off, and localhost vs remote managed web-server behavior was pinned explicitly.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the slice only changed Playwright config values and added a config contract test; no E2E spec behavior changed.
+  - Refactor proof command: `bunx vitest run tests/unit/playwright-config.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/playwright-config.test.ts tests/unit/post-revision-route.test.ts tests/unit/post-revision-restore-route.test.ts tests/unit/admin-series-part-numbers-route.test.ts tests/unit/admin-post-comments-route.test.ts` passed with 31 tests across 5 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "playwright.config.ts" "tests/unit/playwright-config.test.ts" "src/lib/admin-route-errors.ts" "src/app/api/admin/posts/[postId]/revisions/[revisionId]/route.ts" "src/app/api/admin/posts/[postId]/revisions/[revisionId]/restore/route.ts" "src/app/api/admin/series/[seriesId]/part-numbers/route.ts" "src/app/api/admin/posts/[postId]/comments/route.ts"` passed.
+  - Build: skipped because this slice only touched Playwright support config and focused unit tests.
+  - Code review: reviewed after the slice; no findings. Residual gap: broader Playwright config behavior is still only unit-covered rather than exercised in CI here.
+  - Security review: initial review flagged retained CI video artifacts as an operational sensitivity risk on admin E2E flows; the slice absorbed that finding by leaving `video` off while keeping HTML/JSON reports and traces. No remaining scoped findings.
 - Status: complete
 
 ### Batch: admin leaf-route unexpected-error hardening
@@ -1770,6 +2420,46 @@ Do not run in parallel:
   - Security review: only `isPublic = true` rows are exposed by the public query, and optional links still render as validated HTTPS anchors with `rel="noreferrer"`.
 - Status: complete
 
+### Batch: wishlist admin management expansion
+- Goal: complete the admin wishlist CRUD surface by adding update/delete flows on top of the initial create/list foundation.
+- User journey or failure being protected: an authenticated admin can edit wishlist place fields, reorder entries, toggle visited/public flags, and delete stale destinations without bypassing validation.
+- Scope: `TODO.md`, `web/src/server/forms/admin-wishlist-place.ts`, `web/src/server/dal/admin-wishlist-places.ts`, `web/src/app/admin/wishlist/actions.ts`, `web/src/app/admin/wishlist/page.tsx`, focused unit tests, and one admin smoke shell assertion.
+- Files expected to change: the wishlist form/DAL/action/page files above, `web/tests/unit/wishlist-place-form.test.ts`, `web/tests/unit/admin-wishlist-actions.test.ts`, `web/tests/unit/admin-wishlist-places.test.ts`, `web/tests/e2e/smoke.spec.ts`, and `TODO.md`.
+- Tests to add or update first: add unit coverage for update/delete DAL helpers, update/delete admin action behavior, and update-schema ID validation before touching production code.
+- RED command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts`
+- Expected RED test(s): the new update/delete tests fail because the wishlist DAL and admin actions only support create/list today.
+- Why this RED proves the right problem: it exercises the exact missing admin-management boundary needed to make the existing wishlist domain genuinely CRUD-capable before any later planner/admin polish work.
+- GREEN target: update/delete flows exist behind validated server actions, the admin page exposes those forms, and the wishlist schema now validates update IDs explicitly.
+- GREEN command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`
+- Refactor boundary: no route-planner work, no new migration/schema columns, and no public wishlist route redesign.
+- Refactor proof command(s): `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`
+- Security impact: medium-high, because this extends authenticated admin write paths.
+- Required security assertions: server actions fail closed for non-admin sessions, update/delete IDs validate at the trust boundary, coordinates and optional links remain validated server-side, and no raw backend errors are surfaced.
+- E2E impact: low-medium; add a lightweight authenticated admin wishlist shell assertion now, leaving live mutation coverage for a later fixture-backed pass.
+- E2E prerequisites (seed, auth state, env): existing admin storage state for shell coverage; mutation coverage still needs a stable wishlist fixture contract.
+- Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` when the admin smoke suite is rerun.
+- Coverage impact: expands the wishlist admin lane from create/list into real CRUD support and adds update-ID validation coverage.
+- Verification commands: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`, `bunx tsc --noEmit`, `npx eslint "src/server/forms/admin-wishlist-place.ts" "src/server/dal/admin-wishlist-places.ts" "src/app/admin/wishlist/actions.ts" "src/app/admin/wishlist/page.tsx" "tests/unit/wishlist-place-form.test.ts" "tests/unit/admin-wishlist-actions.test.ts" "tests/unit/admin-wishlist-places.test.ts" "tests/e2e/smoke.spec.ts"`.
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts`
+  - Result: the new action/DAL tests failed because `updateWishlistPlaceAction`, `deleteWishlistPlaceAction`, `updateAdminWishlistPlace`, and `deleteAdminWishlistPlace` did not exist yet.
+  - Why this RED proved the right problem: it showed the wishlist admin lane still stopped at create/list even though the batch contract already called for edit/reorder/toggle/delete behavior.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`
+  - Result: 24 focused tests passed across 5 files after adding wishlist update/delete DAL helpers, matching server actions, UUID-backed update ID validation, and the admin page edit/delete forms.
+- REFACTOR evidence:
+  - Refactor stayed minimal: the slice extended the dedicated wishlist modules created in the earlier batch rather than threading new behavior through the large shared admin action surface.
+  - Refactor proof command: `bunx vitest run tests/unit/wishlist-place-form.test.ts tests/unit/admin-wishlist-actions.test.ts tests/unit/admin-wishlist-places.test.ts tests/unit/public-wishlist.test.ts tests/unit/wishlist-page.test.ts`
+- Verification evidence:
+  - Tests: the focused suite above passed with 24 tests across 5 files.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/server/forms/admin-wishlist-place.ts" "src/server/dal/admin-wishlist-places.ts" "src/app/admin/wishlist/actions.ts" "src/app/admin/wishlist/page.tsx" "tests/unit/wishlist-place-form.test.ts" "tests/unit/admin-wishlist-actions.test.ts" "tests/unit/admin-wishlist-places.test.ts" "tests/e2e/smoke.spec.ts"` passed.
+  - Build: skipped because this stayed within an already-added route surface plus focused unit tests; typecheck covered the touched app/server code.
+  - E2E: added an authenticated `/admin/wishlist` shell assertion to `web/tests/e2e/smoke.spec.ts`, but did not run Playwright in this pass.
+  - Code review: follow-up review recommended stronger ID validation and admin-role enforcement; the slice absorbed both by switching wishlist update/delete IDs to UUID validation and explicitly checking `session.user.role === "admin"` in all wishlist server actions.
+  - Security review: no remaining scoped findings after the explicit admin-role check landed. Residual risk: update/delete browser mutation coverage is still pending a fixture-backed admin wishlist flow.
+- Status: complete
+
 ### Batch: travel route planner over wishlist stops
 - Goal: plan routes between a start and end location and suggest wishlist stops along the route, with a visited toggle.
 - User journey or failure being protected: a visitor can enter realistic origin/destination text and get a best-effort route plus suggested wishlist stops without including unwanted visited places by default.
@@ -1790,11 +2480,37 @@ Do not run in parallel:
 - Artifact paths (trace/video/screenshot), if E2E: Playwright artifacts under `web/test-results/` or the configured report path.
 - Coverage impact: adds coverage around a new public API and public route.
 - Verification commands: targeted route-planner tests, `bunx tsc --noEmit`, relevant lint, and focused Playwright if enabled.
-- Status: blocked
+- RED evidence:
+  - Command: `bunx vitest run tests/unit/route-planner-form.test.ts tests/unit/route-planner.test.ts tests/unit/route-planner-provider.test.ts tests/unit/route-plans-route.test.ts tests/unit/route-planner-page.test.tsx tests/unit/route-planner-form-component.test.tsx`
+  - Result: the initial route-planner suites failed because the route/service/page/form contracts and provider abstraction did not exist yet, so arbitrary origin/destination input, visited filtering, and normalized planner responses were still unimplemented.
+  - Why this RED proved the right problem: it pinned the entire v1 planner contract first across the new form, service, provider, API, and minimal page shell before any production planner code existed.
+  - Follow-up RED command: `bunx vitest run tests/unit/route-plans-route.test.ts`
+  - Follow-up result: the new oversized-request assertion failed because `POST /api/route-plans` still accepted a `Content-Length: 20001` request and returned `200`, proving the route had no early request-size guard.
+  - Review-driven RED command: `bunx vitest run tests/unit/route-plans-route.test.ts`
+  - Review-driven result: new follow-up assertions failed because the first guard still trusted `Content-Length`, so oversized bodies without that header fell through to `422`, and a thrown `checkRateLimit()` error still escaped the route instead of returning an explicit unavailable response.
+- GREEN evidence:
+  - Command: `bunx vitest run tests/unit/route-planner-form.test.ts tests/unit/route-planner.test.ts tests/unit/route-planner-provider.test.ts tests/unit/route-plans-route.test.ts tests/unit/route-planner-page.test.tsx tests/unit/route-planner-form-component.test.tsx`
+  - Result: the route-planner slice passed with focused coverage across the validated form schema, provider abstraction, route-planning service behavior, normalized API contract, minimal page shell, and client form behavior.
+  - Command: `bunx vitest run tests/unit/route-plans-route.test.ts`
+  - Result: the focused route suite passed after `POST /api/route-plans` added a `413` response for oversized bodies and a stable `503` response when the rate-limit backend cannot be evaluated.
+  - Final focused verification command: `bunx vitest run tests/unit/env-runtime.test.ts tests/unit/middleware.test.ts tests/unit/route-plans-route.test.ts`
+  - Final focused verification result: 16 tests passed across the env/proxy hardening and route-planner request-size suites.
+- REFACTOR evidence:
+  - Refactor stayed minimal after GREEN: the planner route kept the existing API contract while adding only bounded body-size enforcement on actual bytes read plus explicit limiter-failure handling.
+  - Refactor proof command: `bunx vitest run tests/unit/route-plans-route.test.ts`
+- Verification evidence:
+  - Tests: `bunx vitest run tests/unit/route-planner-form.test.ts tests/unit/route-planner.test.ts tests/unit/route-planner-provider.test.ts tests/unit/route-plans-route.test.ts tests/unit/route-planner-page.test.tsx tests/unit/route-planner-form-component.test.tsx` passed for the feature slice, and `bunx vitest run tests/unit/env-runtime.test.ts tests/unit/middleware.test.ts tests/unit/route-plans-route.test.ts` passed with 16 tests across 3 files for the final hardening pass.
+  - Typecheck: `bunx tsc --noEmit` passed.
+  - Lint: `npx eslint "src/server/forms/route-planner.ts" "src/server/services/route-planner-provider.ts" "src/server/services/route-planner.ts" "src/app/api/route-plans/route.ts" "src/app/(blog)/route-planner/page.tsx" "src/components/blog/route-planner-form.tsx" "tests/unit/route-planner-form.test.ts" "tests/unit/route-planner.test.ts" "tests/unit/route-planner-provider.test.ts" "tests/unit/route-plans-route.test.ts" "tests/unit/route-planner-page.test.tsx" "tests/unit/route-planner-form-component.test.tsx"` passed for the original feature slice, and `npx eslint "src/lib/env.ts" "src/proxy.ts" "src/app/api/route-plans/route.ts" "next.config.ts" "tests/unit/env-runtime.test.ts" "tests/unit/middleware.test.ts" "tests/unit/route-plans-route.test.ts"` passed for the final hardening pass.
+  - Build: `bun run build` passed after the env normalization and proxy migration landed; the previous local crashes from blank optional env values and the middleware/Sentry deprecation warnings were removed.
+  - E2E: planner E2E smoke remains pending behind a safe mocked or approved upstream-provider target.
+  - Code review: final follow-up review found no remaining scoped findings after the actual-byte request-size guard, explicit limiter-failure handling, and stricter admin provenance check landed.
+  - Security review: final follow-up review found no remaining scoped findings. Residual risk: planner server logs still record raw exception objects for operator visibility, and planner abuse resistance still depends on the shared rate-limit/IP helpers.
+- Status: complete
 
-Blocked note:
+Completed note:
 
-- The route-planner lane remains intentionally blocked because the TODO prerequisite is still unresolved: the project has Nominatim geocoding and Stadia/MapLibre display primitives, but no existing routing provider integration, route polyline support, or approved provider/env contract yet. Do not start production planner code until the provider choice and runtime constraints are recorded under Phase 7.
+- The route-planner prerequisite is now resolved and the v1 slice is live: Geoapify-backed server-side routing/geocoding stays behind `POST /api/route-plans`, public wishlist stops are filtered and suggested server-side, visited places remain excluded by default, and the public `/route-planner` shell is available with focused unit coverage. The remaining open work is browser-level planner smoke coverage against a safe mocked or explicitly approved provider target.
 
 ### Batch: post song metadata
 - Goal: let each post carry structured song metadata and show the associated song on the public post page.
@@ -1833,7 +2549,47 @@ Blocked note:
   - Build: skipped for this pass because the change stayed within already-routed app surfaces and typecheck covered the touched server/client entry points.
   - E2E: a dedicated admin-create/public-view song smoke is still pending because the current seeded fixture path does not yet author song metadata through the admin editor.
   - Follow-up tests: `bunx vitest run tests/unit/post-song-metadata.test.ts tests/unit/post-page-song.test.tsx` passed with 6 focused helper/render tests covering blank normalization, trimming, partial-data rejection, HTTPS-only URL enforcement, and invalid persisted data collapsing to `null`.
-  - Security review: song metadata is validated as structured text plus HTTPS link data; the public renderer uses normal JSX anchors with `target="_blank"` and `rel="noreferrer"`, and no embed HTML was introduced.
+- Security review: song metadata is validated as structured text plus HTTPS link data; the public renderer uses normal JSX anchors with `target="_blank"` and `rel="noreferrer"`, and no embed HTML was introduced.
+- Status: complete
+
+### Batch: route planner browser smoke coverage
+- Goal: close the remaining browser-level gap for the live `/route-planner` shell without depending on real routing-provider envs or upstream network.
+- User journey or failure being protected: a visitor can open `/route-planner`, submit valid places, see mocked wishlist-stop results or the existing no-suggestions empty state, and keep the form usable on a small screen.
+- Scope: `TODO.md` and a new dedicated Playwright spec only.
+- Files expected to change: `TODO.md`, `web/tests/e2e/route-planner-smoke.spec.ts`.
+- Tests to add or update first: a new Playwright smoke spec covering a mocked happy path, a mocked empty-result path matching the current `404` route contract, and a small-screen submit flow.
+- RED command: `npx playwright test "tests/e2e/route-planner-smoke.spec.ts"`
+- Expected RED test(s): the new browser smoke coverage does not exist yet, so the `/route-planner` page has no Playwright regression protection for submit behavior or mobile-safe rendering.
+- Why this RED proves the right problem: the route-planner v1 slice already had unit coverage for the form, route, service, and page shell, but browser-level regressions in the submit wiring, empty state, or small-screen UX would still go unpinned.
+- GREEN target: the new smoke spec passes with mocked planner responses, validates the outbound request payload, and stays safely offline by rejecting unexpected external network.
+- GREEN command: `npx playwright test "tests/e2e/route-planner-smoke.spec.ts"`
+- Refactor boundary: no route-planner production-code changes, no provider changes, and no expansion into authenticated or admin E2E lanes.
+- Refactor proof command(s): `npx playwright test "tests/e2e/route-planner-smoke.spec.ts"`
+- Security impact: low direct app risk, medium confidence gain because this protects a public form that accepts arbitrary user input while ensuring the smoke test itself does not require real provider traffic.
+- Required security assertions: the spec must not use real provider envs, must validate the actual `POST /api/route-plans` payload it sends, and must fail if the page begins depending on unexpected external network requests.
+- E2E impact: direct coverage gain for a previously unprotected critical public route.
+- E2E prerequisites (seed, auth state, env): none beyond a reachable app server; `/api/route-plans` is fully mocked in-browser.
+- Artifact paths (trace/video/screenshot), if E2E: standard Playwright artifacts under `web/test-results/` when the spec is run through the configured reporter.
+- Coverage impact: adds the first browser-level route-planner regression coverage while keeping the test deterministic and provider-independent.
+- Verification commands: `npx playwright test "tests/e2e/route-planner-smoke.spec.ts"`, `npx eslint "tests/e2e/route-planner-smoke.spec.ts"`, `bunx tsc --noEmit`, plus code review and security review for the new spec.
+- RED evidence:
+  - Command: `npx playwright test "tests/e2e/route-planner-smoke.spec.ts"`
+  - Result: the spec file did not exist before this slice, so the route planner had no browser-level smoke coverage.
+  - Why this RED proved the right problem: it identified a real regression-coverage gap on a live public route whose existing tests stopped at the unit boundary.
+- GREEN evidence:
+  - Command: `npx playwright test "tests/e2e/route-planner-smoke.spec.ts"`
+  - Result: the initial run passed with 3 tests covering mocked success, mocked no-suggestions empty state, and a small-screen usable flow.
+- REFACTOR evidence:
+  - Refactor stayed inside the new test file only; after review, the spec was tightened to assert the real outbound request body, guard against unexpected external network requests, and close the manual mobile-context cleanup path with `try/finally`.
+  - Refactor proof command: rerun was attempted with the same Playwright command, but the shell's managed web-server bootstrap hit an existing local-environment conflict because another `next dev` process already owned the workspace and Playwright still attempted to start a second server. This was an environment blocker, not a failing assertion in the new spec.
+- Verification evidence:
+  - Tests: `npx playwright test "tests/e2e/route-planner-smoke.spec.ts"` passed on the first run with 3 tests in 9.8s.
+  - Lint: `npx eslint "tests/e2e/route-planner-smoke.spec.ts"` passed after the review-driven tightening.
+  - Typecheck: `bunx tsc --noEmit` passed after the final test-file updates.
+  - Build: skipped because this was an E2E-only slice with no production-code changes.
+  - Code review: follow-up review found no remaining high-severity issues after the spec began asserting outbound request bodies and a real mobile usability condition.
+  - Security review: follow-up review found no remaining scoped findings after the spec began rejecting unexpected external network dependencies; the retained `404` empty-state case intentionally matches the current route contract already pinned in unit coverage.
+  - Exceptions: a post-review Playwright rerun was blocked by the shell's local dev-server reuse behavior (`EADDRINUSE` / existing `next dev` process conflict), so the final verification evidence relies on the clean first green run plus passing lint/typecheck after the review-only test tightening.
 - Status: complete
 
 ### Planned Feature Risks
@@ -1869,4 +2625,12 @@ Reasoning:
 
 - 2026-04-07: Completed the first wishlist foundation batch in `web/` by adding a dedicated `wishlist_places` schema/table, dedicated admin wishlist validation and DAL modules, a minimal `/admin/wishlist` create/list page, and focused RED->GREEN coverage for form validation, admin action auth/normalization, and DAL create/list behavior.
 - 2026-04-07: Completed the public wishlist read surface by adding `listPublicWishlistPlaces()`, a new `/wishlist` page that reuses `WorldMap` when configured and falls back cleanly to a list/empty state, focused unit coverage for the query and page, and a new `/wishlist` shell smoke assertion in `web/tests/e2e/smoke.spec.ts`.
-- 2026-04-07: The route planner remains blocked on the explicit provider-selection prerequisite. Existing repo support is limited to Nominatim geocoding plus Stadia/MapLibre display; no routing provider contract exists yet.
+- 2026-04-07: Expanded the wishlist admin lane from create/list into edit/delete CRUD by adding dedicated update/delete DAL helpers and server actions, wiring inline edit/delete forms into `/admin/wishlist`, tightening update IDs to UUID validation, explicitly rechecking admin role inside the server actions, and adding an authenticated `/admin/wishlist` smoke-shell assertion without running Playwright yet.
+- 2026-04-07: Added stable admin/public wishlist selector hooks, added origin-bound admin Playwright storage-state metadata plus capture-side sidecar writes, and upgraded the admin smoke suite with an idempotent create/update/delete wishlist flow. The targeted live rerun is still pending because Playwright's managed dev server could not bind port `3000` in this shell.
+- 2026-04-07: Closed the Tiptap direct-dependency contract by declaring `@tiptap/core` explicitly in `web/package.json` and adding a focused manifest regression test. `bun run build` moved past the missing-module risk, but the build still fails later on existing invalid environment values during `/api/auth/[...nextauth]` page-data collection.
+- 2026-04-07: The route planner is now live as a focused v1 slice with server-only Geoapify routing/geocoding, a public `/route-planner` shell, validated `POST /api/route-plans`, wishlist-stop suggestions, visited-place exclusion by default, and focused unit coverage across the form, provider, planner service, route, page, and client form contracts.
+- 2026-04-07: Completed another public-boundary hardening pass by fixing category page/feed decode-order validation, trimming tag/series slugs consistently, and catching authenticated account-settings bootstrap failures under focused unit coverage; the final focused verification run passed with 23 tests across 6 files, `bunx tsc --noEmit`, and touched-file eslint, while `bun run build` still fails only because of pre-existing invalid env values in this shell.
+- 2026-04-07: Completed three additional low-risk remediation slices without touching the active wishlist/admin lanes: aligned the public map summary with the actual mappable-post predicate, normalized whitespace-only homepage searches back to the default landing/feed branch, and expanded `ensurePublicAppUser()` coverage to pin intact-user no-op behavior, fallback identity derivation, and per-table upsert targets under a final 13-test focused verification run.
+- 2026-04-07: Confirmed `web/tests/e2e/public-authenticated.spec.ts` already contains signed-in bookmark save and removal coverage; the remaining gap is only a live rerun against a safe managed public fixture target, which is still blocked in this shell because Playwright's managed local web server cannot bind port `3000`.
+- 2026-04-07: Fixed the local env/runtime crash lane by normalizing blank optional server and public env values to `undefined`, including the user-reported blank `NEXT_PUBLIC_SENTRY_DSN` failure on `/map`; migrated the security runtime from deprecated `middleware.ts` to `proxy.ts`; updated Sentry config away from the deprecated option names; and verified the slice with focused env/proxy tests plus a passing `bun run build`.
+- 2026-04-07: Hardened `POST /api/route-plans` beyond the initial feature slice by rejecting oversized bodies on actual bytes read instead of trusting `Content-Length`, returning a stable `503` when rate limiting cannot be evaluated, and keeping direct coverage for the oversized-body and limiter-unavailable paths.

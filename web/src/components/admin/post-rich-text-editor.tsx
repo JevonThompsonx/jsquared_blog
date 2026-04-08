@@ -7,7 +7,7 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import NextImage from "next/image";
-import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
+import EmojiPicker, { EmojiStyle, type EmojiClickData } from "emoji-picker-react";
 
 import imageCompression from "browser-image-compression";
 
@@ -396,6 +396,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
             {showEmojiPicker ? (
               <div className="absolute left-0 top-full z-50 mt-1 shadow-xl">
                 <EmojiPicker
+                  emojiStyle={EmojiStyle.NATIVE}
                   height={350}
                   width={300}
                   onEmojiClick={handleEmojiClick}

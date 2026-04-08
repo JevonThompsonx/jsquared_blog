@@ -27,6 +27,8 @@ describe("GET /api/cron/publish-scheduled", () => {
   });
 
   it("returns throttled response when rate limited", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("CRON_SECRET", "");
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 30, remaining: 0, resetAt: Date.now() + 60_000 });
     const throttled = NextResponse.json({ error: "Too many requests" }, { status: 429 });
     vi.mocked(tooManyRequests).mockReturnValue(throttled);
@@ -49,6 +51,7 @@ describe("GET /api/cron/publish-scheduled", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(vi.mocked(checkRateLimit)).not.toHaveBeenCalled();
     expect(vi.mocked(publishDueScheduledPosts)).not.toHaveBeenCalled();
   });
 
@@ -113,5 +116,37 @@ describe("GET /api/cron/publish-scheduled", () => {
       nowIso: "2026-03-29T22:00:00.000Z",
       timezone: "UTC",
     });
+  });
+
+  it("still returns success when revalidation fails after publishing", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CRON_SECRET", "very-secret-token");
+
+    vi.mocked(publishDueScheduledPosts).mockResolvedValue({
+      scannedCount: 2,
+      publishedCount: 1,
+      updatedPostIds: ["post-2"],
+      nowIso: "2026-03-29T23:00:00.000Z",
+    });
+    vi.mocked(revalidatePath).mockImplementationOnce(() => {
+      throw new Error("cache backend unavailable");
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/cron/publish-scheduled", {
+        headers: { authorization: "Bearer very-secret-token" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      scanned: 2,
+      published: 1,
+      ids: ["post-2"],
+      nowIso: "2026-03-29T23:00:00.000Z",
+      timezone: "UTC",
+    });
+    expect(vi.mocked(revalidatePath)).toHaveBeenNthCalledWith(1, "/");
+    expect(vi.mocked(revalidatePath)).toHaveBeenNthCalledWith(2, "/admin");
   });
 });

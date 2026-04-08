@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -14,8 +15,26 @@ type TagPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+const tagParamsSchema = z.object({
+  slug: z.string().trim().min(1),
+});
+
+function normalizeTagSlug(rawParams: { slug: string }): string | null {
+  const parsed = tagParamsSchema.safeParse(rawParams);
+
+  if (!parsed.success) {
+    return null;
+  }
+
+  return parsed.data.slug;
+}
+
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const slug = normalizeTagSlug(await params);
+  if (!slug) {
+    return {};
+  }
+
   const tag = await getTagBySlug(slug);
   if (!tag) {
     return {};
@@ -33,7 +52,11 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
 }
 
 export default async function TagPage({ params }: TagPageProps) {
-  const { slug } = await params;
+  const slug = normalizeTagSlug(await params);
+  if (!slug) {
+    notFound();
+  }
+
   const [tag, initialPosts, postCount] = await Promise.all([
     getTagBySlug(slug),
     listPublishedPostsByTagSlug(slug, 20, 0),

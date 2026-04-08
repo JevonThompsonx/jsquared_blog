@@ -15,6 +15,23 @@ if (!process.env.NEXTAUTH_URL) {
   process.env.NEXTAUTH_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 }
 
+function blankStringToUndefined(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length === 0 ? undefined : trimmedValue;
+}
+
+function optionalTrimmedString() {
+  return z.preprocess(blankStringToUndefined, z.string().trim().min(1).optional());
+}
+
+function optionalTrimmedEmail() {
+  return z.preprocess(blankStringToUndefined, z.string().trim().email().optional());
+}
+
 // Required server-side vars — the app cannot function without these.
 // Optional exceptions:
 //   AUTH_ADMIN_GITHUB_IDS  — can be absent (disables admin access) but not a crash
@@ -35,34 +52,57 @@ const serverEnvSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().min(1, "required"),
   SUPABASE_URL: z.string().url("must be a valid URL"),
   SUPABASE_ANON_KEY: z.string().min(1, "required"),
-  RESEND_API_KEY: z.string().min(1).optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional(),
-  COMMENT_NOTIFICATION_TO_EMAIL: z.string().email().optional(),
-  RESEND_NEWSLETTER_SEGMENT_ID: z.string().min(1).optional(),
+  RESEND_API_KEY: optionalTrimmedString(),
+  RESEND_FROM_EMAIL: optionalTrimmedEmail(),
+  COMMENT_NOTIFICATION_TO_EMAIL: optionalTrimmedString(),
+  RESEND_NEWSLETTER_SEGMENT_ID: optionalTrimmedString(),
   // Rate limiter — optional in local dev/test only
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+  UPSTASH_REDIS_REST_URL: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
+  UPSTASH_REDIS_REST_TOKEN: optionalTrimmedString(),
   // Cron endpoint secret — optional in local dev only (enforced by the route handler)
-  CRON_SECRET: z.string().min(16).optional(),
+  CRON_SECRET: z.preprocess(blankStringToUndefined, z.string().trim().min(16).optional()),
 });
 
 // NEXT_PUBLIC_ vars are embedded at build time, so they can't be validated
 // at runtime in the same way. Keep them optional here; missing values show up
 // as `undefined` in the client bundle if not set before `next build`.
 const publicEnvSchema = z.object({
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
-  NEXT_PUBLIC_STADIA_MAPS_API_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_SITE_URL: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
+  NEXT_PUBLIC_SUPABASE_URL: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalTrimmedString(),
+  NEXT_PUBLIC_STADIA_MAPS_API_KEY: optionalTrimmedString(),
   // Sentry DSN is safe to expose publicly
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+  NEXT_PUBLIC_SENTRY_DSN: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
+});
+
+const databaseEnvSchema = serverEnvSchema.pick({
+  TURSO_DATABASE_URL: true,
+  TURSO_AUTH_TOKEN: true,
+});
+
+const supabaseServerEnvSchema = serverEnvSchema.pick({
+  SUPABASE_URL: true,
+  SUPABASE_ANON_KEY: true,
+});
+
+const cloudinaryEnvSchema = serverEnvSchema.pick({
+  CLOUDINARY_CLOUD_NAME: true,
+  CLOUDINARY_API_KEY: true,
+  CLOUDINARY_API_SECRET: true,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
+export type DatabaseEnv = z.infer<typeof databaseEnvSchema>;
+export type SupabaseServerEnv = z.infer<typeof supabaseServerEnvSchema>;
+export type CloudinaryEnv = z.infer<typeof cloudinaryEnvSchema>;
+
+function hasNonEmptyValue(value: string | undefined): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
 
 export function hasUpstashRedisCredentials(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
+  return hasNonEmptyValue(env.UPSTASH_REDIS_REST_URL) && hasNonEmptyValue(env.UPSTASH_REDIS_REST_TOKEN);
 }
 
 function assertRateLimitConfiguration(env: NodeJS.ProcessEnv = process.env): void {
@@ -107,6 +147,18 @@ if (!isNextBuild) {
 
 export function getServerEnv(): ServerEnv {
   return serverEnvSchema.parse(process.env);
+}
+
+export function getDatabaseEnv(): DatabaseEnv {
+  return databaseEnvSchema.parse(process.env);
+}
+
+export function getSupabaseServerEnv(): SupabaseServerEnv {
+  return supabaseServerEnvSchema.parse(process.env);
+}
+
+export function getCloudinaryEnv(): CloudinaryEnv {
+  return cloudinaryEnvSchema.parse(process.env);
 }
 
 export function getPublicEnv(): PublicEnv {

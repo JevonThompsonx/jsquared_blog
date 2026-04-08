@@ -32,8 +32,9 @@ export function PostSongMetadata({ song }: { song: BlogSongMetadata | null }) {
         </div>
         <a
           className="text-sm font-semibold text-[var(--accent)] hover:underline"
+          aria-label={`Listen to ${song.title} by ${song.artist}`}
           href={song.url}
-          rel="noreferrer"
+          rel="noopener noreferrer"
           target="_blank"
         >
           Listen

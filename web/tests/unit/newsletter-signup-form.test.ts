@@ -1,8 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { getNewsletterResponseState } from "@/components/blog/newsletter-signup-form";
+import { getNewsletterResponseState, getNewsletterSubmissionState } from "@/components/blog/newsletter-signup-form";
 
 describe("newsletter signup form response handling", () => {
+  it("treats bare 202 responses as unavailable without requiring a JSON body", () => {
+    expect(getNewsletterResponseState(202, {})).toEqual({
+      status: "error",
+      message: "Newsletter signup is not available right now.",
+    });
+  });
+
+  it("fails closed when a 2xx response omits an explicit status", () => {
+    expect(getNewsletterResponseState(200, {})).toEqual({
+      status: "error",
+        message: "Something went wrong. Please try again.",
+    });
+  });
+
   it("does not report skipped responses as a successful subscription", () => {
     expect(
       getNewsletterResponseState(202, {
@@ -30,5 +44,35 @@ describe("newsletter signup form response handling", () => {
       status: "success",
       message: "You're subscribed!",
     });
+  });
+
+  it("does not parse JSON for a 202 response", async () => {
+    const jsonMock = vi.fn().mockRejectedValue(new Error("no body"));
+
+    await expect(getNewsletterSubmissionState({
+      status: 202,
+      ok: true,
+      json: jsonMock,
+    })).resolves.toEqual({
+      status: "error",
+      message: "Newsletter signup is not available right now.",
+    });
+
+    expect(jsonMock).not.toHaveBeenCalled();
+  });
+
+  it("does not parse JSON for a 400 response", async () => {
+    const jsonMock = vi.fn().mockRejectedValue(new Error("no body"));
+
+    await expect(getNewsletterSubmissionState({
+      status: 400,
+      ok: false,
+      json: jsonMock,
+    })).resolves.toEqual({
+      status: "error",
+      message: "Please enter a valid email address.",
+    });
+
+    expect(jsonMock).not.toHaveBeenCalled();
   });
 });

@@ -60,6 +60,9 @@ describe("WishlistPage", () => {
     expect(markup).toContain("Map markers: 1");
     expect(markup).toContain("Glacier National Park");
     expect(markup).toContain("West Glacier, Montana");
+    expect(markup).toContain('data-testid="public-wishlist-list"');
+    expect(markup).toContain('data-testid="public-wishlist-item"');
+    expect(markup).toContain('data-place-id="place-1"');
     expect(markup).toContain('href="https://example.com/glacier"');
     expect(markup).toContain('target="_blank"');
     expect(markup).toContain('rel="noreferrer"');

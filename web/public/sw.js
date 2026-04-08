@@ -1,4 +1,13 @@
 const CACHE_NAME = 'j2-adventures-cache-v2';
+const STATIC_ASSET_EXTENSION_PATTERN = /\.(css|js|woff2?|png|jpe?g|gif|svg|webp|ico)$/i;
+
+function isServiceWorkerCacheablePath(pathname) {
+  if (pathname.startsWith('/_next/')) {
+    return false;
+  }
+
+  return STATIC_ASSET_EXTENSION_PATTERN.test(pathname);
+}
 
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
@@ -85,9 +94,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Static assets (CSS, JS, Fonts, Images)
-  const isStaticAsset =
-    url.pathname.startsWith('/_next/static/') ||
-    url.pathname.match(/\.(css|js|woff2?|png|jpe?g|gif|svg|webp|ico)$/i);
+  const isStaticAsset = isServiceWorkerCacheablePath(url.pathname);
 
   if (isStaticAsset) {
     event.respondWith(
@@ -125,3 +132,9 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+if (typeof module !== 'undefined') {
+  module.exports = {
+    isServiceWorkerCacheablePath,
+  };
+}

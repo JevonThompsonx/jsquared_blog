@@ -2,7 +2,6 @@ import { expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import { canRunAuthenticatedPublicFlows } from "@/lib/e2e/public-authenticated-guard";
-import { createIsolatedPublicRequestHeaders } from "@/lib/e2e/public-request-headers";
 
 import {
   configuredPublicEmail,
@@ -11,6 +10,7 @@ import {
   hasPublicStorageState,
   publicTest,
 } from "./helpers/public";
+import { createIsolatedPublicRequestHeaders } from "./helpers/public-request-headers";
 
 const canRunAuthenticatedFlows = canRunAuthenticatedPublicFlows({
   hasPublicStorageState,
@@ -26,24 +26,6 @@ function isCommentCreateResponse(response: { request(): { method(): string }; ur
 function isCommentDeleteResponse(response: { request(): { method(): string }; url(): string; ok(): boolean }) {
   return response.request().method() === "DELETE"
     && /\/api\/comments\/[^/]+$/.test(new URL(response.url()).pathname);
-}
-
-function getRetryAfterDelayMs(retryAfterHeader: string | undefined): number {
-  if (!retryAfterHeader) {
-    return 1500;
-  }
-
-  const numericSeconds = Number(retryAfterHeader);
-  if (Number.isFinite(numericSeconds) && numericSeconds >= 0) {
-    return (numericSeconds * 1000) + 500;
-  }
-
-  const retryAfterDateMs = Date.parse(retryAfterHeader);
-  if (Number.isFinite(retryAfterDateMs)) {
-    return Math.max(retryAfterDateMs - Date.now(), 0) + 500;
-  }
-
-  return 1500;
 }
 
 async function setPublicRequestScope(page: Page, scope: string): Promise<void> {

@@ -244,33 +244,37 @@ export function AccountSettings() {
     didInit.current = true;
 
     void (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        window.location.href = "/login?redirectTo=/account";
-        return;
-      }
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          window.location.href = "/login?redirectTo=/account";
+          return;
+        }
 
-      const accessToken = data.session.access_token;
-      setToken(accessToken);
+        const accessToken = data.session.access_token;
+        setToken(accessToken);
 
-      const res = await fetch("/api/account/profile", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+        const res = await fetch("/api/account/profile", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-      if (!res.ok) {
+        if (!res.ok) {
+          setLoadError("Failed to load profile. Please refresh.");
+          return;
+        }
+
+        const json = profileResponseSchema.parse(await res.json());
+        const loaded = json.profile;
+        setProfile(loaded);
+        setDisplayName(loaded.displayName);
+        setAvatarUrl(loaded.avatarUrl ?? "");
+
+        if (loaded.themePreference) {
+          const saved = parseSavedTheme(loaded.themePreference);
+          if (saved) restorePreference(saved.mode, saved.lightLook, saved.darkLook);
+        }
+      } catch {
         setLoadError("Failed to load profile. Please refresh.");
-        return;
-      }
-
-      const json = profileResponseSchema.parse(await res.json());
-      const loaded = json.profile;
-      setProfile(loaded);
-      setDisplayName(loaded.displayName);
-      setAvatarUrl(loaded.avatarUrl ?? "");
-
-      if (loaded.themePreference) {
-        const saved = parseSavedTheme(loaded.themePreference);
-        if (saved) restorePreference(saved.mode, saved.lightLook, saved.darkLook);
       }
     })();
   }, [supabase, restorePreference]);

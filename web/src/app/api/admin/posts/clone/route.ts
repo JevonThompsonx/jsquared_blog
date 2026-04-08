@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { clonePostById } from "@/server/posts/clone";
@@ -42,11 +43,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    console.error("[admin post clone] failed to clone post", {
+    logAdminRouteFailure("[admin post clone] failed to clone post", {
       postId: body.postId,
       adminUserId: session.user.id,
       error,
     });
-    return NextResponse.json({ error: "Failed to clone post" }, { status: 500 });
+    return adminRouteFailureResponse("Failed to clone post");
   }
 }

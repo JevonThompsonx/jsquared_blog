@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockInsertValues = vi.fn().mockResolvedValue(undefined);
 const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
+const mockUpdateSet = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
+const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }));
+const mockDeleteWhere = vi.fn().mockResolvedValue(undefined);
+const mockDelete = vi.fn(() => ({ where: mockDeleteWhere }));
 const mockOrderBy = vi.fn().mockResolvedValue([
   {
     id: "place-1",
@@ -22,15 +26,22 @@ const mockFrom = vi.fn(() => ({ orderBy: mockOrderBy }));
 const mockSelect = vi.fn(() => ({ from: mockFrom }));
 
 const mockDb = {
+  delete: mockDelete,
   insert: mockInsert,
   select: mockSelect,
+  update: mockUpdate,
 };
 
 vi.mock("@/lib/db", () => ({
   getDb: vi.fn(() => mockDb),
 }));
 
-import { createAdminWishlistPlace, listAdminWishlistPlaces } from "@/server/dal/admin-wishlist-places";
+import {
+  createAdminWishlistPlace,
+  deleteAdminWishlistPlace,
+  listAdminWishlistPlaces,
+  updateAdminWishlistPlace,
+} from "@/server/dal/admin-wishlist-places";
 
 describe("admin wishlist places DAL", () => {
   afterEach(() => {
@@ -92,5 +103,43 @@ describe("admin wishlist places DAL", () => {
         updatedAt: new Date("2026-04-01T00:00:00.000Z"),
       },
     ]);
+  });
+
+  it("updates persisted wishlist place data and refreshes updatedAt", async () => {
+    await updateAdminWishlistPlace({
+      id: "place-1",
+      name: "Updated Glacier National Park",
+      locationName: "Updated West Glacier, Montana",
+      latitude: 48.7,
+      longitude: -113.7,
+      zoom: 10,
+      sortOrder: 4,
+      visited: true,
+      isPublic: false,
+      externalUrl: "https://example.com/updated-glacier",
+    });
+
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Updated Glacier National Park",
+        locationName: "Updated West Glacier, Montana",
+        locationLat: 48.7,
+        locationLng: -113.7,
+        locationZoom: 10,
+        sortOrder: 4,
+        visited: true,
+        isPublic: false,
+        externalUrl: "https://example.com/updated-glacier",
+        updatedAt: expect.any(Date),
+      }),
+    );
+  });
+
+  it("deletes wishlist places by id", async () => {
+    await deleteAdminWishlistPlace("place-1");
+
+    expect(mockDelete).toHaveBeenCalledOnce();
+    expect(mockDeleteWhere).toHaveBeenCalledOnce();
   });
 });

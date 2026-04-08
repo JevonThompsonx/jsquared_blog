@@ -1,9 +1,10 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test as base } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { getAdminStorageStateMetadataPath, isAdminStorageStateMetadata } from "@/lib/e2e/admin-storage-state-config";
 import { getStorageStateHint, resolveExistingStorageStatePath } from "@/lib/e2e/storage-state-helper";
 import { loadEnvironmentFiles } from "../../../src/lib/env-loader";
 
@@ -21,12 +22,40 @@ function isLocalTarget(urlValue: string): boolean {
   }
 }
 
+function parseAdminStorageStateMetadata(value: string) {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isAdminStorageStateMetadata(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function hasMatchingAdminStorageStateOrigin(storageStatePath: string): boolean {
+  try {
+    const metadata = parseAdminStorageStateMetadata(readFileSync(getAdminStorageStateMetadataPath(storageStatePath), "utf8"));
+    return metadata?.origin === new URL(configuredBaseUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
 function resolveAdminStorageStatePath(): string | null {
-  return resolveExistingStorageStatePath({
+  const resolvedPath = resolveExistingStorageStatePath({
     configuredPath: process.env.E2E_ADMIN_STORAGE_STATE,
     defaultPath: defaultAdminStorageStatePath,
     hasStorageState: existsSync,
   });
+
+  if (!resolvedPath) {
+    return null;
+  }
+
+  if (isLocalTarget(configuredBaseUrl)) {
+    return resolvedPath;
+  }
+
+  return hasMatchingAdminStorageStateOrigin(resolvedPath) ? resolvedPath : null;
 }
 
 export const configuredAdminPostId = process.env.E2E_ADMIN_POST_ID?.trim() || null;

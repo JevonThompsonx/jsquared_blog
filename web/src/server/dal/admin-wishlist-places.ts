@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 
 import { wishlistPlaces } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
@@ -33,6 +33,19 @@ export type CreateAdminWishlistPlaceInput = {
   createdByUserId: string;
 };
 
+export type UpdateAdminWishlistPlaceInput = {
+  id: string;
+  name: string;
+  locationName: string;
+  latitude: number;
+  longitude: number;
+  zoom: number;
+  sortOrder: number;
+  visited: boolean;
+  isPublic: boolean;
+  externalUrl: string | null;
+};
+
 export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceInput): Promise<void> {
   const db = getDb();
   const now = new Date();
@@ -52,6 +65,32 @@ export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceIn
     createdAt: now,
     updatedAt: now,
   });
+}
+
+export async function updateAdminWishlistPlace(input: UpdateAdminWishlistPlaceInput): Promise<void> {
+  const db = getDb();
+
+  await db
+    .update(wishlistPlaces)
+    .set({
+      name: input.name,
+      locationName: input.locationName,
+      locationLat: input.latitude,
+      locationLng: input.longitude,
+      locationZoom: input.zoom,
+      sortOrder: input.sortOrder,
+      visited: input.visited,
+      isPublic: input.isPublic,
+      externalUrl: input.externalUrl,
+      updatedAt: new Date(),
+    })
+    .where(eq(wishlistPlaces.id, input.id));
+}
+
+export async function deleteAdminWishlistPlace(id: string): Promise<void> {
+  const db = getDb();
+
+  await db.delete(wishlistPlaces).where(eq(wishlistPlaces.id, id));
 }
 
 export async function listAdminWishlistPlaces(): Promise<AdminWishlistPlaceRecord[]> {

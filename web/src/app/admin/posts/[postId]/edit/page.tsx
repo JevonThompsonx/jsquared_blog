@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import { PostEditorForm } from "@/components/admin/post-editor-form";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -9,6 +10,10 @@ import { listAllSeries } from "@/server/dal/series";
 import { getPostHref } from "@/lib/utils";
 
 import { updateAdminPostAction } from "../../../actions";
+
+const editPostParamsSchema = z.object({
+  postId: z.string().trim().min(1).max(128),
+});
 
 export default async function EditAdminPostPage({
   params,
@@ -22,7 +27,12 @@ export default async function EditAdminPostPage({
     redirect("/admin");
   }
 
-  const { postId } = await params;
+  const parsedParams = editPostParamsSchema.safeParse(await params);
+  if (!parsedParams.success) {
+    notFound();
+  }
+
+  const { postId } = parsedParams.data;
   const [post, categories, allSeries, allTags, resolvedSearchParams] = await Promise.all([
     getAdminEditablePostById(postId),
     listAdminCategories(),

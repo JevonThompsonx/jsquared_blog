@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 
-import { middleware } from "@/middleware";
+import { proxy } from "@/proxy";
 
 describe("middleware security hardening", () => {
   it("blocks cross-site admin API mutations", async () => {
@@ -13,7 +13,18 @@ describe("middleware security hardening", () => {
       },
     });
 
-    const response = middleware(request);
+    const response = proxy(request);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "Forbidden" });
+  });
+
+  it("blocks admin API mutations when provenance headers are absent", async () => {
+    const request = new NextRequest("https://jsquaredadventures.com/api/admin/posts", {
+      method: "POST",
+    });
+
+    const response = proxy(request);
 
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({ error: "Forbidden" });
@@ -28,7 +39,7 @@ describe("middleware security hardening", () => {
       },
     });
 
-    const response = middleware(request);
+    const response = proxy(request);
     const csp = response.headers.get("Content-Security-Policy");
 
     expect(response.status).toBe(200);
@@ -46,7 +57,7 @@ describe("middleware security hardening", () => {
       method: "GET",
     });
 
-    const response = middleware(request);
+    const response = proxy(request);
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBeNull();

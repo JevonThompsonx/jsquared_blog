@@ -1,7 +1,26 @@
 import NextAuth from "next-auth";
+import type { NextRequest } from "next/server";
 
 import { buildAdminAuthOptions } from "@/lib/auth/admin";
 
-const handler = NextAuth(buildAdminAuthOptions());
+let handler: ReturnType<typeof NextAuth> | null = null;
 
-export { handler as GET, handler as POST };
+type AuthRouteContext = {
+  params: Promise<{ nextauth: string[] }>;
+};
+
+function getHandler() {
+  if (!handler) {
+    handler = NextAuth(buildAdminAuthOptions());
+  }
+
+  return handler;
+}
+
+export function GET(request: NextRequest, context: AuthRouteContext) {
+  return getHandler()(request, context);
+}
+
+export function POST(request: NextRequest, context: AuthRouteContext) {
+  return getHandler()(request, context);
+}

@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getAdminEditablePostById } from "@/server/dal/admin-posts";
 import { AdminCommentsPanel } from "@/components/admin/admin-comments-panel";
+
+const adminPostCommentsParamsSchema = z.object({
+  postId: z.string().trim().min(1).max(128),
+});
 
 export default async function AdminPostCommentsPage({
   params,
@@ -16,7 +21,12 @@ export default async function AdminPostCommentsPage({
     redirect("/admin");
   }
 
-  const { postId } = await params;
+  const parsedParams = adminPostCommentsParamsSchema.safeParse(await params);
+  if (!parsedParams.success) {
+    notFound();
+  }
+
+  const { postId } = parsedParams.data;
   const post = await getAdminEditablePostById(postId);
 
   if (!post) {

@@ -109,6 +109,31 @@ describe("GET /api/posts/[postId]/bookmark", () => {
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("bookmark-status:supabase-user-1:127.0.0.1", 60, 60_000);
     expect(await response.json()).toEqual({ bookmarked: true });
   });
+
+  it("returns a safe generic error when bookmark status lookup fails unexpectedly", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(isPostBookmarked).mockRejectedValue(new Error("bookmark status lookup failed"));
+
+    const response = await GET(new Request("http://localhost/api/posts/post-1/bookmark"), {
+      params: Promise.resolve({ postId: "post-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Internal error" });
+  });
 });
 
 describe("POST /api/posts/[postId]/bookmark", () => {
@@ -238,5 +263,30 @@ describe("POST /api/posts/[postId]/bookmark", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ bookmarked: false });
+  });
+
+  it("returns a safe generic error when bookmark mutation fails unexpectedly", async () => {
+    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(ensurePublicAppUser).mockResolvedValue({
+      id: "public-user-1",
+      supabaseUserId: "supabase-user-1",
+      email: "reader@example.com",
+      displayName: "Reader",
+      avatarUrl: null,
+    });
+    vi.mocked(togglePostBookmark).mockRejectedValue(new Error("bookmark toggle failed"));
+
+    const response = await POST(new Request("http://localhost/api/posts/post-1/bookmark", { method: "POST" }), {
+      params: Promise.resolve({ postId: "post-1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Internal error" });
   });
 });

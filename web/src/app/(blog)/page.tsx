@@ -32,7 +32,7 @@ function getSeasonalHero(): SeasonalHero {
 
 export default async function HomePage({ searchParams }: { searchParams?: Promise<{ search?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const search = resolvedSearchParams?.search ?? "";
+  const search = resolvedSearchParams?.search?.trim() ?? "";
   const posts = await listPublishedPosts(20, 0, search);
 
   if (search) {

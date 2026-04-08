@@ -26,7 +26,7 @@ function isSameOrigin(originValue: string, requestOrigin: string): boolean {
 
 function allowsFetchSite(fetchSite: string | null): boolean {
   if (!fetchSite) {
-    return true;
+    return false;
   }
 
   return fetchSite === "same-origin" || fetchSite === "same-site" || fetchSite === "none";
@@ -44,17 +44,15 @@ function forbiddenResponse(pathname: string): NextResponse {
 // The nonce is set in two places:
 //   1. The Content-Security-Policy response header (authorises scripts with that nonce)
 //   2. The x-nonce request header (forwarded to Server Components so they can render <Script nonce>)
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const pathname = request.nextUrl.pathname;
 
   if (isStateChangingMethod(request.method) && (isAdminPath(pathname) || isAdminApiPath(pathname))) {
     const originHeader = request.headers.get("origin");
     const fetchSiteHeader = request.headers.get("sec-fetch-site");
+    const hasAllowedOrigin = originHeader !== null && isSameOrigin(originHeader, request.nextUrl.origin);
 
-    if (
-      (originHeader !== null && !isSameOrigin(originHeader, request.nextUrl.origin)) ||
-      !allowsFetchSite(fetchSiteHeader)
-    ) {
+    if (!hasAllowedOrigin || !allowsFetchSite(fetchSiteHeader)) {
       return forbiddenResponse(pathname);
     }
   }

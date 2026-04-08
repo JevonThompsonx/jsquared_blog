@@ -39,6 +39,7 @@ function formatDate(iso: string): string {
 export default function BookmarksPage() {
   const [status, setStatus] = useState<"loading" | "unauthenticated" | "ready">("loading");
   const [posts, setPosts] = useState<BookmarkedPost[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -51,6 +52,7 @@ export default function BookmarksPage() {
   useEffect(() => {
     if (!supabase) {
       flushSync(() => {
+        setLoadError(null);
         setStatus("unauthenticated");
       });
       return;
@@ -59,22 +61,59 @@ export default function BookmarksPage() {
     let cancelled = false;
 
     void (async () => {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) {
-        if (!cancelled) setStatus("unauthenticated");
-        return;
-      }
-
-      const res = await fetch("/api/bookmarks", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!cancelled) {
-        if (res.ok) {
-          const json = bookmarksResponseSchema.parse(await res.json());
-          setPosts(json.posts);
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) {
+          if (!cancelled) {
+            setLoadError(null);
+            setStatus("unauthenticated");
+          }
+          return;
         }
-        setStatus("ready");
+
+        const res = await fetch("/api/bookmarks", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!cancelled) {
+          if (res.status === 401 || res.status === 403) {
+            setPosts([]);
+            setLoadError(null);
+            setStatus("unauthenticated");
+            return;
+          }
+
+          if (res.ok) {
+            const payload = await res.json();
+            if (cancelled) {
+              return;
+            }
+
+            const json = bookmarksResponseSchema.parse(payload);
+            if (cancelled) {
+              return;
+            }
+
+            setPosts(json.posts);
+            setLoadError(null);
+          } else {
+            setPosts([]);
+            setLoadError("Failed to load saved posts");
+          }
+
+          if (cancelled) {
+            return;
+          }
+
+          setStatus("ready");
+        }
+      } catch {
+        if (!cancelled) {
+          setPosts([]);
+          setLoadError("Failed to load saved posts");
+          setStatus("ready");
+        }
       }
     })();
 
@@ -105,6 +144,11 @@ export default function BookmarksPage() {
             >
               Sign in
             </Link>
+          </div>
+        ) : loadError ? (
+          <div className="mt-10 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-10 text-center shadow-lg">
+            <p className="text-lg font-bold text-[var(--text-primary)]">{loadError}</p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">Please refresh and try again.</p>
           </div>
         ) : posts.length === 0 ? (
           <div className="mt-10 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-10 text-center shadow-lg">

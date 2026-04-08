@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getSeriesPartNumbers } from "@/server/dal/series";
 
@@ -35,10 +36,10 @@ export async function GET(
     const result = await getSeriesPartNumbers(parsedSeriesId.data);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("[admin series part numbers] failed to load series part numbers", {
+    logAdminRouteFailure("[admin series part numbers] failed to load series part numbers", {
       seriesId: parsedSeriesId.data,
       error,
     });
-    return NextResponse.json({ error: "Failed to load series part numbers" }, { status: 500 });
+    return adminRouteFailureResponse("Failed to load series part numbers");
   }
 }

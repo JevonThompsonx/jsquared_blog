@@ -3,9 +3,9 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// 6.S.1: CSP is now set dynamically per-request by middleware.ts (with a per-request nonce).
+// 6.S.1: CSP is now set dynamically per-request by proxy.ts (with a per-request nonce).
 // next.config.ts only sets the remaining non-CSP security headers.
-// 6.S.2: the explicit img-src / connect-src allowlists live in middleware.ts alongside the nonce logic.
+// 6.S.2: the explicit img-src / connect-src allowlists live in proxy.ts alongside the nonce logic.
 const securityHeaders = [
   {
     key: "Referrer-Policy",
@@ -119,9 +119,12 @@ export default withSentryConfig(nextConfig, {
   // Suppress non-CI source map upload logs
   silent: !process.env.CI,
 
-  // Tree-shake Sentry SDK for smaller client bundles (webpack only)
-  disableLogger: true,
-
-  // Automatically instrument Next.js data fetching methods
-  autoInstrumentServerFunctions: true,
+  webpack: {
+    // Tree-shake Sentry debug logging from webpack bundles.
+    treeshake: {
+      removeDebugLogging: true,
+    },
+    // Automatically instrument supported server functions in webpack builds.
+    autoInstrumentServerFunctions: true,
+  },
 });

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { countCommentsByUserId, listCommentsByUserId } from "@/server/dal/comments";
@@ -24,6 +25,10 @@ const AVATAR_PRESETS: AvatarPreset[] = [
   { id: "j2:map", bg: "#a0785a", path: "M9 4L3 7v13l6-3 6 3 6-3V4l-6 3-6-3zm0 2.3L15 9v10.4L9 16.7V6.3zM7 6.7v10L3 18.7V7.3l4-2zm10 0l4 2v11.4l-4 1.6V6.7z" },
   { id: "j2:sun", bg: "#c8843a", path: "M12 3v2M12 19v2M3 12H1M23 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" },
 ];
+
+const authorParamsSchema = z.object({
+  id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
+});
 
 function getInitials(name: string): string {
   return name
@@ -75,7 +80,12 @@ function ProfileAvatar({ avatarUrl, displayName, size }: { avatarUrl: string | n
 // ---------------------------------------------------------------------------
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
+  const paramsParse = authorParamsSchema.safeParse(await params);
+  if (!paramsParse.success) {
+    return { title: "Author not found" };
+  }
+
+  const { id } = paramsParse.data;
   const profile = await getPublicAuthorProfileById(id);
   if (!profile) return { title: "Author not found" };
   return {
@@ -105,7 +115,12 @@ function truncate(text: string, max: number): string {
 // ---------------------------------------------------------------------------
 
 export default async function AuthorProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  const paramsParse = authorParamsSchema.safeParse(await params);
+  if (!paramsParse.success) {
+    notFound();
+  }
+
+  const { id } = paramsParse.data;
 
   const [profile, recentComments, totalComments] = await Promise.all([
     getPublicAuthorProfileById(id),

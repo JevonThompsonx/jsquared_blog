@@ -62,4 +62,10 @@ export const adminWishlistPlaceFormSchema = z.object({
   externalUrl: optionalHttpsUrlField,
 });
 
+export const adminWishlistPlaceIdSchema = z.string().trim().uuid("Invalid wishlist place id");
+
+export const adminWishlistPlaceUpdateFormSchema = adminWishlistPlaceFormSchema.extend({
+  id: adminWishlistPlaceIdSchema,
+});
+
 export type AdminWishlistPlaceFormValues = z.infer<typeof adminWishlistPlaceFormSchema>;

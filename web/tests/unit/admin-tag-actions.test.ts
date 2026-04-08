@@ -45,6 +45,7 @@ function makeFormData(values: { tagId?: string; description?: string }): FormDat
 
 describe("updateTagDescriptionAction", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
@@ -67,6 +68,15 @@ describe("updateTagDescriptionAction", () => {
     expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
   });
 
+  it("rejects whitespace-only tag ids", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+
+    await updateTagDescriptionAction(makeFormData({ tagId: "   ", description: "Stories" }));
+
+    expect(vi.mocked(updateTagDescription)).not.toHaveBeenCalled();
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
   it("normalizes blank descriptions to null before persistence", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
 
@@ -83,5 +93,33 @@ describe("updateTagDescriptionAction", () => {
     await updateTagDescriptionAction(makeFormData({ tagId: "tag-1", description: "Short archive copy" }));
 
     expect(vi.mocked(updateTagDescription)).toHaveBeenCalledWith("tag-1", "Short archive copy");
+  });
+
+  it("does not fail the action when tag revalidation throws after a successful save", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(revalidatePath).mockImplementationOnce(() => {
+      throw new Error("revalidation failed");
+    });
+
+    await expect(
+      updateTagDescriptionAction(makeFormData({ tagId: "tag-1", description: "Short archive copy" })),
+    ).resolves.toBeUndefined();
+
+    expect(vi.mocked(updateTagDescription)).toHaveBeenCalledWith("tag-1", "Short archive copy");
+    expect(vi.mocked(revalidatePath)).toHaveBeenNthCalledWith(1, "/admin/tags");
+    expect(vi.mocked(revalidatePath)).toHaveBeenNthCalledWith(2, "/tag/[slug]", "page");
+  });
+
+  it("returns a generic save failure when tag persistence throws after validation", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(updateTagDescription).mockRejectedValue(new Error("database unavailable"));
+
+    await expect(
+      updateTagDescriptionAction(makeFormData({ tagId: "tag-1", description: "Short archive copy" })),
+    ).rejects.toThrow("Failed to save tag description");
+
+    expect(consoleErrorSpy).toHaveBeenCalledOnce();
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
   });
 });

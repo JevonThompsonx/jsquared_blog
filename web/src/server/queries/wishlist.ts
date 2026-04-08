@@ -17,10 +17,29 @@ export type PublicWishlistPlace = {
   externalUrl: string | null;
 };
 
+function normalizePublicWishlistExternalUrl(externalUrl: string | null): string | null {
+  if (!externalUrl) {
+    return null;
+  }
+
+  const trimmedExternalUrl = externalUrl.trim();
+
+  if (!trimmedExternalUrl) {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedExternalUrl);
+    return parsedUrl.protocol === "https:" ? parsedUrl.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]> {
   const db = getDb();
 
-  return db
+  const places = await db
     .select({
       id: wishlistPlaces.id,
       name: wishlistPlaces.name,
@@ -35,4 +54,9 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
     .from(wishlistPlaces)
     .where(eq(wishlistPlaces.isPublic, true))
     .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
+
+  return places.map((place) => ({
+    ...place,
+    externalUrl: normalizePublicWishlistExternalUrl(place.externalUrl),
+  }));
 }

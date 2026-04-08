@@ -36,11 +36,14 @@
 
 import "server-only";
 
+import { z } from "zod";
+
 import { getResendConfig, sendResendEmail } from "@/lib/email/resend";
 import { getCanonicalPostUrl } from "@/lib/utils";
 import type { CommentNotificationRecord } from "@/server/dal/comments";
 
 const COMMENT_NOTIFICATION_TO_ENV_KEY = "COMMENT_NOTIFICATION_TO_EMAIL";
+const commentNotificationRecipientSchema = z.string().email();
 
 export type CommentNotificationPayload = {
   commentId: string;
@@ -59,7 +62,12 @@ export type CommentNotificationResult =
 
 function getNotificationRecipient(): string | null {
   const recipient = process.env[COMMENT_NOTIFICATION_TO_ENV_KEY]?.trim();
-  return recipient ? recipient : null;
+  if (!recipient) {
+    return null;
+  }
+
+  const parsedRecipient = commentNotificationRecipientSchema.safeParse(recipient);
+  return parsedRecipient.success ? parsedRecipient.data : null;
 }
 
 function escapeHtml(value: string): string {

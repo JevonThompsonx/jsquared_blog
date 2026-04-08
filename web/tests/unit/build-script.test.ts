@@ -5,19 +5,59 @@ type MockSpawnResult = {
   error?: Error;
 };
 
+type MockRmSync = ReturnType<typeof vi.fn>;
+
+type PrepareBuildScriptResult = {
+  spawnSync: ReturnType<typeof vi.fn>;
+  exitSpy: ReturnType<typeof vi.spyOn>;
+  rmSync: MockRmSync;
+  loadPromise: Promise<unknown>;
+};
+
 function prepareBuildScript({
   nodeOptions,
   extraEnv,
+  platform,
+  rmSyncImpl,
   spawnResult = { status: 0 },
 }: {
   nodeOptions?: string;
   extraEnv?: Record<string, string | undefined>;
+  platform?: NodeJS.Platform;
+  rmSyncImpl?: Parameters<typeof vi.fn>[0];
   spawnResult?: MockSpawnResult;
-} = {}) {
+} = {}): PrepareBuildScriptResult {
   vi.resetModules();
 
   const spawnSync = vi.fn(() => spawnResult);
   vi.doMock("node:child_process", () => ({ spawnSync }));
+
+  const rmSync = vi.fn(rmSyncImpl);
+  vi.doMock("node:fs", async () => {
+    const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+    return {
+      ...actual,
+      rmSync,
+    };
+  });
+
+  if (platform) {
+    vi.doMock("node:process", async () => {
+      const actual = (await vi.importActual("node:process")) as typeof import("node:process") & {
+        default?: typeof process;
+      };
+      const actualProcess = actual.default ?? (actual as unknown as typeof process);
+
+      return {
+        ...actual,
+        default: {
+          ...actualProcess,
+          platform,
+        },
+        platform,
+      };
+    });
+  }
 
   const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
 
@@ -39,6 +79,7 @@ function prepareBuildScript({
   return {
     spawnSync,
     exitSpy,
+    rmSync,
     loadPromise: import("../../scripts/build"),
   };
 }
@@ -111,5 +152,52 @@ describe("web/scripts/build.ts", () => {
 
     await expect(loadPromise).rejects.toThrow("spawn failed");
     expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it("cleans the static build output on Windows before spawning next build", async () => {
+    const { loadPromise, rmSync, spawnSync } = prepareBuildScript({
+      platform: "win32",
+    });
+
+    await loadPromise;
+
+    expect(rmSync).toHaveBeenCalledWith(expect.stringMatching(/[\\/]\.next[\\/]static$/), {
+      force: true,
+      recursive: true,
+    });
+    expect(rmSync.mock.invocationCallOrder[0]).toBeLessThan(spawnSync.mock.invocationCallOrder[0]);
+  });
+
+  it("retries one transient Windows EPERM cleanup failure before building", async () => {
+    const epermError = Object.assign(new Error("locked"), { code: "EPERM" });
+    const rmSyncImpl = vi
+      .fn()
+      .mockImplementationOnce(() => {
+        throw epermError;
+      })
+      .mockImplementationOnce(() => undefined);
+
+    const { loadPromise, rmSync, spawnSync } = prepareBuildScript({
+      platform: "win32",
+      rmSyncImpl,
+    });
+
+    await loadPromise;
+
+    expect(rmSync).toHaveBeenCalledTimes(2);
+    expect(spawnSync).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces non-EPERM cleanup failures instead of hiding them", async () => {
+    const cleanupError = Object.assign(new Error("denied"), { code: "EACCES" });
+    const { loadPromise, spawnSync } = prepareBuildScript({
+      platform: "win32",
+      rmSyncImpl: () => {
+        throw cleanupError;
+      },
+    });
+
+    await expect(loadPromise).rejects.toThrow("denied");
+    expect(spawnSync).not.toHaveBeenCalled();
   });
 });

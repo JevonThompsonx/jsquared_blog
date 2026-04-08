@@ -22,14 +22,14 @@ import { publishDueScheduledPosts } from "@/server/posts/publish";
  * Schedule: daily at midnight UTC (cron: "0 0 * * *") — configured in vercel.json.
  */
 export async function GET(request: Request): Promise<NextResponse> {
-  const rl = await checkRateLimit(`cron-publish-scheduled:${getClientIp(request)}`, 30, 60_000);
-  if (!rl.allowed) {
-    return tooManyRequests(rl);
-  }
-
   const authError = requireCronAuthorization(request);
   if (authError) {
     return authError;
+  }
+
+  const rl = await checkRateLimit(`cron-publish-scheduled:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   let result;
@@ -40,8 +40,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
-  revalidatePath("/");
-  revalidatePath("/admin");
+  try {
+    revalidatePath("/");
+  } catch (error) {
+    console.error("[cron] publish-scheduled revalidation failed for /:", error);
+  }
+
+  try {
+    revalidatePath("/admin");
+  } catch (error) {
+    console.error("[cron] publish-scheduled revalidation failed for /admin:", error);
+  }
 
   return NextResponse.json({
     scanned: result.scannedCount,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { createPostPreviewAccess } from "@/server/posts/preview";
@@ -42,11 +43,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    console.error("[admin post preview] failed to create preview", {
+    logAdminRouteFailure("[admin post preview] failed to create preview", {
       postId: body.postId,
       adminUserId: session.user.id,
       error,
     });
-    return NextResponse.json({ error: "Failed to create preview" }, { status: 500 });
+    return adminRouteFailureResponse("Failed to create preview");
   }
 }

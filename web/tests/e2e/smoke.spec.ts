@@ -293,6 +293,74 @@ adminTest.describe("authenticated admin smoke tests", () => {
     await expect(page.getByRole("button", { name: "Create post" })).toBeVisible();
   });
 
+  adminTest("admin wishlist page renders for authenticated admins", async ({ page }) => {
+    await page.goto("/admin/wishlist");
+
+    await expect(page.getByRole("heading", { name: "Travel wishlist" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Add destination" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save destination" })).toBeVisible();
+  });
+
+  adminTest("admin can create, update, and delete a wishlist destination", async ({ page }) => {
+    adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
+
+    const destinationName = `E2E wishlist ${Date.now()}`;
+    const updatedDestinationName = `${destinationName} updated`;
+    const updatedLocationName = "Moab, Utah";
+    const updatedExternalUrl = "https://example.com/moab-guide";
+
+    await page.goto("/admin/wishlist");
+
+    await expect(page.getByTestId("admin-wishlist-create-form")).toBeVisible();
+
+    try {
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Name").fill(destinationName);
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Location label").fill("Arches National Park");
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Latitude").fill("38.7331");
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Longitude").fill("-109.5925");
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Zoom").fill("9");
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Sort order").fill("42");
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Visited already").check();
+      await page.getByTestId("admin-wishlist-create-form").getByLabel("Show publicly").check();
+      await page.getByTestId("admin-wishlist-create-form").getByRole("button", { name: "Save destination" }).click();
+
+      const createdRow = page.getByTestId("admin-wishlist-row").filter({ hasText: destinationName }).first();
+      await expect(createdRow).toBeVisible({ timeout: 15_000 });
+      await expect(createdRow).toContainText("Arches National Park");
+      await expect(createdRow.getByTestId("admin-wishlist-public-badge")).toHaveText("Public");
+      await expect(createdRow.getByTestId("admin-wishlist-visited-badge")).toHaveText("Visited");
+
+      const updateForm = createdRow.getByTestId("admin-wishlist-update-form");
+      await updateForm.getByLabel("Name").fill(updatedDestinationName);
+      await updateForm.getByLabel("Location label").fill(updatedLocationName);
+      await updateForm.getByLabel("Optional link").fill(updatedExternalUrl);
+      await updateForm.getByLabel("Visited already").uncheck();
+      await updateForm.getByLabel("Show publicly").uncheck();
+      await updateForm.getByRole("button", { name: "Update destination" }).click();
+
+      const updatedRow = page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName }).first();
+      await expect(updatedRow).toBeVisible({ timeout: 15_000 });
+      await expect(updatedRow).toContainText(updatedLocationName);
+      await expect(updatedRow.getByRole("link", { name: "Open link" })).toHaveAttribute("href", updatedExternalUrl);
+      await expect(updatedRow.getByTestId("admin-wishlist-public-badge")).toHaveCount(0);
+      await expect(updatedRow.getByTestId("admin-wishlist-visited-badge")).toHaveCount(0);
+
+      await updatedRow.getByTestId("admin-wishlist-delete-form").getByRole("button", { name: "Delete destination" }).click();
+      await expect(page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName })).toHaveCount(0, { timeout: 15_000 });
+    } finally {
+      const lingeringRow = page.getByTestId("admin-wishlist-row").filter({ hasText: destinationName }).first();
+      const lingeringUpdatedRow = page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName }).first();
+
+      if (await lingeringUpdatedRow.count()) {
+        await lingeringUpdatedRow.getByTestId("admin-wishlist-delete-form").getByRole("button", { name: "Delete destination" }).click();
+        await expect(page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName })).toHaveCount(0, { timeout: 15_000 });
+      } else if (await lingeringRow.count()) {
+        await lingeringRow.getByTestId("admin-wishlist-delete-form").getByRole("button", { name: "Delete destination" }).click();
+        await expect(page.getByTestId("admin-wishlist-row").filter({ hasText: destinationName })).toHaveCount(0, { timeout: 15_000 });
+      }
+    }
+  });
+
   adminTest("admin tags page renders editing controls", async ({ page }) => {
     await page.goto("/admin/tags");
 

@@ -13,6 +13,8 @@ type NewsletterApiResponse = {
   source?: "created" | "updated";
 };
 
+type NewsletterApiResponseLike = Pick<Response, "status" | "ok" | "json">;
+
 export function getNewsletterResponseState(statusCode: number, data: NewsletterApiResponse): NewsletterResponseState {
   if (statusCode === 202 || data.status === "skipped") {
     return {
@@ -28,10 +30,34 @@ export function getNewsletterResponseState(statusCode: number, data: NewsletterA
     };
   }
 
+  if (data.status === "subscribed") {
+    return {
+      status: "success",
+      message: "You're subscribed!",
+    };
+  }
+
   return {
-    status: "success",
-    message: "You're subscribed!",
+    status: "error",
+    message: "Something went wrong. Please try again.",
   };
+}
+
+export async function getNewsletterSubmissionState(res: NewsletterApiResponseLike): Promise<NewsletterResponseState> {
+  if (res.status === 202) {
+    return getNewsletterResponseState(res.status, {});
+  }
+
+  if (res.status === 400) {
+    return { status: "error", message: "Please enter a valid email address." };
+  }
+
+  if (!res.ok) {
+    return { status: "error", message: "Something went wrong. Please try again." };
+  }
+
+  const data = (await res.json()) as NewsletterApiResponse;
+  return getNewsletterResponseState(res.status, data);
 }
 
 function SubmitButton({ loading }: { loading: boolean }) {
@@ -78,19 +104,7 @@ export function NewsletterSignupForm({ source = "footer" }: { source?: string })
         return;
       }
 
-      if (res.status === 400) {
-        const data = await res.json();
-        setState({ status: "error", message: data.error || "Please enter a valid email address." });
-        return;
-      }
-
-      if (!res.ok && res.status !== 202) {
-        setState({ status: "error", message: "Something went wrong. Please try again." });
-        return;
-      }
-
-      const data = (await res.json()) as NewsletterApiResponse;
-      setState(getNewsletterResponseState(res.status, data));
+      setState(await getNewsletterSubmissionState(res));
     } catch {
       setState({ status: "error", message: "Something went wrong. Please try again." });
     }

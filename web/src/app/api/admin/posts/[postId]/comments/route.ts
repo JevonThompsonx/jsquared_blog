@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { requireAdminSession } from "@/lib/auth/session";
 import { listCommentsForAdmin } from "@/server/dal/comments";
 import { commentSortSchema, postCommentsParamsSchema } from "@/server/forms/comments";
@@ -36,7 +37,7 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
     const comments = await listCommentsForAdmin(postId, sortParse.data);
     return NextResponse.json({ comments });
   } catch (error) {
-    console.error("[admin post comments] failed to load comments", { postId, sort: sortParse.data, error });
-    return NextResponse.json({ error: "Failed to load comments" }, { status: 500 });
+    logAdminRouteFailure("[admin post comments] failed to load comments", { postId, sort: sortParse.data, error });
+    return adminRouteFailureResponse("Failed to load comments");
   }
 }

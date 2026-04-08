@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { requireAdminSession } from "@/lib/auth/session";
 import {
   getPostRevisionById,
@@ -85,7 +86,7 @@ export async function POST(
       revalidatePath("/admin");
       revalidatePath(`/posts/${restoreResult.slug}`);
     } catch (error) {
-      console.error("[admin revision restore] failed to revalidate after restore", { postId, revisionId, error });
+      logAdminRouteFailure("[admin revision restore] failed to revalidate after restore", { postId, revisionId, error });
     }
 
     return NextResponse.json({
@@ -94,7 +95,7 @@ export async function POST(
       newRevisionId: restoreResult.newRevisionId,
     });
   } catch (error) {
-    console.error("[admin revision restore] failed to restore revision", { postId, revisionId, error });
-    return NextResponse.json({ error: "Failed to restore revision" }, { status: 500 });
+    logAdminRouteFailure("[admin revision restore] failed to restore revision", { postId, revisionId, error });
+    return adminRouteFailureResponse("Failed to restore revision");
   }
 }

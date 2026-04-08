@@ -9,16 +9,36 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 type CallbackState = "verifying" | "success" | "error";
 type CallbackType = "signup" | "email" | "recovery";
 
+const GENERIC_CALLBACK_ERROR_MESSAGE = "Something went wrong. The link may have expired.";
+const REDIRECT_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F\\]/;
+
 function parseCallbackType(value: string | null): CallbackType | null {
   return value === "signup" || value === "email" || value === "recovery" ? value : null;
 }
 
-function safeRedirectPath(raw: string | null): string {
-  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+export function safeRedirectPath(raw: string | null): string {
+  if (
+    raw &&
+    raw.startsWith("/") &&
+    !raw.startsWith("//") &&
+    !REDIRECT_CONTROL_CHARACTER_PATTERN.test(raw)
+  ) {
     return raw;
   }
 
   return "/";
+}
+
+function getCallbackErrorMessage(errorMessage: string | null | undefined): string {
+  if (!errorMessage) {
+    return GENERIC_CALLBACK_ERROR_MESSAGE;
+  }
+
+  if (errorMessage === "No verification token found. The link may have expired.") {
+    return errorMessage;
+  }
+
+  return GENERIC_CALLBACK_ERROR_MESSAGE;
 }
 
 export function CallbackContent() {
@@ -45,7 +65,7 @@ export function CallbackContent() {
     void (async () => {
       if (!supabase) {
         setState("error");
-        setErrorMessage("Auth is not configured.");
+        setErrorMessage(GENERIC_CALLBACK_ERROR_MESSAGE);
         return;
       }
 
@@ -58,14 +78,14 @@ export function CallbackContent() {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           setState("error");
-          setErrorMessage(error.message);
+          setErrorMessage(getCallbackErrorMessage(error.message));
           return;
         }
       } else if (tokenHash && type) {
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
         if (error) {
           setState("error");
-          setErrorMessage(error.message);
+          setErrorMessage(getCallbackErrorMessage(error.message));
           return;
         }
       } else {
@@ -110,7 +130,7 @@ export function CallbackContent() {
     <div className="w-full max-w-sm text-center">
       <div className="rounded-2xl border border-[var(--color-error-soft-border)] bg-[var(--color-error-soft-bg)] px-6 py-8">
         <h1 className="text-xl font-semibold text-[var(--color-error-text)]">Verification failed</h1>
-        <p className="mt-3 text-sm leading-7 text-[var(--color-error-text)]">{errorMessage ?? "Something went wrong. The link may have expired."}</p>
+        <p className="mt-3 text-sm leading-7 text-[var(--color-error-text)]">{errorMessage ?? GENERIC_CALLBACK_ERROR_MESSAGE}</p>
         <Link
           className="mt-6 inline-block rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)]"
           href="/login"

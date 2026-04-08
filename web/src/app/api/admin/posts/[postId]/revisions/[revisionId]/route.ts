@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getPostRevisionById } from "@/server/dal/post-revisions";
 
@@ -49,7 +50,7 @@ export async function GET(
       label: revision.label,
     });
   } catch (error) {
-    console.error("[admin revision detail] failed to load revision", { postId, revisionId, error });
-    return NextResponse.json({ error: "Failed to load revision" }, { status: 500 });
+    logAdminRouteFailure("[admin revision detail] failed to load revision", { postId, revisionId, error });
+    return adminRouteFailureResponse("Failed to load revision");
   }
 }

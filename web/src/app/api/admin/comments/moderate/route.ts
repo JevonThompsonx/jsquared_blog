@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { moderateCommentsSchema } from "@/server/forms/comments";
@@ -33,12 +34,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     const result = await moderateCommentsByIds(body.commentIds, body.action, session.user.id);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("[admin comment moderation] failed to moderate comments", {
+    logAdminRouteFailure("[admin comment moderation] failed to moderate comments", {
       action: body.action,
       commentIds: body.commentIds,
       adminUserId: session.user.id,
       error,
     });
-    return NextResponse.json({ error: "Failed to moderate comments" }, { status: 500 });
+    return adminRouteFailureResponse("Failed to moderate comments");
   }
 }

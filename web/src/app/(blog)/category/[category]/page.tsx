@@ -2,7 +2,9 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import type { SVGProps } from "react";
+import { z } from "zod";
 
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -14,9 +16,35 @@ type CategoryPageProps = {
   params: Promise<{ category: string }>;
 };
 
+const categoryParamsSchema = z.object({
+  category: z.string().trim().min(1),
+});
+
+function normalizeCategoryParam(rawParams: { category: string }): string | null {
+  let decodedCategory: string;
+
+  try {
+    decodedCategory = decodeURIComponent(rawParams.category);
+  } catch {
+    return null;
+  }
+
+  const parsed = categoryParamsSchema.safeParse({ category: decodedCategory });
+
+  if (!parsed.success) {
+    return null;
+  }
+
+  return parsed.data.category;
+}
+
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const { category } = await params;
-  const label = decodeURIComponent(category);
+  const label = normalizeCategoryParam(await params);
+
+  if (!label) {
+    return {};
+  }
+
   return {
     title: `${label} – J²Adventures`,
     description: `Explore all ${label} adventures on J²Adventures.`,
@@ -111,8 +139,12 @@ function CategoryIcon({ slug }: { slug: string }) {
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { category } = await params;
-  const label = decodeURIComponent(category);
+  const label = normalizeCategoryParam(await params);
+
+  if (!label) {
+    notFound();
+  }
+
   const slug = getCategorySlug(label);
   const [initialPosts, postCount] = await Promise.all([
     listPublishedPostsByCategory(label, 20, 0),

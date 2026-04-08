@@ -88,6 +88,18 @@ describe("comment notifications", () => {
     expect(result).toEqual({ status: "skipped", reason: "missing-config" });
   });
 
+  it("skips sending when comment notification recipient is invalid", async () => {
+    process.env.RESEND_API_KEY = "resend-test-key";
+    process.env.RESEND_FROM_EMAIL = "noreply@example.com";
+    process.env.COMMENT_NOTIFICATION_TO_EMAIL = "not-an-email";
+    globalThis.fetch = vi.fn();
+
+    const result = await sendCommentNotification(makeComment());
+
+    expect(result).toEqual({ status: "skipped", reason: "missing-config" });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
   it("sends through resend when config is present", async () => {
     process.env.RESEND_API_KEY = "resend-test-key";
     process.env.RESEND_FROM_EMAIL = "noreply@example.com";

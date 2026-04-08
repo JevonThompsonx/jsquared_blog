@@ -7,11 +7,13 @@
  * Env: E2E_BASE_URL=https://jsquaredadventures.com and/or E2E_ADMIN_STORAGE_STATE=playwright/.auth/admin.prod.json
  */
 
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
 import { chromium } from "@playwright/test";
+
+import { createAdminStorageStateMetadata, getAdminStorageStateMetadataPath } from "../src/lib/e2e/admin-storage-state-config";
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const storageStatePath = path.resolve(
@@ -93,6 +95,10 @@ async function main(): Promise<void> {
 
   await mkdir(path.dirname(storageStatePath), { recursive: true });
   await context.storageState({ path: storageStatePath });
+  await writeFile(
+    getAdminStorageStateMetadataPath(storageStatePath),
+    JSON.stringify(createAdminStorageStateMetadata({ origin: new URL(baseURL).origin }), null, 2),
+  );
 
   console.log(`Saved admin storage state to ${storageStatePath}`);
 

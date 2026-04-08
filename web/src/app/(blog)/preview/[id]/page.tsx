@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 
 import { AuthorCard } from "@/components/blog/author-card";
 import { PostGallery } from "@/components/blog/post-gallery";
@@ -28,16 +29,27 @@ type PreviewPageProps = {
   searchParams?: Promise<{ token?: string }>;
 };
 
+const previewParamsSchema = z.object({
+  id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
+});
+
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
 export default async function PreviewPage({ params, searchParams }: PreviewPageProps) {
-  const [{ id }, resolvedSearchParams, adminSession] = await Promise.all([
+  const [rawParams, resolvedSearchParams, adminSession] = await Promise.all([
     params,
     searchParams,
     requireAdminSession(),
   ]);
+
+  const paramsParse = previewParamsSchema.safeParse(rawParams);
+  if (!paramsParse.success) {
+    notFound();
+  }
+
+  const { id } = paramsParse.data;
 
   const previewToken = resolvedSearchParams?.token?.trim() ?? "";
   const hasValidToken = previewToken ? await validatePostPreviewToken(id, previewToken) : false;

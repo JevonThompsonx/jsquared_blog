@@ -55,9 +55,9 @@ export default async function WishlistPage() {
               No destinations are on the public wishlist yet.
             </p>
           ) : (
-            <ul className="divide-y divide-[var(--border)]">
+            <ul className="divide-y divide-[var(--border)]" data-testid="public-wishlist-list">
               {places.map((place) => (
-                <li key={place.id} className="px-6 py-5">
+                <li key={place.id} className="px-6 py-5" data-place-id={place.id} data-testid="public-wishlist-item">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">

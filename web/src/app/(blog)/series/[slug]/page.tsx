@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { PostDate } from "@/components/blog/post-date";
@@ -12,8 +13,24 @@ import { getPostHref } from "@/lib/utils";
 
 type SeriesPageProps = { params: Promise<{ slug: string }> };
 
+const seriesParamsSchema = z.object({
+  slug: z.string().trim().min(1),
+});
+
+function normalizeSeriesSlug(rawParams: { slug: string }): string | null {
+  const parsed = seriesParamsSchema.safeParse(rawParams);
+
+  if (!parsed.success) {
+    return null;
+  }
+
+  return parsed.data.slug;
+}
+
 export async function generateMetadata({ params }: SeriesPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const slug = normalizeSeriesSlug(await params);
+  if (!slug) return {};
+
   const s = await getSeriesBySlug(slug);
   if (!s) return {};
   return {
@@ -23,7 +40,9 @@ export async function generateMetadata({ params }: SeriesPageProps): Promise<Met
 }
 
 export default async function SeriesPage({ params }: SeriesPageProps) {
-  const { slug } = await params;
+  const slug = normalizeSeriesSlug(await params);
+  if (!slug) notFound();
+
   const s = await getSeriesBySlug(slug);
   if (!s) notFound();
 
