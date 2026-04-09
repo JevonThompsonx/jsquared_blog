@@ -19,6 +19,8 @@ Code review ensures quality, security, and maintainability before code is merged
 Before requesting review, ensure:
 
 - All automated checks (CI/CD) are passing
+- The relevant build succeeds locally; failing builds block review
+- All changed or affected pages have been checked, including applicable happy path, empty/error state, and auth/permission state
 - Merge conflicts are resolved
 - Branch is up to date with target branch
 
@@ -33,8 +35,12 @@ Before marking code complete:
 - [ ] Errors are handled explicitly
 - [ ] No hardcoded secrets or credentials
 - [ ] No console.log or debug statements
+- [ ] Tests were written first for new functionality or bug fixes
+- [ ] The relevant RED -> GREEN TDD cycle was completed
 - [ ] Tests exist for new functionality
 - [ ] Test coverage meets 80% minimum
+- [ ] All affected pages were manually checked
+- [ ] The relevant local build succeeds
 
 ## Security Review Triggers
 
@@ -76,9 +82,11 @@ Use these agents for code review:
 1. Run git diff to understand changes
 2. Check security checklist first
 3. Review code quality checklist
-4. Run relevant tests
-5. Verify coverage >= 80%
-6. Use appropriate agent for detailed review
+4. Check changed or affected pages and their relevant states
+5. Run relevant tests
+6. Verify coverage >= 80%
+7. Confirm the relevant local build succeeds
+8. Use appropriate agent for detailed review
 ```
 
 ## Common Issues to Catch

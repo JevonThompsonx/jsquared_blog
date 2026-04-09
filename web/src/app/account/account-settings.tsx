@@ -206,17 +206,23 @@ export function AccountSettings() {
   const { mode, lightLook, darkLook, lookLabel, restorePreference } = useNextTheme();
   const didInit = useRef(false);
 
-  const supabase = useMemo(() => {
+  const supabaseBootstrap = useMemo(() => {
     try {
-      return getSupabaseBrowserClient();
+      return {
+        client: getSupabaseBrowserClient(),
+        unavailable: false,
+      };
     } catch {
-      return null;
+      return {
+        client: null,
+        unavailable: true,
+      };
     }
   }, []);
+  const supabase = supabaseBootstrap.client;
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
 
   // Form fields
   const [displayName, setDisplayName] = useState("");
@@ -252,7 +258,6 @@ export function AccountSettings() {
         }
 
         const accessToken = data.session.access_token;
-        setToken(accessToken);
 
         const res = await fetch("/api/account/profile", {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -279,16 +284,38 @@ export function AccountSettings() {
     })();
   }, [supabase, restorePreference]);
 
+  useEffect(() => {
+    if (supabaseBootstrap.unavailable) {
+      setLoadError("Failed to load profile. Please refresh.");
+    }
+  }, [supabaseBootstrap.unavailable]);
+
+  async function getAccessToken(): Promise<string | null> {
+    if (!supabase) return null;
+
+    try {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async function patchProfile(fields: Record<string, unknown>): Promise<boolean> {
-    if (!token) return false;
+    const accessToken = await getAccessToken();
+    if (!accessToken) return false;
 
-    const res = await fetch("/api/account/profile", {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(fields),
-    });
+    try {
+      const res = await fetch("/api/account/profile", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      });
 
-    return res.ok;
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
 
   async function saveAvatarUrl(url: string) {
@@ -330,7 +357,10 @@ export function AccountSettings() {
 
   async function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !token) return;
+    if (!file) return;
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) return;
 
     setUploadingAvatar(true);
     setAvatarError(null);
@@ -341,7 +371,7 @@ export function AccountSettings() {
     try {
       const res = await fetch("/api/account/avatar", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         body: form,
       });
 

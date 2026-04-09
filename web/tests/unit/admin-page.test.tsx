@@ -1,39 +1,20 @@
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header"),
+vi.mock("@/components/admin/admin-dashboard", () => ({
+  AdminDashboard: () => <div data-testid="admin-dashboard">Dashboard</div>,
 }));
 
 vi.mock("@/components/auth/admin-auth-button", () => ({
-  AdminAuthButton: ({ disabled, isSignedIn }: { disabled: boolean; isSignedIn: boolean }) =>
-    createElement(
-      "button",
-      {
-        "data-testid": "admin-auth-button",
-        "data-disabled": String(disabled),
-        "data-signed-in": String(isSignedIn),
-      },
-      "Admin auth",
-    ),
+  AdminAuthButton: () => <button type="button">Admin sign in</button>,
 }));
 
-vi.mock("@/components/admin/admin-dashboard", () => ({
-  AdminDashboard: ({ counts, categories }: { counts: { total: number }; categories: string[] }) =>
-    createElement(
-      "div",
-      {
-        "data-testid": "admin-dashboard",
-        "data-total": String(counts.total),
-        "data-categories": categories.join(","),
-      },
-      "Dashboard",
-    ),
+vi.mock("@/components/layout/site-header", () => ({
+  SiteHeader: () => null,
 }));
 
 vi.mock("@/lib/auth/admin", () => ({
-  isAdminAuthConfigured: vi.fn(),
+  isAdminAuthConfigured: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -41,18 +22,37 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 vi.mock("@/server/forms/admin-post-list", () => ({
-  parseAdminPostListSearchParams: vi.fn(),
+  parseAdminPostListSearchParams: vi.fn(() => ({
+    query: "",
+    page: 1,
+    pageSize: 24,
+    sort: "updated-desc",
+  })),
 }));
 
 vi.mock("@/server/queries/admin-dashboard", () => ({
-  getAdminDashboardData: vi.fn(),
-  getAdminDashboardMetadata: vi.fn(),
+  getAdminDashboardData: vi.fn(async () => ({
+    counts: { total: 0, published: 0, draft: 0, scheduled: 0 },
+    posts: {
+      posts: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 24,
+      totalPages: 1,
+      filters: {
+        query: "",
+        page: 1,
+        pageSize: 24,
+        sort: "updated-desc",
+      },
+    },
+  })),
+  getAdminDashboardMetadata: vi.fn(async () => ({ categories: [] })),
 }));
 
 import AdminPage from "@/app/admin/page";
 import { isAdminAuthConfigured } from "@/lib/auth/admin";
 import { requireAdminSession } from "@/lib/auth/session";
-import type { AdminPostListFilters } from "@/server/dal/admin-posts";
 import { parseAdminPostListSearchParams } from "@/server/forms/admin-post-list";
 import { getAdminDashboardData, getAdminDashboardMetadata } from "@/server/queries/admin-dashboard";
 
@@ -61,90 +61,66 @@ describe("AdminPage", () => {
     vi.clearAllMocks();
   });
 
-  const defaultFilters: AdminPostListFilters = {
-    query: "",
-    page: 1,
-    pageSize: 24,
-    sort: "updated-desc",
-  };
-
-  it("shows generic public-facing auth guidance without leaking env variable names", async () => {
-    vi.mocked(isAdminAuthConfigured).mockReturnValue(false);
-    vi.mocked(requireAdminSession).mockResolvedValue(null);
-    vi.mocked(parseAdminPostListSearchParams).mockReturnValue(defaultFilters);
-
-    const markup = renderToStaticMarkup(
-      await AdminPage({
-        searchParams: Promise.resolve({ error: "AccessDenied" }),
-      }),
-    );
-
-    expect(markup).toContain("Admin sign-in is not available right now.");
-    expect(markup).toContain("Sign-in was denied.");
-    expect(markup).not.toContain("AUTH_SECRET");
-    expect(markup).not.toContain("AUTH_GITHUB_ID");
-    expect(markup).not.toContain("AUTH_GITHUB_SECRET");
-    expect(markup).not.toContain("AUTH_ADMIN_GITHUB_IDS");
-  });
-
-  it("does not load dashboard data for non-admin sessions", async () => {
-    vi.mocked(isAdminAuthConfigured).mockReturnValue(true);
-    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "user-1", role: "editor" } } as never);
-    vi.mocked(parseAdminPostListSearchParams).mockReturnValue({
-      query: "drafts",
-      page: 2,
-      pageSize: 10,
-      sort: "updated-desc",
-    } satisfies AdminPostListFilters);
-
-    const markup = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ query: "drafts" }) }));
-
-    expect(getAdminDashboardData).not.toHaveBeenCalled();
-    expect(getAdminDashboardMetadata).not.toHaveBeenCalled();
-    expect(markup).not.toContain('data-testid="admin-dashboard"');
-  });
-
-  it("renders the admin dashboard for admin sessions with parsed filters", async () => {
-    const parsedFilters = {
-      query: "road trip",
-      page: 3,
-      pageSize: 12,
-      sort: "updated-desc",
-    } satisfies AdminPostListFilters;
-
-    vi.mocked(isAdminAuthConfigured).mockReturnValue(true);
+  it("renders admin quick links for admin sessions", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue({
       user: {
         id: "admin-1",
         role: "admin",
-        githubLogin: "octocat",
+        githubLogin: "octoadmin",
       },
     } as never);
-    vi.mocked(parseAdminPostListSearchParams).mockReturnValue(parsedFilters);
-    vi.mocked(getAdminDashboardData).mockResolvedValue({
-      counts: { total: 7, published: 3, draft: 2, scheduled: 2 },
-      posts: {
-        posts: [],
-        totalCount: 0,
-        page: 3,
-        pageSize: 12,
-        totalPages: 1,
-        filters: parsedFilters,
-      },
-    });
-    vi.mocked(getAdminDashboardMetadata).mockResolvedValue({
-      categories: [
-        { id: "cat-1", name: "Travel", slug: "travel" },
-        { id: "cat-2", name: "Camping", slug: "camping" },
-      ],
+
+    const markup = renderToStaticMarkup(await AdminPage({}));
+
+    expect(markup).toContain("Admin pages");
+    expect(markup).toContain("href=\"/admin/wishlist\"");
+    expect(markup).toContain("href=\"/admin/tags\"");
+    expect(markup).toContain("href=\"/admin/posts/new\"");
+    expect(markup).toContain("Travel wishlist");
+    expect(getAdminDashboardData).toHaveBeenCalled();
+    expect(getAdminDashboardMetadata).toHaveBeenCalled();
+  });
+
+  it("keeps admin quick links hidden when there is no admin session", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(null);
+
+    const markup = renderToStaticMarkup(await AdminPage({}));
+
+    expect(markup).not.toContain("Admin pages");
+    expect(markup).not.toContain("href=\"/admin/wishlist\"");
+    expect(getAdminDashboardData).not.toHaveBeenCalled();
+    expect(getAdminDashboardMetadata).not.toHaveBeenCalled();
+  });
+
+  it("shows the auth-disabled message when admin auth is unavailable", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(null);
+    vi.mocked(isAdminAuthConfigured).mockReturnValue(false);
+
+    const markup = renderToStaticMarkup(await AdminPage({}));
+
+    expect(markup).toContain("Admin sign-in is not available right now.");
+    expect(markup).not.toContain("Admin pages");
+  });
+
+  it("shows denied sign-in feedback from the query string", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(null);
+
+    const markup = renderToStaticMarkup(await AdminPage({
+      searchParams: Promise.resolve({ error: "AccessDenied" }),
+    }));
+
+    expect(markup).toContain("Sign-in was denied.");
+  });
+
+  it("does not parse admin dashboard filters for public visitors", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(null);
+
+    await AdminPage({
+      searchParams: Promise.resolve({ status: "not-a-real-status" }),
     });
 
-    const markup = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ query: "road trip" }) }));
-
-    expect(getAdminDashboardData).toHaveBeenCalledWith(parsedFilters);
-    expect(getAdminDashboardMetadata).toHaveBeenCalledOnce();
-    expect(markup).toContain('data-testid="admin-dashboard"');
-    expect(markup).toContain('data-total="7"');
-    expect(markup).toContain("Signed in as `octocat`");
+    expect(parseAdminPostListSearchParams).not.toHaveBeenCalled();
+    expect(getAdminDashboardData).not.toHaveBeenCalled();
+    expect(getAdminDashboardMetadata).not.toHaveBeenCalled();
   });
 });

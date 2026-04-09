@@ -1,6 +1,9 @@
+import Link from "next/link";
+
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AdminAuthButton } from "@/components/auth/admin-auth-button";
 import { SiteHeader } from "@/components/layout/site-header";
+import { adminNavLinks } from "@/lib/admin/navigation";
 import { isAdminAuthConfigured } from "@/lib/auth/admin";
 import { requireAdminSession } from "@/lib/auth/session";
 import type { AdminPostListResult } from "@/server/dal/admin-posts";
@@ -15,11 +18,10 @@ export default async function AdminPage({
   const session = await requireAdminSession();
   const authConfigured = isAdminAuthConfigured();
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const listFilters = parseAdminPostListSearchParams(resolvedSearchParams);
-  
+
   const [dashboardData, metadata] = session?.user?.role === "admin" 
     ? await Promise.all([
-        getAdminDashboardData(listFilters),
+        getAdminDashboardData(parseAdminPostListSearchParams(resolvedSearchParams)),
         getAdminDashboardMetadata()
       ])
     : [null, null];
@@ -75,12 +77,39 @@ export default async function AdminPage({
         </div>
 
         {session?.user?.role === "admin" ? (
-          <AdminDashboard
-            counts={dashboardData?.counts ?? { total: 0, published: 0, draft: 0, scheduled: 0 }}
-            postsResult={dashboardData?.posts ?? defaultPostsResult}
-            categories={metadata?.categories ?? []}
-            session={session}
-          />
+          <>
+            <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--background)]/70 p-5 shadow-sm sm:p-6" aria-label="Admin pages">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Admin pages</p>
+                  <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">Jump straight to the tools you use most.</h2>
+                </div>
+                <p className="max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+                  Keep every admin route one click away so wishlist, tags, posts, and dashboard tasks stay easy to find.
+                </p>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {adminNavLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-4 text-left transition-colors hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/40"
+                    href={link.href}
+                  >
+                    <span className="block text-sm font-semibold text-[var(--foreground)]">{link.label}</span>
+                    <span className="mt-2 block text-sm leading-6 text-[var(--text-secondary)]">{link.description}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            <AdminDashboard
+              counts={dashboardData?.counts ?? { total: 0, published: 0, draft: 0, scheduled: 0 }}
+              postsResult={dashboardData?.posts ?? defaultPostsResult}
+              categories={metadata?.categories ?? []}
+              session={session}
+            />
+          </>
         ) : null}
       </section>
     </main>

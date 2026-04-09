@@ -27,6 +27,33 @@ function getFirstMatchedPath(html: string, pattern: RegExp): string | null {
   return match?.[1] ?? null;
 }
 
+async function discoverPublicSeriesPath(request: { get: (url: string) => Promise<{ status(): number; text(): Promise<string> }> }): Promise<string | null> {
+  const homepageResponse = await request.get("/");
+  if (homepageResponse.status() !== 200) {
+    return null;
+  }
+
+  const homepageHtml = await homepageResponse.text();
+  const homepageSeriesSlug = homepageHtml.match(/href="\/series\/([^"?#/]+)"/)?.[1] ?? null;
+  if (homepageSeriesSlug) {
+    return `/series/${homepageSeriesSlug}`;
+  }
+
+  const postPath = getFirstMatchedPath(homepageHtml, /href="(\/posts\/[^"?#]+)"/);
+  if (!postPath) {
+    return null;
+  }
+
+  const postResponse = await request.get(postPath);
+  if (postResponse.status() !== 200) {
+    return null;
+  }
+
+  const postHtml = await postResponse.text();
+  const postSeriesSlug = postHtml.match(/href="\/series\/([^"?#/]+)"/)?.[1] ?? null;
+  return postSeriesSlug ? `/series/${postSeriesSlug}` : null;
+}
+
 test.describe("public pages smoke tests", () => {
 
   test("homepage loads with post feed", async ({ page }) => {
@@ -123,13 +150,75 @@ test.describe("public pages smoke tests", () => {
     await expect(page.getByRole("main").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Adventure Map" })).toBeVisible();
     await expect(page.getByText(/story|stories pinned to the map|Stories will appear here as locations are added\./i)).toBeVisible();
+
+    const mapRegion = page.getByTestId("world-map").first();
+    const mapUnavailable = page.getByText(/Map unavailable/i).first();
+
+    await expect
+      .poll(async () => (await mapRegion.count()) + (await mapUnavailable.count()), {
+        message: "expected either the interactive map or the map unavailable fallback",
+      })
+      .toBeGreaterThan(0);
+
+    if (await mapRegion.count()) {
+      await expect(mapRegion).toBeVisible();
+      await expect(mapRegion).toHaveAttribute("data-map-ready", "true");
+      const box = await mapRegion.boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThan(0);
+      expect(box?.height ?? 0).toBeGreaterThan(0);
+    } else {
+      await expect(mapUnavailable).toBeVisible();
+    }
   });
 
   test("wishlist page loads its shell", async ({ page }) => {
     await page.goto("/wishlist");
     await expect(page.getByRole("main").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Travel Wishlist" })).toBeVisible();
-    await expect(page.getByText(/destination is on the public wishlist|destinations are on the public wishlist|No destinations are on the public wishlist yet\./i)).toBeVisible();
+    await expect(
+      page
+        .getByText(/destination is on the public wishlist|destinations are on the public wishlist|No destinations are on the public wishlist yet\.|Wishlist temporarily unavailable\./i)
+        .first(),
+    ).toBeVisible();
+  });
+
+  test("signup page renders", async ({ page }) => {
+    await page.goto("/signup");
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Confirm password", { exact: true })).toBeVisible();
+  });
+
+  test("tag page loads when a public tag exists", async ({ page, request }) => {
+    const homepageResponse = await request.get("/");
+    expect(homepageResponse.status()).toBe(200);
+
+    const homepageHtml = await homepageResponse.text();
+    const tagSlug = homepageHtml.match(/href="\/tag\/([^"?#/]+)"/)?.[1] ?? null;
+    const tagPath = tagSlug ? `/tag/${tagSlug}` : null;
+
+    test.skip(!tagPath, "No public tag links were available to verify a tag page.");
+
+    await page.goto(tagPath!);
+    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator('a[href="/"]').first()).toBeVisible();
+    await expect(page.getByRole("region", { name: "Filtered stories feed" })).toBeVisible();
+  });
+
+  test("series page loads when a public series exists", async ({ page, request }) => {
+    const seriesPath = await discoverPublicSeriesPath(request);
+
+    test.skip(!seriesPath, "No public series links were available to verify a series page.");
+
+    await page.goto(seriesPath!);
+    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.getByText(/^Series$/)).toBeVisible();
+    await expect(page.locator('a[href="/"]').first()).toBeVisible();
+    await expect(
+      page.getByText(/^\d+\s+(part|parts)$/i).or(page.getByText(/^No published posts yet$/i)),
+    ).toBeVisible();
   });
 
   test("published post detail page loads when a public story exists", async ({ page, request }) => {

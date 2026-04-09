@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 vi.mock("@/components/layout/site-header", () => ({
   SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header shell"),
 }));
@@ -22,6 +24,9 @@ vi.mock("@/server/queries/posts", () => ({
 import MapPage, { dynamic, metadata } from "@/app/(blog)/map/page";
 import { getPublicEnv } from "@/lib/env";
 import { listAllPublishedPosts } from "@/server/queries/posts";
+
+const mockedGetPublicEnv = getPublicEnv as unknown as ReturnType<typeof vi.fn>;
+const mockedListAllPublishedPosts = listAllPublishedPosts as unknown as ReturnType<typeof vi.fn>;
 
 const mappedPost = {
   id: "post-1",
@@ -64,8 +69,8 @@ describe("MapPage", () => {
   });
 
   it("renders a fallback when the public map key is missing", async () => {
-    vi.mocked(getPublicEnv).mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
-    vi.mocked(listAllPublishedPosts).mockResolvedValue([]);
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedListAllPublishedPosts.mockResolvedValue([]);
 
     const markup = renderToStaticMarkup(await MapPage());
 
@@ -77,8 +82,8 @@ describe("MapPage", () => {
   });
 
   it("renders the world map with the mapped story count when the public key exists", async () => {
-    vi.mocked(getPublicEnv).mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
-    vi.mocked(listAllPublishedPosts).mockResolvedValue([mappedPost, unmappedPost]);
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
+    mockedListAllPublishedPosts.mockResolvedValue([mappedPost, unmappedPost]);
 
     const markup = renderToStaticMarkup(await MapPage());
 
@@ -89,8 +94,8 @@ describe("MapPage", () => {
   });
 
   it("counts only stories with complete coordinates in the summary", async () => {
-    vi.mocked(getPublicEnv).mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
-    vi.mocked(listAllPublishedPosts).mockResolvedValue([
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedListAllPublishedPosts.mockResolvedValue([
       {
         ...mappedPost,
         id: "post-3",
@@ -104,5 +109,20 @@ describe("MapPage", () => {
 
     expect(markup).toContain("Stories will appear here as locations are added.");
     expect(markup).toContain("Map unavailable");
+  });
+
+  it("renders the map page shell when loading posts fails", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
+    mockedListAllPublishedPosts.mockRejectedValue(new Error("database unavailable"));
+
+    const markup = renderToStaticMarkup(await MapPage());
+
+    expect(markup).toContain('data-testid="site-header"');
+    expect(markup).toContain("Adventure Map");
+    expect(markup).toContain("Story locations are temporarily unavailable.");
+    expect(markup).toContain("Map unavailable");
+    expect(markup).toContain("temporarily unavailable");
+    expect(markup).not.toContain("Stories will appear here as locations are added.");
+    expect(markup).not.toContain('data-testid="world-map"');
   });
 });

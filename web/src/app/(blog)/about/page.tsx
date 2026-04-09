@@ -29,7 +29,7 @@ export default function AboutPage() {
       {/* Hero banner */}
       <div className="relative w-full overflow-hidden" style={{ background: "var(--background)" }}>
         <div className="relative mx-auto h-64 w-full max-w-6xl sm:h-80 lg:h-[28rem]">
-          <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover lg:rounded-b-2xl" priority />
+          <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover lg:rounded-b-2xl" priority sizes="100vw" />
           <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent lg:rounded-b-2xl">
             <div className="container mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">Est. somewhere between a trailhead and a campfire</p>
@@ -46,7 +46,7 @@ export default function AboutPage() {
           <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-lg sm:p-8 lg:p-10">
             {/* Float photo */}
             <div className="relative mb-4 h-56 w-full overflow-hidden rounded-2xl sm:float-right sm:mb-0 sm:ml-8 sm:h-64 sm:w-64 lg:h-72 lg:w-72">
-              <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover" />
+              <Image src="/images/us.webp" alt="Jevon and Jessica" fill className="object-cover" sizes="(min-width: 1024px) 18rem, (min-width: 640px) 16rem, 100vw" />
             </div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Who we are</p>
             <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Two people with a serious travel bug.</h2>
@@ -75,7 +75,7 @@ export default function AboutPage() {
             {/* Jevon */}
             <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg">
               <div className="relative h-56 w-full">
-                <Image src="/images/me.webp" alt="Jevon" fill className="object-cover rounded-t-2xl" style={{ objectPosition: "center 20%" }} />
+                <Image src="/images/me.webp" alt="Jevon" fill className="object-cover rounded-t-2xl" style={{ objectPosition: "center 20%" }} sizes="(min-width: 640px) 50vw, 100vw" />
               </div>
               <div className="p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">The tech half</p>
@@ -94,7 +94,7 @@ export default function AboutPage() {
             {/* Jessica */}
             <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg">
               <div className="relative h-56 w-full">
-                <Image src="/images/tiddies.webp" alt="Jessica" fill className="object-cover rounded-t-2xl" />
+                <Image src="/images/tiddies.webp" alt="Jessica" fill className="object-cover rounded-t-2xl" sizes="(min-width: 640px) 50vw, 100vw" />
               </div>
               <div className="p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">The outdoors half</p>
@@ -121,13 +121,13 @@ export default function AboutPage() {
             {/* Photo strip — 3 across */}
             <div className="mt-6 grid grid-cols-3 gap-3">
               <div className="relative aspect-square overflow-hidden rounded-2xl">
-                <Image src="/images/hiking.webp" alt="Hiking" fill className="object-cover" />
+                <Image src="/images/hiking.webp" alt="Hiking" fill className="object-cover" sizes="(min-width: 640px) 33vw, 33vw" />
               </div>
               <div className="relative aspect-square overflow-hidden rounded-2xl">
-                <Image src="/images/camping.webp" alt="Van / camping" fill className="object-cover" />
+                <Image src="/images/camping.webp" alt="Van / camping" fill className="object-cover" sizes="(min-width: 640px) 33vw, 33vw" />
               </div>
               <div className="relative aspect-square overflow-hidden rounded-2xl">
-                <Image src="/images/travel.jpg" alt="Travel" fill className="object-cover" />
+                <Image src="/images/travel.jpg" alt="Travel" fill className="object-cover" sizes="(min-width: 640px) 33vw, 33vw" />
               </div>
             </div>
 

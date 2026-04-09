@@ -23,8 +23,9 @@ The Feature Implementation Workflow describes the development pipeline: research
 2. **TDD Approach**
    - Use **tdd-guide** agent
    - Write tests first (RED)
+   - Run the new or updated test target and confirm it fails for the intended reason before changing production code
    - Implement to pass tests (GREEN)
-   - Refactor (IMPROVE)
+   - Re-run the same relevant test target to confirm GREEN, then refactor (IMPROVE)
    - Verify 80%+ coverage
 
 3. **Code Review**
@@ -39,6 +40,8 @@ The Feature Implementation Workflow describes the development pipeline: research
 
 5. **Pre-Review Checks**
    - Verify all automated checks (CI/CD) are passing
+   - Ensure the project build succeeds locally for the change being made; treat build failures as blocking
+   - Check every changed or affected page before review, including relevant happy path, empty/error state, and auth/permission state when applicable
    - Resolve any merge conflicts
    - Ensure branch is up to date with target branch
    - Only request review after these checks pass

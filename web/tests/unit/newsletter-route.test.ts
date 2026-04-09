@@ -50,6 +50,22 @@ describe("POST /api/newsletter", () => {
     expect(vi.mocked(subscribeToNewsletter)).not.toHaveBeenCalled();
   });
 
+  it("returns 400 for malformed JSON payloads", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid JSON payload" });
+    expect(vi.mocked(subscribeToNewsletter)).not.toHaveBeenCalled();
+  });
+
   it("does not disclose setup instructions when config is missing", async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
     vi.mocked(isNewsletterConfigured).mockReturnValue(false);

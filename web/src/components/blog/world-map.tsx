@@ -69,6 +69,7 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
 
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activePin, setActivePin] = useState<ActivePin | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   // Posts that have coordinates
   const allMappable = useMemo(
@@ -213,13 +214,19 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
       ) : null}
 
       {/* Map */}
-      <div className="overflow-hidden rounded-2xl border border-[var(--border)] shadow-xl" style={{ height: 560 }}>
+      <div
+        className="overflow-hidden rounded-2xl border border-[var(--border)] shadow-xl"
+        data-map-ready={isMapReady ? "true" : "false"}
+        data-testid="world-map"
+        style={{ height: 560 }}
+      >
         <Map
           ref={mapRef}
           initialViewState={{ latitude: 39.5, longitude: -98.35, zoom: 3.5 }}
           interactiveLayerIds={["clusters", "unclustered-point"]}
           mapStyle={mapStyle}
           onClick={handleMapClick}
+          onLoad={() => setIsMapReady(true)}
           style={{ height: "100%", width: "100%" }}
         >
           <NavigationControl position="top-right" />

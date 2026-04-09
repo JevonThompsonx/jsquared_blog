@@ -49,7 +49,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const nonce = headersList.get("x-nonce") ?? undefined;
 
   return (
-    <html lang="en" className={lora.variable}>
+    <html lang="en" className={lora.variable} data-scroll-behavior="smooth">
       <body className="antialiased">
         <a className="skip-link" href="#main-content">
           Skip to main content

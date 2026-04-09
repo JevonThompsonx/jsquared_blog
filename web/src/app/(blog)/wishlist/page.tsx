@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { WorldMap } from "@/components/blog/world-map";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getPublicEnv } from "@/lib/env";
+import type { PublicWishlistPlace } from "@/server/queries/wishlist";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 
 export const metadata: Metadata = {
@@ -14,7 +15,21 @@ export const metadata: Metadata = {
 
 export default async function WishlistPage() {
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
-  const places = await listPublicWishlistPlaces();
+  let places: PublicWishlistPlace[] = [];
+  let wishlistLoadFailed = false;
+
+  try {
+    places = await listPublicWishlistPlaces();
+  } catch (error) {
+    console.error("[wishlist] Failed to load public wishlist places", error);
+    wishlistLoadFailed = true;
+  }
+
+  const summary = wishlistLoadFailed
+    ? "The public wishlist is temporarily offline."
+    : places.length > 0
+      ? `${places.length} ${places.length === 1 ? "destination is" : "destinations are"} on the public wishlist.`
+      : "No destinations are on the public wishlist yet.";
 
   const mapPlaces = places.map((place) => ({
     id: place.id,
@@ -38,11 +53,7 @@ export default async function WishlistPage() {
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Explore</p>
           <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">Travel Wishlist</h1>
-          <p className="mt-2 text-base leading-relaxed text-[var(--text-secondary)]">
-            {places.length > 0
-              ? `${places.length} ${places.length === 1 ? "destination is" : "destinations are"} on the public wishlist.`
-              : "No destinations are on the public wishlist yet."}
-          </p>
+          <p className="mt-2 text-base leading-relaxed text-[var(--text-secondary)]">{summary}</p>
         </div>
 
         {places.length > 0 && NEXT_PUBLIC_STADIA_MAPS_API_KEY ? (
@@ -50,7 +61,11 @@ export default async function WishlistPage() {
         ) : null}
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
-          {places.length === 0 ? (
+          {wishlistLoadFailed ? (
+            <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
+              Wishlist temporarily unavailable. Please try again later.
+            </p>
+          ) : places.length === 0 ? (
             <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
               No destinations are on the public wishlist yet.
             </p>
@@ -74,7 +89,7 @@ export default async function WishlistPage() {
                       <a
                         className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
                         href={place.externalUrl}
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         target="_blank"
                       >
                         Learn more

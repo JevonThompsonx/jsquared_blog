@@ -46,6 +46,18 @@ describe("newsletter signup form response handling", () => {
     });
   });
 
+  it("fails closed when the 2xx status code does not match the newsletter result shape", () => {
+    expect(getNewsletterResponseState(200, { status: "subscribed", source: "created" })).toEqual({
+      status: "error",
+      message: "Something went wrong. Please try again.",
+    });
+
+    expect(getNewsletterResponseState(201, { status: "already-subscribed" })).toEqual({
+      status: "error",
+      message: "Something went wrong. Please try again.",
+    });
+  });
+
   it("does not parse JSON for a 202 response", async () => {
     const jsonMock = vi.fn().mockRejectedValue(new Error("no body"));
 

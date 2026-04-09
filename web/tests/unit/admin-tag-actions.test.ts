@@ -29,6 +29,11 @@ const ADMIN_SESSION: AdminSession = {
   expires: "2099-01-01T00:00:00.000Z",
 };
 
+const NON_ADMIN_SESSION: AdminSession = {
+  user: { id: "author-1", role: "author" },
+  expires: "2099-01-01T00:00:00.000Z",
+};
+
 function makeFormData(values: { tagId?: string; description?: string }): FormData {
   const formData = new FormData();
 
@@ -57,6 +62,17 @@ describe("updateTagDescriptionAction", () => {
     );
 
     expect(vi.mocked(updateTagDescription)).not.toHaveBeenCalled();
+  });
+
+  it("redirects non-admin callers to the admin sign-in gate", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(updateTagDescriptionAction(makeFormData({ tagId: "tag-1", description: "Stories" }))).rejects.toThrow(
+      "NEXT_REDIRECT:/admin?error=AccessDenied",
+    );
+
+    expect(vi.mocked(updateTagDescription)).not.toHaveBeenCalled();
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
   });
 
   it("does not persist invalid payloads", async () => {

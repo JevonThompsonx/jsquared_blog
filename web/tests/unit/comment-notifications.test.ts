@@ -120,4 +120,18 @@ describe("comment notifications", () => {
       }),
     );
   });
+
+  it("returns a failed result when resend send throws", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    process.env.RESEND_API_KEY = "resend-test-key";
+    process.env.RESEND_FROM_EMAIL = "noreply@example.com";
+    process.env.COMMENT_NOTIFICATION_TO_EMAIL = "owner@example.com";
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("provider offline"));
+
+    const result = await sendCommentNotification(makeComment());
+
+    expect(result).toEqual({ status: "failed", reason: "send-error" });
+    expect(consoleErrorSpy).toHaveBeenCalledOnce();
+  });
 });

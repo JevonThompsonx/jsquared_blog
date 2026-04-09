@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 vi.mock("@/components/layout/site-header", () => ({
   SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header"),
 }));
@@ -22,14 +24,17 @@ import { getPublicEnv } from "@/lib/env";
 import WishlistPage from "@/app/(blog)/wishlist/page";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 
+const mockedGetPublicEnv = getPublicEnv as unknown as ReturnType<typeof vi.fn>;
+const mockedListPublicWishlistPlaces = listPublicWishlistPlaces as unknown as ReturnType<typeof vi.fn>;
+
 describe("WishlistPage", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it("renders an empty state when there are no public wishlist places", async () => {
-    vi.mocked(getPublicEnv).mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
-    vi.mocked(listPublicWishlistPlaces).mockResolvedValue([]);
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedListPublicWishlistPlaces.mockResolvedValue([]);
 
     const markup = renderToStaticMarkup(await WishlistPage());
 
@@ -39,8 +44,8 @@ describe("WishlistPage", () => {
   });
 
   it("renders the wishlist map and list when public places exist", async () => {
-    vi.mocked(getPublicEnv).mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
-    vi.mocked(listPublicWishlistPlaces).mockResolvedValue([
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
+    mockedListPublicWishlistPlaces.mockResolvedValue([
       {
         id: "place-1",
         name: "Glacier National Park",
@@ -65,6 +70,26 @@ describe("WishlistPage", () => {
     expect(markup).toContain('data-place-id="place-1"');
     expect(markup).toContain('href="https://example.com/glacier"');
     expect(markup).toContain('target="_blank"');
-    expect(markup).toContain('rel="noreferrer"');
+    expect(markup).toContain('rel="noopener noreferrer"');
+  });
+
+  it("renders the wishlist shell when loading places fails", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
+    mockedListPublicWishlistPlaces.mockRejectedValue(new Error("database unavailable"));
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).toContain("Travel Wishlist");
+    expect(markup).toContain("Wishlist temporarily unavailable. Please try again later.");
+    expect(markup.match(/Wishlist temporarily unavailable\. Please try again later\./g)?.length).toBe(1);
+    expect(markup).not.toContain("No destinations are on the public wishlist yet.");
+    expect(markup).not.toContain("Map markers:");
+    expect(markup).not.toContain('data-testid="public-wishlist-list"');
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[wishlist] Failed to load public wishlist places",
+      expect.any(Error),
+    );
+    consoleErrorSpy.mockRestore();
   });
 });

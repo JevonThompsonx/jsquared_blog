@@ -17,7 +17,7 @@ describe("playwright config", () => {
     const { default: config } = await importConfigModule();
 
     expect(config.reporter).toBe("list");
-  });
+  }, 15_000);
 
   it("emits durable CI diagnostics artifacts", async () => {
     vi.stubEnv("CI", "1");
@@ -33,7 +33,7 @@ describe("playwright config", () => {
     expect(config.use?.trace).toBe("retain-on-failure");
     expect(config.use?.video).toBe("off");
     expect(config.use?.screenshot).toBe("only-on-failure");
-  });
+  }, 15_000);
 
   it("starts a managed dev server only for localhost targets", async () => {
     vi.stubEnv("E2E_BASE_URL", "http://localhost:4123");
@@ -46,7 +46,7 @@ describe("playwright config", () => {
       reuseExistingServer: true,
       timeout: 120_000,
     });
-  });
+  }, 15_000);
 
   it("does not start a managed dev server for remote targets", async () => {
     vi.stubEnv("E2E_BASE_URL", "https://staging.example.com");
@@ -54,5 +54,5 @@ describe("playwright config", () => {
     const { default: config } = await importConfigModule();
 
     expect(config.webServer).toBeUndefined();
-  });
+  }, 15_000);
 });

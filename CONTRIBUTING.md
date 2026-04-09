@@ -443,9 +443,14 @@ What you're adding and why.
 ## Testing
 How you tested this.
 
+If your change affects implementation or review workflow, include whether you followed TDD, which affected pages you checked, and whether the relevant build succeeded.
+
 ## Checklist
 - [ ] Follows format guidelines
 - [ ] Tested with Claude Code
+- [ ] Used a TDD approach where code changed
+- [ ] Checked all affected pages where applicable
+- [ ] Relevant build succeeds
 - [ ] No sensitive info (API keys, paths)
 - [ ] Clear descriptions
 ```

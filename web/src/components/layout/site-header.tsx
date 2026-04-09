@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { SessionContext } from "next-auth/react";
+import { useContext, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { useNextTheme } from "@/components/theme/theme-provider";
+import { adminDashboardHref } from "@/lib/admin/navigation";
 
 function SunIcon() {
   return (
@@ -38,6 +39,11 @@ function SearchIcon() {
 
 import { MobileNav } from "./mobile-nav";
 
+function useOptionalAdminSession() {
+  const sessionContext = useContext(SessionContext);
+  return sessionContext?.data ?? null;
+}
+
 export function ThemeToggle() {
   const { mode, toggleMode } = useNextTheme();
 
@@ -65,8 +71,8 @@ export function ThemeToggle() {
 }
 
 export function SiteHeader() {
-  const { data: adminSession } = useSession();
-  const isAdminSignedIn = Boolean(adminSession?.user?.id);
+  const adminSession = useOptionalAdminSession();
+  const isAdminSignedIn = adminSession?.user?.role === "admin";
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -213,8 +219,8 @@ export function SiteHeader() {
           ) : null}
 
           {isAdminSignedIn ? (
-            <Link className="max-w-[10rem] truncate text-sm font-semibold text-[var(--accent)] hover:underline" href="/admin">
-              {adminSession?.user?.githubLogin ?? adminSession?.user?.email ?? "Admin"}
+            <Link className="nav-link-pill text-sm font-semibold" href={adminDashboardHref}>
+              Admin
             </Link>
           ) : null}
         </div>

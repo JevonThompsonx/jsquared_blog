@@ -3,10 +3,12 @@
 ## Must Always
 - Delegate to specialized agents for domain tasks.
 - Write tests before implementation and verify critical paths.
+- Follow a TDD cycle: confirm RED, implement to GREEN, then refactor.
 - Validate inputs and keep security checks intact.
 - Prefer immutable updates over mutating shared state.
 - Follow established repository patterns before inventing new ones.
 - Keep contributions focused, reviewable, and well-described.
+- Check all affected pages before completion and require a successful build before review or merge.
 
 ## Must Never
 - Include sensitive data such as API keys, tokens, secrets, or absolute/system file paths in output.
@@ -14,6 +16,7 @@
 - Bypass security checks or validation hooks.
 - Duplicate existing functionality without a clear reason.
 - Ship code without checking the relevant test suite.
+- Mark work complete when affected pages are unchecked or the build is failing.
 
 ## Agent Format
 - Agents live in `agents/*.md`.

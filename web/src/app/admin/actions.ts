@@ -37,9 +37,27 @@ function normalizeScheduledTimestamp(
   }
 
   const parsedOffset = Number.parseInt(offsetMinutesValue, 10);
-  const offsetMinutes = Number.isFinite(parsedOffset) ? parsedOffset : 0;
-  const normalizedValue = trimmedValue.includes("T") ? `${trimmedValue}:00` : trimmedValue;
-  const localTimestamp = Date.parse(normalizedValue);
+  if (!Number.isFinite(parsedOffset)) {
+    throw new Error("Invalid request");
+  }
+
+  const offsetMinutes = parsedOffset;
+
+  const localDateTimeMatch = trimmedValue.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+
+  const localTimestamp = localDateTimeMatch
+    ? Date.UTC(
+        Number.parseInt(localDateTimeMatch[1], 10),
+        Number.parseInt(localDateTimeMatch[2], 10) - 1,
+        Number.parseInt(localDateTimeMatch[3], 10),
+        Number.parseInt(localDateTimeMatch[4], 10),
+        Number.parseInt(localDateTimeMatch[5], 10),
+        Number.parseInt(localDateTimeMatch[6] ?? "0", 10),
+      )
+    : Date.parse(trimmedValue);
+
   if (Number.isNaN(localTimestamp)) {
     return new Date(Number.NaN);
   }
@@ -49,7 +67,7 @@ function normalizeScheduledTimestamp(
 
 async function ensureAdmin() {
   const session = await requireAdminSession();
-  if (!session?.user?.id) {
+  if (session?.user?.role !== "admin" || !session.user.id) {
     redirect("/admin?error=AccessDenied");
   }
 

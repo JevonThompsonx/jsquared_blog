@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src }: { alt: string; src: string }) => createElement("img", { alt, src }),
+  default: ({ alt, src, sizes }: { alt: string; src: string; sizes?: string }) =>
+    createElement("img", { alt, src, sizes }),
 }));
 
 vi.mock("@/components/layout/site-header", () => ({
@@ -26,5 +27,17 @@ describe("AboutPage", () => {
     expect(markup).toContain("Read the adventures.");
     expect(markup).toContain('href="/"');
     expect(markup).toContain('href="/signup"');
+  });
+
+  it("provides responsive sizes for every fill image", () => {
+    const markup = renderToStaticMarkup(AboutPage());
+
+    expect(markup).toContain('alt="Jevon and Jessica"');
+    expect(markup).toContain('alt="Jevon"');
+    expect(markup).toContain('alt="Jessica"');
+    expect(markup).toContain('alt="Hiking"');
+    expect(markup).toContain('alt="Van / camping"');
+    expect(markup).toContain('alt="Travel"');
+    expect(markup).toContain('sizes=');
   });
 });

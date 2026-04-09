@@ -23,14 +23,14 @@ export function getNewsletterResponseState(statusCode: number, data: NewsletterA
     };
   }
 
-  if (data.status === "already-subscribed") {
+  if (statusCode === 200 && data.status === "already-subscribed") {
     return {
       status: "success",
       message: "You're already on the list!",
     };
   }
 
-  if (data.status === "subscribed") {
+  if (statusCode === 201 && data.status === "subscribed") {
     return {
       status: "success",
       message: "You're subscribed!",

@@ -60,6 +60,11 @@ const ADMIN_SESSION: AdminSession = {
   expires: "2099-01-01T00:00:00.000Z",
 };
 
+const NON_ADMIN_SESSION: AdminSession = {
+  user: { id: "author-1", role: "author" },
+  expires: "2099-01-01T00:00:00.000Z",
+};
+
 describe("admin action trust boundaries", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -74,11 +79,28 @@ describe("admin action trust boundaries", () => {
     expect(vi.mocked(createPostPreviewAccess)).not.toHaveBeenCalled();
   });
 
+  it("redirects non-admin sessions before preview creation", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(createPostPreviewLinkAction("post-1")).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
+
+    expect(vi.mocked(createPostPreviewAccess)).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid clone requests with a stable safe error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
 
     await expect(clonePost("")).rejects.toThrow("Invalid request");
     await expect(clonePost("   ")).rejects.toThrow("Invalid request");
+
+    expect(vi.mocked(clonePostById)).not.toHaveBeenCalled();
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
+  it("redirects non-admin sessions before clone requests", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(clonePost("post-1")).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
 
     expect(vi.mocked(clonePostById)).not.toHaveBeenCalled();
     expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
@@ -93,11 +115,27 @@ describe("admin action trust boundaries", () => {
     expect(vi.mocked(deletePosts)).not.toHaveBeenCalled();
   });
 
+  it("redirects non-admin sessions before delete requests", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(deletePostAction("post-1")).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
+
+    expect(vi.mocked(deletePosts)).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid bulk publish requests with a stable safe error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
 
     await expect(bulkPublishPosts([""])).rejects.toThrow("Invalid request");
     await expect(bulkPublishPosts(["   "])).rejects.toThrow("Invalid request");
+
+    expect(vi.mocked(publishPosts)).not.toHaveBeenCalled();
+  });
+
+  it("redirects non-admin sessions before bulk publish requests", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(bulkPublishPosts(["post-1"])).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
 
     expect(vi.mocked(publishPosts)).not.toHaveBeenCalled();
   });
@@ -111,11 +149,27 @@ describe("admin action trust boundaries", () => {
     expect(vi.mocked(unpublishPosts)).not.toHaveBeenCalled();
   });
 
+  it("redirects non-admin sessions before bulk unpublish requests", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(bulkUnpublishPosts(["post-1"])).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
+
+    expect(vi.mocked(unpublishPosts)).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid bulk delete requests with a stable safe error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
 
     await expect(bulkDeletePosts([""])).rejects.toThrow("Invalid request");
     await expect(bulkDeletePosts(["   "])).rejects.toThrow("Invalid request");
+
+    expect(vi.mocked(deletePosts)).not.toHaveBeenCalled();
+  });
+
+  it("redirects non-admin sessions before bulk delete requests", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(bulkDeletePosts(["post-1"])).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
 
     expect(vi.mocked(deletePosts)).not.toHaveBeenCalled();
   });
@@ -164,6 +218,16 @@ describe("admin action trust boundaries", () => {
 
     await expect(validatePostContentWarningsAction("{", null)).rejects.toThrow("Invalid post content");
     expect(vi.mocked(derivePostContent)).toHaveBeenCalledWith("{", null);
+  });
+
+  it("redirects non-admin sessions before validating post warnings", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(validatePostContentWarningsAction('{"type":"doc"}', null)).rejects.toThrow(
+      "NEXT_REDIRECT:/admin?error=AccessDenied",
+    );
+
+    expect(vi.mocked(derivePostContent)).not.toHaveBeenCalled();
   });
 
   it("rejects structurally invalid post warning content with a stable safe error", async () => {

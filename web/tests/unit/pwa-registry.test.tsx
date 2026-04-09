@@ -9,11 +9,11 @@ import { ServiceWorkerRegistry } from "@/components/pwa-registry";
 describe("ServiceWorkerRegistry", () => {
   const originalNavigator = window.navigator;
   const originalLocation = window.location;
-  const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
     document.body.innerHTML = "";
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
 
     Object.defineProperty(window, "navigator", {
       configurable: true,
@@ -24,16 +24,10 @@ describe("ServiceWorkerRegistry", () => {
       configurable: true,
       value: originalLocation,
     });
-
-    if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
-    } else {
-      process.env.NODE_ENV = originalNodeEnv;
-    }
   });
 
   it("does not register the service worker during local development", async () => {
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
 
     const register = vi.fn().mockResolvedValue(undefined);
 
@@ -66,7 +60,7 @@ describe("ServiceWorkerRegistry", () => {
   });
 
   it("registers the service worker on secure production pages", async () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
 
     const register = vi.fn().mockResolvedValue(undefined);
 

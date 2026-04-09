@@ -7,6 +7,8 @@ import { useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { Session as AdminSession } from "next-auth";
 
+import { adminDashboardHref, adminNavLinks } from "@/lib/admin/navigation";
+
 interface MobileNavProps {
   adminSession: AdminSession | null;
   publicSession: Session | null;
@@ -52,7 +54,7 @@ export function MobileNav({
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  const isAdminSignedIn = Boolean(adminSession?.user);
+  const isAdminSignedIn = adminSession?.user?.role === "admin";
   const isPublicSignedIn = Boolean(publicSession?.user);
   const closeMenu = () => setIsOpen(false);
 
@@ -137,15 +139,24 @@ export function MobileNav({
               {isAdminSignedIn && (
                 <div className="mt-4 flex flex-col gap-1.5">
                   <div className="px-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]/60">Admin</div>
-                  <Link
-                      className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
-                        pathname?.startsWith("/admin") ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
-                      }`}
-                      href="/admin"
-                      onClick={closeMenu}
-                    >
-                      Dashboard
-                    </Link>
+                  {adminNavLinks.map((link) => {
+                    const isActive = link.href === adminDashboardHref
+                      ? pathname === adminDashboardHref
+                      : pathname === link.href;
+
+                    return (
+                      <Link
+                        key={link.href}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
+                          isActive ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
+                        }`}
+                        href={link.href}
+                        onClick={closeMenu}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
                   <div className="px-4 pb-2 text-xs text-[var(--text-secondary)]">
                     Logged in as <span className="font-semibold text-[var(--accent)]">{adminSession?.user?.githubLogin ?? adminSession?.user?.email}</span>
                   </div>

@@ -94,6 +94,7 @@ vi.mock("@/server/posts/content", () => ({
 
 // ── Imports (after mocks) ──────────────────────────────────────────────────────
 import { redirect } from "next/navigation";
+import type { AdminSession } from "@/lib/auth/session";
 import { requireAdminSession } from "@/lib/auth/session";
 import { createPostRevision } from "@/server/dal/post-revisions";
 import { derivePostContent } from "@/server/posts/content";
@@ -101,8 +102,13 @@ import { createAdminPostAction, updateAdminPostAction } from "@/app/admin/action
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const ADMIN_SESSION = {
-  user: { id: "admin-1", email: "a@example.com", name: "Admin" },
+const ADMIN_SESSION: AdminSession = {
+  user: { id: "admin-1", role: "admin", email: "a@example.com", name: "Admin" },
+  expires: new Date(Date.now() + 3_600_000).toISOString(),
+};
+
+const NON_ADMIN_SESSION: AdminSession = {
+  user: { id: "author-1", role: "author", email: "a@example.com", name: "Author" },
   expires: new Date(Date.now() + 3_600_000).toISOString(),
 };
 
@@ -178,6 +184,27 @@ describe("updateAdminPostAction — revision capture", () => {
     });
   });
 
+  it("redirects non-admin callers before starting create transactions", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(createAdminPostAction(buildFormData())).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(mockDb.transaction).not.toHaveBeenCalled();
+    expect(mockInsertValues).not.toHaveBeenCalled();
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith("/admin?error=AccessDenied");
+  });
+
+  it("redirects non-admin callers before starting update transactions", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(updateAdminPostAction("post-1", buildFormData())).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mockDb.transaction).not.toHaveBeenCalled();
+    expect(vi.mocked(createPostRevision)).not.toHaveBeenCalled();
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith("/admin?error=AccessDenied");
+  });
+
   it("persists structured song metadata when creating a post", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
@@ -199,6 +226,46 @@ describe("updateAdminPostAction — revision capture", () => {
         songUrl: "https://open.spotify.com/track/123",
       }),
     );
+  });
+
+  it("normalizes scheduled create payloads to UTC using the browser offset and leaves publishedAt unset", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+
+    await expect(
+      createAdminPostAction(
+        buildFormData({
+          status: "scheduled",
+          scheduledPublishTime: "2026-04-07T18:30",
+          scheduledPublishOffsetMinutes: "240",
+        }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "scheduled",
+        publishedAt: null,
+        scheduledPublishTime: new Date("2026-04-07T22:30:00.000Z"),
+      }),
+    );
+  });
+
+  it("rejects scheduled create payloads with an invalid browser offset", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+
+    await expect(
+      createAdminPostAction(
+        buildFormData({
+          status: "scheduled",
+          scheduledPublishTime: "2026-04-07T18:30",
+          scheduledPublishOffsetMinutes: "not-a-number",
+        }),
+      ),
+    ).rejects.toThrow("Invalid request");
+
+    expect(mockDb.transaction).not.toHaveBeenCalled();
+    expect(mockInsertValues).not.toHaveBeenCalled();
   });
 
   it("captures and updates song metadata during post updates", async () => {
@@ -245,6 +312,50 @@ describe("updateAdminPostAction — revision capture", () => {
         songUrl: "https://open.spotify.com/track/123",
       }),
     );
+  });
+
+  it("normalizes scheduled update payloads to UTC using the browser offset and clears publishedAt", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+    mockFindFirst.mockResolvedValue({ ...EXISTING_POST, publishedAt: new Date("2026-04-01T12:00:00.000Z") });
+
+    await expect(
+      updateAdminPostAction(
+        "post-1",
+        buildFormData({
+          status: "scheduled",
+          scheduledPublishTime: "2026-04-07T18:30",
+          scheduledPublishOffsetMinutes: "-120",
+        }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "scheduled",
+        publishedAt: null,
+        scheduledPublishTime: new Date("2026-04-07T16:30:00.000Z"),
+      }),
+    );
+  });
+
+  it("rejects scheduled update payloads with an invalid browser offset", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+
+    await expect(
+      updateAdminPostAction(
+        "post-1",
+        buildFormData({
+          status: "scheduled",
+          scheduledPublishTime: "2026-04-07T18:30",
+          scheduledPublishOffsetMinutes: "not-a-number",
+        }),
+      ),
+    ).rejects.toThrow("Invalid request");
+
+    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mockDb.transaction).not.toHaveBeenCalled();
+    expect(mockUpdateSet).not.toHaveBeenCalled();
   });
 
   it("rejects unsafe song URLs before starting a transaction", async () => {

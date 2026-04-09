@@ -14,7 +14,7 @@ const updateTagDescriptionSchema = z.object({
 
 export async function updateTagDescriptionAction(formData: FormData): Promise<void> {
   const session = await requireAdminSession();
-  if (!session) {
+  if (session?.user?.role !== "admin") {
     redirect("/admin?error=AccessDenied");
   }
 

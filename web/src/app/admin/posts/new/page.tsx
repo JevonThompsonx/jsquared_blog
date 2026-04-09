@@ -11,7 +11,7 @@ import { createAdminPostAction } from "../../actions";
 
 export default async function NewAdminPostPage() {
   const session = await requireAdminSession();
-  if (!session) {
+  if (session?.user?.role !== "admin") {
     redirect("/admin");
   }
 
