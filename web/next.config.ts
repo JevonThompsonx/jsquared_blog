@@ -68,6 +68,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/_stats/js/script.js",
+        destination: "https://plausible.io/js/script.js",
+      },
+      {
+        source: "/_stats/api/event",
+        destination: "https://plausible.io/api/event",
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -113,8 +125,8 @@ export default withSentryConfig(nextConfig, {
   // Upload a wider set of client files for better stack trace resolution
   widenClientFileUpload: true,
 
-  // Proxy Sentry requests through /monitoring to bypass ad-blockers
-  tunnelRoute: "/monitoring",
+  // Proxy Sentry requests through a first-party path to reduce ad-blocker noise
+  tunnelRoute: "/_err",
 
   // Suppress non-CI source map upload logs
   silent: !process.env.CI,

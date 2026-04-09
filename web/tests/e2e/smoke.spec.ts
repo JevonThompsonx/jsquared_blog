@@ -12,6 +12,12 @@ import {
   selectThemeOption,
 } from "./helpers/admin";
 
+type AxePage = ConstructorParameters<typeof AxeBuilder>[0]["page"];
+
+function buildAxe(page: Parameters<typeof test>[0] extends never ? never : import("@playwright/test").Page) {
+  return new AxeBuilder({ page: page as unknown as AxePage });
+}
+
 // These tests run against a live server (local dev or production).
 // Set E2E_BASE_URL to target a specific environment, otherwise defaults to
 // http://localhost:3000 (local dev server must be running).
@@ -81,6 +87,12 @@ test.describe("public pages smoke tests", () => {
     expect(contentType).toMatch(/xml/);
     const body = await response.text();
     expect(body).toContain("<rss");
+  });
+
+  test("favicon route resolves without 404", async ({ request }) => {
+    const response = await request.get("/favicon.ico");
+    expect(response.status()).toBe(200);
+    expect(response.url()).toMatch(/\/icon\.svg$/);
   });
 
   test("category RSS feed returns valid XML", async ({ request }) => {
@@ -260,7 +272,7 @@ test.describe("public pages smoke tests", () => {
   test("homepage has no critical axe-core violations", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("article").first()).toBeVisible({ timeout: 15_000 });
-    const results = await new AxeBuilder({ page })
+    const results = await buildAxe(page)
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
     expect(results.violations).toEqual([]);
@@ -269,7 +281,7 @@ test.describe("public pages smoke tests", () => {
   test("category page has no critical axe-core violations", async ({ page }) => {
     await page.goto("/category/Travel");
     await expect(page.getByRole("heading", { name: "Travel", exact: true })).toBeVisible({ timeout: 10_000 });
-    const results = await new AxeBuilder({ page })
+    const results = await buildAxe(page)
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
     expect(results.violations).toEqual([]);
@@ -278,7 +290,7 @@ test.describe("public pages smoke tests", () => {
   test("login page has no critical axe-core violations", async ({ page }) => {
     await page.goto("/login");
     await expect(page.locator('input[type="email"]')).toBeVisible();
-    const results = await new AxeBuilder({ page })
+    const results = await buildAxe(page)
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
     expect(results.violations).toEqual([]);

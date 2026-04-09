@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
-import { listAdminWishlistPlaces } from "@/server/dal/admin-wishlist-places";
+import { listAdminWishlistPlaces, type AdminWishlistPlaceRecord } from "@/server/dal/admin-wishlist-places";
 
 import { createWishlistPlaceAction, deleteWishlistPlaceAction, updateWishlistPlaceAction } from "./actions";
 
@@ -13,7 +13,15 @@ export default async function AdminWishlistPage() {
     redirect("/admin");
   }
 
-  const places = await listAdminWishlistPlaces();
+  let places: AdminWishlistPlaceRecord[] = [];
+  let wishlistLoadFailed = false;
+
+  try {
+    places = await listAdminWishlistPlaces();
+  } catch (error) {
+    console.error("[admin wishlist] Failed to load wishlist places", error);
+    wishlistLoadFailed = true;
+  }
 
   return (
     <main id="main-content" className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
@@ -37,59 +45,72 @@ export default async function AdminWishlistPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
-          <form action={createWishlistPlaceAction} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl" data-testid="admin-wishlist-create-form">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Add destination</h2>
-            <div className="mt-5 space-y-4">
-              <label className="block text-sm text-[var(--text-secondary)]">
-                <span className="mb-1 block font-medium text-[var(--text-primary)]">Name</span>
-                <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="name" required type="text" />
-              </label>
-              <label className="block text-sm text-[var(--text-secondary)]">
-                <span className="mb-1 block font-medium text-[var(--text-primary)]">Location label</span>
-                <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="locationName" required type="text" />
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
+          {wishlistLoadFailed ? (
+            <section className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl">
+              <h2 className="text-xl font-semibold text-[var(--text-primary)]">Wishlist unavailable</h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+                The current wishlist data could not be loaded, so editing is temporarily disabled to avoid making changes without the latest state.
+              </p>
+            </section>
+          ) : (
+            <form action={createWishlistPlaceAction} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl" data-testid="admin-wishlist-create-form">
+              <h2 className="text-xl font-semibold text-[var(--text-primary)]">Add destination</h2>
+              <div className="mt-5 space-y-4">
                 <label className="block text-sm text-[var(--text-secondary)]">
-                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Latitude</span>
-                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="latitude" required step="any" type="number" />
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Name</span>
+                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="name" required type="text" />
                 </label>
                 <label className="block text-sm text-[var(--text-secondary)]">
-                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Longitude</span>
-                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="longitude" required step="any" type="number" />
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Location label</span>
+                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="locationName" required type="text" />
                 </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm text-[var(--text-secondary)]">
+                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Latitude</span>
+                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="latitude" required step="any" type="number" />
+                  </label>
+                  <label className="block text-sm text-[var(--text-secondary)]">
+                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Longitude</span>
+                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="longitude" required step="any" type="number" />
+                  </label>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm text-[var(--text-secondary)]">
+                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Zoom</span>
+                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="8" name="zoom" step="1" type="number" />
+                  </label>
+                  <label className="block text-sm text-[var(--text-secondary)]">
+                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
+                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="0" name="sortOrder" step="1" type="number" />
+                  </label>
+                </div>
+                <label className="block text-sm text-[var(--text-secondary)]">
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Optional link</span>
+                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="externalUrl" placeholder="https://example.com/place-guide" type="url" />
+                </label>
+                <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                  <label className="inline-flex items-center gap-2">
+                    <input name="visited" type="checkbox" />
+                    Visited already
+                  </label>
+                  <label className="inline-flex items-center gap-2">
+                    <input name="isPublic" type="checkbox" />
+                    Show publicly
+                  </label>
+                </div>
+                <button className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold" type="submit">
+                  Save destination
+                </button>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm text-[var(--text-secondary)]">
-                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Zoom</span>
-                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="8" name="zoom" step="1" type="number" />
-                </label>
-                <label className="block text-sm text-[var(--text-secondary)]">
-                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
-                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="0" name="sortOrder" step="1" type="number" />
-                </label>
-              </div>
-              <label className="block text-sm text-[var(--text-secondary)]">
-                <span className="mb-1 block font-medium text-[var(--text-primary)]">Optional link</span>
-                <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="externalUrl" placeholder="https://example.com/place-guide" type="url" />
-              </label>
-              <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
-                <label className="inline-flex items-center gap-2">
-                  <input name="visited" type="checkbox" />
-                  Visited already
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input name="isPublic" type="checkbox" />
-                  Show publicly
-                </label>
-              </div>
-              <button className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold" type="submit">
-                Save destination
-              </button>
-            </div>
-          </form>
+            </form>
+          )}
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
-            {places.length === 0 ? (
+            {wishlistLoadFailed ? (
+              <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
+                Wishlist data is temporarily unavailable. Please try again later.
+              </p>
+            ) : places.length === 0 ? (
               <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
                 No wishlist destinations yet.
               </p>

@@ -30,6 +30,10 @@ export const metadata: Metadata = {
     template: "%s | J²Adventures",
   },
   description: "Travel stories, maps, camps, hikes, and photo-led field notes from J²Adventures.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/favicon.ico"],
+  },
   openGraph: {
     title: "J²Adventures",
     description: "Travel stories, maps, camps, hikes, and photo-led field notes from J²Adventures.",
@@ -58,10 +62,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <ServiceWorkerRegistry />
         {process.env.NODE_ENV === "production" ? (
           <Script
+            data-api="/_stats/api/event"
             data-domain="jsquaredadventures.com"
             defer
             nonce={nonce}
-            src="https://plausible.io/js/script.js"
+            src="/_stats/js/script.js"
             strategy="afterInteractive"
           />
         ) : null}
