@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import { canRunAuthenticatedPublicFlows } from "@/lib/e2e/public-authenticated-guard";
+import { E2E_FIXTURE_POST_TITLE } from "@/lib/e2e/fixture-post";
 
 import {
   configuredPublicEmail,
@@ -58,7 +59,7 @@ publicTest.describe("authenticated public-user flows", () => {
     await page.goto("/bookmarks");
 
     await expect(page.getByRole("heading", { name: "Saved posts" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Read: E2E Admin Fixture Post/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: `Read: ${E2E_FIXTURE_POST_TITLE}` })).toBeVisible();
   });
 
   publicTest("signed-in user can remove a saved post from bookmarks", async ({ page }) => {
@@ -98,7 +99,7 @@ publicTest.describe("authenticated public-user flows", () => {
     await page.goto("/bookmarks");
 
     await expect(page.getByRole("heading", { name: "Saved posts" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Read: E2E Admin Fixture Post/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: `Read: ${E2E_FIXTURE_POST_TITLE}` })).toHaveCount(0);
   });
 
   publicTest("signed-in user can load account settings", async ({ page }) => {

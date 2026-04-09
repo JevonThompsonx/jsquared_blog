@@ -11,6 +11,13 @@ import { and, count, eq } from "drizzle-orm";
 
 import { authAccounts, categories, comments, posts, profiles, users } from "../src/drizzle/schema";
 import { getDb, getDbClient } from "../src/lib/db-core";
+import {
+  E2E_FIXTURE_POST_CONTENT_TEXT,
+  E2E_FIXTURE_POST_EXCERPT,
+  E2E_FIXTURE_POST_ID,
+  E2E_FIXTURE_POST_SLUG,
+  E2E_FIXTURE_POST_TITLE,
+} from "../src/lib/e2e/fixture-post";
 import { findSupabaseAuthUserByEmail } from "../src/lib/e2e/public-auth-fixture";
 import { readEnvFileValue, writeEnvFileValues } from "../src/lib/e2e/env-file";
 import { createPublicEnvArtifactMetadata } from "../src/lib/e2e/public-env-artifact";
@@ -20,8 +27,6 @@ import { loadEnvironmentFiles } from "../src/lib/env-loader";
 loadEnvironmentFiles();
 
 const ENV_FILE_PATH = path.resolve(process.cwd(), ".env.test.local");
-const FIXTURE_POST_ID = "e2e-admin-post-fixture";
-const FIXTURE_POST_SLUG = "e2e-admin-fixture-post";
 const FIXTURE_CATEGORY_ID = "category-road-trips";
 const FIXTURE_AUTHOR_ID = "e2e-admin-author";
 const FIXTURE_COMMENTER_ID = "e2e-commenter";
@@ -239,22 +244,22 @@ async function ensureFixturePost(): Promise<void> {
   const hasViewCount = await hasPostViewCountColumn();
   const timestamp = now.getTime();
   const insertEntries: Array<[string, string | number | null]> = [
-    ["id", FIXTURE_POST_ID],
-    ["title", "E2E Admin Fixture Post"],
-    ["slug", FIXTURE_POST_SLUG],
+    ["id", E2E_FIXTURE_POST_ID],
+    ["title", E2E_FIXTURE_POST_TITLE],
+    ["slug", E2E_FIXTURE_POST_SLUG],
     ["content_json", JSON.stringify({
       type: "doc",
       content: [
         {
           type: "paragraph",
-          content: [{ type: "text", text: "Stable fixture content for authenticated admin smoke coverage." }],
+          content: [{ type: "text", text: E2E_FIXTURE_POST_CONTENT_TEXT }],
         },
       ],
     })],
     ["content_format", "tiptap-json"],
     ["content_html", null],
-    ["content_plain_text", "Stable fixture content for authenticated admin smoke coverage."],
-    ["excerpt", "Stable fixture post used by Playwright admin smoke tests."],
+    ["content_plain_text", E2E_FIXTURE_POST_CONTENT_TEXT],
+    ["excerpt", E2E_FIXTURE_POST_EXCERPT],
     ["status", "published"],
     ["layout_type", "standard"],
     ["published_at", timestamp],
@@ -280,9 +285,21 @@ async function ensureFixturePost(): Promise<void> {
   insertEntries.push(["created_at", timestamp], ["updated_at", timestamp]);
 
   const updateEntries: Array<[string, string | number | null]> = [
-    ["title", "E2E Admin Fixture Post"],
-    ["slug", FIXTURE_POST_SLUG],
-    ["excerpt", "Stable fixture post used by Playwright admin smoke tests."],
+    ["title", E2E_FIXTURE_POST_TITLE],
+    ["slug", E2E_FIXTURE_POST_SLUG],
+    ["content_json", JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: E2E_FIXTURE_POST_CONTENT_TEXT }],
+        },
+      ],
+    })],
+    ["content_format", "tiptap-json"],
+    ["content_html", null],
+    ["content_plain_text", E2E_FIXTURE_POST_CONTENT_TEXT],
+    ["excerpt", E2E_FIXTURE_POST_EXCERPT],
     ["status", "published"],
     ["author_id", FIXTURE_AUTHOR_ID],
     ["category_id", FIXTURE_CATEGORY_ID],
@@ -317,7 +334,7 @@ async function ensureFixtureComments(): Promise<void> {
   if (!existingParentComment) {
     await db.insert(comments).values({
       id: FIXTURE_PARENT_COMMENT_ID,
-      postId: FIXTURE_POST_ID,
+      postId: E2E_FIXTURE_POST_ID,
       authorId: FIXTURE_COMMENTER_ID,
       content: "Fixture top-level comment for admin moderation smoke coverage.",
       parentId: null,
@@ -333,7 +350,7 @@ async function ensureFixtureComments(): Promise<void> {
   if (!existingReplyComment) {
     await db.insert(comments).values({
       id: FIXTURE_REPLY_COMMENT_ID,
-      postId: FIXTURE_POST_ID,
+      postId: E2E_FIXTURE_POST_ID,
       authorId: FIXTURE_COMMENTER_ID,
       content: "Fixture reply comment that keeps the moderation thread non-empty.",
       parentId: FIXTURE_PARENT_COMMENT_ID,
@@ -369,21 +386,21 @@ async function main(): Promise<void> {
   await ensureFixtureComments();
   const publicEnvMetadata = createPublicEnvArtifactMetadata({
     publicEmail: publicAuthFixture.email,
-    publicPostSlug: FIXTURE_POST_SLUG,
+    publicPostSlug: E2E_FIXTURE_POST_SLUG,
     createdAt: fixtureGeneratedAt,
   });
 
-  await writeEnvValue("E2E_ADMIN_POST_ID", FIXTURE_POST_ID);
-  await writeEnvValue("E2E_PUBLIC_POST_SLUG", FIXTURE_POST_SLUG);
+  await writeEnvValue("E2E_ADMIN_POST_ID", E2E_FIXTURE_POST_ID);
+  await writeEnvValue("E2E_PUBLIC_POST_SLUG", E2E_FIXTURE_POST_SLUG);
   await writeEnvValue("E2E_PUBLIC_FIXTURE_GENERATED_AT", fixtureGeneratedAt);
   await writeEnvValue("E2E_PUBLIC_ENV_METADATA", JSON.stringify(publicEnvMetadata));
 
   const commentCountRows = await db
     .select({ total: count() })
     .from(comments)
-    .where(and(eq(comments.postId, FIXTURE_POST_ID), eq(comments.visibility, "visible")));
+    .where(and(eq(comments.postId, E2E_FIXTURE_POST_ID), eq(comments.visibility, "visible")));
 
-  console.log(`Seeded E2E fixture post ${FIXTURE_POST_ID} with ${Number(commentCountRows[0]?.total ?? 0)} visible comments.`);
+  console.log(`Seeded E2E fixture post ${E2E_FIXTURE_POST_ID} with ${Number(commentCountRows[0]?.total ?? 0)} visible comments.`);
   console.log(`Wrote E2E_ADMIN_POST_ID to ${ENV_FILE_PATH}`);
   console.log(`Wrote E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD to ${ENV_FILE_PATH}`);
   console.log(`Wrote E2E_PUBLIC_POST_SLUG to ${ENV_FILE_PATH}`);

@@ -6,16 +6,6 @@ import { postRevisions, posts } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
 import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
 
-export type PostContentSnapshot = {
-  title: string;
-  slug: string;
-  contentJson: string;
-  excerpt: string | null;
-  songTitle?: string | null;
-  songArtist?: string | null;
-  songUrl?: string | null;
-};
-
 export type PostRevisionRecord = {
   id: string;
   postId: string;
@@ -209,81 +199,6 @@ export async function postExistsById(postId: string): Promise<boolean> {
     .limit(1);
 
   return rows.length > 0;
-}
-
-/**
- * Fetches a lightweight snapshot of the current post content fields.
- * Used by the restore endpoint to create a pre-restore revision before
- * overwriting the post with an older revision's content.
- */
-export async function getPostContentSnapshot(postId: string): Promise<PostContentSnapshot | null> {
-  const db = getDb();
-
-  const rows = await db
-    .select({
-      title: posts.title,
-      slug: posts.slug,
-      contentJson: posts.contentJson,
-      excerpt: posts.excerpt,
-      songTitle: posts.songTitle,
-      songArtist: posts.songArtist,
-      songUrl: posts.songUrl,
-    })
-    .from(posts)
-    .where(eq(posts.id, postId))
-    .limit(1);
-
-  const row = rows[0];
-  if (!row) {
-    return null;
-  }
-
-  return {
-    title: row.title,
-    slug: row.slug,
-    contentJson: row.contentJson,
-    excerpt: row.excerpt,
-    songTitle: row.songTitle,
-    songArtist: row.songArtist,
-    songUrl: row.songUrl,
-  };
-}
-
-/**
- * Applies the derived content of a revision back to the posts table.
- * Called by the restore endpoint after creating the pre-restore snapshot revision.
- * The caller is responsible for computing contentHtml and contentPlainText via derivePostContent.
- */
-export async function applyRevisionContentToPost(
-  postId: string,
-  content: {
-    title: string;
-    contentJson: string;
-    contentHtml: string | null;
-    contentPlainText: string | null;
-    excerpt: string | null;
-    songTitle?: string | null;
-    songArtist?: string | null;
-    songUrl?: string | null;
-    updatedAt: Date;
-  },
-): Promise<void> {
-  const db = getDb();
-
-  await db
-    .update(posts)
-    .set({
-      title: content.title,
-      contentJson: content.contentJson,
-      contentHtml: content.contentHtml,
-      contentPlainText: content.contentPlainText,
-      excerpt: content.excerpt,
-      songTitle: content.songTitle ?? null,
-      songArtist: content.songArtist ?? null,
-      songUrl: content.songUrl ?? null,
-      updatedAt: content.updatedAt,
-    })
-    .where(eq(posts.id, postId));
 }
 
 export async function restorePostRevisionAtomically(input: {

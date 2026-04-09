@@ -92,24 +92,6 @@ export function getSeriesHref(slug: string): `/series/${string}` {
   return `/series/${slug}`;
 }
 
-export function getMapHref(): "/map" {
-  return "/map";
-}
-
-export function getPreviewHref(postId: string): `/preview/${string}` {
-  return `/preview/${postId}`;
-}
-
-export function getPostIdFromSlug(slug: string): number | null {
-  const match = slug.match(/^(\d+)/);
-  if (!match) {
-    return null;
-  }
-
-  const postId = Number(match[1]);
-  return Number.isInteger(postId) && postId > 0 ? postId : null;
-}
-
 export function formatPublishedDate(value: string): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",

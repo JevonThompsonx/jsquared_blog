@@ -395,22 +395,6 @@ export async function getAnyPostRecordById(id: string): Promise<AnyStatusPostRec
   return rows[0] ?? null;
 }
 
-export async function schedulePost(postId: string, scheduledAt: Date): Promise<void> {
-  const db = getDb();
-  await db
-    .update(posts)
-    .set({ status: "scheduled", scheduledPublishTime: scheduledAt, updatedAt: new Date() })
-    .where(eq(posts.id, postId));
-}
-
-export async function unschedulePost(postId: string): Promise<void> {
-  const db = getDb();
-  await db
-    .update(posts)
-    .set({ status: "draft", scheduledPublishTime: null, updatedAt: new Date() })
-    .where(eq(posts.id, postId));
-}
-
 export async function incrementPostViewCount(postId: string): Promise<void> {
   if (!(await hasPostViewCountColumn())) {
     return;

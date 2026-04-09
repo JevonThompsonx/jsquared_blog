@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { categories, mediaAssets, postImages, postTags, posts, series, tags } from "@/drizzle/schema";
@@ -317,26 +317,6 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
     tags: postTagRows,
     galleryImages: galleryRows,
   };
-}
-
-export async function getAdminPostsByIds(postIds: string[]): Promise<Array<Pick<AdminPostRecord, "id" | "slug" | "title" | "status" | "publishedAt" | "scheduledPublishTime">>> {
-  const ids = [...new Set(postIds)];
-  if (ids.length === 0) {
-    return [];
-  }
-
-  const db = getDb();
-  return db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      status: posts.status,
-      publishedAt: posts.publishedAt,
-      scheduledPublishTime: posts.scheduledPublishTime,
-    })
-    .from(posts)
-    .where(inArray(posts.id, ids));
 }
 
 export async function listAdminCategories(): Promise<AdminCategoryRecord[]> {

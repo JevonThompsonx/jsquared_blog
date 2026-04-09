@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { WorldMap } from "@/components/blog/world-map";
 import { getPublicEnv } from "@/lib/env";
 import { listAllPublishedPosts } from "@/server/queries/posts";
+import type { BlogPost } from "@/types/blog";
 
 export const metadata: Metadata = {
   title: "Adventure Map",
@@ -18,7 +19,7 @@ function hasMapCoordinates(post: { locationLat: number | null; locationLng: numb
 
 export default async function MapPage() {
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
-  let allPosts = [];
+  let allPosts: BlogPost[] = [];
   let mapLoadFailed = false;
 
   try {
