@@ -129,16 +129,29 @@ export function buildAdminAuthOptions(): NextAuthOptions {
           if (githubProfile?.id) {
             const adminAccount = await getAdminAccountByGitHubId(String(githubProfile.id));
             if (adminAccount) {
-              const nextToken: typeof token & AdminToken = token;
-              nextToken.userId = adminAccount.userId;
-              nextToken.role = adminAccount.role;
-              nextToken.githubLogin = githubProfile.login ?? undefined;
-              nextToken.avatarUrl = adminAccount.avatarUrl;
+              return {
+                ...token,
+                userId: adminAccount.userId,
+                role: adminAccount.role,
+                githubLogin: githubProfile.login ?? undefined,
+                avatarUrl: adminAccount.avatarUrl,
+              } satisfies typeof token & AdminToken;
             }
           }
         }
 
-        return token;
+        // On every subsequent JWT refresh, preserve existing custom fields.
+        // NextAuth decodes the signed JWT and passes all fields back in `token`,
+        // so this is a no-op in the normal case, but makes the intent explicit
+        // and ensures the fields survive any token re-issue edge cases.
+        const existingToken = token as typeof token & Partial<AdminToken>;
+        return {
+          ...token,
+          ...(existingToken.userId !== undefined && { userId: existingToken.userId }),
+          ...(existingToken.role !== undefined && { role: existingToken.role }),
+          ...(existingToken.githubLogin !== undefined && { githubLogin: existingToken.githubLogin }),
+          ...(existingToken.avatarUrl !== undefined && { avatarUrl: existingToken.avatarUrl }),
+        };
       },
       async session({ session, token }) {
         if (session.user) {

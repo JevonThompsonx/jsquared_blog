@@ -7,9 +7,6 @@ describe("adminWishlistPlaceFormSchema", () => {
     const parsed = adminWishlistPlaceFormSchema.parse({
       name: "  Glacier National Park  ",
       locationName: "  West Glacier, Montana  ",
-      latitude: "48.7596",
-      longitude: "-113.7870",
-      zoom: "",
       sortOrder: "",
       visited: false,
       isPublic: true,
@@ -19,9 +16,6 @@ describe("adminWishlistPlaceFormSchema", () => {
     expect(parsed).toEqual({
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
-      latitude: 48.7596,
-      longitude: -113.787,
-      zoom: 8,
       sortOrder: 0,
       visited: false,
       isPublic: true,
@@ -33,9 +27,6 @@ describe("adminWishlistPlaceFormSchema", () => {
     const parsed = adminWishlistPlaceFormSchema.parse({
       name: "Big Bend",
       locationName: "Big Bend National Park, Texas",
-      latitude: "29.1275",
-      longitude: "-103.2425",
-      zoom: "7",
       sortOrder: "2",
       externalUrl: "",
     });
@@ -49,61 +40,16 @@ describe("adminWishlistPlaceFormSchema", () => {
     const parsed = adminWishlistPlaceFormSchema.safeParse({
       name: "   ",
       locationName: "Moab, Utah",
-      latitude: "38.5733",
-      longitude: "-109.5498",
       externalUrl: "",
     });
 
     expect(parsed.success).toBe(false);
   });
 
-  it("rejects invalid latitude and longitude", () => {
-    const latitudeResult = adminWishlistPlaceFormSchema.safeParse({
-      name: "Moab",
-      locationName: "Moab, Utah",
-      latitude: "95",
-      longitude: "-109.5498",
-      externalUrl: "",
-    });
-    const longitudeResult = adminWishlistPlaceFormSchema.safeParse({
-      name: "Moab",
-      locationName: "Moab, Utah",
-      latitude: "38.5733",
-      longitude: "-195",
-      externalUrl: "",
-    });
-
-    expect(latitudeResult.success).toBe(false);
-    expect(longitudeResult.success).toBe(false);
-  });
-
-  it("rejects blank latitude and longitude strings", () => {
-    const latitudeResult = adminWishlistPlaceFormSchema.safeParse({
-      name: "Moab",
-      locationName: "Moab, Utah",
-      latitude: "   ",
-      longitude: "-109.5498",
-      externalUrl: "",
-    });
-    const longitudeResult = adminWishlistPlaceFormSchema.safeParse({
-      name: "Moab",
-      locationName: "Moab, Utah",
-      latitude: "38.5733",
-      longitude: "   ",
-      externalUrl: "",
-    });
-
-    expect(latitudeResult.success).toBe(false);
-    expect(longitudeResult.success).toBe(false);
-  });
-
-  it("rejects unrealistic zoom values", () => {
+  it("rejects blank locationName", () => {
     const parsed = adminWishlistPlaceFormSchema.safeParse({
       name: "Moab",
-      locationName: "Moab, Utah",
-      latitude: "38.5733",
-      longitude: "-109.5498",
-      zoom: "40",
+      locationName: "   ",
       externalUrl: "",
     });
 
@@ -114,8 +60,6 @@ describe("adminWishlistPlaceFormSchema", () => {
     const parsed = adminWishlistPlaceFormSchema.safeParse({
       name: "Moab",
       locationName: "Moab, Utah",
-      latitude: "38.5733",
-      longitude: "-109.5498",
       externalUrl: "http://example.com/moab",
     });
 
@@ -127,9 +71,6 @@ describe("adminWishlistPlaceFormSchema", () => {
       id: "550e8400-e29b-41d4-a716-446655440000",
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
-      latitude: "48.7596",
-      longitude: "-113.7870",
-      zoom: "9",
       sortOrder: "1",
       externalUrl: "",
     });
@@ -142,8 +83,6 @@ describe("adminWishlistPlaceFormSchema", () => {
       id: "place-1",
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
-      latitude: "48.7596",
-      longitude: "-113.7870",
       externalUrl: "",
     });
 

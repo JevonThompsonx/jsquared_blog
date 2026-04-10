@@ -1,6 +1,14 @@
+import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createPublicAuthArtifactFingerprint } from "@/lib/e2e/public-storage-state-config";
+
+// Compute paths the same way the helper does so the mocks resolve on both Windows and Linux.
+const DEFAULT_STORAGE_STATE_PATH = path.resolve(process.cwd(), "playwright", ".auth", "public.json");
+const DEFAULT_META_PATH = DEFAULT_STORAGE_STATE_PATH.replace(/\.json$/, ".meta.json");
+const TMP_STORAGE_STATE_PATH = path.resolve(process.cwd(), "tmp", "public.json");
+const TMP_META_PATH = TMP_STORAGE_STATE_PATH.replace(/\.json$/, ".meta.json");
 
 const existingStorageState = new Set<string>();
 const existingMetadata = new Map<string, string>();
@@ -70,9 +78,9 @@ describe("public E2E helper env contract", () => {
   });
 
   it("does not reuse persisted public storage state when fixture identity env is missing", async () => {
-    existingStorageState.add("C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.json");
+    existingStorageState.add(DEFAULT_STORAGE_STATE_PATH);
     existingMetadata.set(
-      "C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.meta.json",
+      DEFAULT_META_PATH,
       JSON.stringify({
         artifactType: "public-playwright-storage-state",
         artifactVersion: 1,
@@ -102,9 +110,9 @@ describe("public E2E helper env contract", () => {
       publicPostSlug: "seeded-post",
     }));
 
-    existingStorageState.add("C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.json");
+    existingStorageState.add(DEFAULT_STORAGE_STATE_PATH);
     existingMetadata.set(
-      "C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.meta.json",
+      DEFAULT_META_PATH,
       JSON.stringify({
         artifactType: "public-playwright-storage-state",
         artifactVersion: 1,
@@ -121,16 +129,14 @@ describe("public E2E helper env contract", () => {
     const helper = await importPublicHelper();
 
     expect(helper.hasPublicStorageState).toBe(true);
-    expect(helper.publicStorageStatePath).toBe(
-      "C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.json",
-    );
+    expect(helper.publicStorageStatePath).toBe(DEFAULT_STORAGE_STATE_PATH);
     expect(mockUse).toHaveBeenCalledWith({
-      storageState: "C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.json",
+      storageState: DEFAULT_STORAGE_STATE_PATH,
     });
   });
 
   it("does not reuse persisted public storage state when the ownership metadata is missing", async () => {
-    existingStorageState.add("C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.json");
+    existingStorageState.add(DEFAULT_STORAGE_STATE_PATH);
 
     const helper = await importPublicHelper();
 
@@ -145,9 +151,9 @@ describe("public E2E helper env contract", () => {
     vi.stubEnv("E2E_PUBLIC_POST_SLUG", "seeded-post");
     vi.stubEnv("E2E_PUBLIC_FIXTURE_GENERATED_AT", "2026-04-07T12:00:00.000Z");
 
-    existingStorageState.add("C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.json");
+    existingStorageState.add(DEFAULT_STORAGE_STATE_PATH);
     existingMetadata.set(
-      "C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.meta.json",
+      DEFAULT_META_PATH,
       JSON.stringify({
         artifactType: "public-playwright-storage-state",
         artifactVersion: 1,
@@ -170,9 +176,9 @@ describe("public E2E helper env contract", () => {
     vi.stubEnv("E2E_PUBLIC_POST_SLUG", "seeded-post");
     vi.stubEnv("E2E_PUBLIC_FIXTURE_GENERATED_AT", "2026-04-07T12:00:00.000Z");
 
-    existingStorageState.add("C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.json");
+    existingStorageState.add(DEFAULT_STORAGE_STATE_PATH);
     existingMetadata.set(
-      "C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\playwright\\.auth\\public.meta.json",
+      DEFAULT_META_PATH,
       JSON.stringify({
         artifactType: "public-playwright-storage-state",
         artifactVersion: 1,
@@ -196,9 +202,9 @@ describe("public E2E helper env contract", () => {
   it("does not reuse persisted public storage state from an unmanaged explicit path", async () => {
     vi.stubEnv("E2E_PUBLIC_STORAGE_STATE", "tmp/public.json");
 
-    existingStorageState.add("C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\tmp\\public.json");
+    existingStorageState.add(TMP_STORAGE_STATE_PATH);
     existingMetadata.set(
-      "C:\\Users\\AVAdmin\\Nextcloud\\Projects\\jsquared_blog\\web\\tmp\\public.meta.json",
+      TMP_META_PATH,
       JSON.stringify({
         artifactType: "public-playwright-storage-state",
         artifactVersion: 1,
