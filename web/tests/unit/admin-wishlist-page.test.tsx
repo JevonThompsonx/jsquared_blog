@@ -31,6 +31,10 @@ vi.mock("@/app/admin/wishlist/actions", () => ({
   deleteWishlistPlaceAction: vi.fn(),
 }));
 
+vi.mock("@/components/admin/wishlist-location-autocomplete", () => ({
+  WishlistLocationAutocomplete: () => null,
+}));
+
 import AdminWishlistPage from "@/app/admin/wishlist/page";
 import { requireAdminSession } from "@/lib/auth/session";
 import { listAdminWishlistPlaces } from "@/server/dal/admin-wishlist-places";

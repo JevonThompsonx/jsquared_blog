@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/layout/site-header";
+import { WishlistLocationAutocomplete } from "@/components/admin/wishlist-location-autocomplete";
 import { requireAdminSession } from "@/lib/auth/session";
 import { listAdminWishlistPlaces, type AdminWishlistPlaceRecord } from "@/server/dal/admin-wishlist-places";
 
@@ -60,30 +61,11 @@ export default async function AdminWishlistPage() {
                   <span className="mb-1 block font-medium text-[var(--text-primary)]">Name</span>
                   <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="name" required type="text" />
                 </label>
+                <WishlistLocationAutocomplete />
                 <label className="block text-sm text-[var(--text-secondary)]">
-                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Location label</span>
-                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="locationName" required type="text" />
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
+                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="0" name="sortOrder" step="1" type="number" />
                 </label>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm text-[var(--text-secondary)]">
-                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Latitude</span>
-                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="latitude" required step="any" type="number" />
-                  </label>
-                  <label className="block text-sm text-[var(--text-secondary)]">
-                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Longitude</span>
-                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="longitude" required step="any" type="number" />
-                  </label>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm text-[var(--text-secondary)]">
-                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Zoom</span>
-                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="8" name="zoom" step="1" type="number" />
-                  </label>
-                  <label className="block text-sm text-[var(--text-secondary)]">
-                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
-                    <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="0" name="sortOrder" step="1" type="number" />
-                  </label>
-                </div>
                 <label className="block text-sm text-[var(--text-secondary)]">
                   <span className="mb-1 block font-medium text-[var(--text-primary)]">Optional link</span>
                   <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="externalUrl" placeholder="https://example.com/place-guide" type="url" />
@@ -148,29 +130,12 @@ export default async function AdminWishlistPage() {
                             <span className="mb-1 block font-medium text-[var(--text-primary)]">Name</span>
                             <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.name} name="name" required type="text" />
                           </label>
-                          <label className="block text-sm text-[var(--text-secondary)]">
-                            <span className="mb-1 block font-medium text-[var(--text-primary)]">Location label</span>
-                            <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.locationName} name="locationName" required type="text" />
-                          </label>
+                          <WishlistLocationAutocomplete defaultLocationName={place.locationName} />
                         </div>
-                        <div className="grid gap-4 md:grid-cols-4">
-                          <label className="block text-sm text-[var(--text-secondary)]">
-                            <span className="mb-1 block font-medium text-[var(--text-primary)]">Latitude</span>
-                            <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.locationLat} name="latitude" required step="any" type="number" />
-                          </label>
-                          <label className="block text-sm text-[var(--text-secondary)]">
-                            <span className="mb-1 block font-medium text-[var(--text-primary)]">Longitude</span>
-                            <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.locationLng} name="longitude" required step="any" type="number" />
-                          </label>
-                          <label className="block text-sm text-[var(--text-secondary)]">
-                            <span className="mb-1 block font-medium text-[var(--text-primary)]">Zoom</span>
-                            <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.locationZoom} name="zoom" step="1" type="number" />
-                          </label>
-                          <label className="block text-sm text-[var(--text-secondary)]">
-                            <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
-                            <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.sortOrder} name="sortOrder" step="1" type="number" />
-                          </label>
-                        </div>
+                        <label className="block text-sm text-[var(--text-secondary)]">
+                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
+                          <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.sortOrder} name="sortOrder" step="1" type="number" />
+                        </label>
                         <label className="block text-sm text-[var(--text-secondary)]">
                           <span className="mb-1 block font-medium text-[var(--text-primary)]">Optional link</span>
                           <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.externalUrl ?? ""} name="externalUrl" placeholder="https://example.com/place-guide" type="url" />

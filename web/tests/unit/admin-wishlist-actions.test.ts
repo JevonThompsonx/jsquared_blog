@@ -20,10 +20,15 @@ vi.mock("@/server/dal/admin-wishlist-places", () => ({
   updateAdminWishlistPlace: vi.fn(),
 }));
 
+vi.mock("@/lib/geocode", () => ({
+  geocodeLocation: vi.fn(),
+}));
+
 import { revalidatePath } from "next/cache";
 
 import type { AdminSession } from "@/lib/auth/session";
 import { requireAdminSession } from "@/lib/auth/session";
+import { geocodeLocation } from "@/lib/geocode";
 import {
   createWishlistPlaceAction,
   deleteWishlistPlaceAction,
@@ -41,9 +46,6 @@ function makeValidWishlistPlaceFields(
   return {
     name: "Glacier National Park",
     locationName: "West Glacier, Montana",
-    latitude: "48.7596",
-    longitude: "-113.7870",
-    zoom: "8",
     sortOrder: "0",
     externalUrl: "",
     ...overrides,
@@ -92,6 +94,7 @@ describe("wishlist admin actions", () => {
     vi.mocked(createAdminWishlistPlace).mockResolvedValue(undefined);
     vi.mocked(updateAdminWishlistPlace).mockResolvedValue(undefined);
     vi.mocked(deleteAdminWishlistPlace).mockResolvedValue(undefined);
+    vi.mocked(geocodeLocation).mockResolvedValue({ lat: 48.7596, lng: -113.787, zoom: 8 });
   });
 
   it("redirects unauthenticated callers to the admin sign-in gate", async () => {
@@ -128,7 +131,7 @@ describe("wishlist admin actions", () => {
     await createWishlistPlaceAction(
       makeFormData({
         ...makeValidWishlistPlaceFields({
-          latitude: "   ",
+          name: "",
         }),
       }),
     );
@@ -145,7 +148,6 @@ describe("wishlist admin actions", () => {
         ...makeValidWishlistPlaceFields({
           name: "  Glacier National Park  ",
           locationName: "  West Glacier, Montana  ",
-          zoom: "9",
           sortOrder: "3",
           visited: true,
           isPublic: true,
@@ -154,12 +156,13 @@ describe("wishlist admin actions", () => {
       }),
     );
 
+    expect(vi.mocked(geocodeLocation)).toHaveBeenCalledWith("West Glacier, Montana");
     expect(vi.mocked(createAdminWishlistPlace)).toHaveBeenCalledWith({
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
       latitude: 48.7596,
       longitude: -113.787,
-      zoom: 9,
+      zoom: 8,
       sortOrder: 3,
       visited: true,
       isPublic: true,
@@ -216,7 +219,6 @@ describe("wishlist admin actions", () => {
           id: "550e8400-e29b-41d4-a716-446655440000",
           name: "  Glacier National Park  ",
           locationName: "  West Glacier, Montana  ",
-          zoom: "10",
           sortOrder: "4",
           visited: true,
           isPublic: true,
@@ -225,13 +227,14 @@ describe("wishlist admin actions", () => {
       }),
     );
 
+    expect(vi.mocked(geocodeLocation)).toHaveBeenCalledWith("West Glacier, Montana");
     expect(vi.mocked(updateAdminWishlistPlace)).toHaveBeenCalledWith({
       id: "550e8400-e29b-41d4-a716-446655440000",
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
       latitude: 48.7596,
       longitude: -113.787,
-      zoom: 10,
+      zoom: 8,
       sortOrder: 4,
       visited: true,
       isPublic: true,
@@ -418,6 +421,34 @@ describe("wishlist admin actions", () => {
     );
 
     expect(vi.mocked(deleteAdminWishlistPlace)).not.toHaveBeenCalled();
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
+  it("throws when geocoding returns null during create", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(geocodeLocation).mockResolvedValue(null);
+
+    await expect(
+      createWishlistPlaceAction(makeFormData({ ...makeValidWishlistPlaceFields() })),
+    ).rejects.toThrow("Could not geocode location");
+
+    expect(vi.mocked(createAdminWishlistPlace)).not.toHaveBeenCalled();
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
+  it("throws when geocoding returns null during update", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(geocodeLocation).mockResolvedValue(null);
+
+    await expect(
+      updateWishlistPlaceAction(
+        makeFormData({
+          ...makeValidWishlistPlaceFields({ id: "550e8400-e29b-41d4-a716-446655440000" }),
+        }),
+      ),
+    ).rejects.toThrow("Could not geocode location");
+
+    expect(vi.mocked(updateAdminWishlistPlace)).not.toHaveBeenCalled();
     expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
   });
 });
