@@ -21,7 +21,7 @@
     "@libsql/client": "0.17.2",
     "@radix-ui/react-dialog": "1.1.15",
     "@radix-ui/react-select": "2.2.6",
-    "@sentry/nextjs": "10.47.0",
+    "@sentry/nextjs": "10.48.0",
     "@supabase/supabase-js": "2.102.1",
     "@tiptap/core": "3.22.3",
     "@tiptap/extension-image": "3.22.3",
