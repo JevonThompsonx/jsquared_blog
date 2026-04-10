@@ -395,7 +395,7 @@ describe("updateAdminPostAction — revision capture", () => {
 
     // createPostRevision was attempted but failed non-fatally
     expect(vi.mocked(createPostRevision)).toHaveBeenCalledOnce();
-    expect(vi.mocked(redirect)).toHaveBeenCalledWith("/admin/posts/post-1/edit?saved=1");
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith("/admin?postId=post-1&saved=1");
   });
 
   it("passes excerpt as null when the existing post has no excerpt", async () => {

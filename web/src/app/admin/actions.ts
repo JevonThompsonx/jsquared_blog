@@ -21,6 +21,7 @@ import { generateUniquePostSlug } from "@/server/posts/slug";
 import { slugify } from "@/lib/utils";
 
 type DbExecutor = Pick<ReturnType<typeof getDb>, "query" | "select" | "insert" | "update" | "delete">;
+type AdminReturnRoute = "/admin" | `/admin?${string}`;
 
 function normalizeScheduledTimestamp(
   value: string,
@@ -147,6 +148,42 @@ function parseFormData(formData: FormData) {
   }
 
   return parsed.data;
+}
+
+function normalizeAdminReturnTo(value: FormDataEntryValue | null): AdminReturnRoute {
+  if (typeof value !== "string") {
+    return "/admin";
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue.startsWith("/admin")) {
+    return "/admin";
+  }
+
+  try {
+    const url = new URL(trimmedValue, "https://jsquaredadventures.com");
+    if (url.pathname !== "/admin") {
+      return "/admin";
+    }
+
+    url.searchParams.delete("postId");
+    url.searchParams.delete("saved");
+    url.searchParams.delete("cloned");
+    url.searchParams.delete("editRemoved");
+
+    const nextSearch = url.searchParams.toString();
+    return nextSearch ? `/admin?${nextSearch}` : "/admin";
+  } catch {
+    return "/admin";
+  }
+}
+
+function buildAdminPostReturnPath(returnTo: AdminReturnRoute, postId: string, flag: "saved" | "cloned" | "editRemoved"): AdminReturnRoute {
+  const url = new URL(returnTo, "https://jsquaredadventures.com");
+  url.searchParams.set("postId", postId);
+  url.searchParams.set(flag, "1");
+  const nextSearch = url.searchParams.toString();
+  return nextSearch ? `/admin?${nextSearch}` : "/admin";
 }
 
 type GeoResult = {
@@ -452,13 +489,14 @@ function isPostNotFoundError(error: unknown) {
 
 // createAdminPostAction
 // Input: FormData matching adminPostFormSchema
-// Output: redirect to /admin/posts/:postId/edit?saved=1
+// Output: redirect to /admin?postId=:postId&saved=1
 // Auth: Admin (Auth.js GitHub)
 // UI: submit editor form, then show saved state on edit screen
 export async function createAdminPostAction(formData: FormData) {
   const authorId = await ensureAdmin();
   const values = parseFormData(formData);
   const galleryEntries = parseGalleryEntries(values.galleryEntries);
+  const returnTo = normalizeAdminReturnTo(formData.get("returnTo"));
   let payload: ReturnType<typeof buildPostSavePayload>;
 
   try {
@@ -530,12 +568,12 @@ export async function createAdminPostAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
-  redirect(`/admin/posts/${postId}/edit?saved=1`);
+  redirect(buildAdminPostReturnPath(returnTo, postId, "saved"));
 }
 
 // updateAdminPostAction
 // Input: postId + FormData matching adminPostFormSchema
-// Output: redirect to /admin/posts/:postId/edit?saved=1
+// Output: redirect to /admin?postId=:postId&saved=1
 // Auth: Admin (Auth.js GitHub)
 // UI: submit editor form, invalidate preview links, keep edit page current
 export async function updateAdminPostAction(postId: string, formData: FormData) {
@@ -543,6 +581,7 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   const validPostId = parseActionPostId(deletePostSchema, postId);
   const values = parseFormData(formData);
   const galleryEntries = parseGalleryEntries(values.galleryEntries);
+  const returnTo = normalizeAdminReturnTo(formData.get("returnTo"));
   let payload: ReturnType<typeof buildPostSavePayload>;
 
   try {
@@ -645,7 +684,7 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath(`/posts/${slug}`);
-  redirect(`/admin/posts/${validPostId}/edit?saved=1`);
+  redirect(buildAdminPostReturnPath(returnTo, validPostId, "saved"));
 }
 
 const actionPostIdSchema = z.string().trim().min(1);

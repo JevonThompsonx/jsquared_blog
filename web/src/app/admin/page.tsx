@@ -1,30 +1,76 @@
 import Link from "next/link";
+import { z } from "zod";
 
+import { updateAdminPostAction } from "@/app/admin/actions";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import { PostEditorForm } from "@/components/admin/post-editor-form";
 import { AdminAuthButton } from "@/components/auth/admin-auth-button";
 import { SiteHeader } from "@/components/layout/site-header";
 import { adminNavLinks } from "@/lib/admin/navigation";
 import { isAdminAuthConfigured } from "@/lib/auth/admin";
 import { requireAdminSession } from "@/lib/auth/session";
-import type { AdminPostListResult } from "@/server/dal/admin-posts";
+import { getPostHref } from "@/lib/utils";
+import { getAdminEditablePostById, listAllAdminTags, type AdminPostListResult } from "@/server/dal/admin-posts";
+import { listAllSeries } from "@/server/dal/series";
 import { parseAdminPostListSearchParams } from "@/server/forms/admin-post-list";
 import { getAdminDashboardData, getAdminDashboardMetadata } from "@/server/queries/admin-dashboard";
+
+const adminEditPostIdSchema = z.string().trim().min(1).max(128);
+type AdminReturnRoute = "/admin" | `/admin?${string}`;
+
+function getAdminReturnTo(searchParams: Record<string, string | undefined>): AdminReturnRoute {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (!value) {
+      continue;
+    }
+
+    if (key === "postId" || key === "saved" || key === "cloned" || key === "editRemoved") {
+      continue;
+    }
+
+    params.set(key, value);
+  }
+
+  const query = params.toString();
+  return query ? `/admin?${query}` : "/admin";
+}
 
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ error?: string; query?: string; status?: string; page?: string; pageSize?: string; sort?: string; search?: string; category?: string }>;
+  searchParams?: Promise<{
+    error?: string;
+    query?: string;
+    status?: string;
+    page?: string;
+    pageSize?: string;
+    sort?: string;
+    search?: string;
+    category?: string;
+    saved?: string;
+    cloned?: string;
+    editRemoved?: string;
+    postId?: string;
+  }>;
 }) {
   const session = await requireAdminSession();
   const authConfigured = isAdminAuthConfigured();
   const resolvedSearchParams = searchParams ? await searchParams : {};
+  const parsedEditPostId = adminEditPostIdSchema.safeParse(resolvedSearchParams.postId);
+  const selectedPostId = parsedEditPostId.success ? parsedEditPostId.data : null;
+  const returnTo = getAdminReturnTo(resolvedSearchParams);
 
-  const [dashboardData, metadata] = session?.user?.role === "admin" 
+  const [dashboardData, metadata, editablePost, allSeries, allTags] = session?.user?.role === "admin" 
     ? await Promise.all([
         getAdminDashboardData(parseAdminPostListSearchParams(resolvedSearchParams)),
-        getAdminDashboardMetadata()
+        getAdminDashboardMetadata(),
+        selectedPostId ? getAdminEditablePostById(selectedPostId) : Promise.resolve(null),
+        listAllSeries(),
+        listAllAdminTags(),
       ])
-    : [null, null];
+    : [null, null, null, [], []];
 
   const defaultPostsResult: AdminPostListResult = {
     posts: [],
@@ -63,6 +109,30 @@ export default async function AdminPage({
           </div>
         ) : null}
 
+        {resolvedSearchParams?.saved ? (
+          <div className="mt-6 rounded-2xl border border-[var(--color-success-soft-border)] bg-[var(--color-success-soft-bg)] px-4 py-3 text-sm text-[var(--color-success-text)]">
+            Post saved successfully.
+          </div>
+        ) : null}
+
+        {resolvedSearchParams?.cloned ? (
+          <div className="mt-6 rounded-2xl border border-[var(--color-success-soft-border)] bg-[var(--color-success-soft-bg)] px-4 py-3 text-sm text-[var(--color-success-text)]">
+            Draft clone created successfully.
+          </div>
+        ) : null}
+
+        {resolvedSearchParams?.editRemoved ? (
+          <div className="mt-6 rounded-2xl border border-[var(--color-warning-soft-border)] bg-[var(--color-warning-soft-bg)] px-4 py-3 text-sm text-[var(--color-warning-text)]">
+            The legacy post edit route has moved into the admin dashboard.
+          </div>
+        ) : null}
+
+        {resolvedSearchParams?.postId && !editablePost && selectedPostId ? (
+          <div className="mt-6 rounded-2xl border border-[var(--color-warning-soft-border)] bg-[var(--color-warning-soft-bg)] px-4 py-3 text-sm text-[var(--color-warning-text)]">
+            The selected post could not be loaded.
+          </div>
+        ) : null}
+
         <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--text-secondary)]">
           For local GitHub sign-in, your GitHub OAuth app also needs `http://localhost:3000/api/auth/callback/github` listed as an allowed callback URL.
         </div>
@@ -78,6 +148,46 @@ export default async function AdminPage({
 
         {session?.user?.role === "admin" ? (
           <>
+            {editablePost ? (
+              <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--background)]/70 p-5 shadow-sm sm:p-6" aria-label="Edit selected post">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Inline editor</p>
+                    <h2 className="mt-2 text-2xl font-semibold text-[var(--foreground)]">Edit post</h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+                      Update the selected post without leaving the dashboard.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {editablePost.status === "published" ? (
+                      <Link
+                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
+                        href={getPostHref({ id: editablePost.id, title: editablePost.title, slug: editablePost.slug })}
+                      >
+                        View live
+                      </Link>
+                    ) : null}
+                      <Link
+                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]"
+                        href={returnTo}
+                      >
+                        Close editor
+                      </Link>
+                  </div>
+                </div>
+
+                <PostEditorForm
+                  action={updateAdminPostAction.bind(null, editablePost.id)}
+                  allSeries={allSeries}
+                  allTags={allTags}
+                  categories={metadata?.categories ?? []}
+                  mode="edit"
+                  post={editablePost}
+                  returnTo={returnTo}
+                />
+              </section>
+            ) : null}
+
             <section className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--background)]/70 p-5 shadow-sm sm:p-6" aria-label="Admin pages">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

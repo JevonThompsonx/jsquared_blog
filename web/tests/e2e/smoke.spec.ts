@@ -349,7 +349,7 @@ adminTest.describe("authenticated admin smoke tests", () => {
     }
 
     await filteredFirstRow.getByTestId("admin-post-clone").click();
-    await page.waitForURL(/\/admin\/posts\/.*\/edit\?cloned=1/, { timeout: 15_000 });
+    await page.waitForURL((url) => url.pathname === "/admin" && url.searchParams.get("cloned") === "1" && Boolean(url.searchParams.get("postId")), { timeout: 15_000 });
     await expect(page.getByText("Draft clone created successfully.")).toBeVisible();
 
     const previewButton = page.getByRole("button", { name: "Preview" });

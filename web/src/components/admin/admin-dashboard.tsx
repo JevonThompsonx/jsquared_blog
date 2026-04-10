@@ -34,6 +34,18 @@ function getDashboardRoute(params: URLSearchParams): "/admin" | `/admin?${string
   return query ? `/admin?${query}` : "/admin";
 }
 
+function getAdminEditorRoute(params: URLSearchParams, postId: string, flag?: "cloned"): "/admin" | `/admin?${string}` {
+  const nextParams = new URLSearchParams(params.toString());
+  nextParams.set("postId", postId);
+
+  if (flag) {
+    nextParams.set(flag, "1");
+  }
+
+  const query = nextParams.toString();
+  return query ? `/admin?${query}` : "/admin";
+}
+
 function formatBulkResultMessage(result: PostPublishResult): string {
   const actionLabel = result.operation === "publish" ? "Published" : "Moved to draft";
   const parts = [`${actionLabel} ${result.updatedCount} post(s).`];
@@ -267,7 +279,7 @@ export function AdminDashboard({
         setTimeout(() => {
           setToastMessage(null);
         }, 4000);
-        router.push(`/admin/posts/${result.postId}/edit?cloned=1`);
+        router.push(getAdminEditorRoute(searchParams, result.postId, "cloned"));
       } catch (err: unknown) {
         console.error("Clone failed:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
@@ -621,7 +633,7 @@ export function AdminDashboard({
                             </button>
                             <Link
                               className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                              href={`/admin/posts/${post.id}/edit`}
+                              href={getAdminEditorRoute(searchParams, post.id)}
                             >
                               Edit
                             </Link>

@@ -46,7 +46,7 @@ export default async function AdminPostCommentsPage({
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]" href={`/admin/posts/${postId}/edit`}>
+            <Link className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]" href={`/admin?postId=${encodeURIComponent(postId)}`}>
               Back to editor
             </Link>
             <Link className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]" href="/admin">

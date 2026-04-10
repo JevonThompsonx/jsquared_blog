@@ -16,6 +16,7 @@ import { TagMultiSelect } from "@/components/admin/tag-multi-select";
 import { RevisionHistory } from "@/components/admin/revision-history";
 
 type AdminTag = { id: string; name: string; slug: string };
+type AdminReturnRoute = "/admin" | `/admin?${string}`;
 
 function formatDateTimeLocal(value: Date): string {
   const offset = value.getTimezoneOffset();
@@ -28,6 +29,7 @@ export function PostEditorForm({
   allSeries,
   allTags,
   post,
+  returnTo = "/admin",
   action,
 }: {
   mode: "create" | "edit";
@@ -35,6 +37,7 @@ export function PostEditorForm({
   allSeries: SeriesRecord[];
   allTags: AdminTag[];
   post?: AdminEditablePostRecord | null;
+  returnTo?: AdminReturnRoute;
   action: (formData: FormData) => void | Promise<void>;
 }) {
   const router = useRouter();
@@ -70,7 +73,11 @@ export function PostEditorForm({
     startTransition(async () => {
       try {
         const result = await clonePost(post.id);
-        router.push(`/admin/posts/${result.postId}/edit?cloned=1`);
+        const nextUrl = new URL(returnTo, window.location.origin);
+        nextUrl.searchParams.set("postId", result.postId);
+        nextUrl.searchParams.set("cloned", "1");
+        const nextRoute = `${nextUrl.pathname}${nextUrl.search}` as AdminReturnRoute;
+        router.push(nextRoute);
       } catch (err) {
         setCloneError(err instanceof Error ? err.message : "Failed to clone post");
       }
@@ -110,6 +117,7 @@ export function PostEditorForm({
   return (
     <form action={action} className="space-y-8">
       <input name="scheduledPublishOffsetMinutes" type="hidden" value={browserOffsetMinutes} />
+      <input name="returnTo" type="hidden" value={returnTo} />
       <div className="sticky top-24 z-20 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-4 shadow-lg sm:px-5">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editor actions</p>

@@ -154,7 +154,7 @@ export default async function PostPage({ params }: PostPageProps) {
             {isAdmin ? (
               <Link
                 className="rounded-full border border-[var(--primary)] px-3 py-1 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-[var(--on-primary)]"
-                href={`/admin/posts/${post.id}/edit`}
+                href={`/admin?postId=${encodeURIComponent(post.id)}`}
               >
                 Edit post
               </Link>
