@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -18,10 +19,12 @@ import { createPostPreviewAccess, revokePostPreviewTokens } from "@/server/posts
 import { deletePosts, type PostDeleteResult } from "@/server/posts/delete";
 import { publishPosts, unpublishPosts, type PostPublishResult } from "@/server/posts/publish";
 import { generateUniquePostSlug } from "@/server/posts/slug";
+import { ADMIN_FLASH_COOKIE_NAME, getAdminFlashCookieOptions, type AdminFlashKind } from "@/lib/admin-flash";
 import { slugify } from "@/lib/utils";
 
 type DbExecutor = Pick<ReturnType<typeof getDb>, "query" | "select" | "insert" | "update" | "delete">;
 type AdminReturnRoute = "/admin" | `/admin?${string}`;
+const GEOCODE_TIMEOUT_MS = 4_000;
 
 function normalizeScheduledTimestamp(
   value: string,
@@ -186,6 +189,15 @@ function buildAdminPostReturnPath(returnTo: AdminReturnRoute, postId: string, fl
   return nextSearch ? `/admin?${nextSearch}` : "/admin";
 }
 
+async function setAdminFlash(kind: AdminFlashKind) {
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const forwardedProto = headerStore.get("x-forwarded-proto");
+  const isSecure = forwardedProto?.split(",")[0]?.trim() === "https";
+
+  cookieStore.set(ADMIN_FLASH_COOKIE_NAME, kind, getAdminFlashCookieOptions(isSecure));
+}
+
 type GeoResult = {
   lat: number;
   lng: number;
@@ -193,10 +205,14 @@ type GeoResult = {
 };
 
 async function geocodeLocation(locationName: string): Promise<GeoResult | null> {
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), GEOCODE_TIMEOUT_MS);
+
   try {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`;
     const res = await fetch(url, {
       headers: { "User-Agent": "jsquaredadventures.com (travel blog)" },
+      signal: abortController.signal,
     });
 
     if (!res.ok) {
@@ -224,6 +240,8 @@ async function geocodeLocation(locationName: string): Promise<GeoResult | null> 
     return { lat, lng, zoom };
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -568,6 +586,7 @@ export async function createAdminPostAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
+  await setAdminFlash("saved");
   redirect(buildAdminPostReturnPath(returnTo, postId, "saved"));
 }
 
@@ -684,6 +703,7 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath(`/posts/${slug}`);
+  await setAdminFlash("saved");
   redirect(buildAdminPostReturnPath(returnTo, validPostId, "saved"));
 }
 
@@ -777,6 +797,8 @@ export async function clonePost(postId: string) {
   } catch (error) {
     console.error(`[admin-actions] Failed to revalidate admin after cloning ${validPostId}`, error);
   }
+
+  await setAdminFlash("cloned");
 
   return result;
 }

@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const { cookiesMock, headersMock } = vi.hoisted(() => ({
+  cookiesMock: vi.fn(),
+  headersMock: vi.fn(),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: cookiesMock,
+  headers: headersMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -68,6 +78,8 @@ const NON_ADMIN_SESSION: AdminSession = {
 describe("admin action trust boundaries", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    cookiesMock.mockReset();
+    headersMock.mockReset();
   });
 
   it("rejects invalid preview requests with a stable safe error", async () => {
@@ -252,6 +264,9 @@ describe("admin action trust boundaries", () => {
 
   it("clones posts for valid requests and revalidates admin", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    const cookieStore = { set: vi.fn() };
+    headersMock.mockResolvedValue({ get: vi.fn(() => "http") });
+    cookiesMock.mockResolvedValue(cookieStore);
     vi.mocked(clonePostById).mockResolvedValue({
       postId: "post-2",
       slug: "cloned-post",
@@ -269,6 +284,11 @@ describe("admin action trust boundaries", () => {
     });
     expect(vi.mocked(clonePostById)).toHaveBeenCalledWith("post-1");
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin");
+    expect(cookieStore.set).toHaveBeenCalledWith(
+      "j2-admin-flash",
+      "cloned",
+      expect.objectContaining({ httpOnly: true, path: "/admin" }),
+    );
   });
 
   it("converts clone source-post not-found failures into a stable safe error", async () => {
@@ -302,6 +322,9 @@ describe("admin action trust boundaries", () => {
 
   it("still returns the cloned post when admin revalidation fails after a successful clone", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    const cookieStore = { set: vi.fn() };
+    headersMock.mockResolvedValue({ get: vi.fn(() => "http") });
+    cookiesMock.mockResolvedValue(cookieStore);
     vi.mocked(clonePostById).mockResolvedValue({
       postId: "post-2",
       slug: "cloned-post",
@@ -320,6 +343,11 @@ describe("admin action trust boundaries", () => {
       title: "Cloned Post",
       status: "draft",
     });
+    expect(cookieStore.set).toHaveBeenCalledWith(
+      "j2-admin-flash",
+      "cloned",
+      expect.objectContaining({ httpOnly: true, path: "/admin" }),
+    );
   });
 
   it("publishes valid bulk requests", async () => {

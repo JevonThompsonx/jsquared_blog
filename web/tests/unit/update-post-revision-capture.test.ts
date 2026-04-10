@@ -8,9 +8,19 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const { cookiesMock, headersMock } = vi.hoisted(() => ({
+  cookiesMock: vi.fn(),
+  headersMock: vi.fn(),
+}));
+
 // ── Next.js internals ──────────────────────────────────────────────────────────
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: cookiesMock,
+  headers: headersMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -144,18 +154,37 @@ function buildFormData(overrides: Record<string, string> = {}): FormData {
   fd.set("songTitle", overrides.songTitle ?? "");
   fd.set("songArtist", overrides.songArtist ?? "");
   fd.set("songUrl", overrides.songUrl ?? "");
+  fd.set("returnTo", overrides.returnTo ?? "/admin");
   return fd;
+}
+
+function makeCookieStore() {
+  return {
+    get: vi.fn(),
+    set: vi.fn(),
+  };
+}
+
+function makeHeadersStore(proto = "http") {
+  return {
+    get: vi.fn((name: string) => (name === "x-forwarded-proto" ? proto : null)),
+  };
 }
 
 describe("updateAdminPostAction — revision capture", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    cookiesMock.mockReset();
+    headersMock.mockReset();
+    vi.unstubAllGlobals();
   });
 
   it("calls createPostRevision with the pre-update content after a successful save", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
     mockFindFirst.mockResolvedValue(EXISTING_POST);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(createPostRevision).mockResolvedValue({
       id: "rev-1",
       postId: "post-1",
@@ -186,6 +215,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("redirects non-admin callers before starting create transactions", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(createAdminPostAction(buildFormData())).rejects.toThrow("NEXT_REDIRECT");
 
@@ -196,6 +227,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("redirects non-admin callers before starting update transactions", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(updateAdminPostAction("post-1", buildFormData())).rejects.toThrow("NEXT_REDIRECT");
 
@@ -208,6 +241,8 @@ describe("updateAdminPostAction — revision capture", () => {
   it("persists structured song metadata when creating a post", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(
       createAdminPostAction(
@@ -231,6 +266,8 @@ describe("updateAdminPostAction — revision capture", () => {
   it("normalizes scheduled create payloads to UTC using the browser offset and leaves publishedAt unset", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(
       createAdminPostAction(
@@ -253,6 +290,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects scheduled create payloads with an invalid browser offset", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(
       createAdminPostAction(
@@ -272,6 +311,8 @@ describe("updateAdminPostAction — revision capture", () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
     mockFindFirst.mockResolvedValue(EXISTING_POST);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(createPostRevision).mockResolvedValue({
       id: "rev-1",
       postId: "post-1",
@@ -318,6 +359,8 @@ describe("updateAdminPostAction — revision capture", () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
     mockFindFirst.mockResolvedValue({ ...EXISTING_POST, publishedAt: new Date("2026-04-01T12:00:00.000Z") });
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(
       updateAdminPostAction(
@@ -341,6 +384,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects scheduled update payloads with an invalid browser offset", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(
       updateAdminPostAction(
@@ -360,6 +405,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects unsafe song URLs before starting a transaction", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(
       createAdminPostAction(
@@ -378,6 +425,8 @@ describe("updateAdminPostAction — revision capture", () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
     mockFindFirst.mockResolvedValue(undefined);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(updateAdminPostAction("ghost-post", buildFormData())).rejects.toThrow("NEXT_REDIRECT");
 
@@ -388,6 +437,9 @@ describe("updateAdminPostAction — revision capture", () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
     mockFindFirst.mockResolvedValue(EXISTING_POST);
+    const cookieStore = makeCookieStore();
+    cookiesMock.mockResolvedValue(cookieStore);
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(createPostRevision).mockRejectedValue(new Error("DB connection error"));
 
     // The save must complete and redirect even though the revision write failed
@@ -396,12 +448,19 @@ describe("updateAdminPostAction — revision capture", () => {
     // createPostRevision was attempted but failed non-fatally
     expect(vi.mocked(createPostRevision)).toHaveBeenCalledOnce();
     expect(vi.mocked(redirect)).toHaveBeenCalledWith("/admin?postId=post-1&saved=1");
+    expect(cookieStore.set).toHaveBeenCalledWith(
+      "j2-admin-flash",
+      "saved",
+      expect.objectContaining({ httpOnly: true, path: "/admin" }),
+    );
   });
 
   it("passes excerpt as null when the existing post has no excerpt", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
     mockFindFirst.mockResolvedValue({ ...EXISTING_POST, excerpt: null });
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(createPostRevision).mockResolvedValue({
       id: "rev-1",
       postId: "post-1",
@@ -426,6 +485,8 @@ describe("updateAdminPostAction — revision capture", () => {
     async (galleryEntries) => {
       vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
       mockFindFirst.mockResolvedValue(EXISTING_POST);
+      cookiesMock.mockResolvedValue(makeCookieStore());
+      headersMock.mockResolvedValue(makeHeadersStore());
 
       await expect(
         updateAdminPostAction("post-1", buildFormData({ galleryEntries })),
@@ -441,6 +502,8 @@ describe("updateAdminPostAction — revision capture", () => {
     "aborts before starting the transaction when create gallery entries are invalid: %s",
     async (galleryEntries) => {
       vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+      cookiesMock.mockResolvedValue(makeCookieStore());
+      headersMock.mockResolvedValue(makeHeadersStore());
 
       await expect(createAdminPostAction(buildFormData({ galleryEntries }))).rejects.toThrow("Invalid request");
 
@@ -452,6 +515,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects whitespace-only update post ids with a stable safe error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(updateAdminPostAction("   ", buildFormData())).rejects.toThrow("Invalid request");
 
@@ -463,6 +528,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects invalid form enum values with a stable safe error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(createAdminPostAction(buildFormData({ status: "invalid-status" }))).rejects.toThrow("Invalid request");
 
@@ -473,6 +540,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects malformed contentJson with a stable post-content error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(createAdminPostAction(buildFormData({ contentJson: "{not-json}" }))).rejects.toThrow("Invalid post content");
 
@@ -482,6 +551,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects malformed update contentJson with a stable post-content error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
 
     await expect(updateAdminPostAction("post-1", buildFormData({ contentJson: "{not-json}" }))).rejects.toThrow("Invalid post content");
 
@@ -492,6 +563,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects downstream content derivation failures with a stable post-content error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(derivePostContent).mockImplementationOnce(() => {
       throw new Error("Content must be valid Tiptap JSON");
     });
@@ -504,6 +577,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("rejects downstream update content derivation failures with a stable post-content error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(derivePostContent).mockImplementationOnce(() => {
       throw new Error("Content must be valid Tiptap JSON");
     });
@@ -517,6 +592,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("converts unexpected create content derivation failures into a stable safe error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(derivePostContent).mockImplementationOnce(() => {
       throw new Error("Renderer exploded");
     });
@@ -529,6 +606,8 @@ describe("updateAdminPostAction — revision capture", () => {
 
   it("converts unexpected update content derivation failures into a stable safe error", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
     vi.mocked(derivePostContent).mockImplementationOnce(() => {
       throw new Error("Renderer exploded");
     });
@@ -538,5 +617,53 @@ describe("updateAdminPostAction — revision capture", () => {
     expect(mockDb.transaction).not.toHaveBeenCalled();
     expect(vi.mocked(createPostRevision)).not.toHaveBeenCalled();
     expect(vi.mocked(redirect)).not.toHaveBeenCalled();
+  });
+
+  it("continues saving when geocoding aborts", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input, init?: RequestInit) => {
+        const signal = init?.signal;
+
+        await new Promise((resolve, reject) => {
+          if (!signal) {
+            return resolve(undefined);
+          }
+
+          const onAbort = () => {
+            signal.removeEventListener("abort", onAbort);
+            const abortError = new Error("The operation was aborted.");
+            abortError.name = "AbortError";
+            reject(abortError);
+          };
+
+          signal.addEventListener("abort", onAbort);
+        });
+
+        return new Response("[]", { status: 200 });
+      }),
+    );
+
+    await expect(
+      createAdminPostAction(
+        buildFormData({
+          locationName: "Banff, Alberta",
+        }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locationName: "Banff, Alberta",
+        locationLat: null,
+        locationLng: null,
+        locationZoom: null,
+      }),
+    );
   });
 });

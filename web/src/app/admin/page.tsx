@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { updateAdminPostAction } from "@/app/admin/actions";
@@ -7,6 +8,7 @@ import { PostEditorForm } from "@/components/admin/post-editor-form";
 import { AdminAuthButton } from "@/components/auth/admin-auth-button";
 import { SiteHeader } from "@/components/layout/site-header";
 import { adminNavLinks } from "@/lib/admin/navigation";
+import { ADMIN_FLASH_COOKIE_NAME, isAdminFlashKind } from "@/lib/admin-flash";
 import { isAdminAuthConfigured } from "@/lib/auth/admin";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getPostHref } from "@/lib/utils";
@@ -58,6 +60,10 @@ export default async function AdminPage({
   const session = await requireAdminSession();
   const authConfigured = isAdminAuthConfigured();
   const resolvedSearchParams = searchParams ? await searchParams : {};
+  const cookieStore = await cookies();
+  const flashCookieValue = cookieStore.get(ADMIN_FLASH_COOKIE_NAME)?.value;
+  const flashKind = isAdminFlashKind(flashCookieValue) ? flashCookieValue : null;
+
   const parsedEditPostId = adminEditPostIdSchema.safeParse(resolvedSearchParams.postId);
   const selectedPostId = parsedEditPostId.success ? parsedEditPostId.data : null;
   const returnTo = getAdminReturnTo(resolvedSearchParams);
@@ -109,19 +115,19 @@ export default async function AdminPage({
           </div>
         ) : null}
 
-        {resolvedSearchParams?.saved ? (
+        {flashKind === "saved" && resolvedSearchParams?.saved ? (
           <div className="mt-6 rounded-2xl border border-[var(--color-success-soft-border)] bg-[var(--color-success-soft-bg)] px-4 py-3 text-sm text-[var(--color-success-text)]">
             Post saved successfully.
           </div>
         ) : null}
 
-        {resolvedSearchParams?.cloned ? (
+        {flashKind === "cloned" && resolvedSearchParams?.cloned ? (
           <div className="mt-6 rounded-2xl border border-[var(--color-success-soft-border)] bg-[var(--color-success-soft-bg)] px-4 py-3 text-sm text-[var(--color-success-text)]">
             Draft clone created successfully.
           </div>
         ) : null}
 
-        {resolvedSearchParams?.editRemoved ? (
+        {flashKind === "editRemoved" && resolvedSearchParams?.editRemoved ? (
           <div className="mt-6 rounded-2xl border border-[var(--color-warning-soft-border)] bg-[var(--color-warning-soft-bg)] px-4 py-3 text-sm text-[var(--color-warning-text)]">
             The legacy post edit route has moved into the admin dashboard.
           </div>

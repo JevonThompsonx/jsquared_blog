@@ -1,6 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const { cookiesMock } = vi.hoisted(() => ({
+  cookiesMock: vi.fn(),
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: cookiesMock,
+}));
+
 vi.mock("@/components/admin/admin-dashboard", () => ({
   AdminDashboard: () => <div data-testid="admin-dashboard">Dashboard</div>,
 }));
@@ -77,9 +85,21 @@ import { listAllSeries } from "@/server/dal/series";
 import { parseAdminPostListSearchParams } from "@/server/forms/admin-post-list";
 import { getAdminDashboardData, getAdminDashboardMetadata } from "@/server/queries/admin-dashboard";
 
+function makeCookieStore(initialValues: Record<string, string> = {}) {
+  const values = new Map(Object.entries(initialValues));
+
+  return {
+    get(name: string) {
+      const value = values.get(name);
+      return value === undefined ? undefined : { value };
+    },
+  };
+}
+
 describe("AdminPage", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    cookiesMock.mockReset();
   });
 
   it("renders admin quick links for admin sessions", async () => {
@@ -90,6 +110,7 @@ describe("AdminPage", () => {
         githubLogin: "octoadmin",
       },
     } as never);
+    cookiesMock.mockResolvedValue(makeCookieStore());
 
     const markup = renderToStaticMarkup(await AdminPage({}));
 
@@ -104,6 +125,7 @@ describe("AdminPage", () => {
 
   it("keeps admin quick links hidden when there is no admin session", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(null);
+    cookiesMock.mockResolvedValue(makeCookieStore());
 
     const markup = renderToStaticMarkup(await AdminPage({}));
 
@@ -116,6 +138,7 @@ describe("AdminPage", () => {
   it("shows the auth-disabled message when admin auth is unavailable", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(null);
     vi.mocked(isAdminAuthConfigured).mockReturnValue(false);
+    cookiesMock.mockResolvedValue(makeCookieStore());
 
     const markup = renderToStaticMarkup(await AdminPage({}));
 
@@ -125,6 +148,7 @@ describe("AdminPage", () => {
 
   it("shows denied sign-in feedback from the query string", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(null);
+    cookiesMock.mockResolvedValue(makeCookieStore());
 
     const markup = renderToStaticMarkup(await AdminPage({
       searchParams: Promise.resolve({ error: "AccessDenied" }),
@@ -141,14 +165,34 @@ describe("AdminPage", () => {
         githubLogin: "octoadmin",
       },
     } as never);
+    cookiesMock.mockResolvedValue(makeCookieStore({ "j2-admin-flash": "saved" }));
 
     const markup = renderToStaticMarkup(await AdminPage({
       searchParams: Promise.resolve({ saved: "1", cloned: "1", editRemoved: "1" }),
     }));
 
     expect(markup).toContain("Post saved successfully.");
-    expect(markup).toContain("Draft clone created successfully.");
-    expect(markup).toContain("The legacy post edit route has moved into the admin dashboard.");
+    expect(markup).not.toContain("Draft clone created successfully.");
+    expect(markup).not.toContain("The legacy post edit route has moved into the admin dashboard.");
+  });
+
+  it("does not trust flash query params without the matching cookie", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({
+      user: {
+        id: "admin-1",
+        role: "admin",
+        githubLogin: "octoadmin",
+      },
+    } as never);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+
+    const markup = renderToStaticMarkup(await AdminPage({
+      searchParams: Promise.resolve({ saved: "1", cloned: "1", editRemoved: "1" }),
+    }));
+
+    expect(markup).not.toContain("Post saved successfully.");
+    expect(markup).not.toContain("Draft clone created successfully.");
+    expect(markup).not.toContain("The legacy post edit route has moved into the admin dashboard.");
   });
 
   it("renders the inline editor when a valid postId is provided", async () => {
@@ -159,6 +203,7 @@ describe("AdminPage", () => {
         githubLogin: "octoadmin",
       },
     } as never);
+    cookiesMock.mockResolvedValue(makeCookieStore());
     vi.mocked(getAdminEditablePostById).mockResolvedValue({
       id: "post-123",
       slug: "admin-fixture",
@@ -230,6 +275,7 @@ describe("AdminPage", () => {
         githubLogin: "octoadmin",
       },
     } as never);
+    cookiesMock.mockResolvedValue(makeCookieStore());
     vi.mocked(getAdminEditablePostById).mockResolvedValue({
       id: "post-123",
       slug: "admin-fixture",
@@ -280,6 +326,7 @@ describe("AdminPage", () => {
 
   it("does not parse admin dashboard filters for public visitors", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(null);
+    cookiesMock.mockResolvedValue(makeCookieStore());
 
     await AdminPage({
       searchParams: Promise.resolve({ status: "not-a-real-status" }),
