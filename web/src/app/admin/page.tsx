@@ -139,10 +139,6 @@ export default async function AdminPage({
           </div>
         ) : null}
 
-        <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-          For local GitHub sign-in, your GitHub OAuth app also needs `http://localhost:3000/api/auth/callback/github` listed as an allowed callback URL.
-        </div>
-
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <AdminAuthButton disabled={!authConfigured} isSignedIn={Boolean(session?.user?.id)} />
           {session?.user?.id ? (
