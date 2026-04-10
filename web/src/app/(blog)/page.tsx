@@ -118,6 +118,26 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
           <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Stories from the trail</h2>
         </div>
         <HomeFeed key="feed:home" initialPosts={posts} initialSearch="" />
+
+        <section className="container mx-auto px-4 pt-8 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-8 shadow-[var(--shadow)] backdrop-blur-sm sm:p-10">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Next up</p>
+            <div className="mt-4 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <h2 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">A few pins are still daydreams</h2>
+                <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+                  Peek at the places we keep plotting between published trips, from national park returns to roads we still want to chase.
+                </p>
+              </div>
+              <Link
+                className="inline-flex items-center justify-center rounded-full border border-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent-soft)]"
+                href="/wishlist"
+              >
+                Wander through the wishlist
+              </Link>
+            </div>
+          </div>
+        </section>
         
         <section className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-8 shadow-[var(--shadow)] backdrop-blur-sm sm:p-12 text-center">

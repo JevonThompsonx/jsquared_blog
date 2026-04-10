@@ -73,6 +73,8 @@ describe("HomePage", () => {
     expect(markup).toContain('data-testid="scroll-to-stories"');
     expect(markup).toContain('href="/map"');
     expect(markup).toContain('href="/feed.xml"');
+    expect(markup).toContain('href="/wishlist"');
+    expect(markup).toContain("A few pins are still daydreams");
     expect(markup).toContain('data-testid="newsletter-signup"');
     expect(markup).toContain('data-source="homepage-bottom"');
     expect(markup).toContain("Feed posts: 1");
