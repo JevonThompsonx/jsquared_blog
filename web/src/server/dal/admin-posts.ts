@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { categories, mediaAssets, postImages, postTags, posts, series, tags } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
+import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 import { hasPostViewCountColumn } from "@/server/dal/posts";
 
 const adminPostStatusSchema = z.enum(["draft", "published", "scheduled"]);
@@ -221,7 +222,7 @@ export async function getAdminPostCounts(): Promise<AdminPostCounts> {
 
 export async function getAdminEditablePostById(postId: string): Promise<AdminEditablePostRecord | null> {
   const db = getDb();
-  const hasViewCount = await hasPostViewCountColumn();
+  const caps = await getPostColumnCapabilities();
   const rows = await db
     .select({
       id: posts.id,
@@ -237,8 +238,8 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       updatedAt: posts.updatedAt,
       publishedAt: posts.publishedAt,
       scheduledPublishTime: posts.scheduledPublishTime,
-      viewCount: getAdminViewCountSelection(hasViewCount),
-      layoutType: posts.layoutType,
+      viewCount: getAdminViewCountSelection(caps.viewCount),
+      layoutType: caps.layoutType ? posts.layoutType : sql<null>`null`,
       contentJson: posts.contentJson,
       contentFormat: posts.contentFormat,
       contentHtml: posts.contentHtml,
@@ -246,14 +247,14 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       seriesId: posts.seriesId,
       seriesTitle: series.title,
       seriesOrder: posts.seriesOrder,
-      locationName: posts.locationName,
-      locationLat: posts.locationLat,
-      locationLng: posts.locationLng,
-      locationZoom: posts.locationZoom,
-      iovanderUrl: posts.iovanderUrl,
-      songTitle: posts.songTitle,
-      songArtist: posts.songArtist,
-      songUrl: posts.songUrl,
+      locationName: caps.locationName ? posts.locationName : sql<null>`null`,
+      locationLat: caps.locationLat ? posts.locationLat : sql<null>`null`,
+      locationLng: caps.locationLng ? posts.locationLng : sql<null>`null`,
+      locationZoom: caps.locationZoom ? posts.locationZoom : sql<null>`null`,
+      iovanderUrl: caps.iovanderUrl ? posts.iovanderUrl : sql<null>`null`,
+      songTitle: caps.songTitle ? posts.songTitle : sql<null>`null`,
+      songArtist: caps.songArtist ? posts.songArtist : sql<null>`null`,
+      songUrl: caps.songUrl ? posts.songUrl : sql<null>`null`,
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
