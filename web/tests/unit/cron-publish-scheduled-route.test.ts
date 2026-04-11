@@ -15,6 +15,10 @@ vi.mock("@/server/posts/publish", () => ({
   publishDueScheduledPosts: vi.fn(),
 }));
 
+vi.mock("@/server/dal/admin-wishlist-places", () => ({
+  deactivateLinkedWishlistPlaces: vi.fn(() => Promise.resolve()),
+}));
+
 import { GET } from "@/app/api/cron/publish-scheduled/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";

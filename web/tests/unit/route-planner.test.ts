@@ -18,6 +18,7 @@ const samplePlaces: PublicWishlistPlace[] = [
     sortOrder: 0,
     visited: false,
     externalUrl: null,
+    description: null,
   },
   {
     id: "place-2",
@@ -29,6 +30,7 @@ const samplePlaces: PublicWishlistPlace[] = [
     sortOrder: 1,
     visited: true,
     externalUrl: null,
+    description: null,
   },
   {
     id: "place-3",
@@ -40,6 +42,7 @@ const samplePlaces: PublicWishlistPlace[] = [
     sortOrder: 2,
     visited: false,
     externalUrl: null,
+    description: null,
   },
 ];
 

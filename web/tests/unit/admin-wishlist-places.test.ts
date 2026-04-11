@@ -56,6 +56,7 @@ describe("admin wishlist places DAL", () => {
     await createAdminWishlistPlace({
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
+      description: null,
       latitude: 48.7596,
       longitude: -113.787,
       zoom: 8,
@@ -115,6 +116,7 @@ describe("admin wishlist places DAL", () => {
       id: "place-1",
       name: "Updated Glacier National Park",
       locationName: "Updated West Glacier, Montana",
+      description: null,
       latitude: 48.7,
       longitude: -113.7,
       zoom: 10,

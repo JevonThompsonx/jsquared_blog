@@ -131,9 +131,7 @@ export async function deleteWishlistPlaceAction(formData: FormData): Promise<voi
   }
 }
 
-export async function checkOffWishlistPlaceAction(
-  formData: FormData,
-): Promise<{ error: string } | undefined> {
+export async function checkOffWishlistPlaceAction(formData: FormData): Promise<void> {
   const session = await requireAdminSession();
   if (!session?.user?.id || session.user.role !== "admin") {
     redirect("/admin?error=AccessDenied");
@@ -141,7 +139,7 @@ export async function checkOffWishlistPlaceAction(
 
   const id = (formData.get("id") as string | null)?.trim() ?? "";
   if (!id) {
-    return { error: "Invalid wishlist place id" };
+    return;
   }
 
   const linkedPostIdRaw = (formData.get("linkedPostId") as string | null) ?? "";

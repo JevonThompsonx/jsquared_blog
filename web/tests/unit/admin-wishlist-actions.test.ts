@@ -511,12 +511,11 @@ describe("checkOffWishlistPlaceAction", () => {
     expect(vi.mocked(setWishlistPlaceLinkedPost)).not.toHaveBeenCalled();
   });
 
-  it("rejects missing place id", async () => {
+  it("silently returns when place id is missing or blank", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
 
-    const result = await checkOffWishlistPlaceAction(makeFormData({ id: "", linkedPostId: "post-xyz" }));
+    await checkOffWishlistPlaceAction(makeFormData({ id: "", linkedPostId: "post-xyz" }));
 
-    expect(result).toEqual({ error: "Invalid wishlist place id" });
     expect(vi.mocked(setWishlistPlaceLinkedPost)).not.toHaveBeenCalled();
   });
 });
