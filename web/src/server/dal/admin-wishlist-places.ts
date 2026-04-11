@@ -9,6 +9,7 @@ export type AdminWishlistPlaceRecord = {
   id: string;
   name: string;
   locationName: string;
+  description: string | null;
   locationLat: number;
   locationLng: number;
   locationZoom: number;
@@ -23,6 +24,7 @@ export type AdminWishlistPlaceRecord = {
 export type CreateAdminWishlistPlaceInput = {
   name: string;
   locationName: string;
+  description: string | null;
   latitude: number;
   longitude: number;
   zoom: number;
@@ -37,6 +39,7 @@ export type UpdateAdminWishlistPlaceInput = {
   id: string;
   name: string;
   locationName: string;
+  description: string | null;
   latitude: number;
   longitude: number;
   zoom: number;
@@ -54,6 +57,7 @@ export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceIn
     id: crypto.randomUUID(),
     name: input.name,
     locationName: input.locationName,
+    description: input.description,
     locationLat: input.latitude,
     locationLng: input.longitude,
     locationZoom: input.zoom,
@@ -75,6 +79,7 @@ export async function updateAdminWishlistPlace(input: UpdateAdminWishlistPlaceIn
     .set({
       name: input.name,
       locationName: input.locationName,
+      description: input.description,
       locationLat: input.latitude,
       locationLng: input.longitude,
       locationZoom: input.zoom,
@@ -101,6 +106,7 @@ export async function listAdminWishlistPlaces(): Promise<AdminWishlistPlaceRecor
       id: wishlistPlaces.id,
       name: wishlistPlaces.name,
       locationName: wishlistPlaces.locationName,
+      description: wishlistPlaces.description,
       locationLat: wishlistPlaces.locationLat,
       locationLng: wishlistPlaces.locationLng,
       locationZoom: wishlistPlaces.locationZoom,

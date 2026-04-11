@@ -25,6 +25,7 @@ export async function createWishlistPlaceAction(formData: FormData): Promise<voi
   const parsed = adminWishlistPlaceFormSchema.safeParse({
     name: formData.get("name"),
     locationName: formData.get("locationName"),
+    description: formData.get("description"),
     sortOrder: formData.get("sortOrder"),
     visited: formData.get("visited") === "on",
     isPublic: formData.get("isPublic") === "on",
@@ -70,6 +71,7 @@ export async function updateWishlistPlaceAction(formData: FormData): Promise<voi
     id: formData.get("id"),
     name: formData.get("name"),
     locationName: formData.get("locationName"),
+    description: formData.get("description"),
     sortOrder: formData.get("sortOrder"),
     visited: formData.get("visited") === "on",
     isPublic: formData.get("isPublic") === "on",

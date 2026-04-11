@@ -160,6 +160,7 @@ describe("wishlist admin actions", () => {
     expect(vi.mocked(createAdminWishlistPlace)).toHaveBeenCalledWith({
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
+      description: null,
       latitude: 48.7596,
       longitude: -113.787,
       zoom: 8,
@@ -239,6 +240,7 @@ describe("wishlist admin actions", () => {
       visited: true,
       isPublic: true,
       externalUrl: "https://example.com/updated-glacier",
+      description: null,
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });

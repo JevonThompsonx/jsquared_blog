@@ -30,9 +30,20 @@ const optionalHttpsUrlField = z.preprocess(
   z.union([z.null(), z.url({ protocol: /^https$/ })]),
 );
 
+const optionalTextAreaField = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed || null;
+  },
+  z.string().max(500).nullable(),
+);
+
 export const adminWishlistPlaceFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   locationName: z.string().trim().min(1, "Location is required"),
+  description: optionalTextAreaField,
   sortOrder: optionalIntegerField(0),
   visited: z.boolean().optional().default(false),
   isPublic: z.boolean().optional().default(false),

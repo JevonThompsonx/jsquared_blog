@@ -63,6 +63,10 @@ export default async function AdminWishlistPage() {
                 </label>
                 <WishlistLocationAutocomplete />
                 <label className="block text-sm text-[var(--text-secondary)]">
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Short description <span className="font-normal text-[var(--text-secondary)]">(optional, max 500 chars)</span></span>
+                  <textarea className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" maxLength={500} name="description" rows={2} />
+                </label>
+                <label className="block text-sm text-[var(--text-secondary)]">
                   <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
                   <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue="0" name="sortOrder" step="1" type="number" />
                 </label>
@@ -112,6 +116,9 @@ export default async function AdminWishlistPage() {
                             ) : null}
                           </div>
                           <p className="mt-2 text-sm text-[var(--text-secondary)]">{place.locationName}</p>
+                          {place.description ? (
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">{place.description}</p>
+                          ) : null}
                           <p className="mt-1 text-xs text-[var(--text-secondary)]">
                             {place.locationLat.toFixed(4)}, {place.locationLng.toFixed(4)} · zoom {place.locationZoom} · sort {place.sortOrder}
                           </p>
@@ -132,6 +139,10 @@ export default async function AdminWishlistPage() {
                           </label>
                           <WishlistLocationAutocomplete defaultLocationName={place.locationName} />
                         </div>
+                        <label className="block text-sm text-[var(--text-secondary)]">
+                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Short description <span className="font-normal text-[var(--text-secondary)]">(optional, max 500 chars)</span></span>
+                          <textarea className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.description ?? ""} maxLength={500} name="description" rows={2} />
+                        </label>
                         <label className="block text-sm text-[var(--text-secondary)]">
                           <span className="mb-1 block font-medium text-[var(--text-primary)]">Sort order</span>
                           <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.sortOrder} name="sortOrder" step="1" type="number" />

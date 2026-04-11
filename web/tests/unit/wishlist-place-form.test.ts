@@ -16,6 +16,7 @@ describe("adminWishlistPlaceFormSchema", () => {
     expect(parsed).toEqual({
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
+      description: null,
       sortOrder: 0,
       visited: false,
       isPublic: true,
@@ -61,6 +62,53 @@ describe("adminWishlistPlaceFormSchema", () => {
       name: "Moab",
       locationName: "Moab, Utah",
       externalUrl: "http://example.com/moab",
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it("accepts an optional description and trims whitespace", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      description: "  A stunning park in Montana.  ",
+    });
+
+    expect(parsed.description).toBe("A stunning park in Montana.");
+  });
+
+  it("defaults description to null when omitted", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+    });
+
+    expect(parsed.description).toBeNull();
+  });
+
+  it("defaults description to null when blank", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      description: "   ",
+    });
+
+    expect(parsed.description).toBeNull();
+  });
+
+  it("rejects a description over 500 characters", () => {
+    const parsed = adminWishlistPlaceFormSchema.safeParse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      description: "x".repeat(501),
     });
 
     expect(parsed.success).toBe(false);

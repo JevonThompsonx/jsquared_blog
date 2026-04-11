@@ -180,6 +180,7 @@ export const wishlistPlaces = sqliteTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     locationName: text("location_name").notNull(),
+    description: text("description"),
     locationLat: real("location_lat").notNull(),
     locationLng: real("location_lng").notNull(),
     locationZoom: integer("location_zoom").notNull().default(8),
