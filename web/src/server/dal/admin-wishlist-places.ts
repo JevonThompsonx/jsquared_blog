@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 
 import { wishlistPlaces } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
@@ -17,6 +17,7 @@ export type AdminWishlistPlaceRecord = {
   visited: boolean;
   isPublic: boolean;
   externalUrl: string | null;
+  linkedPostId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -114,9 +115,30 @@ export async function listAdminWishlistPlaces(): Promise<AdminWishlistPlaceRecor
       visited: wishlistPlaces.visited,
       isPublic: wishlistPlaces.isPublic,
       externalUrl: wishlistPlaces.externalUrl,
+      linkedPostId: wishlistPlaces.linkedPostId,
       createdAt: wishlistPlaces.createdAt,
       updatedAt: wishlistPlaces.updatedAt,
     })
     .from(wishlistPlaces)
     .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), desc(wishlistPlaces.createdAt));
+}
+
+export async function setWishlistPlaceLinkedPost(id: string, postId: string | null): Promise<void> {
+  const db = getDb();
+
+  await db
+    .update(wishlistPlaces)
+    .set({ linkedPostId: postId, updatedAt: new Date() })
+    .where(eq(wishlistPlaces.id, id));
+}
+
+export async function deactivateLinkedWishlistPlaces(postIds: string[]): Promise<void> {
+  if (postIds.length === 0) return;
+
+  const db = getDb();
+
+  await db
+    .update(wishlistPlaces)
+    .set({ isPublic: false, updatedAt: new Date() })
+    .where(inArray(wishlistPlaces.linkedPostId, postIds));
 }

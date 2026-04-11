@@ -17,6 +17,7 @@ vi.mock("@/lib/auth/session", () => ({
 vi.mock("@/server/dal/admin-wishlist-places", () => ({
   createAdminWishlistPlace: vi.fn(),
   deleteAdminWishlistPlace: vi.fn(),
+  setWishlistPlaceLinkedPost: vi.fn(),
   updateAdminWishlistPlace: vi.fn(),
 }));
 
@@ -31,12 +32,14 @@ import { requireAdminSession } from "@/lib/auth/session";
 import { geocodeLocation } from "@/lib/geocode";
 import {
   createWishlistPlaceAction,
+  checkOffWishlistPlaceAction,
   deleteWishlistPlaceAction,
   updateWishlistPlaceAction,
 } from "@/app/admin/wishlist/actions";
 import {
   createAdminWishlistPlace,
   deleteAdminWishlistPlace,
+  setWishlistPlaceLinkedPost,
   updateAdminWishlistPlace,
 } from "@/server/dal/admin-wishlist-places";
 
@@ -452,5 +455,68 @@ describe("wishlist admin actions", () => {
 
     expect(vi.mocked(updateAdminWishlistPlace)).not.toHaveBeenCalled();
     expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+});
+
+describe("checkOffWishlistPlaceAction", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("links a wishlist place to a post for authenticated admins", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+
+    await checkOffWishlistPlaceAction(
+      makeFormData({
+        id: "place-abc",
+        linkedPostId: "post-xyz",
+      }),
+    );
+
+    expect(vi.mocked(setWishlistPlaceLinkedPost)).toHaveBeenCalledWith("place-abc", "post-xyz");
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
+  });
+
+  it("clears the linked post when linkedPostId is empty", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+
+    await checkOffWishlistPlaceAction(
+      makeFormData({
+        id: "place-abc",
+        linkedPostId: "",
+      }),
+    );
+
+    expect(vi.mocked(setWishlistPlaceLinkedPost)).toHaveBeenCalledWith("place-abc", null);
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
+  });
+
+  it("redirects unauthenticated callers away from check-off", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(null);
+
+    await expect(
+      checkOffWishlistPlaceAction(makeFormData({ id: "place-abc", linkedPostId: "post-xyz" })),
+    ).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
+
+    expect(vi.mocked(setWishlistPlaceLinkedPost)).not.toHaveBeenCalled();
+  });
+
+  it("redirects non-admin callers away from check-off", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(NON_ADMIN_SESSION);
+
+    await expect(
+      checkOffWishlistPlaceAction(makeFormData({ id: "place-abc", linkedPostId: "post-xyz" })),
+    ).rejects.toThrow("NEXT_REDIRECT:/admin?error=AccessDenied");
+
+    expect(vi.mocked(setWishlistPlaceLinkedPost)).not.toHaveBeenCalled();
+  });
+
+  it("rejects missing place id", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+
+    const result = await checkOffWishlistPlaceAction(makeFormData({ id: "", linkedPostId: "post-xyz" }));
+
+    expect(result).toEqual({ error: "Invalid wishlist place id" });
+    expect(vi.mocked(setWishlistPlaceLinkedPost)).not.toHaveBeenCalled();
   });
 });

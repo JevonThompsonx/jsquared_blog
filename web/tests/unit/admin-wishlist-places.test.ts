@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockInsertValues = vi.fn().mockResolvedValue(undefined);
 const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
-const mockUpdateSet = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
+const mockUpdateWhere = vi.fn().mockResolvedValue(undefined);
+const mockUpdateSet = vi.fn().mockReturnValue({ where: mockUpdateWhere });
 const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }));
 const mockDeleteWhere = vi.fn().mockResolvedValue(undefined);
 const mockDelete = vi.fn(() => ({ where: mockDeleteWhere }));
@@ -18,6 +19,7 @@ const mockOrderBy = vi.fn().mockResolvedValue([
     visited: false,
     isPublic: true,
     externalUrl: "https://example.com/glacier",
+    linkedPostId: null,
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
   },
@@ -38,8 +40,10 @@ vi.mock("@/lib/db", () => ({
 
 import {
   createAdminWishlistPlace,
+  deactivateLinkedWishlistPlaces,
   deleteAdminWishlistPlace,
   listAdminWishlistPlaces,
+  setWishlistPlaceLinkedPost,
   updateAdminWishlistPlace,
 } from "@/server/dal/admin-wishlist-places";
 
@@ -99,6 +103,7 @@ describe("admin wishlist places DAL", () => {
         visited: false,
         isPublic: true,
         externalUrl: "https://example.com/glacier",
+        linkedPostId: null,
         createdAt: new Date("2026-04-01T00:00:00.000Z"),
         updatedAt: new Date("2026-04-01T00:00:00.000Z"),
       },
@@ -141,5 +146,49 @@ describe("admin wishlist places DAL", () => {
 
     expect(mockDelete).toHaveBeenCalledOnce();
     expect(mockDeleteWhere).toHaveBeenCalledOnce();
+  });
+
+  it("links a wishlist place to a draft post by id", async () => {
+    await setWishlistPlaceLinkedPost("place-1", "post-abc");
+
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        linkedPostId: "post-abc",
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(mockUpdateWhere).toHaveBeenCalledOnce();
+  });
+
+  it("clears a wishlist place linked post when postId is null", async () => {
+    await setWishlistPlaceLinkedPost("place-1", null);
+
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        linkedPostId: null,
+        updatedAt: expect.any(Date),
+      }),
+    );
+  });
+
+  it("deactivates wishlist places linked to published post ids", async () => {
+    await deactivateLinkedWishlistPlaces(["post-abc", "post-xyz"]);
+
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isPublic: false,
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(mockUpdateWhere).toHaveBeenCalledOnce();
+  });
+
+  it("skips deactivation when published post ids list is empty", async () => {
+    await deactivateLinkedWishlistPlaces([]);
+
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

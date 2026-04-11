@@ -92,6 +92,13 @@
       "when": 1744416000000,
       "tag": "0013_wishlist_description",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1744502400000,
+      "tag": "0014_wishlist_linked_post",
+      "breakpoints": true
     }
   ]
 }

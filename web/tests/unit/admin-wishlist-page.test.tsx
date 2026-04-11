@@ -29,6 +29,7 @@ vi.mock("@/app/admin/wishlist/actions", () => ({
   createWishlistPlaceAction: vi.fn(),
   updateWishlistPlaceAction: vi.fn(),
   deleteWishlistPlaceAction: vi.fn(),
+  checkOffWishlistPlaceAction: vi.fn(),
 }));
 
 vi.mock("@/components/admin/wishlist-location-autocomplete", () => ({

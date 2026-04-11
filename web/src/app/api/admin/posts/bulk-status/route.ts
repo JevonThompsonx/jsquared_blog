@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { publishPosts, unpublishPosts } from "@/server/posts/publish";
+import { deactivateLinkedWishlistPlaces } from "@/server/dal/admin-wishlist-places";
 
 const bulkStatusSchema = z.object({
   postIds: z.array(z.string().trim().min(1)).min(1).max(100),
@@ -31,6 +33,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     const result = body.status === "published"
       ? await publishPosts(body.postIds)
       : await unpublishPosts(body.postIds);
+
+    if (body.status === "published" && result.updatedPostIds.length > 0) {
+      try {
+        await deactivateLinkedWishlistPlaces(result.updatedPostIds);
+        revalidatePath("/wishlist");
+      } catch (err) {
+        console.error("[bulk-status] deactivateLinkedWishlistPlaces failed:", err);
+      }
+    }
+
     return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: "Invalid bulk update request" }, { status: 400 });

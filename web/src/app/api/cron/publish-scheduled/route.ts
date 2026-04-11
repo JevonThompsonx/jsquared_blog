@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { requireCronAuthorization } from "@/lib/cron-auth";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { publishDueScheduledPosts } from "@/server/posts/publish";
+import { deactivateLinkedWishlistPlaces } from "@/server/dal/admin-wishlist-places";
 
 // GET /api/cron/publish-scheduled
 // Input: Authorization: Bearer {CRON_SECRET}
@@ -50,6 +51,15 @@ export async function GET(request: Request): Promise<NextResponse> {
     revalidatePath("/admin");
   } catch (error) {
     console.error("[cron] publish-scheduled revalidation failed for /admin:", error);
+  }
+
+  if (result.updatedPostIds.length > 0) {
+    try {
+      await deactivateLinkedWishlistPlaces(result.updatedPostIds);
+      revalidatePath("/wishlist");
+    } catch (err) {
+      console.error("[cron] deactivateLinkedWishlistPlaces failed:", err);
+    }
   }
 
   return NextResponse.json({

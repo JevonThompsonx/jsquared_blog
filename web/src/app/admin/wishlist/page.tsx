@@ -6,7 +6,7 @@ import { WishlistLocationAutocomplete } from "@/components/admin/wishlist-locati
 import { requireAdminSession } from "@/lib/auth/session";
 import { listAdminWishlistPlaces, type AdminWishlistPlaceRecord } from "@/server/dal/admin-wishlist-places";
 
-import { createWishlistPlaceAction, deleteWishlistPlaceAction, updateWishlistPlaceAction } from "./actions";
+import { createWishlistPlaceAction, deleteWishlistPlaceAction, updateWishlistPlaceAction, checkOffWishlistPlaceAction } from "./actions";
 
 export default async function AdminWishlistPage() {
   const session = await requireAdminSession();
@@ -172,6 +172,23 @@ export default async function AdminWishlistPage() {
                         <input name="id" type="hidden" value={place.id} />
                         <button className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:border-red-400 hover:text-red-200" type="submit">
                           Delete destination
+                        </button>
+                      </form>
+
+                      <form action={checkOffWishlistPlaceAction} className="mt-3 flex flex-wrap items-end gap-3" data-testid="admin-wishlist-checkoff-form">
+                        <input name="id" type="hidden" value={place.id} />
+                        <label className="block text-sm text-[var(--text-secondary)]">
+                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Link to published post <span className="font-normal text-[var(--text-secondary)]">(post id — clears from public wishlist on publish)</span></span>
+                          <input
+                            className="w-72 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--input-text)]"
+                            defaultValue={place.linkedPostId ?? ""}
+                            name="linkedPostId"
+                            placeholder="Leave blank to unlink"
+                            type="text"
+                          />
+                        </label>
+                        <button className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]" type="submit">
+                          {place.linkedPostId ? "Update link" : "Link post"}
                         </button>
                       </form>
                   </li>

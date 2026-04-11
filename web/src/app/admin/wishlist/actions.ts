@@ -8,6 +8,7 @@ import { geocodeLocation } from "@/lib/geocode";
 import {
   createAdminWishlistPlace,
   deleteAdminWishlistPlace,
+  setWishlistPlaceLinkedPost,
   updateAdminWishlistPlace,
 } from "@/server/dal/admin-wishlist-places";
 import {
@@ -15,7 +16,6 @@ import {
   adminWishlistPlaceIdSchema,
   adminWishlistPlaceUpdateFormSchema,
 } from "@/server/forms/admin-wishlist-place";
-
 export async function createWishlistPlaceAction(formData: FormData): Promise<void> {
   const session = await requireAdminSession();
   if (!session?.user?.id || session.user.role !== "admin") {
@@ -128,5 +128,30 @@ export async function deleteWishlistPlaceAction(formData: FormData): Promise<voi
     revalidatePath("/admin/wishlist");
   } catch (error) {
     console.error("[admin wishlist] Revalidation failed for /admin/wishlist after delete", error);
+  }
+}
+
+export async function checkOffWishlistPlaceAction(
+  formData: FormData,
+): Promise<{ error: string } | undefined> {
+  const session = await requireAdminSession();
+  if (!session?.user?.id || session.user.role !== "admin") {
+    redirect("/admin?error=AccessDenied");
+  }
+
+  const id = (formData.get("id") as string | null)?.trim() ?? "";
+  if (!id) {
+    return { error: "Invalid wishlist place id" };
+  }
+
+  const linkedPostIdRaw = (formData.get("linkedPostId") as string | null) ?? "";
+  const linkedPostId = linkedPostIdRaw.trim() || null;
+
+  await setWishlistPlaceLinkedPost(id, linkedPostId);
+
+  try {
+    revalidatePath("/admin/wishlist");
+  } catch (error) {
+    console.error("[admin wishlist] Revalidation failed for /admin/wishlist after check-off", error);
   }
 }
