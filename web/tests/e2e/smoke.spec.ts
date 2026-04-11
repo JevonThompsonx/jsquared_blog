@@ -417,9 +417,6 @@ adminTest.describe("authenticated admin smoke tests", () => {
     try {
       await page.getByTestId("admin-wishlist-create-form").getByLabel("Name").fill(destinationName);
       await page.getByTestId("admin-wishlist-create-form").getByLabel("Location label").fill("Arches National Park");
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Latitude").fill("38.7331");
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Longitude").fill("-109.5925");
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Zoom").fill("9");
       await page.getByTestId("admin-wishlist-create-form").getByLabel("Sort order").fill("42");
       await page.getByTestId("admin-wishlist-create-form").getByLabel("Visited already").check();
       await page.getByTestId("admin-wishlist-create-form").getByLabel("Show publicly").check();
