@@ -15,6 +15,7 @@ export type PublicWishlistPlace = {
   sortOrder: number;
   visited: boolean;
   externalUrl: string | null;
+  description: string | null;
 };
 
 function normalizePublicWishlistExternalUrl(externalUrl: string | null): string | null {
@@ -50,6 +51,7 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
       sortOrder: wishlistPlaces.sortOrder,
       visited: wishlistPlaces.visited,
       externalUrl: wishlistPlaces.externalUrl,
+      description: wishlistPlaces.description,
     })
     .from(wishlistPlaces)
     .where(eq(wishlistPlaces.isPublic, true))

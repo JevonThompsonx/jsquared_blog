@@ -84,6 +84,9 @@ export default async function WishlistPage() {
                         ) : null}
                       </div>
                       <p className="mt-2 text-sm text-[var(--text-secondary)]">{place.locationName}</p>
+                      {place.description ? (
+                        <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{place.description}</p>
+                      ) : null}
                     </div>
                     {place.externalUrl ? (
                       <a

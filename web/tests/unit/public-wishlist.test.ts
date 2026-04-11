@@ -32,6 +32,7 @@ describe("listPublicWishlistPlaces", () => {
         sortOrder: 0,
         visited: false,
         externalUrl: "https://example.com/glacier",
+        description: "Beautiful alpine park in Montana",
       },
     ]);
 
@@ -46,6 +47,7 @@ describe("listPublicWishlistPlaces", () => {
         sortOrder: 0,
         visited: false,
         externalUrl: "https://example.com/glacier",
+        description: "Beautiful alpine park in Montana",
       },
     ]);
 
@@ -66,6 +68,7 @@ describe("listPublicWishlistPlaces", () => {
         sortOrder: 0,
         visited: false,
         externalUrl: "javascript:alert('xss')",
+        description: null,
       },
       {
         id: "place-2",
@@ -77,6 +80,7 @@ describe("listPublicWishlistPlaces", () => {
         sortOrder: 1,
         visited: true,
         externalUrl: "  https://example.com/banff ",
+        description: "Rocky mountain gem",
       },
     ]);
 
@@ -91,6 +95,7 @@ describe("listPublicWishlistPlaces", () => {
         sortOrder: 0,
         visited: false,
         externalUrl: null,
+        description: null,
       },
       {
         id: "place-2",
@@ -102,6 +107,7 @@ describe("listPublicWishlistPlaces", () => {
         sortOrder: 1,
         visited: true,
         externalUrl: "https://example.com/banff",
+        description: "Rocky mountain gem",
       },
     ]);
   });
