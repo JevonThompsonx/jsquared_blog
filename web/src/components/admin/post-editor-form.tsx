@@ -84,9 +84,14 @@ export function PostEditorForm({
     });
   };
 
+  const [browserOffsetMinutes, setBrowserOffsetMinutes] = useState("");
+
+  useEffect(() => {
+    setBrowserOffsetMinutes(new Date().getTimezoneOffset().toString());
+  }, []);
+
   const buttonLabel = mode === "create" ? "Create post" : "Save changes";
   const modeLabel = mode === "create" ? "New story" : "Editing story";
-  const browserOffsetMinutes = new Date().getTimezoneOffset().toString();
   const scheduledValue = post?.scheduledPublishTime
     ? formatDateTimeLocal(new Date(post.scheduledPublishTime))
     : "";
