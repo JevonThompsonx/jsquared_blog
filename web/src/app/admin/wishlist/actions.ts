@@ -137,15 +137,24 @@ export async function checkOffWishlistPlaceAction(formData: FormData): Promise<v
     redirect("/admin?error=AccessDenied");
   }
 
-  const id = (formData.get("id") as string | null)?.trim() ?? "";
-  if (!id) {
+  const idParsed = adminWishlistPlaceIdSchema.safeParse(
+    (formData.get("id") as string | null)?.trim() ?? "",
+  );
+  if (!idParsed.success) {
     return;
   }
 
-  const linkedPostIdRaw = (formData.get("linkedPostId") as string | null) ?? "";
-  const linkedPostId = linkedPostIdRaw.trim() || null;
+  const linkedPostIdRaw = (formData.get("linkedPostId") as string | null)?.trim() ?? "";
+  let linkedPostId: string | null = null;
+  if (linkedPostIdRaw) {
+    const linkedParsed = adminWishlistPlaceIdSchema.safeParse(linkedPostIdRaw);
+    if (!linkedParsed.success) {
+      return;
+    }
+    linkedPostId = linkedParsed.data;
+  }
 
-  await setWishlistPlaceLinkedPost(id, linkedPostId);
+  await setWishlistPlaceLinkedPost(idParsed.data, linkedPostId);
 
   try {
     revalidatePath("/admin/wishlist");
