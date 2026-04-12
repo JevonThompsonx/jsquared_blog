@@ -45,7 +45,7 @@ function dedupeIds(postIds: string[]): string[] {
   return [...new Set(postIds)];
 }
 
-export async function getPublishTargetsByIds(postIds: string[]): Promise<PostPublishTarget[]> {
+async function getPublishTargetsByIds(postIds: string[]): Promise<PostPublishTarget[]> {
   const ids = dedupeIds(postIds);
   if (ids.length === 0) {
     return [];

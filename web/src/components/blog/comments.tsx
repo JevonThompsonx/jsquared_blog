@@ -9,6 +9,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import type { Session } from "@supabase/supabase-js";
 
 import { resolveCommentMutationComments } from "@/lib/comment-mutation-response";
+import { formatCommentDate } from "@/lib/comment-utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CommentSortOption = "likes" | "newest" | "oldest";
@@ -51,19 +52,6 @@ const commentsResponseSchema = z.object({
 });
 
 type CommentThread = PostComment & { replies: PostComment[] };
-
-function formatCommentDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return "just now";
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
 
 function buildThreads(flat: PostComment[], sortBy: CommentSortOption): CommentThread[] {
   const visibleFlat = flat.filter((c) => c.visibility === "visible" || c.visibility === "hidden");

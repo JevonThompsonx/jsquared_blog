@@ -1,15 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { getInitials } from "@/lib/display-utils";
 import type { PublicAuthorProfile } from "@/server/dal/profiles";
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 export function AuthorCard({ author }: { author: PublicAuthorProfile }) {
   const initials = getInitials(author.displayName);

@@ -290,7 +290,7 @@ function renderTiptapNode(node: TiptapNode): string {
   }
 }
 
-export function createEmptyTiptapDocument(): TiptapDocument {
+function createEmptyTiptapDocument(): TiptapDocument {
   return {
     type: "doc",
     content: [{ type: "paragraph" }],
@@ -309,7 +309,7 @@ export function parseCanonicalTiptapDocument(contentJson: string | null | undefi
   }
 }
 
-export function isLegacyHtmlContent(contentJson: string | null | undefined): boolean {
+function isLegacyHtmlContent(contentJson: string | null | undefined): boolean {
   if (!contentJson) {
     return false;
   }

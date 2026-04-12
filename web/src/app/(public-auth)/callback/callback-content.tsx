@@ -4,29 +4,16 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { safeRedirectPath } from "@/lib/auth/redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CallbackState = "verifying" | "success" | "error";
 type CallbackType = "signup" | "email" | "recovery";
 
 const GENERIC_CALLBACK_ERROR_MESSAGE = "Something went wrong. The link may have expired.";
-const REDIRECT_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F\\]/;
 
 function parseCallbackType(value: string | null): CallbackType | null {
   return value === "signup" || value === "email" || value === "recovery" ? value : null;
-}
-
-export function safeRedirectPath(raw: string | null): string {
-  if (
-    raw &&
-    raw.startsWith("/") &&
-    !raw.startsWith("//") &&
-    !REDIRECT_CONTROL_CHARACTER_PATTERN.test(raw)
-  ) {
-    return raw;
-  }
-
-  return "/";
 }
 
 function getCallbackErrorMessage(errorMessage: string | null | undefined): string {

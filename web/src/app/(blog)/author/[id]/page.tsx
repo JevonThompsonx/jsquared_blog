@@ -7,6 +7,7 @@ import { z } from "zod";
 import { SiteHeader } from "@/components/layout/site-header";
 import { countCommentsByUserId, listCommentsByUserId } from "@/server/dal/comments";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
+import { getInitials } from "@/lib/display-utils";
 import { getPostHref } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -29,15 +30,6 @@ const AVATAR_PRESETS: AvatarPreset[] = [
 const authorParamsSchema = z.object({
   id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
 });
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 function ProfileAvatar({ avatarUrl, displayName, size }: { avatarUrl: string | null; displayName: string; size: number }) {
   const preset = avatarUrl?.startsWith("j2:") ? AVATAR_PRESETS.find((p) => p.id === avatarUrl) : null;

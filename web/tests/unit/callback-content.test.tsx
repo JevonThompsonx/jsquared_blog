@@ -24,7 +24,8 @@ vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => getSupabaseBrowserClientMock(),
 }));
 
-import { CallbackContent, safeRedirectPath } from "@/app/(public-auth)/callback/callback-content";
+import { safeRedirectPath } from "@/lib/auth/redirect";
+import { CallbackContent } from "@/app/(public-auth)/callback/callback-content";
 
 describe("CallbackContent", () => {
   let container: HTMLDivElement;

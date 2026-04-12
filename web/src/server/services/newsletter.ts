@@ -34,15 +34,6 @@ export function isNewsletterConfigured(): boolean {
   return Boolean(getResendApiKey() && getNewsletterSegmentId());
 }
 
-export function getNewsletterEnvSetupInstructions(): string[] {
-  return [
-    "Set `RESEND_API_KEY` to a server-side Resend API key.",
-    "Create a Resend Segment for newsletter subscribers.",
-    "Set `RESEND_NEWSLETTER_SEGMENT_ID` to that Segment ID.",
-    "Leave the route deployed even when unset; it returns a non-fatal skipped result for safe rollouts.",
-  ];
-}
-
 export async function subscribeToNewsletter(input: SubscribeToNewsletterValues): Promise<NewsletterSubscriptionResult> {
   const segmentId = getNewsletterSegmentId();
   if (!segmentId || !getResendApiKey()) {

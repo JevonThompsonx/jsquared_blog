@@ -4,27 +4,9 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
 import type { AdminCommentDTO } from "./admin-comments-panel";
+import { formatCommentDate } from "@/lib/comment-utils";
 import { getAuthorHref } from "@/lib/utils";
 import type { CommentModerationAction } from "@/server/forms/comments";
-
-function formatCommentDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return "just now";
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-  });
-}
 
 export function AdminCommentCard({
   comment,
@@ -106,7 +88,7 @@ export function AdminCommentCard({
             >
               {comment.authorDisplayName}
             </Link>
-            <span className="text-sm text-[var(--text-secondary)]">{formatCommentDate(comment.createdAt)}</span>
+            <span className="text-sm text-[var(--text-secondary)]">{formatCommentDate(comment.createdAt, true)}</span>
             {comment.parentId ? (
               <span className="rounded-full border border-[var(--border)] bg-[var(--background)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
                 Reply
@@ -132,7 +114,7 @@ export function AdminCommentCard({
 
           {comment.moderatedAt && comment.moderatedByUserId ? (
             <p className="mt-3 text-xs italic text-[var(--muted)]">
-              {statusText} by moderator {formatCommentDate(comment.moderatedAt)}
+              {statusText} by moderator {formatCommentDate(comment.moderatedAt, true)}
             </p>
           ) : null}
         </div>

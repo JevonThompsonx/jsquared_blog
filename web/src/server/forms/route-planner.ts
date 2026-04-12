@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const routeLocationSchema = z.string().trim().min(1).max(200);
 
-export const routePlannerModeSchema = z.enum(["drive", "walk", "bike"]);
+const routePlannerModeSchema = z.enum(["drive", "walk", "bike"]);
 
 export const routePlannerRequestSchema = z.object({
   source: z.literal("public-wishlist"),

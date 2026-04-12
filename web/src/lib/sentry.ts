@@ -14,4 +14,4 @@ export function captureException(err: unknown, context?: Record<string, unknown>
   });
 }
 
-export { Sentry };
+

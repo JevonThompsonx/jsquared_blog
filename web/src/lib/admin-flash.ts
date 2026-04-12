@@ -1,8 +1,8 @@
 export type AdminFlashKind = "saved" | "cloned" | "editRemoved";
 
 export const ADMIN_FLASH_COOKIE_NAME = "j2-admin-flash";
-export const ADMIN_FLASH_COOKIE_PATH = "/admin";
-export const ADMIN_FLASH_MAX_AGE_SECONDS = 60;
+const ADMIN_FLASH_COOKIE_PATH = "/admin";
+const ADMIN_FLASH_MAX_AGE_SECONDS = 60;
 
 export function isAdminFlashKind(value: string | null | undefined): value is AdminFlashKind {
   return value === "saved" || value === "cloned" || value === "editRemoved";

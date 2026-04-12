@@ -2,7 +2,7 @@ export function isDeployedEnvironment(env: NodeJS.ProcessEnv = process.env): boo
   return env.VERCEL === "1" || env.NODE_ENV === "production";
 }
 
-export function isProductionDeployment(env: NodeJS.ProcessEnv = process.env): boolean {
+function isProductionDeployment(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.VERCEL_ENV === "production" || (env.VERCEL !== "1" && env.NODE_ENV === "production");
 }
 
