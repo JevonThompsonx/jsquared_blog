@@ -1,9 +1,10 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { mediaAssets, postImages, postTags, posts } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
+import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 import { generateUniquePostSlug } from "@/server/posts/slug";
 
 export type ClonedPostResult = {
@@ -14,10 +15,38 @@ export type ClonedPostResult = {
 };
 
 export async function clonePostById(postId: string): Promise<ClonedPostResult> {
+  const caps = await getPostColumnCapabilities();
   const db = getDb();
-  const source = await db.query.posts.findFirst({
-    where: eq(posts.id, postId),
-  });
+  const sourceRows = await db
+    .select({
+      slug: posts.slug,
+      title: posts.title,
+      contentJson: posts.contentJson,
+      contentFormat: posts.contentFormat,
+      contentHtml: posts.contentHtml,
+      contentPlainText: posts.contentPlainText,
+      excerpt: posts.excerpt,
+      authorId: posts.authorId,
+      categoryId: posts.categoryId,
+      seriesId: posts.seriesId,
+      seriesOrder: posts.seriesOrder,
+      featuredImageId: posts.featuredImageId,
+      externalGalleryUrl: posts.externalGalleryUrl,
+      externalGalleryLabel: posts.externalGalleryLabel,
+      layoutType: caps.layoutType ? posts.layoutType : sql<null>`null`,
+      locationName: caps.locationName ? posts.locationName : sql<null>`null`,
+      locationLat: caps.locationLat ? posts.locationLat : sql<null>`null`,
+      locationLng: caps.locationLng ? posts.locationLng : sql<null>`null`,
+      locationZoom: caps.locationZoom ? posts.locationZoom : sql<null>`null`,
+      iovanderUrl: caps.iovanderUrl ? posts.iovanderUrl : sql<null>`null`,
+      songTitle: caps.songTitle ? posts.songTitle : sql<null>`null`,
+      songArtist: caps.songArtist ? posts.songArtist : sql<null>`null`,
+      songUrl: caps.songUrl ? posts.songUrl : sql<null>`null`,
+    })
+    .from(posts)
+    .where(eq(posts.id, postId))
+    .limit(1);
+  const source = sourceRows[0];
 
   if (!source) {
     throw new Error(`Post ${postId} not found`);
@@ -76,7 +105,6 @@ export async function clonePostById(postId: string): Promise<ClonedPostResult> {
       contentPlainText: source.contentPlainText,
       excerpt: source.excerpt,
       status: "draft",
-      layoutType: source.layoutType,
       publishedAt: null,
       scheduledPublishTime: null,
       authorId: source.authorId,
@@ -86,17 +114,18 @@ export async function clonePostById(postId: string): Promise<ClonedPostResult> {
       featuredImageId: clonedFeaturedImageId,
       externalGalleryUrl: source.externalGalleryUrl,
       externalGalleryLabel: source.externalGalleryLabel,
-      locationName: source.locationName,
-        locationLat: source.locationLat,
-        locationLng: source.locationLng,
-        locationZoom: source.locationZoom,
-        iovanderUrl: source.iovanderUrl,
-        songTitle: source.songTitle,
-        songArtist: source.songArtist,
-        songUrl: source.songUrl,
-        createdAt: now,
-        updatedAt: now,
-      });
+      ...(caps.layoutType ? { layoutType: source.layoutType } : {}),
+      ...(caps.locationName ? { locationName: source.locationName } : {}),
+      ...(caps.locationLat ? { locationLat: source.locationLat } : {}),
+      ...(caps.locationLng ? { locationLng: source.locationLng } : {}),
+      ...(caps.locationZoom ? { locationZoom: source.locationZoom } : {}),
+      ...(caps.iovanderUrl ? { iovanderUrl: source.iovanderUrl } : {}),
+      ...(caps.songTitle ? { songTitle: source.songTitle } : {}),
+      ...(caps.songArtist ? { songArtist: source.songArtist } : {}),
+      ...(caps.songUrl ? { songUrl: source.songUrl } : {}),
+      createdAt: now,
+      updatedAt: now,
+    });
 
     for (const sourceTag of sourceTags) {
       await tx.insert(postTags).values({ postId: clonedPostId, tagId: sourceTag.tagId }).onConflictDoNothing();

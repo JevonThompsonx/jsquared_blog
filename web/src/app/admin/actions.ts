@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db";
 import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
 import { createPostRevision } from "@/server/dal/post-revisions";
 import { ensureSeriesId } from "@/server/dal/series";
+import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 import { adminPostFormSchema } from "@/server/forms/admin-post-form";
 import { derivePostContent } from "@/server/posts/content";
 import { clonePostById } from "@/server/posts/clone";
@@ -483,10 +484,11 @@ export async function createAdminPostAction(formData: FormData) {
 
   const { derivedContent, scheduledPublishTime, songMetadata } = payload;
   const db = getDb();
-  const [seriesId, geo, slug] = await Promise.all([
+  const [seriesId, geo, slug, caps] = await Promise.all([
     ensureSeriesId(values.seriesTitle ?? ""),
     values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
     generateUniquePostSlug(values.slug.trim() || values.title),
+    getPostColumnCapabilities(),
   ]);
   const postId = crypto.randomUUID();
   const now = new Date();
@@ -505,7 +507,6 @@ export async function createAdminPostAction(formData: FormData) {
       contentPlainText: derivedContent.contentPlainText,
       excerpt: derivedContent.excerpt,
       status: values.status,
-      layoutType: values.layoutType,
       publishedAt,
       scheduledPublishTime,
       authorId,
@@ -515,14 +516,15 @@ export async function createAdminPostAction(formData: FormData) {
       featuredImageId: null,
       externalGalleryUrl: null,
       externalGalleryLabel: null,
-      locationName: values.locationName || null,
-      locationLat: geo?.lat ?? null,
-      locationLng: geo?.lng ?? null,
-      locationZoom: geo?.zoom ?? null,
-      iovanderUrl: values.iovanderUrl || null,
-      songTitle: songMetadata.songTitle,
-      songArtist: songMetadata.songArtist,
-      songUrl: songMetadata.songUrl,
+      ...(caps.layoutType ? { layoutType: values.layoutType } : {}),
+      ...(caps.locationName ? { locationName: values.locationName || null } : {}),
+      ...(caps.locationLat ? { locationLat: geo?.lat ?? null } : {}),
+      ...(caps.locationLng ? { locationLng: geo?.lng ?? null } : {}),
+      ...(caps.locationZoom ? { locationZoom: geo?.zoom ?? null } : {}),
+      ...(caps.iovanderUrl ? { iovanderUrl: values.iovanderUrl || null } : {}),
+      ...(caps.songTitle ? { songTitle: songMetadata.songTitle } : {}),
+      ...(caps.songArtist ? { songArtist: songMetadata.songArtist } : {}),
+      ...(caps.songUrl ? { songUrl: songMetadata.songUrl } : {}),
       createdAt: now,
       updatedAt: now,
     });
@@ -569,6 +571,7 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
 
   const { derivedContent, scheduledPublishTime, songMetadata } = payload;
   const db = getDb();
+  const caps = await getPostColumnCapabilities();
   const [existingPost, seriesId, geo, slug] = await Promise.all([
     db.query.posts.findFirst({
       where: eq(posts.id, validPostId),
@@ -577,9 +580,9 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         title: true,
         contentJson: true,
         excerpt: true,
-        songTitle: true,
-        songArtist: true,
-        songUrl: true,
+        ...(caps.songTitle ? { songTitle: true as const } : {}),
+        ...(caps.songArtist ? { songArtist: true as const } : {}),
+        ...(caps.songUrl ? { songUrl: true as const } : {}),
       },
     }),
     ensureSeriesId(values.seriesTitle ?? ""),
@@ -603,20 +606,20 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         contentPlainText: derivedContent.contentPlainText,
         excerpt: derivedContent.excerpt,
         status: values.status,
-        layoutType: values.layoutType,
         publishedAt,
         scheduledPublishTime,
         categoryId,
         seriesId,
         seriesOrder: values.seriesOrder ?? null,
-        locationName: values.locationName || null,
-        locationLat: geo?.lat ?? null,
-        locationLng: geo?.lng ?? null,
-        locationZoom: geo?.zoom ?? null,
-        iovanderUrl: values.iovanderUrl || null,
-        songTitle: songMetadata.songTitle,
-        songArtist: songMetadata.songArtist,
-        songUrl: songMetadata.songUrl,
+        ...(caps.layoutType ? { layoutType: values.layoutType } : {}),
+        ...(caps.locationName ? { locationName: values.locationName || null } : {}),
+        ...(caps.locationLat ? { locationLat: geo?.lat ?? null } : {}),
+        ...(caps.locationLng ? { locationLng: geo?.lng ?? null } : {}),
+        ...(caps.locationZoom ? { locationZoom: geo?.zoom ?? null } : {}),
+        ...(caps.iovanderUrl ? { iovanderUrl: values.iovanderUrl || null } : {}),
+        ...(caps.songTitle ? { songTitle: songMetadata.songTitle } : {}),
+        ...(caps.songArtist ? { songArtist: songMetadata.songArtist } : {}),
+        ...(caps.songUrl ? { songUrl: songMetadata.songUrl } : {}),
         updatedAt: now,
         })
         .where(eq(posts.id, validPostId));
@@ -640,9 +643,9 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         title: existingPost.title,
         contentJson: existingPost.contentJson,
         excerpt: existingPost.excerpt ?? null,
-        songTitle: existingPost.songTitle ?? null,
-        songArtist: existingPost.songArtist ?? null,
-        songUrl: existingPost.songUrl ?? null,
+        songTitle: caps.songTitle ? (existingPost as { songTitle?: string | null }).songTitle ?? null : null,
+        songArtist: caps.songArtist ? (existingPost as { songArtist?: string | null }).songArtist ?? null : null,
+        songUrl: caps.songUrl ? (existingPost as { songUrl?: string | null }).songUrl ?? null : null,
         savedByUserId: authorId,
       });
     } catch {

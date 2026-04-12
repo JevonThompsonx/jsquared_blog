@@ -91,6 +91,21 @@ vi.mock("@/server/posts/slug", () => ({
   generateUniquePostSlug: vi.fn().mockResolvedValue("my-post-slug"),
 }));
 
+vi.mock("@/server/dal/post-column-capabilities", () => ({
+  getPostColumnCapabilities: vi.fn().mockResolvedValue({
+    layoutType: true,
+    locationName: true,
+    locationLat: true,
+    locationLng: true,
+    locationZoom: true,
+    iovanderUrl: true,
+    songTitle: true,
+    songArtist: true,
+    songUrl: true,
+    viewCount: true,
+  }),
+}));
+
 vi.mock("@/server/posts/content", () => ({
   derivePostContent: vi.fn().mockReturnValue({
     canonicalContentJson: '{"type":"doc","content":[]}',

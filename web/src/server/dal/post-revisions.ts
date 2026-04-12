@@ -5,6 +5,7 @@ import { desc, eq, max, sql } from "drizzle-orm";
 import { postRevisions, posts } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
 import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
+import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 
 export type PostRevisionRecord = {
   id: string;
@@ -218,6 +219,7 @@ export async function restorePostRevisionAtomically(input: {
     songArtist: input.revision.songArtist,
     songUrl: input.revision.songUrl,
   });
+  const caps = await getPostColumnCapabilities();
 
   return db.transaction(async (tx) => {
     const snapshotRows = await tx
@@ -226,9 +228,9 @@ export async function restorePostRevisionAtomically(input: {
         slug: posts.slug,
         contentJson: posts.contentJson,
         excerpt: posts.excerpt,
-        songTitle: posts.songTitle,
-        songArtist: posts.songArtist,
-        songUrl: posts.songUrl,
+        songTitle: caps.songTitle ? posts.songTitle : sql<null>`null`,
+        songArtist: caps.songArtist ? posts.songArtist : sql<null>`null`,
+        songUrl: caps.songUrl ? posts.songUrl : sql<null>`null`,
       })
       .from(posts)
       .where(eq(posts.id, input.postId))
@@ -271,9 +273,9 @@ export async function restorePostRevisionAtomically(input: {
         contentHtml: input.derivedContent.contentHtml,
         contentPlainText: input.derivedContent.contentPlainText,
         excerpt: input.derivedContent.excerpt,
-        songTitle: normalizedSongMetadata.songTitle,
-        songArtist: normalizedSongMetadata.songArtist,
-        songUrl: normalizedSongMetadata.songUrl,
+        ...(caps.songTitle ? { songTitle: normalizedSongMetadata.songTitle } : {}),
+        ...(caps.songArtist ? { songArtist: normalizedSongMetadata.songArtist } : {}),
+        ...(caps.songUrl ? { songUrl: normalizedSongMetadata.songUrl } : {}),
         updatedAt: now,
       })
       .where(eq(posts.id, input.postId));
