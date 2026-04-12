@@ -82,19 +82,26 @@
     {
       "idx": 11,
       "version": "7",
+      "when": 1774391200000,
+      "tag": "0011_post_song_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
       "when": 1774478400000,
       "tag": "0012_wishlist_places",
       "breakpoints": true
     },
     {
-      "idx": 12,
+      "idx": 13,
       "version": "7",
       "when": 1744416000000,
       "tag": "0013_wishlist_description",
       "breakpoints": true
     },
     {
-      "idx": 13,
+      "idx": 14,
       "version": "7",
       "when": 1744502400000,
       "tag": "0014_wishlist_linked_post",
