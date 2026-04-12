@@ -46,6 +46,7 @@ export function PostEditorForm({
   const [cloneError, setCloneError] = useState<string | null>(null);
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
   const cloneCancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     if (showCloneConfirm) {
@@ -72,6 +73,11 @@ export function PostEditorForm({
     setShowCloneConfirm(false);
     startTransition(async () => {
       try {
+        // Save the current form state first so the clone captures the latest edits.
+        if (formRef.current) {
+          const formData = new FormData(formRef.current);
+          await action(formData);
+        }
         const result = await clonePost(post.id);
         const nextUrl = new URL(returnTo, window.location.origin);
         nextUrl.searchParams.set("postId", result.postId);
@@ -120,7 +126,7 @@ export function PostEditorForm({
   );
 
   return (
-    <form action={action} className="space-y-8">
+    <form ref={formRef} action={action} className="space-y-8">
       <input name="scheduledPublishOffsetMinutes" type="hidden" value={browserOffsetMinutes} />
       <input name="returnTo" type="hidden" value={returnTo} />
       <div className="sticky top-24 z-20 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-4 shadow-lg sm:px-5">

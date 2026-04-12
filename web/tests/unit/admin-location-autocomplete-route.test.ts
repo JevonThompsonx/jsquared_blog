@@ -69,7 +69,7 @@ describe("GET /api/admin/location-autocomplete", () => {
       remaining: 9,
       resetAt: Date.now() + 60_000,
     });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       json: async () => [
         {
@@ -98,6 +98,10 @@ describe("GET /api/admin/location-autocomplete", () => {
         },
       ],
     });
+
+    // Verify Nominatim User-Agent header is sent (required by usage policy)
+    const [, fetchInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect((fetchInit?.headers as Record<string, string>)?.["User-Agent"]).toMatch(/jsquared-blog/);
   });
 
   it("returns a generic upstream failure response", async () => {

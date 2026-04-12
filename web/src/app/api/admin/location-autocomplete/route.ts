@@ -39,7 +39,13 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   try {
     const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&limit=5`;
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        // Nominatim usage policy requires a descriptive User-Agent identifying the app
+        // and contact info so Nominatim can reach the operator if needed.
+        "User-Agent": "jsquared-blog/1.0 (https://jsquaredadventures.com)",
+      },
+    });
     const data: NominatimResult[] = await res.json();
 
     const suggestions = data.map((item) => ({
