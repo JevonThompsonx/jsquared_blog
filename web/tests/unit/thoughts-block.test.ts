@@ -42,6 +42,20 @@ describe("ThoughtsBlock extension", () => {
     expect(ThoughtsBlock.name).toBe("thoughtsBlock");
   });
 
+  it("renders the content hole inside its own wrapper so ProseMirror can serialize it safely", () => {
+    const renderHTML = (ThoughtsBlock as unknown as {
+      config: {
+        renderHTML: (props: { HTMLAttributes: Record<string, unknown> }) => unknown;
+      };
+    }).config.renderHTML;
+
+    expect(renderHTML({ HTMLAttributes: { summary: "  Camp notes  " } })).toEqual([
+      "details",
+      ["summary", {}, "Camp notes"],
+      ["div", { class: "thoughts-block-content" }, 0],
+    ]);
+  });
+
   it("keeps the canonical thoughts block shape in sync with the editor extension", () => {
     expect(createThoughtsBlockNode("  Camp notes  ")).toEqual({
       type: THOUGHTS_BLOCK_NODE_NAME,

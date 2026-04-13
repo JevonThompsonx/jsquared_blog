@@ -684,6 +684,58 @@ a {
   text-decoration: underline;
 }
 
+.prose-content details,
+.tiptap details {
+  margin: 1.4rem 0;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(111, 134, 91, 0.08) 100%);
+  overflow: hidden;
+}
+
+.prose-content summary,
+.tiptap summary {
+  position: relative;
+  list-style: none;
+  cursor: pointer;
+  padding: 0.95rem 1rem 0.95rem 2.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: rgba(111, 134, 91, 0.08);
+}
+
+.prose-content summary::-webkit-details-marker,
+.tiptap summary::-webkit-details-marker {
+  display: none;
+}
+
+.prose-content summary::before,
+.tiptap summary::before {
+  content: ">";
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent);
+  font-size: 0.95rem;
+  transition: transform 160ms ease;
+}
+
+.prose-content details[open] summary::before,
+.tiptap details[open] summary::before {
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.prose-content .thoughts-block-content,
+.tiptap .thoughts-block-content {
+  padding: 0.15rem 1rem 1rem;
+}
+
+.prose-content details > *:last-child,
+.tiptap details > *:last-child {
+  margin-bottom: 0;
+}
+
 .post-card-shell {
   background: var(--card-shell-bg);
   border-color: var(--card-panel-border);

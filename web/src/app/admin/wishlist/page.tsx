@@ -80,7 +80,7 @@ export default async function AdminWishlistPage() {
                     Visited already
                   </label>
                   <label className="inline-flex items-center gap-2">
-                    <input name="isPublic" type="checkbox" />
+                    <input defaultChecked name="isPublic" type="checkbox" />
                     Show publicly
                   </label>
                 </div>

@@ -6,13 +6,14 @@ import process from "node:process";
 import { sanitizeNodeOptionsForBuild } from "../src/lib/build/sanitize-node-options";
 
 const WINDOWS_NEXT_STATIC_DIR = path.join(process.cwd(), ".next", "static");
+const NEXT_BUILD_OUTPUT_DIR = path.join(process.cwd(), ".next", "build");
 
-function removeWindowsStaticBuildOutput() {
+function removeBuildOutput(targetPath: string, { retryEperm = false }: { retryEperm?: boolean } = {}) {
   let attempts = 0;
 
   while (attempts < 2) {
     try {
-      rmSync(WINDOWS_NEXT_STATIC_DIR, {
+      rmSync(targetPath, {
         force: true,
         recursive: true,
       });
@@ -22,6 +23,7 @@ function removeWindowsStaticBuildOutput() {
 
       if (
         attempts < 2
+        && retryEperm
         && error
         && typeof error === "object"
         && "code" in error
@@ -35,8 +37,18 @@ function removeWindowsStaticBuildOutput() {
   }
 }
 
+function removeTurbopackBuildOutput() {
+  removeBuildOutput(NEXT_BUILD_OUTPUT_DIR, {
+    retryEperm: process.platform === "win32",
+  });
+}
+
+removeTurbopackBuildOutput();
+
 if (process.platform === "win32") {
-  removeWindowsStaticBuildOutput();
+  removeBuildOutput(WINDOWS_NEXT_STATIC_DIR, {
+    retryEperm: true,
+  });
 }
 
 const buildEnv = { ...process.env };

@@ -187,6 +187,12 @@ describe("PostRichTextEditor emoji picker", () => {
     expect(container.querySelector('[data-testid="emoji-picker-native"]')).not.toBeNull();
   });
 
+  it("does not call editor.getHTML while rendering derived stats", async () => {
+    await renderEditor();
+
+    expect(fakeEditor.getHTML).not.toHaveBeenCalled();
+  });
+
   it("inserts the selected emoji and closes the picker", async () => {
     await renderEditor();
 

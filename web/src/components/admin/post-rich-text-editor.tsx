@@ -12,7 +12,7 @@ import EmojiPicker, { EmojiStyle, type EmojiClickData } from "emoji-picker-react
 import imageCompression from "browser-image-compression";
 
 import { validatePostContentWarningsAction } from "@/app/admin/actions";
-import { getReadingTimeMinutes, getWordCount, type TiptapImageAltWarning } from "@/lib/content";
+import { getReadingTimeMinutes, getWordCount, renderTiptapJson, type TiptapImageAltWarning } from "@/lib/content";
 import { ThoughtsBlock } from "@/lib/tiptap/thoughts-block";
 
 type EditorUploadResponse = {
@@ -636,9 +636,12 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     return () => clearTimeout(timer);
   }, [tiptapJson, excerpt]);
 
-  // Derive word count
-  const wordCount = getWordCount(editor?.getHTML() ?? "");
-  const readingMinutes = Math.max(1, getReadingTimeMinutes(editor?.getHTML() ?? ""));
+  const renderedEditorHtml = useMemo(() => renderTiptapJson(tiptapJson) ?? "", [tiptapJson]);
+
+  // Derive stats from the canonical JSON rather than editor.getHTML() so a
+  // broken serializer state cannot crash the whole editor surface.
+  const wordCount = getWordCount(renderedEditorHtml);
+  const readingMinutes = Math.max(1, getReadingTimeMinutes(renderedEditorHtml));
   const missingAltCount = backendWarnings.length;
 
   const [warningsDismissed, setWarningsDismissed] = useState(false);

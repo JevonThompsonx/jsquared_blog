@@ -107,7 +107,7 @@ export function proxy(request: NextRequest): NextResponse {
     `connect-src ${connectSrc}`,
     "media-src 'self' data: blob:",
     "worker-src 'self' blob:",
-    "frame-src 'none'",
+    "frame-src 'self' https://open.spotify.com",
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

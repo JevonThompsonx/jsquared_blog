@@ -25,12 +25,26 @@ describe("normalizeSongMetadataFields", () => {
     });
   });
 
-  it("rejects partial song metadata", () => {
+  it("accepts a playable link without title or artist metadata", () => {
+    expect(
+      normalizeSongMetadataFields({
+        songTitle: "",
+        songArtist: " ",
+        songUrl: "https://open.spotify.com/track/123",
+      }),
+    ).toEqual({
+      songTitle: null,
+      songArtist: null,
+      songUrl: "https://open.spotify.com/track/123",
+    });
+  });
+
+  it("rejects partial song metadata when the playable URL is missing", () => {
     expect(() =>
       normalizeSongMetadataFields({
         songTitle: "Holocene",
         songArtist: "",
-        songUrl: "https://open.spotify.com/track/123",
+        songUrl: "",
       }),
     ).toThrow("Invalid request");
   });
@@ -57,6 +71,20 @@ describe("getSongMetadata", () => {
     ).toEqual({
       title: "Holocene",
       artist: "Bon Iver",
+      url: "https://open.spotify.com/track/123",
+    });
+  });
+
+  it("returns a playable song object when only the URL is provided", () => {
+    expect(
+      getSongMetadata({
+        songTitle: "",
+        songArtist: "",
+        songUrl: "https://open.spotify.com/track/123",
+      }),
+    ).toEqual({
+      title: null,
+      artist: null,
       url: "https://open.spotify.com/track/123",
     });
   });

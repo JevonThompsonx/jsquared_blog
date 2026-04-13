@@ -1,8 +1,8 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, notExists } from "drizzle-orm";
 
-import { wishlistPlaces } from "@/drizzle/schema";
+import { posts, wishlistPlaces } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
 
 export type PublicWishlistPlace = {
@@ -54,7 +54,17 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
       description: wishlistPlaces.description,
     })
     .from(wishlistPlaces)
-    .where(eq(wishlistPlaces.isPublic, true))
+    .where(
+      and(
+        eq(wishlistPlaces.isPublic, true),
+        notExists(
+          db
+            .select({ id: posts.id })
+            .from(posts)
+            .where(and(eq(posts.id, wishlistPlaces.linkedPostId), eq(posts.status, "published"))),
+        ),
+      ),
+    )
     .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
 
   return places.map((place) => ({

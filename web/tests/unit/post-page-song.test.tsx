@@ -53,6 +53,17 @@ describe("PostSongMetadata", () => {
       expect(trackMarkup).toContain('height="152"');
       expect(playlistMarkup).toContain('height="352"');
     });
+
+    it("renders a Spotify embed when the URL is present even without title or artist fields", () => {
+      const markup = renderToStaticMarkup(
+        <PostSongMetadata
+          song={{ title: null, artist: null, url: "https://open.spotify.com/track/4bHsxqR3GMjc5K5kKkXmBl" }}
+        />,
+      );
+
+      expect(markup).toContain("<iframe");
+      expect(markup).toContain("Spotify player");
+    });
   });
 
   describe("non-Spotify HTTPS URL", () => {
@@ -74,6 +85,18 @@ describe("PostSongMetadata", () => {
       expect(markup).toContain('rel="noopener noreferrer"');
       expect(markup).toContain('aria-label="Listen to Holocene by Bon Iver"');
       // Should NOT render an iframe for non-Spotify URLs
+      expect(markup).not.toContain("<iframe");
+    });
+
+    it("renders a generic external-player link when only a non-Spotify URL is available", () => {
+      const markup = renderToStaticMarkup(
+        <PostSongMetadata
+          song={{ title: null, artist: null, url: "https://music.example.com/track/123" }}
+        />,
+      );
+
+      expect(markup).toContain('href="https://music.example.com/track/123"');
+      expect(markup).toContain("Open audio link");
       expect(markup).not.toContain("<iframe");
     });
   });

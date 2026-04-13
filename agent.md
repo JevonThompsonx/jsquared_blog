@@ -3,47 +3,39 @@
 ## Status
 - Active checklist source: `TODO.md`
 - Repo is in a dirty worktree; do not disturb unrelated in-flight edits
-- Current focus: authenticated public E2E remains the smallest explicit open batch, but the live rerun is still blocked by missing managed fixture metadata rather than missing test code
+- Test baseline: **778/779 passing** (4 pre-existing Vite 8/rolldown 0-test-suite failures — do NOT fix; `playwright-config.test.ts` flaky under load but passes standalone; 1 pre-existing flaky `playwright-config.test.ts` timeout counts as the 1 non-passing)
+- TypeScript: `bunx tsc --noEmit` exits 0 (clean)
+- Deploy method: `bunx vercel deploy --prod --archive=tgz --yes` from repo root (not `web/`)
+- `.vercelignore` at repo root excludes `Others/` (unreadable WSL path — do not remove)
 
 ## Completed
-- Read `CLAUDE.md`, `README.md`, `prompt.md`, `WORKING-CONTEXT.md`, and `TODO.md`
-- Confirmed `TODO.md` is the canonical execution tracker
-- Identified remaining open checklist lanes: trust-boundary coverage follow-ups, correctness/cleanup backlog, and E2E confidence items
-- Added Playwright smoke coverage for `/signup` and discovered public `/tag/[slug]` route shells in `web/tests/e2e/smoke.spec.ts`
-- Verified new smoke slice green: targeted Playwright run passed for signup and tag; series discovery still skips when no public series link is discoverable from current content
-- Confirmed live authenticated bookmark-removal rerun is blocked by missing managed public storage-state metadata, not by a failing test
-- Removed unused auth helper shims `web/src/lib/auth/identities.ts` and `web/src/lib/auth/public.ts`
-- Removed unused `getSupabaseServerClient()` export from `web/src/lib/supabase/server.ts`
-- Verified cleanup batch green: 71 focused auth/public-route tests passed, `bunx tsc --noEmit` passed, and `bun run build` passed
-- Centralized the homepage infinite-feed Playwright skip gate behind one explicit dataset-precondition helper and confirmed the spec still quarantines cleanly when `/` already renders the end-of-feed shell on first load
-- Verified the quarantine sync with `bunx playwright test "tests/e2e/homepage-infinite-feed.spec.ts" --project=chromium`, `npx eslint "tests/e2e/homepage-infinite-feed.spec.ts"`, and `bunx tsc --noEmit`
-- Reconfirmed the authenticated public E2E blocker: `bunx playwright test "tests/e2e/public-authenticated.spec.ts" --project=chromium` skipped all 13 tests because managed public fixture metadata is still missing locally
-- Removed the handled `console.error("[wishlist] Failed to load public wishlist places")` noise from the public `/wishlist` page and tightened the unit test to prove the fallback shell stays silent while still rendering correctly
-- Verified the wishlist batch with `bunx vitest run tests/unit/wishlist-page.test.ts` and touched-file eslint; also removed the touched route's local implicit-`any[]` issue by typing `places` as `PublicWishlistPlace[]`
 
-## Remaining
-- Expand critical route smoke coverage where still missing
-- Expand authenticated admin/public flow coverage where safely possible
-- Reduce or document flaky E2E behavior
-- Continue backlog items in `TODO.md` without overlapping unrelated active edits
-- Revisit repo-wide typecheck cleanup later: remaining failures now sit in `src/app/(blog)/map/page.tsx` and `tests/e2e/smoke.spec.ts`, not the wishlist route
+- **SESSION 2026-04-12 (Spotify/editor/wishlist stability refresh)**: Local changes verified, not yet committed/deployed in this session. Fixed invalid Tiptap `thoughtsBlock` DOM spec in `web/src/lib/tiptap/thoughts-block.ts` by wrapping the content hole in `.thoughts-block-content`; styled disclosure blocks in `web/src/app/globals.css`; switched `web/src/components/admin/post-rich-text-editor.tsx` reading stats away from `editor.getHTML()` to `renderTiptapJson(...)`. Added Spotify parsing helpers in `web/src/lib/spotify.ts` (strict `open.spotify.com` host, no query/hash/credentials, track/album/playlist support, canonical embed height helper). Relaxed `web/src/lib/post-song-metadata.ts` so URL-only song metadata is valid and preview metadata uses the shared height helper. Updated `web/src/components/blog/post-song-metadata.tsx` to render Spotify embeds or external audio links without requiring title/artist text. Added admin-only `POST /api/admin/song-preview` in `web/src/app/api/admin/song-preview/route.ts` with admin auth, rate limiting, 5s Spotify oEmbed fetch timeout, request-body transport, and `.scdn.co` artwork validation; updated `web/src/components/admin/post-editor-form.tsx` to use debounced POST preview/autofill. Updated CSP in `web/src/proxy.ts` to `frame-src 'self' https://open.spotify.com`. Wishlist hardening: `web/src/server/forms/admin-wishlist-place.ts` and `web/src/app/admin/wishlist/page.tsx` now default new entries to public; `web/src/server/queries/wishlist.ts` excludes linked published posts directly; `web/src/app/admin/actions.ts` deactivates linked wishlist places during single-post publish and revalidates `/wishlist`. Added/updated tests: `admin-song-preview-route.test.ts`, `spotify.test.ts`, `song-preview-metadata.test.ts`, `thoughts-block.test.ts`, `post-rich-text-editor-emoji.test.tsx`, `post-song-metadata.test.ts`, `post-page-song.test.tsx`, `wishlist-place-form.test.ts`, `admin-wishlist-page.test.tsx`, `public-wishlist.test.ts`, `update-post-revision-capture.test.ts`, `post-editor-form-hydration.test.tsx`, `middleware.test.ts` expectation update. Verified locally: extended targeted suite 73/73 passing, `bun run lint` clean, `timeout 90 bunx tsc --noEmit` clean. README updated to reflect shipped wishlist/song behavior.
+- **SESSION 2026-04-12 (PHASE 8 dead-code/refactor cleanup)**: Commit `32d2ef1` — (a) Removed unused `export` keywords from `admin-flash.ts`, `runtime-env.ts`, `sentry.ts`, `route-planner.ts`, `publish.ts`, `newsletter.ts`, `content.ts`; deleted dead `getNewsletterEnvSetupInstructions` function entirely. (b) Deleted two orphaned files: `web/src/lib/errors.ts` (`AppError` class, zero consumers) and `web/src/components/blog/post-card.tsx` (`PostCard` component, zero import sites). (c) Extracted `safeRedirectPath` into `web/src/lib/auth/redirect.ts` — stricter version with control-character check; updated `callback-content.tsx`, `login-form.tsx`, `signup-form.tsx` to import from new location. (d) Created `web/src/lib/comment-utils.ts` (shared `formatCommentDate`; `includeTime` flag for admin callers) and `web/src/lib/display-utils.ts` (shared `getInitials`); updated `comments.tsx`, `admin-comment-card.tsx`, `author-card.tsx`, `author/[id]/page.tsx` to use shared helpers. Added `tests/unit/comment-utils.test.ts` (8 tests) and `tests/unit/display-utils.test.ts` (8 tests). 778/779 passing. Deployed to production.
+- **SESSION 2026-04-11 (optional column crash fix — restore/clone/actions)**: Commit `18e4bcb` — guarded all remaining 5 crash sites where missing optional post columns cause LibSQL "no such column" errors on Turso. Fixed `restorePostRevisionAtomically` in `post-revisions.ts` (snapshot SELECT + UPDATE), `clonePostById` in `clone.ts` (replaced `db.query.posts.findFirst` with explicit `db.select()`, conditional INSERT spreads), and both `createAdminPostAction` and `updateAdminPostAction` in `actions.ts` (INSERT + UPDATE conditional spreads; findFirst columns guarded; type-cast song fields in revision capture block). Added `tests/unit/restore-post-revision-column-capabilities.test.ts` (2 tests), rewrote `clone-post.test.ts`, added caps mock to `update-post-revision-capture.test.ts`. 763/763 passing. Also added `.vercelignore` (commit `ad250ba`) to exclude unreadable `Others/` WSL directory that was blocking deploys. Deployed to production.
+- **SESSION 2026-04-11 (admin post edit RSC crash fix)**: Commit `46af405` — `getAdminEditablePostById` in `admin-posts.ts` now calls `getPostColumnCapabilities()` and guards all 9 optional columns (`layoutType`, `locationName`, `locationLat`, `locationLng`, `locationZoom`, `iovanderUrl`, `songTitle`, `songArtist`, `songUrl`) with ternary fallbacks to `sql\`null\``. Previously these were unconditional direct column refs that caused LibSQL to throw "no such column" on Turso instances missing those columns, crashing the entire `/admin?postId=<id>` RSC render. Added `tests/unit/admin-editable-post-column-capabilities.test.ts` (2 tests). 761/761 passing. Deployed to production.
+- **SESSION 2026-04-11 (hydration fix #418)**: Commit `72d87f8` — replaced synchronous `getTimezoneOffset()` at component top level in `post-editor-form.tsx` with `useState("")` + `useEffect`, eliminating React hydration error #418 (server/client timezone mismatch). Added `tests/unit/post-editor-form-hydration.test.tsx` (2 SSR tests). 759/759 tests green. Deployed to production.
+- **SESSION 2026-04-11 (nav + UUID hardening)**: Commit `951058f` — added Route planner to `adminNavLinks`, added UUID validation for `id` and `linkedPostId` in `checkOffWishlistPlaceAction`, created `tests/unit/admin-navigation.test.ts`. 757/757 tests green. Deployed to production.
+- **SESSION 2026-04-11 (check-off flow)**: Commits `70eef58` + `d2733d0` — added `linked_post_id` column, `setWishlistPlaceLinkedPost` / `deactivateLinkedWishlistPlaces` DAL functions, `checkOffWishlistPlaceAction` server action (returns `Promise<void>`), "Link to post" UI on admin wishlist page, auto-deactivate in bulk-status API and cron routes, full unit test coverage. Deployed to production.
+- **SESSION 2026-04-10**: Committed `2db8813` — hardened JWT token persistence, fixed Windows-path test failures, added `admin-location-autocomplete-route.test.ts`.
+- Previous: admin wishlist inputs (name, location autocomplete, externalUrl, description), public wishlist map+list, homepage CTA, admin nav wishlist link, description/externalUrl on public query.
+
+## Remaining (from TODO.md)
+
+1. Debug port leak: `Debugger listening on ws://...` in Vercel serverless-middleware logs — likely `NODE_OPTIONS=--inspect*` set in Vercel dashboard env vars (not in codebase). Fix requires dashboard access to remove the flag.
 
 ## Active Task
-- Return to the next safe unchecked TODO batch now that the `/wishlist` handled-failure console regression is closed
+- Spotify/editor/wishlist stability refresh implemented and locally verified. Awaiting user direction on commit/deploy.
 
 ## Blockers
-- Live managed public-fixture reruns remain safety-gated if they require remote seeding or unsafe env changes
-- `bun run e2e:capture-public-state` currently fails because `E2E_PUBLIC_FIXTURE_GENERATED_AT` is absent from local managed fixture env metadata; reseeding remains intentionally blocked against the current remote Supabase target
-- Homepage infinite-feed live pagination assertions remain dataset-blocked until the managed public fixture guarantees more than one feed page
-- Confirmed again in the current shell: `web/.env.test.local` still lacks `E2E_PUBLIC_FIXTURE_GENERATED_AT`, no `web/playwright/.auth/*.meta.json` sidecar exists, and `web/tests/e2e/helpers/public.ts` therefore resolves `hasPublicStorageState` to `false`, keeping `bunx playwright test "tests/e2e/public-authenticated.spec.ts" --project=chromium` blocked before browser execution and causing all 13 authenticated-public tests to skip
-- A new clean-file Playwright smoke attempt for `/wishlist` is also blocked for now: the dedicated probe `bunx playwright test "tests/e2e/wishlist-page.spec.ts" --project=chromium` reached the global `Trail interrupted` / `Something went sideways.` shell instead of the route heading, which suggests unrelated instability in already-dirty shared app surfaces rather than an isolated missing-route contract.
+- Live managed public-fixture reruns remain safety-gated (`E2E_PUBLIC_FIXTURE_GENERATED_AT` missing from `web/.env.test.local`)
+- Authenticated public E2E (13 tests) skips until managed fixture metadata exists
+- Homepage infinite-feed live pagination assertions remain dataset-blocked
+- Debug port leak requires Vercel dashboard access (not fixable via code)
 
 ## Decisions
 - Use `TODO.md` as canonical checklist; `agent.md` is only the concise execution memory
-- Avoid files already showing unrelated active edits unless the batch requires them
-- Prefer unblocked test-only or deletion-only slices while the managed public-auth lane lacks safe local fixture metadata
-- Favor verified dead-code removal when grep confirms zero references and existing route/auth suites cover the surviving live surfaces
-- Treat homepage feed page-two assertions as fixture-dependent coverage, not a browser-timing failure, until the managed dataset guarantees pagination
-
-## Next Action
-- Wait for safe public-fixture metadata regeneration, a stabilized shared app shell, or a newly identified clean-file batch that does not overlap the current in-flight app edits
+- Never `git add .` or `git add -A` — always `git add web/path/to/file`
+- Avoid files already showing unrelated active edits
+- Shell paths containing `(blog)` must be quoted
+- Do NOT use `git diff --name-only HEAD -- web/` (segfault) — use `git status --short -- web/`

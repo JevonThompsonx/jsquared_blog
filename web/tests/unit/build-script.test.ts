@@ -145,6 +145,24 @@ describe("web/scripts/build.ts", () => {
     expect(exitSpy).toHaveBeenCalledWith(17);
   });
 
+  it("cleans the Turbopack build output before spawning next build", async () => {
+    const { loadPromise, rmSync, spawnSync } = prepareBuildScript();
+
+    await loadPromise;
+
+    const buildCallIndex = rmSync.mock.calls.findIndex(([target]) => /[\\/]\.next[\\/]build$/.test(String(target)));
+
+    expect(buildCallIndex).toBeGreaterThanOrEqual(0);
+    expect(rmSync.mock.calls[buildCallIndex]).toEqual([
+      expect.stringMatching(/[\\/]\.next[\\/]build$/),
+      {
+        force: true,
+        recursive: true,
+      },
+    ]);
+    expect(rmSync.mock.invocationCallOrder[buildCallIndex]).toBeLessThan(spawnSync.mock.invocationCallOrder[0]);
+  });
+
   it("throws the child process error instead of swallowing it", async () => {
     const { loadPromise, exitSpy } = prepareBuildScript({
       spawnResult: { error: new Error("spawn failed") },
@@ -161,11 +179,17 @@ describe("web/scripts/build.ts", () => {
 
     await loadPromise;
 
-    expect(rmSync).toHaveBeenCalledWith(expect.stringMatching(/[\\/]\.next[\\/]static$/), {
-      force: true,
-      recursive: true,
-    });
-    expect(rmSync.mock.invocationCallOrder[0]).toBeLessThan(spawnSync.mock.invocationCallOrder[0]);
+    const staticCallIndex = rmSync.mock.calls.findIndex(([target]) => /[\\/]\.next[\\/]static$/.test(String(target)));
+
+    expect(staticCallIndex).toBeGreaterThanOrEqual(0);
+    expect(rmSync.mock.calls[staticCallIndex]).toEqual([
+      expect.stringMatching(/[\\/]\.next[\\/]static$/),
+      {
+        force: true,
+        recursive: true,
+      },
+    ]);
+    expect(rmSync.mock.invocationCallOrder[staticCallIndex]).toBeLessThan(spawnSync.mock.invocationCallOrder[0]);
   });
 
   it("retries one transient Windows EPERM cleanup failure before building", async () => {
@@ -184,7 +208,7 @@ describe("web/scripts/build.ts", () => {
 
     await loadPromise;
 
-    expect(rmSync).toHaveBeenCalledTimes(2);
+    expect(rmSync).toHaveBeenCalledTimes(3);
     expect(spawnSync).toHaveBeenCalledTimes(1);
   });
 

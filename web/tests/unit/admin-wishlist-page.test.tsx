@@ -89,5 +89,6 @@ describe("AdminWishlistPage", () => {
     expect(markup).toContain("admin-wishlist-create-form");
     expect(markup).toContain("admin-wishlist-update-form");
     expect(markup).toContain("admin-wishlist-delete-form");
+    expect(markup).toContain('<input type="checkbox" name="isPublic" checked=""');
   });
 });

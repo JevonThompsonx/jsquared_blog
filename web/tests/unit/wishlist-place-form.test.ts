@@ -24,7 +24,7 @@ describe("adminWishlistPlaceFormSchema", () => {
     });
   });
 
-  it("defaults visited and isPublic to false", () => {
+  it("defaults visited to false and new items to public", () => {
     const parsed = adminWishlistPlaceFormSchema.parse({
       name: "Big Bend",
       locationName: "Big Bend National Park, Texas",
@@ -33,7 +33,7 @@ describe("adminWishlistPlaceFormSchema", () => {
     });
 
     expect(parsed.visited).toBe(false);
-    expect(parsed.isPublic).toBe(false);
+    expect(parsed.isPublic).toBe(true);
     expect(parsed.externalUrl).toBeNull();
   });
 

@@ -1,6 +1,6 @@
 # J²Adventures Blog
 
-A production travel blog platform built around the live Next.js app in `web/`. It supports rich publishing, expiring previews, post revisions, maps, galleries, comments, bookmarks, public accounts, GitHub-based admin tooling, newsletters, and production SEO for `jsquaredadventures.com`.
+A production travel blog platform built around the live Next.js app in `web/`. It supports rich publishing, expiring previews, post revisions, maps, galleries, comments, bookmarks, public accounts, a public wishlist, a route planner, GitHub-based admin tooling, newsletters, and production SEO for `jsquaredadventures.com`.
 
 **Live Site**: [jsquaredadventures.com](https://jsquaredadventures.com)
 
@@ -16,6 +16,7 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 | **Public Auth** | Supabase Auth |
 | **Admin Auth** | Auth.js + GitHub OAuth |
 | **Storage** | Cloudinary |
+| **Routing / geocoding** | Geoapify (route planner) |
 | **Email** | Resend (newsletter + comment notifications) |
 | **Rate limiting** | Upstash Redis in deployed envs, in-memory locally/tests |
 | **Observability** | Sentry (optional) |
@@ -81,6 +82,12 @@ Optional integrations and operational variables:
 
 ```bash
 NEXT_PUBLIC_STADIA_MAPS_API_KEY=...
+ROUTING_PROVIDER=geoapify
+GEOCODING_PROVIDER=geoapify
+GEOAPIFY_API_KEY=...
+ROUTE_PLANNER_TIMEOUT_MS=10000
+GEOCODING_TIMEOUT_MS=8000
+ROUTE_PLANNER_MAX_STOPS=10
 RESEND_API_KEY=...
 RESEND_FROM_EMAIL=...
 COMMENT_NOTIFICATION_TO_EMAIL=...
@@ -96,6 +103,7 @@ SUPABASE_SERVICE_ROLE_KEY=... # tooling / seed / import scripts
 Notes:
 - `CRON_SECRET` is optional only for local loopback development, but required for deployed cron routes.
 - Upstash credentials are required in deployed environments because rate limiting fails closed there.
+- Geoapify route-planner variables are required only if you want `/route-planner` and `POST /api/route-plans` to return live route suggestions instead of `503 Route planner unavailable`.
 - Newsletter signup safely returns a non-fatal skipped result when Resend newsletter config is absent.
 - `SENTRY_AUTH_TOKEN` is only needed when uploading source maps during production builds.
 - Optional Playwright/E2E helper variables also live in `web/.env.example`; `bun run seed:e2e` writes managed fixture values to `web/.env.test.local`.
@@ -147,8 +155,17 @@ bun run e2e:capture-public-state
 - Seasonal homepage hero and grouped feed sections
 - Reading progress, related posts, breadcrumbs, and reduced-motion support
 - Map/location blocks for geotagged stories
-- Optional per-story song metadata block with external listen link
+- Optional per-story song metadata block with Spotify embeds or external listen links
 - Per-post view tracking with cookie dedupe
+
+### Travel Tools
+- Public wishlist page with map/list rendering for future destinations
+- Route planner at `/route-planner` that suggests public wishlist stops between an origin and destination
+- Visited wishlist stops excluded by default, with an opt-in include-visited toggle
+- Admin wishlist editor supports place names, autocompleted locations, optional info links, short descriptions, and public/private visibility
+- New wishlist entries default to public visibility
+- Admins can check off a wishlist item into the post flow while keeping it visible until the linked post is actually published
+- Linked published posts are excluded from public wishlist surfaces automatically
 
 ### User Profiles
 - Display name and avatar customization
@@ -244,6 +261,8 @@ bun run ./scripts/seed-rich-content.ts
 
 The live app deploys from `web/` to Vercel. Use `web/.env.example`, `web/src/lib/env.ts`, and `web/next.config.ts` as the current source of truth for runtime, build, and observability variables.
 
+For repo-specific Vercel CLI usage, troubleshooting, and manual deploy/inspection commands, see `docs/VERCEL-CLI-REFERENCE.md`.
+
 ---
 
 ## Key Routes / Endpoints
@@ -253,6 +272,9 @@ GET  /                            # Homepage / feed
 GET  /posts/[slug]                # Published post detail
 GET  /preview/[id]?token=...      # Admin or token preview
 GET  /map                         # World map of posts
+GET  /wishlist                    # Public travel wishlist
+GET  /route-planner               # Public route planner
+GET  /admin/wishlist              # Admin wishlist editor
 GET  /category/[category]         # Category feed
 GET  /tag/[slug]                  # Tag feed
 GET  /series/[slug]               # Series detail
@@ -273,10 +295,12 @@ GET  /api/account/profile
 PATCH /api/account/profile
 POST /api/account/avatar
 POST /api/newsletter
+POST /api/route-plans
 
 GET  /api/admin/posts
 POST /api/admin/posts/clone
 POST /api/admin/posts/preview
+POST /api/admin/song-preview        # Admin-only song preview/autofill helper
 POST /api/admin/posts/bulk-status
 POST /api/admin/comments/moderate
 GET  /api/admin/posts/[postId]/comments
@@ -311,7 +335,7 @@ GET  /feed.xml
 
 **Content sanitization** uses an allowlist-based `sanitize-html` pipeline before rendering prose.
 
-**Security headers** ship from `web/next.config.ts`.
+**Security headers** ship from `web/src/proxy.ts` (dynamic CSP/nonces) and `web/next.config.ts` (remaining static headers).
 
 ---
 

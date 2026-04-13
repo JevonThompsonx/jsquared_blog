@@ -48,7 +48,7 @@ describe("middleware security hardening", () => {
     expect(response.headers.get("Expires")).toBe("0");
     expect(csp).not.toBeNull();
     expect(csp).toContain("script-src-attr 'none'");
-    expect(csp).toContain("frame-src 'none'");
+    expect(csp).toContain("frame-src 'self' https://open.spotify.com");
     expect(csp).toContain("manifest-src 'self'");
   });
 

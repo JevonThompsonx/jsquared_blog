@@ -16,6 +16,7 @@ import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities
 import { adminPostFormSchema } from "@/server/forms/admin-post-form";
 import { derivePostContent } from "@/server/posts/content";
 import { clonePostById } from "@/server/posts/clone";
+import { deactivateLinkedWishlistPlaces } from "@/server/dal/admin-wishlist-places";
 import { createPostPreviewAccess, revokePostPreviewTokens } from "@/server/posts/preview";
 import { deletePosts, type PostDeleteResult } from "@/server/posts/delete";
 import { publishPosts, unpublishPosts, type PostPublishResult } from "@/server/posts/publish";
@@ -541,6 +542,14 @@ export async function createAdminPostAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
+  if (values.status === "published") {
+    try {
+      await deactivateLinkedWishlistPlaces([postId]);
+      revalidatePath("/wishlist");
+    } catch (error) {
+      console.error(`[admin-actions] Failed to deactivate linked wishlist places for created post ${postId}`, error);
+    }
+  }
   await setAdminFlash("saved");
   redirect(buildAdminPostReturnPath(returnTo, postId, "saved"));
 }
@@ -659,6 +668,14 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath(`/posts/${slug}`);
+  if (values.status === "published") {
+    try {
+      await deactivateLinkedWishlistPlaces([validPostId]);
+      revalidatePath("/wishlist");
+    } catch (error) {
+      console.error(`[admin-actions] Failed to deactivate linked wishlist places for updated post ${validPostId}`, error);
+    }
+  }
   await setAdminFlash("saved");
   redirect(buildAdminPostReturnPath(returnTo, validPostId, "saved"));
 }

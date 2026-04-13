@@ -1,12 +1,9 @@
 import { z } from "zod";
 
+import { getSpotifyEmbedHeight, parseSpotifyEmbedUrl } from "@/lib/spotify";
 import type { BlogSongMetadata } from "@/types/blog";
 
-const songMetadataSchema = z.object({
-  title: z.string().trim().min(1).max(160),
-  artist: z.string().trim().min(1).max(160),
-  url: z.url({ protocol: /^https$/ }).transform((value) => value.trim()),
-});
+const songUrlSchema = z.url({ protocol: /^https$/ }).transform((value) => value.trim());
 
 type SongMetadataInput = {
   songTitle?: string | null;
@@ -19,6 +16,10 @@ export type SongMetadataFields = {
   songArtist: string | null;
   songUrl: string | null;
 };
+
+function normalizeOptionalSongText(value: string): string | null {
+  return value ? value : null;
+}
 
 function trimSongValue(value: string | null | undefined): string {
   return typeof value === "string" ? value.trim() : "";
@@ -37,20 +38,23 @@ export function normalizeSongMetadataFields(input: SongMetadataInput): SongMetad
     };
   }
 
-  const parsed = songMetadataSchema.safeParse({
-    title: songTitle,
-    artist: songArtist,
-    url: songUrl,
-  });
+  if (!songUrl) {
+    throw new Error("Invalid request");
+  }
 
-  if (!parsed.success) {
+  const parsedUrl = songUrlSchema.safeParse(songUrl);
+  if (!parsedUrl.success) {
+    throw new Error("Invalid request");
+  }
+
+  if ((songTitle && !songArtist) || (!songTitle && songArtist)) {
     throw new Error("Invalid request");
   }
 
   return {
-    songTitle: parsed.data.title,
-    songArtist: parsed.data.artist,
-    songUrl: parsed.data.url,
+    songTitle: normalizeOptionalSongText(songTitle),
+    songArtist: normalizeOptionalSongText(songArtist),
+    songUrl: parsedUrl.data,
   };
 }
 
@@ -58,7 +62,9 @@ export function getSongMetadata(input: SongMetadataInput): BlogSongMetadata | nu
   try {
     const normalized = normalizeSongMetadataFields(input);
     if (!normalized.songTitle || !normalized.songArtist || !normalized.songUrl) {
-      return null;
+      if (!normalized.songUrl) {
+        return null;
+      }
     }
 
     return {
@@ -69,4 +75,37 @@ export function getSongMetadata(input: SongMetadataInput): BlogSongMetadata | nu
   } catch {
     return null;
   }
+}
+
+export type SongPreviewMetadata = {
+  title: string | null;
+  artist: string | null;
+  url: string;
+  spotify: {
+    kind: "track" | "playlist" | "album";
+    canonicalUrl: string;
+    embedUrl: string;
+    height: number;
+  } | null;
+};
+
+export function getSongPreviewMetadata(input: SongMetadataInput): SongPreviewMetadata | null {
+  const song = getSongMetadata(input);
+  if (!song) {
+    return null;
+  }
+
+  const spotify = parseSpotifyEmbedUrl(song.url);
+
+  return {
+    ...song,
+    spotify: spotify
+        ? {
+            kind: spotify.kind,
+            canonicalUrl: spotify.canonicalUrl,
+            embedUrl: spotify.embedUrl,
+            height: getSpotifyEmbedHeight(spotify.kind),
+          }
+        : null,
+  };
 }

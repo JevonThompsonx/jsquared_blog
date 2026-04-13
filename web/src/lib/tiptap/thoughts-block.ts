@@ -69,7 +69,7 @@ export const ThoughtsBlock = Node.create({
     return [
       "details",
       ["summary", {}, normalizeThoughtsBlockSummary(typeof HTMLAttributes.summary === "string" ? HTMLAttributes.summary : null)],
-      0,
+      ["div", { class: "thoughts-block-content" }, 0],
     ];
   },
 

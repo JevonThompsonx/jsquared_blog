@@ -87,6 +87,10 @@ vi.mock("@/server/posts/preview", () => ({
   revokePostPreviewTokens: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/server/dal/admin-wishlist-places", () => ({
+  deactivateLinkedWishlistPlaces: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/server/posts/slug", () => ({
   generateUniquePostSlug: vi.fn().mockResolvedValue("my-post-slug"),
 }));
@@ -123,6 +127,8 @@ import type { AdminSession } from "@/lib/auth/session";
 import { requireAdminSession } from "@/lib/auth/session";
 import { createPostRevision } from "@/server/dal/post-revisions";
 import { derivePostContent } from "@/server/posts/content";
+import { revalidatePath } from "next/cache";
+import { deactivateLinkedWishlistPlaces } from "@/server/dal/admin-wishlist-places";
 import { createAdminPostAction, updateAdminPostAction } from "@/app/admin/actions";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -303,6 +309,22 @@ describe("updateAdminPostAction — revision capture", () => {
     );
   });
 
+  it("hides linked wishlist items when creating a published post", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
+
+    await expect(
+      createAdminPostAction(
+        buildFormData({ status: "published" }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(vi.mocked(deactivateLinkedWishlistPlaces)).toHaveBeenCalledWith([expect.any(String)]);
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/wishlist");
+  });
+
   it("rejects scheduled create payloads with an invalid browser offset", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     cookiesMock.mockResolvedValue(makeCookieStore());
@@ -395,6 +417,24 @@ describe("updateAdminPostAction — revision capture", () => {
         scheduledPublishTime: new Date("2026-04-07T16:30:00.000Z"),
       }),
     );
+  });
+
+  it("hides linked wishlist items when updating a post to published", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
+    vi.mocked(redirect).mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+    mockFindFirst.mockResolvedValue(EXISTING_POST);
+    cookiesMock.mockResolvedValue(makeCookieStore());
+    headersMock.mockResolvedValue(makeHeadersStore());
+
+    await expect(
+      updateAdminPostAction(
+        "post-1",
+        buildFormData({ status: "published" }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(vi.mocked(deactivateLinkedWishlistPlaces)).toHaveBeenCalledWith(["post-1"]);
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/wishlist");
   });
 
   it("rejects scheduled update payloads with an invalid browser offset", async () => {

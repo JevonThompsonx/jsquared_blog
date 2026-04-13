@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AdminCategoryRecord, AdminEditablePostRecord } from "@/server/dal/admin-posts";
 import type { SeriesRecord } from "@/server/dal/series";
 import { getPostHref } from "@/lib/utils";
 import { clonePost, createPostPreviewLinkAction } from "@/app/admin/actions";
+import { parseSpotifyEmbedUrl } from "@/lib/spotify";
 import { ComboboxInput } from "@/components/admin/combobox-input";
 import { LocationAutocomplete } from "@/components/admin/location-autocomplete";
 import { PostMediaManager } from "@/components/admin/post-media-manager";
@@ -14,6 +15,22 @@ import { PostRichTextEditor } from "@/components/admin/post-rich-text-editor";
 import { SeriesSelector } from "@/components/admin/series-selector";
 import { TagMultiSelect } from "@/components/admin/tag-multi-select";
 import { RevisionHistory } from "@/components/admin/revision-history";
+
+type SongPreviewResponse = {
+  song: {
+    title: string | null;
+    artist: string | null;
+    url: string;
+    spotify: {
+      kind: "track" | "playlist" | "album";
+      canonicalUrl: string;
+      embedUrl: string;
+      height: number;
+    } | null;
+  };
+  artworkUrl?: string | null;
+  source: "manual" | "spotify-oembed";
+};
 
 type AdminTag = { id: string; name: string; slug: string };
 type AdminReturnRoute = "/admin" | `/admin?${string}`;
@@ -47,6 +64,12 @@ export function PostEditorForm({
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
   const cloneCancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const [songTitleDraft, setSongTitleDraft] = useState(post?.songTitle ?? "");
+  const [songArtistDraft, setSongArtistDraft] = useState(post?.songArtist ?? "");
+  const [songUrlDraft, setSongUrlDraft] = useState(post?.songUrl ?? "");
+  const [songPreview, setSongPreview] = useState<SongPreviewResponse | null>(null);
+  const [songPreviewError, setSongPreviewError] = useState<string | null>(null);
+  const [isSongPreviewPending, startSongPreviewTransition] = useTransition();
 
   useEffect(() => {
     if (showCloneConfirm) {
@@ -92,9 +115,49 @@ export function PostEditorForm({
 
   const [browserOffsetMinutes, setBrowserOffsetMinutes] = useState("");
 
+  const spotifyEmbed = useMemo(() => parseSpotifyEmbedUrl(songUrlDraft), [songUrlDraft]);
+
   useEffect(() => {
     setBrowserOffsetMinutes(new Date().getTimezoneOffset().toString());
   }, []);
+
+  useEffect(() => {
+    setSongPreviewError(null);
+
+    const trimmedUrl = songUrlDraft.trim();
+    if (!trimmedUrl) {
+      setSongPreview(null);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      startSongPreviewTransition(async () => {
+        try {
+          const response = await fetch("/api/admin/song-preview", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: trimmedUrl }),
+          });
+          const payload = await response.json() as SongPreviewResponse | { error?: string };
+          if (!response.ok || !("song" in payload)) {
+            throw new Error((payload as { error?: string }).error ?? "Song preview unavailable");
+          }
+
+          setSongPreview(payload);
+
+          setSongTitleDraft((current) => current.trim() || !payload.song.title ? current : payload.song.title);
+          setSongArtistDraft((current) => current.trim() || !payload.song.artist ? current : payload.song.artist);
+        } catch (error) {
+          setSongPreview(null);
+          setSongPreviewError(error instanceof Error ? error.message : "Song preview unavailable");
+        }
+      });
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [songUrlDraft]);
 
   const buttonLabel = mode === "create" ? "Create post" : "Save changes";
   const modeLabel = mode === "create" ? "New story" : "Editing story";
@@ -247,28 +310,86 @@ export function PostEditorForm({
                 <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Song title</span>
                 <input
                   className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
-                  defaultValue={post?.songTitle ?? ""}
                   name="songTitle"
+                  onChange={(event) => setSongTitleDraft(event.target.value)}
+                  value={songTitleDraft}
                 />
               </label>
               <label className="block sm:col-span-1">
                 <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Artist</span>
                 <input
                   className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
-                  defaultValue={post?.songArtist ?? ""}
                   name="songArtist"
+                  onChange={(event) => setSongArtistDraft(event.target.value)}
+                  value={songArtistDraft}
                 />
               </label>
               <label className="block sm:col-span-2">
                 <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Song link</span>
                 <input
                   className="mt-1 block w-full rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
-                  defaultValue={post?.songUrl ?? ""}
                   name="songUrl"
+                  onChange={(event) => setSongUrlDraft(event.target.value)}
                   placeholder="https://open.spotify.com/track/..."
                   type="url"
+                  value={songUrlDraft}
                 />
               </label>
+            </div>
+            <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--card-bg)]/60 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">Song preview</p>
+                  <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
+                    Paste any HTTPS audio link. Spotify track, album, and playlist links auto-preview and can autofill the display title.
+                  </p>
+                </div>
+                {isSongPreviewPending ? <span className="text-xs text-[var(--accent)]">Checking link...</span> : null}
+              </div>
+
+              {songPreviewError ? (
+                <p className="mt-3 text-xs text-[var(--color-error-text)]">{songPreviewError}</p>
+              ) : null}
+
+              {songPreview ? (
+                <div className="mt-4 space-y-3">
+                  {songPreview.artworkUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt="Song artwork preview" className="h-20 w-20 rounded-xl object-cover" src={songPreview.artworkUrl} />
+                  ) : null}
+
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{songPreview.song.title ?? "Playable audio link"}</p>
+                    {songPreview.song.artist ? (
+                      <p className="text-xs text-[var(--text-secondary)]">{songPreview.song.artist}</p>
+                    ) : null}
+                  </div>
+
+                  {songPreview.song.spotify ? (
+                    <iframe
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      className="w-full rounded-xl"
+                      height={songPreview.song.spotify.height}
+                      loading="lazy"
+                      src={songPreview.song.spotify.embedUrl}
+                      title={songPreview.song.title ?? "Spotify player preview"}
+                    />
+                  ) : (
+                    <a
+                      className="inline-flex text-sm font-semibold text-[var(--accent)] hover:underline"
+                      href={songPreview.song.url}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Open audio link
+                    </a>
+                  )}
+                </div>
+              ) : songUrlDraft.trim() ? (
+                <p className="mt-3 text-xs text-[var(--text-secondary)]">
+                  {spotifyEmbed ? "Spotify preview loading..." : "This will render as a normal external audio link on the post."}
+                </p>
+              ) : null}
             </div>
           </section>
 

@@ -51,8 +51,8 @@ describe("listPublicWishlistPlaces", () => {
       },
     ]);
 
-    expect(mockSelect).toHaveBeenCalledOnce();
-    expect(mockWhere).toHaveBeenCalledOnce();
+    expect(mockSelect).toHaveBeenCalledTimes(2);
+    expect(mockWhere).toHaveBeenCalledTimes(2);
     expect(mockOrderBy).toHaveBeenCalledOnce();
   });
 
