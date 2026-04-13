@@ -8,9 +8,9 @@ describe("adminNavLinks", () => {
     expect(hrefs).toContain("/admin/wishlist");
   });
 
-  it("includes a Route planner link", () => {
+  it("does not expose a top-level route-planner link in admin nav", () => {
     const hrefs = adminNavLinks.map((l) => l.href);
-    expect(hrefs).toContain("/route-planner");
+    expect(hrefs).not.toContain("/route-planner");
   });
 
   it("every link has a non-empty label and description", () => {

@@ -29,9 +29,4 @@ export const adminNavLinks: AdminNavLink[] = [
     label: "Manage tags",
     description: "Update tag descriptions and keep taxonomy tidy.",
   },
-  {
-    href: "/route-planner",
-    label: "Route planner",
-    description: "Build a suggested itinerary from public wishlist destinations.",
-  },
 ];
