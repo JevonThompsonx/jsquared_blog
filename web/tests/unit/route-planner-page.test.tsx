@@ -1,29 +1,27 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/blog/route-planner-form", () => ({
-  RoutePlannerForm: () => createElement("div", { "data-testid": "route-planner-form" }, "Route planner form shell"),
+const { mockPermanentRedirect } = vi.hoisted(() => ({
+  mockPermanentRedirect: vi.fn(),
 }));
 
-import RoutePlannerPage, { dynamic, metadata } from "@/app/(blog)/route-planner/page";
+vi.mock("next/navigation", () => ({
+  permanentRedirect: mockPermanentRedirect,
+}));
+
+import RoutePlannerPage from "@/app/(blog)/route-planner/page";
 
 describe("RoutePlannerPage", () => {
-  it("keeps the route dynamic and exposes planner metadata", () => {
-    expect(dynamic).toBe("force-dynamic");
-    expect(metadata.title).toBe("Route Planner");
+  it("issues a permanent redirect to /wishlist", () => {
+    RoutePlannerPage();
+
+    expect(mockPermanentRedirect).toHaveBeenCalledOnce();
+    expect(mockPermanentRedirect).toHaveBeenCalledWith("/wishlist");
   });
 
-  it("renders the planner form shell and guidance copy", () => {
-    const markup = renderToStaticMarkup(awaitedPage());
+  it("does not export dynamic or metadata (page is retired)", async () => {
+    const mod = await import("@/app/(blog)/route-planner/page");
 
-    expect(markup).toContain('data-testid="route-planner-form"');
-    expect(markup).toContain("Route planner form shell");
-    expect(markup).toContain("Plan a route between two places");
-    expect(markup).toContain("public wishlist stops");
+    expect((mod as Record<string, unknown>).dynamic).toBeUndefined();
+    expect((mod as Record<string, unknown>).metadata).toBeUndefined();
   });
 });
-
-function awaitedPage() {
-  return RoutePlannerPage();
-}

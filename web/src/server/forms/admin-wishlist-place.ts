@@ -20,6 +20,10 @@ function optionalIntegerField(defaultValue: number) {
 
 const optionalHttpsUrlField = z.preprocess(
   (value) => {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
     if (typeof value !== "string") {
       return value;
     }
@@ -40,6 +44,17 @@ const optionalTextAreaField = z.preprocess(
   z.string().max(500).nullable(),
 );
 
+const optionalVisitedYearField = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return Number(trimmed);
+  },
+  z.number().int().min(1900).max(2100).nullable(),
+);
+
 export const adminWishlistPlaceFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   locationName: z.string().trim().min(1, "Location is required"),
@@ -48,6 +63,8 @@ export const adminWishlistPlaceFormSchema = z.object({
   visited: z.boolean().optional().default(false),
   isPublic: z.boolean().optional().default(true),
   externalUrl: optionalHttpsUrlField,
+  visitedYear: optionalVisitedYearField,
+  imageUrl: optionalHttpsUrlField,
 });
 
 export const adminWishlistPlaceIdSchema = z.string().trim().uuid("Invalid wishlist place id");

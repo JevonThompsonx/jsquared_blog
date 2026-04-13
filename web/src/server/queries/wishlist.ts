@@ -16,6 +16,8 @@ export type PublicWishlistPlace = {
   visited: boolean;
   externalUrl: string | null;
   description: string | null;
+  visitedYear: number | null;
+  imageUrl: string | null;
 };
 
 function normalizePublicWishlistExternalUrl(externalUrl: string | null): string | null {
@@ -52,6 +54,8 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
       visited: wishlistPlaces.visited,
       externalUrl: wishlistPlaces.externalUrl,
       description: wishlistPlaces.description,
+      visitedYear: wishlistPlaces.visitedYear,
+      imageUrl: wishlistPlaces.imageUrl,
     })
     .from(wishlistPlaces)
     .where(
@@ -70,5 +74,6 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
   return places.map((place) => ({
     ...place,
     externalUrl: normalizePublicWishlistExternalUrl(place.externalUrl),
+    imageUrl: place.imageUrl ?? null,
   }));
 }

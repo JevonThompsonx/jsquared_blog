@@ -19,6 +19,8 @@ const mockOrderBy = vi.fn().mockResolvedValue([
     visited: false,
     isPublic: true,
     externalUrl: "https://example.com/glacier",
+    visitedYear: null,
+    imageUrl: null,
     linkedPostId: null,
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -64,6 +66,8 @@ describe("admin wishlist places DAL", () => {
       visited: false,
       isPublic: true,
       externalUrl: null,
+      visitedYear: null,
+      imageUrl: null,
       createdByUserId: "admin-1",
     });
 
@@ -104,6 +108,8 @@ describe("admin wishlist places DAL", () => {
         visited: false,
         isPublic: true,
         externalUrl: "https://example.com/glacier",
+        visitedYear: null,
+        imageUrl: null,
         linkedPostId: null,
         createdAt: new Date("2026-04-01T00:00:00.000Z"),
         updatedAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -124,6 +130,8 @@ describe("admin wishlist places DAL", () => {
       visited: true,
       isPublic: false,
       externalUrl: "https://example.com/updated-glacier",
+      visitedYear: 2023,
+      imageUrl: "https://example.com/glacier.jpg",
     });
 
     expect(mockUpdate).toHaveBeenCalledOnce();

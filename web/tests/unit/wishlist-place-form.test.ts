@@ -21,6 +21,8 @@ describe("adminWishlistPlaceFormSchema", () => {
       visited: false,
       isPublic: true,
       externalUrl: "https://example.com/glacier",
+      visitedYear: null,
+      imageUrl: null,
     });
   });
 
@@ -109,6 +111,88 @@ describe("adminWishlistPlaceFormSchema", () => {
       sortOrder: "",
       externalUrl: "",
       description: "x".repeat(501),
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it("accepts an optional visitedYear as a positive integer", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      visitedYear: "2019",
+    });
+
+    expect(parsed.visitedYear).toBe(2019);
+  });
+
+  it("defaults visitedYear to null when omitted", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+    });
+
+    expect(parsed.visitedYear).toBeNull();
+  });
+
+  it("defaults visitedYear to null when blank", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      visitedYear: "  ",
+    });
+
+    expect(parsed.visitedYear).toBeNull();
+  });
+
+  it("rejects visitedYear outside 1900–2100 range", () => {
+    const parsed = adminWishlistPlaceFormSchema.safeParse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      visitedYear: "1800",
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it("accepts an optional imageUrl as an HTTPS URL", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      imageUrl: "https://images.example.com/glacier.jpg",
+    });
+
+    expect(parsed.imageUrl).toBe("https://images.example.com/glacier.jpg");
+  });
+
+  it("defaults imageUrl to null when omitted", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+    });
+
+    expect(parsed.imageUrl).toBeNull();
+  });
+
+  it("rejects a non-https imageUrl", () => {
+    const parsed = adminWishlistPlaceFormSchema.safeParse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      imageUrl: "http://images.example.com/glacier.jpg",
     });
 
     expect(parsed.success).toBe(false);

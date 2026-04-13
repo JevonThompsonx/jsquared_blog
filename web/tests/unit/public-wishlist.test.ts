@@ -33,6 +33,8 @@ describe("listPublicWishlistPlaces", () => {
         visited: false,
         externalUrl: "https://example.com/glacier",
         description: "Beautiful alpine park in Montana",
+        visitedYear: null,
+        imageUrl: null,
       },
     ]);
 
@@ -48,6 +50,8 @@ describe("listPublicWishlistPlaces", () => {
         visited: false,
         externalUrl: "https://example.com/glacier",
         description: "Beautiful alpine park in Montana",
+        visitedYear: null,
+        imageUrl: null,
       },
     ]);
 
@@ -69,6 +73,8 @@ describe("listPublicWishlistPlaces", () => {
         visited: false,
         externalUrl: "javascript:alert('xss')",
         description: null,
+        visitedYear: null,
+        imageUrl: null,
       },
       {
         id: "place-2",
@@ -81,6 +87,8 @@ describe("listPublicWishlistPlaces", () => {
         visited: true,
         externalUrl: "  https://example.com/banff ",
         description: "Rocky mountain gem",
+        visitedYear: 2022,
+        imageUrl: "https://images.example.com/banff.jpg",
       },
     ]);
 
@@ -96,6 +104,8 @@ describe("listPublicWishlistPlaces", () => {
         visited: false,
         externalUrl: null,
         description: null,
+        visitedYear: null,
+        imageUrl: null,
       },
       {
         id: "place-2",
@@ -108,6 +118,8 @@ describe("listPublicWishlistPlaces", () => {
         visited: true,
         externalUrl: "https://example.com/banff",
         description: "Rocky mountain gem",
+        visitedYear: 2022,
+        imageUrl: "https://images.example.com/banff.jpg",
       },
     ]);
   });
