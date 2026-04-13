@@ -20,12 +20,18 @@ vi.mock("@/lib/env", () => ({
   getPublicEnv: vi.fn(),
 }));
 
+vi.mock("@/lib/auth/session", () => ({
+  getAdminServerSession: vi.fn(),
+}));
+
 import { getPublicEnv } from "@/lib/env";
+import { getAdminServerSession } from "@/lib/auth/session";
 import WishlistPage from "@/app/(blog)/wishlist/page";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 
 const mockedGetPublicEnv = getPublicEnv as unknown as ReturnType<typeof vi.fn>;
 const mockedListPublicWishlistPlaces = listPublicWishlistPlaces as unknown as ReturnType<typeof vi.fn>;
+const mockedGetAdminServerSession = getAdminServerSession as unknown as ReturnType<typeof vi.fn>;
 
 describe("WishlistPage", () => {
   afterEach(() => {
@@ -35,6 +41,7 @@ describe("WishlistPage", () => {
   it("renders an empty state when there are no public wishlist places", async () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
     mockedListPublicWishlistPlaces.mockResolvedValue([]);
+    mockedGetAdminServerSession.mockResolvedValue(null);
 
     const markup = renderToStaticMarkup(await WishlistPage());
 
@@ -45,6 +52,7 @@ describe("WishlistPage", () => {
 
   it("renders the wishlist map and list when public places exist", async () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
+    mockedGetAdminServerSession.mockResolvedValue(null);
     mockedListPublicWishlistPlaces.mockResolvedValue([
       {
         id: "place-1",
@@ -78,6 +86,7 @@ describe("WishlistPage", () => {
 
   it("renders the wishlist shell when loading places fails", async () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
+    mockedGetAdminServerSession.mockResolvedValue(null);
     mockedListPublicWishlistPlaces.mockRejectedValue(new Error("database unavailable"));
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
@@ -98,6 +107,7 @@ describe("WishlistPage", () => {
 
   it("renders a location group header for each distinct locationName", async () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
     mockedListPublicWishlistPlaces.mockResolvedValue([
       {
         id: "p1",
@@ -138,6 +148,7 @@ describe("WishlistPage", () => {
 
   it("renders a visitedYear badge when the place has a visitedYear", async () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
     mockedListPublicWishlistPlaces.mockResolvedValue([
       {
         id: "p1",
@@ -163,6 +174,7 @@ describe("WishlistPage", () => {
 
   it("renders a place image when imageUrl is present", async () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
     mockedListPublicWishlistPlaces.mockResolvedValue([
       {
         id: "p1",
@@ -188,6 +200,7 @@ describe("WishlistPage", () => {
 
   it("does not render a place image when imageUrl is null", async () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
     mockedListPublicWishlistPlaces.mockResolvedValue([
       {
         id: "p1",
@@ -209,4 +222,56 @@ describe("WishlistPage", () => {
 
     expect(markup).not.toContain('data-testid="place-image"');
   });
+
+  it("renders an admin edit link per place when an admin session is active", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue({ user: { id: "admin-1", role: "admin" } });
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "place-99",
+        name: "Glacier NP",
+        locationName: "West Glacier, MT",
+        locationLat: 48.7,
+        locationLng: -113.8,
+        locationZoom: 8,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: null,
+        description: null,
+        visitedYear: null,
+        imageUrl: null,
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).toContain('data-testid="admin-edit-place-link"');
+    expect(markup).toContain('href="/admin/wishlist#place-place-99"');
+  });
+
+  it("does not render admin edit links for non-admin visitors", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "place-99",
+        name: "Glacier NP",
+        locationName: "West Glacier, MT",
+        locationLat: 48.7,
+        locationLng: -113.8,
+        locationZoom: 8,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: null,
+        description: null,
+        visitedYear: null,
+        imageUrl: null,
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).not.toContain('data-testid="admin-edit-place-link"');
+  });
 });
+

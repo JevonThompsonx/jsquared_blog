@@ -6,6 +6,7 @@ import { WorldMap } from "@/components/blog/world-map";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getPublicEnv } from "@/lib/env";
 import { groupWishlistByLocation } from "@/lib/wishlist/grouping";
+import { getAdminServerSession } from "@/lib/auth/session";
 import type { PublicWishlistPlace } from "@/server/queries/wishlist";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 
@@ -18,6 +19,11 @@ export default async function WishlistPage() {
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   let places: PublicWishlistPlace[] = [];
   let wishlistLoadFailed = false;
+
+  const [adminSession] = await Promise.all([
+    getAdminServerSession(),
+  ]);
+  const isAdmin = adminSession !== null;
 
   try {
     places = await listPublicWishlistPlaces();
@@ -115,16 +121,27 @@ export default async function WishlistPage() {
                               />
                             ) : null}
                           </div>
-                          {place.externalUrl ? (
-                            <a
-                              className="shrink-0 text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
-                              href={place.externalUrl}
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              Learn more
-                            </a>
-                          ) : null}
+                          <div className="flex shrink-0 items-center gap-3">
+                            {place.externalUrl ? (
+                              <a
+                                className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+                                href={place.externalUrl}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                Learn more
+                              </a>
+                            ) : null}
+                            {isAdmin ? (
+                              <a
+                                className="text-xs font-semibold text-[var(--text-secondary)] underline-offset-4 hover:underline"
+                                data-testid="admin-edit-place-link"
+                                href={`/admin/wishlist#place-${place.id}`}
+                              >
+                                Edit
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
                       </li>
                     ))}
