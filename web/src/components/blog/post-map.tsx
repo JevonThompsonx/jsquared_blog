@@ -54,7 +54,7 @@ export function PostMap({ locationName, lat, lng, zoom, iovanderUrl, apiKey }: P
   }, []);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--border)] shadow-md">
+    <div className="world-map-container overflow-hidden rounded-xl border border-[var(--border)] shadow-md">
       <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--card-bg)] px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
           <svg aria-hidden="true" className="h-4 w-4 text-[var(--accent)]" fill="currentColor" viewBox="0 0 24 24">

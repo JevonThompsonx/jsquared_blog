@@ -177,7 +177,7 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
   }, []);
 
   return (
-    <div>
+    <div className="world-map-container">
       {/* Category filter pills — only shown when 2+ categories exist */}
       {categories.length > 1 ? (
         <div className="mb-4 flex flex-wrap gap-2">

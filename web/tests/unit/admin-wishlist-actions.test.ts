@@ -172,6 +172,8 @@ describe("wishlist admin actions", () => {
       isPublic: true,
       externalUrl: "https://example.com/glacier",
       createdByUserId: "admin-1",
+      visitedYear: null,
+      imageUrl: null,
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });
@@ -244,6 +246,8 @@ describe("wishlist admin actions", () => {
       isPublic: true,
       externalUrl: "https://example.com/updated-glacier",
       description: null,
+      visitedYear: null,
+      imageUrl: null,
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });
