@@ -3,7 +3,7 @@ const globals = require('globals');
 
 module.exports = [
     {
-        ignores: ['.opencode/dist/**', '.cursor/**', 'node_modules/**']
+        ignores: ['.opencode/dist/**', '.cursor/**', 'node_modules/**', 'web/.next/**', '.tmp-validator-*.js', 'web/public/sw.js', 'web/public/maplibre-worker.js']
     },
     js.configs.recommended,
     {

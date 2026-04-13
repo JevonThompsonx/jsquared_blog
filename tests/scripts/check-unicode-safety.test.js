@@ -109,6 +109,49 @@ if (
   passed++;
 else failed++;
 
+if (
+  test('ignores archived, logged, vendored, and allowlisted intentional unicode paths', () => {
+    const root = makeTempRoot('ecc-unicode-allowlist-');
+    const replyArrow = String.fromCodePoint(0x21A9);
+    const heartSuit = String.fromCodePoint(0x2665);
+    const smilingFace = String.fromCodePoint(0x1F60A);
+    const grinningFace = String.fromCodePoint(0x1F600);
+    fs.mkdirSync(path.join(root, 'agency-agents-main', 'engineering'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'logs'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'web', 'public'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'web', 'src', 'app', '(blog)', 'author', '[id]'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'web', 'src', 'components', 'admin'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'web', 'tests', 'unit'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'web', 'scripts'), { recursive: true });
+
+    fs.writeFileSync(path.join(root, 'agency-agents-main', 'engineering', 'agent.md'), `# ${rocketEmoji} Agent\n`);
+    fs.writeFileSync(path.join(root, 'logs', 'run.json'), `\uFEFF{"status":"ok"}\n`);
+    fs.writeFileSync(path.join(root, 'web', 'public', 'maplibre-worker.js'), `const worker = "a${zeroWidthSpace}";\n`);
+    fs.writeFileSync(
+      path.join(root, 'web', 'src', 'app', '(blog)', 'author', '[id]', 'page.tsx'),
+      `export const copy = ["${replyArrow} Reply", "${heartSuit} 2 likes"];\n`,
+    );
+    fs.writeFileSync(
+      path.join(root, 'web', 'src', 'components', 'admin', 'post-rich-text-editor.tsx'),
+      `export const emojiToggle = "${smilingFace}";\n`,
+    );
+    fs.writeFileSync(
+      path.join(root, 'web', 'tests', 'unit', 'post-rich-text-editor-emoji.test.tsx'),
+      `export const emoji = "${grinningFace}";\n`,
+    );
+    fs.writeFileSync(
+      path.join(root, 'web', 'tests', 'unit', 'author-page.test.tsx'),
+      `export const copy = "${replyArrow} ${heartSuit}";\n`,
+    );
+    fs.writeFileSync(path.join(root, 'web', 'scripts', 'seed-rich-content.ts'), `console.log("${warningEmoji} seeded");\n`);
+
+    const result = runCheck(root);
+    assert.strictEqual(result.status, 0, result.stdout + result.stderr);
+  })
+)
+  passed++;
+else failed++;
+
 console.log(`\nPassed: ${passed}`);
 console.log(`Failed: ${failed}`);
 process.exit(failed > 0 ? 1 : 0);

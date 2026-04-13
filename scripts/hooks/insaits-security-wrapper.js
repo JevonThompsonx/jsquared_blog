@@ -20,6 +20,66 @@ function isEnabled(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
 }
 
+function execute(rawInput, runtime = {}) {
+  const env = runtime.env || process.env;
+  const stderrWrite = runtime.stderrWrite || (message => process.stderr.write(message));
+  const stdoutWrite = runtime.stdoutWrite || (message => process.stdout.write(message));
+  const exit = runtime.exit || (code => process.exit(code));
+  const spawn = runtime.spawnSync || spawnSync;
+
+  if (!isEnabled(env.ECC_ENABLE_INSAITS)) {
+    stdoutWrite(rawInput);
+    exit(0);
+    return;
+  }
+
+  const pyScript = path.join(__dirname, 'insaits-security-monitor.py');
+  const pythonCandidates = ['python3', 'python'];
+  let result;
+
+  for (const pythonBin of pythonCandidates) {
+    result = spawn(pythonBin, [pyScript], {
+      input: rawInput,
+      encoding: 'utf8',
+      env,
+      cwd: process.cwd(),
+      timeout: 14000,
+    });
+
+    if (result.error && result.error.code === 'ENOENT') {
+      continue;
+    }
+    break;
+  }
+
+  if (!result || (result.error && result.error.code === 'ENOENT')) {
+    stderrWrite('[InsAIts] python3/python not found. Install Python 3.9+ and: pip install insa-its\n');
+    stdoutWrite(rawInput);
+    exit(0);
+    return;
+  }
+
+  if (result.error) {
+    stderrWrite(`[InsAIts] Security monitor failed to run: ${result.error.message}\n`);
+    stdoutWrite(rawInput);
+    exit(0);
+    return;
+  }
+
+  if (!Number.isInteger(result.status)) {
+    const signal = result.signal || 'unknown';
+    stderrWrite(`[InsAIts] Security monitor killed (signal: ${signal}). Tool execution continues.\n`);
+    stdoutWrite(rawInput);
+    exit(0);
+    return;
+  }
+
+  if (result.stdout) stdoutWrite(result.stdout);
+  if (result.stderr) stderrWrite(result.stderr);
+
+  exit(result.status);
+}
+
 let raw = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => {
@@ -29,60 +89,10 @@ process.stdin.on('data', chunk => {
 });
 
 process.stdin.on('end', () => {
-  if (!isEnabled(process.env.ECC_ENABLE_INSAITS)) {
-    process.stdout.write(raw);
-    process.exit(0);
-  }
-
-  const scriptDir = __dirname;
-  const pyScript = path.join(scriptDir, 'insaits-security-monitor.py');
-
-  // Try python3 first (macOS/Linux), fall back to python (Windows)
-  const pythonCandidates = ['python3', 'python'];
-  let result;
-
-  for (const pythonBin of pythonCandidates) {
-    result = spawnSync(pythonBin, [pyScript], {
-      input: raw,
-      encoding: 'utf8',
-      env: process.env,
-      cwd: process.cwd(),
-      timeout: 14000,
-    });
-
-    // ENOENT means binary not found — try next candidate
-    if (result.error && result.error.code === 'ENOENT') {
-      continue;
-    }
-    break;
-  }
-
-  if (!result || (result.error && result.error.code === 'ENOENT')) {
-    process.stderr.write('[InsAIts] python3/python not found. Install Python 3.9+ and: pip install insa-its\n');
-    process.stdout.write(raw);
-    process.exit(0);
-  }
-
-  // Log non-ENOENT spawn errors (timeout, signal kill, etc.) so users
-  // know the security monitor did not run — fail-open with a warning.
-  if (result.error) {
-    process.stderr.write(`[InsAIts] Security monitor failed to run: ${result.error.message}\n`);
-    process.stdout.write(raw);
-    process.exit(0);
-  }
-
-  // result.status is null when the process was killed by a signal or
-  // timed out.  Check BEFORE writing stdout to avoid leaking partial
-  // or corrupt monitor output.  Pass through original raw input instead.
-  if (!Number.isInteger(result.status)) {
-    const signal = result.signal || 'unknown';
-    process.stderr.write(`[InsAIts] Security monitor killed (signal: ${signal}). Tool execution continues.\n`);
-    process.stdout.write(raw);
-    process.exit(0);
-  }
-
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
-
-  process.exit(result.status);
+  execute(raw);
 });
+
+module.exports = {
+  isEnabled,
+  execute,
+};

@@ -236,4 +236,16 @@ function validateHooks() {
   console.log(`Validated ${totalMatchers} hook matchers`);
 }
 
-validateHooks();
+if (require.main === module) {
+  validateHooks();
+}
+
+module.exports = {
+  VALID_EVENTS,
+  VALID_HOOK_TYPES,
+  EVENTS_WITHOUT_MATCHER,
+  isNonEmptyString,
+  isNonEmptyStringArray,
+  validateHookEntry,
+  validateHooks,
+};

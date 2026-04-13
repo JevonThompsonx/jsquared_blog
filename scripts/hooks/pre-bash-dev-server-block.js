@@ -145,6 +145,14 @@ function getLeadingCommandWord(segment) {
   return null;
 }
 
+module.exports = {
+  readToken,
+  shouldSkipOptionValue,
+  isOptionToken,
+  normalizeCommandWord,
+  getLeadingCommandWord,
+};
+
 let raw = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => {

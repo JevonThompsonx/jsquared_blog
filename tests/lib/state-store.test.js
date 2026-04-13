@@ -354,6 +354,143 @@ async function runTests() {
     }
   })) passed += 1; else failed += 1;
 
+  if (await test('returns missing install health and null rates when the store is empty', async () => {
+    const testDir = createTempDir('ecc-state-db-');
+    const dbPath = path.join(testDir, 'state.db');
+
+    try {
+      const store = await createStateStore({ dbPath });
+      const status = store.getStatus();
+      store.close();
+
+      assert.strictEqual(status.activeSessions.activeCount, 0);
+      assert.strictEqual(status.skillRuns.summary.totalCount, 0);
+      assert.strictEqual(status.skillRuns.summary.successRate, null);
+      assert.strictEqual(status.skillRuns.summary.failureRate, null);
+      assert.strictEqual(status.installHealth.status, 'missing');
+      assert.strictEqual(status.governance.pendingCount, 0);
+    } finally {
+      cleanupTempDir(testDir);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (await test('supports defaulted entity fields and non-healthy install status', async () => {
+    const testDir = createTempDir('ecc-state-db-');
+    const dbPath = path.join(testDir, 'state.db');
+
+    try {
+      const store = await createStateStore({ dbPath });
+      store.upsertSession({
+        id: 'session-defaults',
+        adapterId: 'dmux-tmux',
+        harness: 'claude',
+        state: 'queued',
+      });
+      store.insertDecision({
+        id: 'decision-defaults',
+        sessionId: 'session-defaults',
+        title: 'Defaults',
+        rationale: 'Exercise defaults',
+        status: 'active',
+      });
+      store.insertGovernanceEvent({
+        id: 'gov-defaults',
+        eventType: 'defaults',
+      });
+      store.upsertInstallState({
+        targetId: 'claude-home',
+        targetRoot: '/tmp/default-home/.claude',
+        profile: null,
+        modules: null,
+        operations: null,
+        installedAt: '2026-03-15T07:00:00.000Z',
+        sourceVersion: null,
+      });
+
+      const detail = store.getSessionDetail('session-defaults');
+      const status = store.getStatus();
+      store.close();
+
+      assert.strictEqual(detail.session.workerCount, 0);
+      assert.deepStrictEqual(detail.decisions[0].alternatives, []);
+      assert.strictEqual(status.installHealth.status, 'warning');
+      assert.strictEqual(status.installHealth.warningCount, 1);
+      assert.strictEqual(status.governance.events[0].sessionId, null);
+      assert.strictEqual(status.governance.events[0].payload, null);
+    } finally {
+      cleanupTempDir(testDir);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (await test('classifies outcome aliases and validates query limits', async () => {
+    const testDir = createTempDir('ecc-state-db-');
+    const dbPath = path.join(testDir, 'state.db');
+
+    try {
+      const store = await createStateStore({ dbPath });
+      store.upsertSession({
+        id: 'session-outcomes',
+        adapterId: 'dmux-tmux',
+        harness: 'claude',
+        state: 'active',
+        snapshot: {},
+      });
+      store.insertSkillRun({
+        id: 'skill-pass',
+        skillId: 'planner',
+        skillVersion: '1.0.0',
+        sessionId: 'session-outcomes',
+        taskDescription: 'pass alias',
+        outcome: 'passed',
+      });
+      store.insertSkillRun({
+        id: 'skill-error',
+        skillId: 'planner',
+        skillVersion: '1.0.0',
+        sessionId: 'session-outcomes',
+        taskDescription: 'error alias',
+        outcome: 'error',
+      });
+
+      const status = store.getStatus({ activeLimit: 1, recentSkillRunLimit: 5, pendingLimit: 2 });
+      assert.strictEqual(status.skillRuns.summary.successCount, 1);
+      assert.strictEqual(status.skillRuns.summary.failureCount, 1);
+      assert.strictEqual(status.skillRuns.summary.successRate, 50);
+      assert.strictEqual(status.skillRuns.summary.failureRate, 50);
+
+      assert.throws(() => store.listRecentSessions({ limit: 0 }), /Invalid limit: 0/);
+      assert.throws(() => store.getStatus({ activeLimit: 'nope' }), /Invalid limit: nope/);
+
+      store.close();
+    } finally {
+      cleanupTempDir(testDir);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (await test('returns null for missing session detail and persists skill version records', async () => {
+    const testDir = createTempDir('ecc-state-db-');
+    const dbPath = path.join(testDir, 'state.db');
+
+    try {
+      const store = await createStateStore({ dbPath });
+      assert.strictEqual(store.getSessionDetail('missing-session'), null);
+
+      const version = store.upsertSkillVersion({
+        skillId: 'planner',
+        version: '2.0.0',
+        contentHash: 'hash-2',
+      });
+
+      assert.strictEqual(version.skillId, 'planner');
+      assert.strictEqual(version.version, '2.0.0');
+      assert.strictEqual(version.amendmentReason, null);
+      assert.strictEqual(version.rolledBackAt, null);
+      store.close();
+    } finally {
+      cleanupTempDir(testDir);
+    }
+  })) passed += 1; else failed += 1;
+
   if (await test('validates entity payloads before writing to the database', async () => {
     const testDir = createTempDir('ecc-state-db-');
     const dbPath = path.join(testDir, 'state.db');

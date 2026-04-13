@@ -367,6 +367,32 @@ function runTests() {
     assert.ok(result.stdout.includes('Documentation counts match the repository catalog.'), 'Should report matching counts');
   })) passed++; else failed++;
 
+  if (test('skips markerless README files instead of failing validation', () => {
+    const testDir = createTestDir();
+    const {
+      readmePath,
+      agentsPath,
+      zhRootReadmePath,
+      zhDocsReadmePath,
+      zhAgentsPath,
+    } = writeCatalogFixture(testDir);
+
+    fs.writeFileSync(readmePath, '# Project README\n\nThis document has no ECC catalog markers.\n');
+
+    const result = runCatalogValidator({
+      ROOT: testDir,
+      README_PATH: readmePath,
+      AGENTS_PATH: agentsPath,
+      README_ZH_CN_PATH: zhRootReadmePath,
+      DOCS_ZH_CN_README_PATH: zhDocsReadmePath,
+      DOCS_ZH_CN_AGENTS_PATH: zhAgentsPath,
+    });
+
+    assert.strictEqual(result.code, 0, `Should skip markerless README, got stderr: ${result.stderr}`);
+    assert.ok(result.stdout.includes('Documentation counts match the repository catalog.'), 'Should still report matching counts');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   if (test('fails when README and AGENTS catalog counts drift', () => {
     const testDir = createTestDir();
     const {
@@ -2292,7 +2318,15 @@ function runTests() {
     fs.mkdirSync(validSkill, { recursive: true });
     // Broken symlink: target does not exist — statSync will throw ENOENT
     const brokenLink = path.join(skillsDir, 'broken-skill');
-    fs.symlinkSync('/nonexistent/target/path', brokenLink);
+    try {
+      fs.symlinkSync('/nonexistent/target/path', brokenLink);
+    } catch {
+      console.log('    (skipped — symlinks not supported)');
+      cleanupTestDir(testDir);
+      cleanupTestDir(agentsDir);
+      fs.rmSync(skillsDir, { recursive: true, force: true });
+      return;
+    }
 
     // Command that references the valid skill (should resolve)
     fs.writeFileSync(path.join(testDir, 'cmd.md'),

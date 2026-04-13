@@ -105,4 +105,10 @@ if (require.main === module) {
   }
 }
 
-module.exports = { main };
+module.exports = {
+  usage,
+  parseArgs,
+  loadPlanConfig,
+  printDryRun,
+  main,
+};

@@ -1372,6 +1372,11 @@ src/main.ts
   console.log('\nRound 83: getAllSessions (broken symlink — statSync catch):');
 
   if (test('getAllSessions skips broken symlink .tmp files gracefully', () => {
+    if (process.platform === 'win32') {
+      console.log('    (skipped — broken symlink creation requires elevated Windows support)');
+      return;
+    }
+
     // getAllSessions at line 241-246: statSync throws for broken symlinks,
     // the catch causes `continue`, skipping that entry entirely.
     const isoHome = path.join(os.tmpdir(), `ecc-r83-toctou-${Date.now()}`);
@@ -1413,6 +1418,11 @@ src/main.ts
   console.log('\nRound 84: getSessionById (broken symlink — statSync catch):');
 
   if (test('getSessionById returns null when matching session is a broken symlink', () => {
+    if (process.platform === 'win32') {
+      console.log('    (skipped — broken symlink creation requires elevated Windows support)');
+      return;
+    }
+
     // getSessionById at line 307-310: statSync throws for broken symlinks,
     // the catch returns null (file deleted between readdir and stat).
     const isoHome = path.join(os.tmpdir(), `ecc-r84-getbyid-toctou-${Date.now()}`);

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { slugify } from "@/lib/utils";
+
 function optionalIntegerField(defaultValue: number) {
   return z.preprocess(
     (value) => {
@@ -55,6 +57,25 @@ const optionalVisitedYearField = z.preprocess(
   z.number().int().min(1900).max(2100).nullable(),
 );
 
+const INVALID_DETAIL_SLUG_SENTINEL = "__invalid-detail-slug__";
+
+const optionalDetailSlugField = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "string") return value;
+
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const normalized = slugify(trimmed);
+    return normalized || INVALID_DETAIL_SLUG_SENTINEL;
+  },
+  z.union([
+    z.null(),
+    z.string().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Invalid detail page slug"),
+  ]),
+);
+
 export const adminWishlistPlaceFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   locationName: z.string().trim().min(1, "Location is required"),
@@ -65,6 +86,7 @@ export const adminWishlistPlaceFormSchema = z.object({
   externalUrl: optionalHttpsUrlField,
   visitedYear: optionalVisitedYearField,
   imageUrl: optionalHttpsUrlField,
+  detailSlug: optionalDetailSlugField,
 });
 
 export const adminWishlistPlaceIdSchema = z.string().trim().uuid("Invalid wishlist place id");

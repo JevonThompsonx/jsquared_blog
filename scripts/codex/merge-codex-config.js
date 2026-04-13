@@ -314,4 +314,26 @@ function main() {
   log('Done. Baseline Codex settings merged.');
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  ROOT_KEYS,
+  TABLE_PATHS,
+  getNested,
+  setNested,
+  findFirstTableIndex,
+  findTableRange,
+  ensureTrailingNewline,
+  insertBeforeFirstTable,
+  appendBlock,
+  stringifyValue,
+  updateInlineTableKeys,
+  appendImplicitTable,
+  appendToTable,
+  stringifyRootKeys,
+  stringifyTable,
+  stringifyTableKeys,
+  main,
+};

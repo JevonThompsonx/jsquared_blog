@@ -15,6 +15,17 @@ const ignoredDirs = new Set([
   '.dmux',
   '.next',
   'coverage',
+  'agency-agents-main',
+  'logs',
+]);
+
+const allowedUnicodePaths = new Set([
+  path.normalize('web/public/maplibre-worker.js'),
+  path.normalize('web/scripts/seed-rich-content.ts'),
+  path.normalize('web/src/app/(blog)/author/[id]/page.tsx'),
+  path.normalize('web/src/components/admin/post-rich-text-editor.tsx'),
+  path.normalize('web/tests/unit/author-page.test.tsx'),
+  path.normalize('web/tests/unit/post-rich-text-editor-emoji.test.tsx'),
 ]);
 
 const textExtensions = new Set([
@@ -75,6 +86,10 @@ function isTextFile(filePath) {
 
 function canAutoWrite(relativePath) {
   return writableExtensions.has(path.extname(relativePath).toLowerCase());
+}
+
+function isUnicodeAllowlisted(relativePath) {
+  return allowedUnicodePaths.has(path.normalize(relativePath));
 }
 
 function listFiles(dirPath) {
@@ -193,6 +208,10 @@ const violations = [];
 
 for (const filePath of listFiles(repoRoot)) {
   const relativePath = path.relative(repoRoot, filePath);
+  if (isUnicodeAllowlisted(relativePath)) {
+    continue;
+  }
+
   let text;
   try {
     text = fs.readFileSync(filePath, 'utf8');

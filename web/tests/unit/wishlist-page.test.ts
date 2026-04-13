@@ -67,6 +67,7 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
@@ -122,6 +123,7 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
       {
         id: "p2",
@@ -136,6 +138,7 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
@@ -163,6 +166,7 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: 2022,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
@@ -189,6 +193,7 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: null,
         imageUrl: "https://example.com/moraine.jpg",
+        detailSlug: null,
       },
     ]);
 
@@ -215,6 +220,7 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
@@ -240,6 +246,7 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
@@ -266,12 +273,65 @@ describe("WishlistPage", () => {
         description: null,
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
     const markup = renderToStaticMarkup(await WishlistPage());
 
     expect(markup).not.toContain('data-testid="admin-edit-place-link"');
+  });
+
+  it("renders an internal destination link when detailSlug is present", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "place-42",
+        name: "Banff Gondola",
+        locationName: "Banff, AB",
+        locationLat: 51.17,
+        locationLng: -115.57,
+        locationZoom: 10,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: "https://example.com/banff-gondola",
+        description: "Ride above the valley.",
+        visitedYear: 2026,
+        imageUrl: "https://images.example.com/banff-gondola.jpg",
+        detailSlug: "banff-gondola",
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).toContain('href="/wishlist/banff-gondola"');
+  });
+
+  it("does not render an internal destination link when detailSlug is absent", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "place-42",
+        name: "Banff Gondola",
+        locationName: "Banff, AB",
+        locationLat: 51.17,
+        locationLng: -115.57,
+        locationZoom: 10,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: "https://example.com/banff-gondola",
+        description: "Ride above the valley.",
+        visitedYear: 2026,
+        imageUrl: "https://images.example.com/banff-gondola.jpg",
+        detailSlug: null,
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).not.toContain('href="/wishlist/banff-gondola"');
   });
 });
 

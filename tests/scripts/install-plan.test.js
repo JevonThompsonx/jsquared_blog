@@ -173,6 +173,30 @@ function runTests() {
     assert.ok(result.stderr.includes('Unknown install target'));
   })) passed++; else failed++;
 
+  if (test('emits JSON for list commands and handles help/config error branches', () => {
+    const profilesResult = run(['--list-profiles', '--json']);
+    assert.strictEqual(profilesResult.code, 0, profilesResult.stderr);
+    assert.ok(Array.isArray(JSON.parse(profilesResult.stdout).profiles));
+
+    const modulesResult = run(['--list-modules', '--json']);
+    assert.strictEqual(modulesResult.code, 0, modulesResult.stderr);
+    assert.ok(Array.isArray(JSON.parse(modulesResult.stdout).modules));
+
+    const componentsResult = run(['--list-components', '--target', 'cursor', '--json']);
+    assert.strictEqual(componentsResult.code, 0, componentsResult.stderr);
+    const componentsPayload = JSON.parse(componentsResult.stdout);
+    assert.ok(Array.isArray(componentsPayload.components));
+    assert.ok(componentsPayload.components.every(component => component.targets.includes('cursor')));
+
+    const helpResult = run(['--help']);
+    assert.strictEqual(helpResult.code, 0);
+    assert.ok(helpResult.stdout.includes('Usage:'));
+
+    const badConfigResult = run(['--config', 'missing-config.json']);
+    assert.strictEqual(badConfigResult.code, 1);
+    assert.ok(badConfigResult.stderr.includes('not found') || badConfigResult.stderr.includes('ENOENT'));
+  })) passed++; else failed++;
+
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
 }

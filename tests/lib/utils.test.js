@@ -104,6 +104,28 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('getHomeDir ignores literal undefined HOME values and falls back to USERPROFILE', () => {
+    const originalHome = process.env.HOME;
+    const originalUserProfile = process.env.USERPROFILE;
+    const fakeHome = path.join(process.cwd(), 'tmp-userprofile-literal-undefined');
+    try {
+      process.env.HOME = 'undefined';
+      process.env.USERPROFILE = fakeHome;
+      assert.strictEqual(utils.getHomeDir(), fakeHome);
+    } finally {
+      if (originalHome === undefined) {
+        delete process.env.HOME;
+      } else {
+        process.env.HOME = originalHome;
+      }
+      if (originalUserProfile === undefined) {
+        delete process.env.USERPROFILE;
+      } else {
+        process.env.USERPROFILE = originalUserProfile;
+      }
+    }
+  })) passed++; else failed++;
+
   if (test('getClaudeDir returns path under home', () => {
     const claudeDir = utils.getClaudeDir();
     const homeDir = utils.getHomeDir();
@@ -1399,6 +1421,11 @@ function runTests() {
   console.log('\nRound 84: findFiles (inner statSync catch — broken symlink):');
 
   if (test('findFiles skips broken symlinks that match the pattern', () => {
+    if (process.platform === 'win32') {
+      console.log('    (skipped — broken symlink creation requires elevated Windows support)');
+      return;
+    }
+
     // findFiles at utils.js:170-173: readdirSync returns entries including broken
     // symlinks (entry.isFile() returns false for broken symlinks, but the test also
     // verifies the overall robustness). On some systems, broken symlinks can be

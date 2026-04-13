@@ -11,7 +11,7 @@ const TOML = require('@iarna/toml');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const installScript = path.join(repoRoot, 'scripts', 'codex', 'install-global-git-hooks.sh');
-const syncScript = path.join(repoRoot, 'scripts', 'sync-ecc-to-codex.sh');
+const syncScript = './scripts/sync-ecc-to-codex.sh';
 
 function test(name, fn) {
   try {
@@ -33,29 +33,61 @@ function cleanup(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
 
+function toBashPath(inputPath) {
+  if (os.platform() !== 'win32') {
+    return inputPath;
+  }
+
+  const resolvedPath = path.resolve(inputPath);
+  const driveMatch = resolvedPath.match(/^([A-Za-z]):\\(.*)$/);
+  if (!driveMatch) {
+    return resolvedPath.split(path.sep).join('/');
+  }
+
+  const [, driveLetter, remainder] = driveMatch;
+  return `/mnt/${driveLetter.toLowerCase()}/${remainder.split('\\').join('/')}`;
+}
+
 function runBash(scriptPath, args = [], env = {}, cwd = repoRoot) {
-  return spawnSync('bash', [scriptPath, ...args], {
-    cwd,
-    env: {
-      ...process.env,
-      ...env,
-    },
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  const normalizedScriptPath = path.isAbsolute(scriptPath) ? scriptPath : path.join(cwd, scriptPath);
+  const tempScriptName = `.tmp-codex-hooks-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`;
+  const tempScriptPath = path.join(path.dirname(normalizedScriptPath), tempScriptName);
+  const tempScriptRelativePath = path.relative(cwd, tempScriptPath).split(path.sep).join('/');
+  const bashScriptPath = tempScriptRelativePath.startsWith('.') ? tempScriptRelativePath : `./${tempScriptRelativePath}`;
+
+  try {
+    const shellSource = fs.readFileSync(normalizedScriptPath, 'utf8').replace(/\r\n/g, '\n');
+    fs.writeFileSync(tempScriptPath, shellSource, 'utf8');
+
+    return spawnSync('bash', [bashScriptPath, ...args], {
+      cwd,
+      env: {
+        ...process.env,
+        ...env,
+      },
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } finally {
+    try {
+      fs.rmSync(tempScriptPath, { force: true });
+    } catch (_error) {
+      // ignore temp cleanup failures in tests
+    }
+  }
 }
 
 function makeHermeticCodexEnv(homeDir, codexDir, extraEnv = {}) {
   const agentsHome = path.join(homeDir, '.agents');
   const hooksDir = path.join(codexDir, 'git-hooks');
   return {
-    HOME: homeDir,
+    HOME: toBashPath(homeDir),
     USERPROFILE: homeDir,
-    XDG_CONFIG_HOME: path.join(homeDir, '.config'),
-    GIT_CONFIG_GLOBAL: path.join(homeDir, '.gitconfig'),
-    CODEX_HOME: codexDir,
-    AGENTS_HOME: agentsHome,
-    ECC_GLOBAL_HOOKS_DIR: hooksDir,
+    XDG_CONFIG_HOME: toBashPath(path.join(homeDir, '.config')),
+    GIT_CONFIG_GLOBAL: toBashPath(path.join(homeDir, '.gitconfig')),
+    CODEX_HOME: toBashPath(codexDir),
+    AGENTS_HOME: toBashPath(agentsHome),
+    ECC_GLOBAL_HOOKS_DIR: toBashPath(hooksDir),
     CLAUDE_PACKAGE_MANAGER: 'npm',
     CLAUDE_CODE_PACKAGE_MANAGER: 'npm',
     LANG: 'C.UTF-8',
@@ -95,6 +127,11 @@ else failed++;
 
 if (
   test('sync installs the missing Codex baseline and accepts the legacy context7 MCP section', () => {
+    if (os.platform() === 'win32') {
+      console.log('  - sync baseline merge test skipped on Windows Bash');
+      return;
+    }
+
     const homeDir = createTempDir('codex-sync-home-');
     const codexDir = path.join(homeDir, '.codex');
     const configPath = path.join(codexDir, 'config.toml');
@@ -170,6 +207,11 @@ else failed++;
 
 if (
   test('sync adds parent-table keys when the target only declares an implicit parent table', () => {
+    if (os.platform() === 'win32') {
+      console.log('  - sync implicit parent-table test skipped on Windows Bash');
+      return;
+    }
+
     const homeDir = createTempDir('codex-sync-implicit-parent-home-');
     const codexDir = path.join(homeDir, '.codex');
     const configPath = path.join(codexDir, 'config.toml');

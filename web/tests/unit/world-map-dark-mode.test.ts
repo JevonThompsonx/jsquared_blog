@@ -62,4 +62,10 @@ describe("globals.css dark-mode filter for .world-map-container", () => {
     const ruleBody = darkRuleMatch![1];
     expect(ruleBody).toMatch(/filter\s*:/);
   });
+
+  it("restyles MapLibre popups and controls for dark mode legibility", () => {
+    expect(globalsCss).toMatch(/maplibregl-popup-content/);
+    expect(globalsCss).toMatch(/maplibregl-ctrl-group/);
+    expect(globalsCss).toMatch(/maplibregl-ctrl button/);
+  });
 });

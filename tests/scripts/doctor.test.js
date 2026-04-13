@@ -183,6 +183,32 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('shows help and rejects unknown arguments', () => {
+    const helpResult = run(['--help']);
+    assert.strictEqual(helpResult.code, 0);
+    assert.ok(helpResult.stdout.includes('Usage: node scripts/doctor.js'));
+
+    const badArgResult = run(['--wat']);
+    assert.strictEqual(badArgResult.code, 1);
+    assert.ok(badArgResult.stderr.includes('Unknown argument: --wat'));
+  })) passed++; else failed++;
+
+  if (test('reports no install-state records in JSON mode', () => {
+    const homeDir = createTempDir('doctor-home-');
+    const projectRoot = createTempDir('doctor-project-');
+
+    try {
+      const result = run(['--json'], { cwd: projectRoot, homeDir });
+      assert.strictEqual(result.code, 0, result.stderr);
+      const parsed = JSON.parse(result.stdout);
+      assert.strictEqual(parsed.results.length, 0);
+      assert.strictEqual(parsed.summary.checkedCount, 0);
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
 }

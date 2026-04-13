@@ -308,6 +308,90 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('shows help, reports empty contexts, and rejects unknown arguments', () => {
+    const helpResult = runNode(REPAIR_SCRIPT, ['--help']);
+    assert.strictEqual(helpResult.code, 0);
+    assert.ok(helpResult.stdout.includes('Usage: node scripts/repair.js'));
+
+    const emptyHomeDir = createTempDir('repair-home-');
+    const emptyProjectRoot = createTempDir('repair-project-');
+
+    try {
+      const emptyResult = runNode(REPAIR_SCRIPT, [], {
+        cwd: emptyProjectRoot,
+        homeDir: emptyHomeDir,
+      });
+      assert.strictEqual(emptyResult.code, 0, emptyResult.stderr);
+      assert.ok(emptyResult.stdout.includes('No ECC install-state files found'));
+    } finally {
+      cleanup(emptyHomeDir);
+      cleanup(emptyProjectRoot);
+    }
+
+    const badArgResult = runNode(REPAIR_SCRIPT, ['--wat']);
+    assert.strictEqual(badArgResult.code, 1);
+    assert.ok(badArgResult.stderr.includes('Unknown argument: --wat'));
+  })) passed++; else failed++;
+
+  if (test('prints populated human-readable output and exits 1 when repair results contain errors', () => {
+    const homeDir = createTempDir('repair-home-');
+    const projectRoot = createTempDir('repair-project-');
+
+    try {
+      const targetRoot = path.join(projectRoot, '.cursor');
+      const statePath = path.join(targetRoot, 'ecc-install-state.json');
+      fs.mkdirSync(targetRoot, { recursive: true });
+
+      writeState(statePath, {
+        adapter: { id: 'cursor-project', target: 'cursor', kind: 'project' },
+        targetRoot,
+        installStatePath: statePath,
+        request: {
+          profile: null,
+          modules: [],
+          includeComponents: [],
+          excludeComponents: [],
+          legacyLanguages: ['typescript'],
+          legacyMode: true,
+        },
+        resolution: {
+          selectedModules: ['legacy-cursor-install'],
+          skippedModules: [],
+        },
+        operations: [
+          {
+            kind: 'copy-file',
+            moduleId: 'platform-configs',
+            sourceRelativePath: 'does/not/exist.json',
+            destinationPath: path.join(targetRoot, 'hooks.json'),
+            strategy: 'sync-root-children',
+            ownership: 'managed',
+            scaffoldOnly: false,
+          },
+        ],
+        source: {
+          repoVersion: CURRENT_PACKAGE_VERSION,
+          repoCommit: 'abc123',
+          manifestVersion: CURRENT_MANIFEST_VERSION,
+        },
+      });
+
+      const result = runNode(REPAIR_SCRIPT, ['--target', 'cursor'], {
+        cwd: projectRoot,
+        homeDir,
+      });
+      assert.strictEqual(result.code, 1);
+      assert.ok(result.stdout.includes('Repair summary:'));
+      assert.ok(result.stdout.includes('- cursor-project'));
+      assert.ok(result.stdout.includes('Status: ERROR'));
+      assert.ok(result.stdout.includes('Error: Missing source file'));
+      assert.ok(result.stdout.includes('Summary: checked=1, repaired=0, errors=1'));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
 }

@@ -123,7 +123,7 @@ describe("PostSongMetadata", () => {
   });
 
   describe("song label", () => {
-    it("shows 'Now playing' as the label instead of 'Song for this story'", () => {
+    it("shows 'Vibes for this story' as the label instead of 'Song for this story'", () => {
       const markup = renderToStaticMarkup(
         <PostSongMetadata
           song={{
@@ -134,11 +134,11 @@ describe("PostSongMetadata", () => {
         />,
       );
 
-      expect(markup).toContain("Now playing");
+      expect(markup).toContain("Vibes for this story");
       expect(markup).not.toContain("Song for this story");
     });
 
-    it("shows 'Now playing' on the fallback text-link layout too", () => {
+    it("shows 'Vibes for this story' on the fallback text-link layout too", () => {
       const markup = renderToStaticMarkup(
         <PostSongMetadata
           song={{
@@ -149,7 +149,7 @@ describe("PostSongMetadata", () => {
         />,
       );
 
-      expect(markup).toContain("Now playing");
+      expect(markup).toContain("Vibes for this story");
       expect(markup).not.toContain("Song for this story");
     });
   });

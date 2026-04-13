@@ -1113,6 +1113,30 @@ a {
   filter: invert(0.9) hue-rotate(180deg) saturate(0.7) brightness(0.85);
 }
 
+[data-theme-mode="dark"] .world-map-container .maplibregl-popup-content,
+[data-theme-mode="dark"] .world-map-container .maplibregl-popup-tip,
+[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl-group,
+[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl button {
+  filter: invert(1) hue-rotate(180deg) saturate(1.15) brightness(1.08);
+}
+
+[data-theme-mode="dark"] .world-map-container .maplibregl-popup-content {
+  background: #172018;
+  color: #e2e8e0;
+  border: 1px solid rgba(180, 210, 150, 0.18);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
+}
+
+[data-theme-mode="dark"] .world-map-container .maplibregl-popup-close-button,
+[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl button {
+  color: #dbe7d6;
+}
+
+[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl-group {
+  border: 1px solid rgba(180, 210, 150, 0.18);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
 /* ─── Filter Dropdown ─────────────────────────────────────────────── */
 
 .filter-dropdown {

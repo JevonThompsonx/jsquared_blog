@@ -206,4 +206,12 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, parseAccumulator };
+module.exports = {
+  run,
+  parseAccumulator,
+  getAccumFile,
+  formatBatch,
+  findTsConfigDir,
+  typecheckBatch,
+  main,
+};

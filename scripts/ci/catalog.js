@@ -90,6 +90,19 @@ function parseReadmeExpectations(readmeContent) {
     /access to\s+(\d+)\s+agents,\s+(\d+)\s+skills,\s+and\s+(\d+)\s+(?:commands|legacy command shims?)/i
   );
   if (!quickStartMatch) {
+    const hasCatalogMarkers = [
+      /\|\s*(?:\*\*)?Agents(?:\*\*)?\s*\|/i,
+      /\|\s*(?:\*\*)?Commands(?:\*\*)?\s*\|/i,
+      /\|\s*(?:\*\*)?Skills(?:\*\*)?\s*\|/i,
+      /Shared\s*\(AGENTS\.md\)/i,
+      /Instruction-based/i,
+      /native format/i,
+    ].some(pattern => pattern.test(readmeContent));
+
+    if (!hasCatalogMarkers) {
+      return expectations;
+    }
+
     throw new Error('README.md is missing the quick-start catalog summary');
   }
 
@@ -640,9 +653,35 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(`ERROR: ${error.message}`);
-  process.exit(1);
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(`ERROR: ${error.message}`);
+    process.exit(1);
+  }
 }
+
+module.exports = {
+  normalizePathSegments,
+  listMatchingFiles,
+  buildCatalog,
+  readFileOrThrow,
+  writeFileOrThrow,
+  replaceOrThrow,
+  parseReadmeExpectations,
+  parseZhRootReadmeExpectations,
+  parseZhDocsReadmeExpectations,
+  parseAgentsDocExpectations,
+  parseZhAgentsDocExpectations,
+  evaluateExpectations,
+  formatExpectation,
+  syncEnglishReadme,
+  syncEnglishAgents,
+  syncZhRootReadme,
+  syncZhDocsReadme,
+  syncZhAgents,
+  renderText,
+  renderMarkdown,
+  main,
+};

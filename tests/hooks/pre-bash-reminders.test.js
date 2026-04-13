@@ -63,6 +63,19 @@ function runTests() {
     assert.strictEqual(result.stdout, result.inputStr, 'Expected stdout to match original input');
   }) ? passed++ : failed++);
 
+  (test('invalid JSON input still exits cleanly and passes through', () => {
+    const result = spawnSync('node', [tmuxScript], {
+      encoding: 'utf8',
+      input: 'not-json',
+      timeout: 10000,
+      env: { ...process.env, TMUX: '' },
+    });
+
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.strictEqual(result.stdout, 'not-json');
+    assert.strictEqual(result.stderr, '');
+  }) ? passed++ : failed++);
+
   // --- tmux-reminder tests (non-Windows only) ---
 
   const isWindows = process.platform === 'win32';
@@ -87,6 +100,12 @@ function runTests() {
       const result = runScript(tmuxScript, 'ls -la', { TMUX: '' });
       assert.strictEqual(result.code, 0, `Expected exit code 0, got ${result.code}`);
       assert.strictEqual(result.stderr, '', `Expected no stderr for ls, got: ${result.stderr}`);
+    }) ? passed++ : failed++);
+
+    (test('tmux sessions suppress the reminder for long-running commands', () => {
+      const result = runScript(tmuxScript, 'npm install', { TMUX: '1' });
+      assert.strictEqual(result.code, 0, `Expected exit code 0, got ${result.code}`);
+      assert.strictEqual(result.stderr, '', `Expected no stderr in tmux, got: ${result.stderr}`);
     }) ? passed++ : failed++);
 
     (test('tmux reminder always passes through input on stdout', () => {

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { WorldMap } from "@/components/blog/world-map";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -40,16 +41,17 @@ export default async function WishlistPage() {
 
   const mapPlaces = places.map((place) => ({
     id: place.id,
-    slug: `wishlist-${place.id}`,
     title: place.name,
+    href: place.detailSlug ? `/wishlist/${place.detailSlug}` : null,
     locationName: place.locationName,
     locationLat: place.locationLat,
     locationLng: place.locationLng,
     locationZoom: place.locationZoom,
     iovanderUrl: place.externalUrl,
-    imageUrl: null,
+    imageUrl: place.imageUrl,
     category: place.visited ? "Visited" : "Wishlist",
-    createdAt: new Date(0).toISOString(),
+    createdAt: null,
+    linkLabel: place.detailSlug ? "View destination" : null,
   }));
 
   const locationGroups = groupWishlistByLocation(places);
@@ -66,7 +68,7 @@ export default async function WishlistPage() {
         </div>
 
         {places.length > 0 && NEXT_PUBLIC_STADIA_MAPS_API_KEY ? (
-          <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={mapPlaces} />
+          <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={mapPlaces} showPostList={false} />
         ) : null}
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
@@ -93,7 +95,13 @@ export default async function WishlistPage() {
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h2 className="text-lg font-semibold text-[var(--text-primary)]">{place.name}</h2>
+                              {place.detailSlug ? (
+                                <Link className="text-lg font-semibold text-[var(--text-primary)] underline-offset-4 hover:text-[var(--accent)] hover:underline" href={`/wishlist/${place.detailSlug}`}>
+                                  {place.name}
+                                </Link>
+                              ) : (
+                                <h2 className="text-lg font-semibold text-[var(--text-primary)]">{place.name}</h2>
+                              )}
                               {place.visited ? (
                                 <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
                                   Visited

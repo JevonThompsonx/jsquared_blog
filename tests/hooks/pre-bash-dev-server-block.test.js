@@ -7,6 +7,12 @@
 const assert = require('assert');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const {
+  getLeadingCommandWord,
+  normalizeCommandWord,
+  readToken,
+  shouldSkipOptionValue,
+} = require('../../scripts/hooks/pre-bash-dev-server-block.js');
 
 const script = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'pre-bash-dev-server-block.js');
 
@@ -110,6 +116,30 @@ function runTests() {
     });
     assert.strictEqual(result.status || 0, 0);
     assert.strictEqual(result.stdout.trim(), inputStr, `Expected stdout to contain original input`);
+  }) ? passed++ : failed++);
+
+  (test('readToken handles quoted strings and escapes', () => {
+    const parsed = readToken('  "npm run dev" trailing', 0);
+    assert.deepStrictEqual(parsed, { token: 'npm run dev', end: 15 });
+  }) ? passed++ : failed++);
+
+  (test('normalizeCommandWord strips Windows executable suffixes', () => {
+    assert.strictEqual(normalizeCommandWord('C:/Program Files/nodejs/npm.cmd'), 'npm');
+    assert.strictEqual(normalizeCommandWord('BUN.EXE'), 'bun');
+  }) ? passed++ : failed++);
+
+  (test('shouldSkipOptionValue only skips known wrapper options without inline values', () => {
+    assert.strictEqual(shouldSkipOptionValue('env', '-u'), true);
+    assert.strictEqual(shouldSkipOptionValue('env', '--unset=FOO'), false);
+    assert.strictEqual(shouldSkipOptionValue('sudo', '--user'), true);
+    assert.strictEqual(shouldSkipOptionValue('sudo', '--preserve-env'), false);
+  }) ? passed++ : failed++);
+
+  (test('getLeadingCommandWord skips env assignments and wrapper options', () => {
+    assert.strictEqual(getLeadingCommandWord('env FOO=bar npm run dev'), 'npm');
+    assert.strictEqual(getLeadingCommandWord('sudo -u root npm run dev'), 'npm');
+    assert.strictEqual(getLeadingCommandWord('command -- npm run dev'), 'npm');
+    assert.strictEqual(getLeadingCommandWord('nohup bun run dev'), 'bun');
   }) ? passed++ : failed++);
 
   // --- Summary ---

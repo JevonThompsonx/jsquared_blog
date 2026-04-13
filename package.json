@@ -6,6 +6,9 @@
   "author": "Jevon Thompson",
   "license": "MIT",
   "homepage": "https://jsquaredadventures.com",
+  "bin": {
+    "ecc-install": "scripts/install-apply.js"
+  },
   "keywords": [
     "travel-blog",
     "nextjs",
@@ -26,7 +29,7 @@
     "build:web": "bun run --cwd web build",
     "lint:web": "bun run --cwd web lint",
     "test:web": "bun run --cwd web test",
-    "lint:ecc": "eslint . && markdownlint '**/*.md' --ignore node_modules --ignore web/node_modules",
+    "lint:ecc": "eslint . && markdownlint README.md AGENTS.md CONTRIBUTING.md SECURITY.md TODO.md testing.md the-security-guide.md prompt.md docs/COMMAND-AGENT-MAP.md",
     "test:ecc": "node scripts/ci/check-unicode-safety.js && node scripts/ci/validate-agents.js && node scripts/ci/validate-commands.js && node scripts/ci/validate-rules.js && node scripts/ci/validate-skills.js && node scripts/ci/validate-hooks.js && node scripts/ci/validate-install-manifests.js && node scripts/ci/validate-no-personal-paths.js && npm run catalog:check && node tests/run-all.js",
     "catalog:check": "node scripts/ci/catalog.js --text",
     "catalog:sync": "node scripts/ci/catalog.js --write --text",
@@ -48,7 +51,8 @@
     "concurrently": "^9.2.0",
     "eslint": "^9.39.2",
     "globals": "^17.1.0",
-    "markdownlint-cli": "^0.48.0"
+    "markdownlint-cli": "^0.48.0",
+    "vercel": "^50.42.0"
   },
   "engines": {
     "node": ">=18"

@@ -16,26 +16,26 @@ setWorkerUrl("/maplibre-worker.js");
 
 import { PostDate } from "@/components/blog/post-date";
 import { getPostHref } from "@/lib/utils";
-import type { BlogPost } from "@/types/blog";
-
-type MapPost = Pick<
-  BlogPost,
-  | "id"
-  | "slug"
-  | "title"
-  | "locationName"
-  | "locationLat"
-  | "locationLng"
-  | "locationZoom"
-  | "iovanderUrl"
-  | "imageUrl"
-  | "category"
-  | "createdAt"
->;
+type MapPost = {
+  id: string;
+  slug?: string | null;
+  href?: string | null;
+  title: string;
+  locationName: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationZoom: number | null;
+  iovanderUrl: string | null;
+  imageUrl: string | null;
+  category: string | null;
+  createdAt?: string | null;
+  linkLabel?: string | null;
+};
 
 type WorldMapProps = {
   posts: MapPost[];
   apiKey: string;
+  showPostList?: boolean;
 };
 
 type MappablePost = MapPost & { locationLat: number; locationLng: number };
@@ -43,14 +43,29 @@ type MappablePost = MapPost & { locationLat: number; locationLng: number };
 type ActivePin = {
   id: string;
   slug: string;
+  href: string | null;
   title: string;
   category: string | null;
   imageUrl: string | null;
   locationName: string | null;
   iovanderUrl: string | null;
+  createdAt: string | null;
+  linkLabel: string | null;
   lat: number;
   lng: number;
 };
+
+function getMapHref(post: Pick<MapPost, "id" | "slug" | "href" | "title">): string | null {
+  if (typeof post.href === "string") {
+    return post.href;
+  }
+
+  if (typeof post.slug === "string" && post.slug.trim()) {
+    return getPostHref({ id: post.id, slug: post.slug, title: post.title });
+  }
+
+  return null;
+}
 
 // Cluster/pin colors — CSS vars don't resolve inside MapLibre WebGL paint properties
 const CLUSTER_SMALL = "#5a8a69";
@@ -63,7 +78,7 @@ function isGeoJSONSource(source: unknown): source is GeoJSONSource {
   return typeof source === "object" && source !== null && "getClusterExpansionZoom" in source;
 }
 
-export function WorldMap({ posts, apiKey }: WorldMapProps) {
+export function WorldMap({ posts, apiKey, showPostList = true }: WorldMapProps) {
   const mapRef = useRef<MapRef>(null);
   const mapStyle = `https://tiles.stadiamaps.com/styles/outdoors.json?api_key=${apiKey}`;
 
@@ -112,12 +127,14 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
         properties: {
           id: p.id,
           slug: p.slug,
+          href: p.href,
           title: p.title,
           category: p.category,
           imageUrl: p.imageUrl,
           locationName: p.locationName,
           iovanderUrl: p.iovanderUrl,
           createdAt: p.createdAt,
+          linkLabel: p.linkLabel,
         },
       })),
     }),
@@ -161,11 +178,14 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
       setActivePin({
         id: String(props["id"] ?? ""),
         slug: String(props["slug"] ?? ""),
+        href: typeof props["href"] === "string" ? props["href"] : null,
         title: String(props["title"] ?? ""),
         category: typeof props["category"] === "string" ? props["category"] : null,
         imageUrl: typeof props["imageUrl"] === "string" ? props["imageUrl"] : null,
         locationName: typeof props["locationName"] === "string" ? props["locationName"] : null,
         iovanderUrl: typeof props["iovanderUrl"] === "string" ? props["iovanderUrl"] : null,
+        createdAt: typeof props["createdAt"] === "string" ? props["createdAt"] : null,
+        linkLabel: typeof props["linkLabel"] === "string" ? props["linkLabel"] : null,
         lat,
         lng,
       });
@@ -302,6 +322,11 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
               onClose={() => setActivePin(null)}
             >
               <div className="space-y-1.5 text-sm">
+                {(() => {
+                  const href = getMapHref(activePin);
+
+                  return (
+                    <>
                 {activePin.imageUrl ? (
                   <div className="relative mb-2 h-20 w-full overflow-hidden rounded">
                     <Image alt={activePin.title} className="object-cover" fill sizes="228px" src={activePin.imageUrl} />
@@ -312,14 +337,20 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
                     {activePin.category}
                   </p>
                 ) : null}
-                <a
-                  className="block font-semibold leading-snug text-[var(--text-primary)] hover:text-[var(--accent)] hover:underline"
-                  href={getPostHref(activePin)}
-                >
-                  {activePin.title}
-                </a>
+                {href ? (
+                  <Link className="block font-semibold leading-snug text-[var(--text-primary)] hover:text-[var(--accent)] hover:underline" href={href}>
+                    {activePin.title}
+                  </Link>
+                ) : (
+                  <p className="font-semibold leading-snug text-[var(--text-primary)]">{activePin.title}</p>
+                )}
                 {activePin.locationName ? (
                   <p className="text-xs text-[var(--text-secondary)]">{activePin.locationName}</p>
+                ) : null}
+                {activePin.createdAt ? (
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    <PostDate dateString={activePin.createdAt} />
+                  </div>
                 ) : null}
                 {activePin.iovanderUrl ? (
                   <a
@@ -331,12 +362,14 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
                     View on iOverlander →
                   </a>
                 ) : null}
-                <a
-                  className="btn-primary mt-1 inline-block rounded-full px-3 py-1 text-[0.7rem] font-bold"
-                  href={getPostHref(activePin)}
-                >
-                  Read story →
-                </a>
+                {href ? (
+                  <Link className="btn-primary mt-1 inline-block rounded-full px-3 py-1 text-[0.7rem] font-bold" href={href}>
+                    {activePin.linkLabel ?? "Read story"} →
+                  </Link>
+                ) : null}
+                    </>
+                  );
+                })()}
               </div>
             </Popup>
           ) : null}
@@ -344,7 +377,7 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
       </div>
 
       {/* Filtered post list */}
-      {filteredPosts.length > 0 ? (
+      {showPostList && filteredPosts.length > 0 ? (
         <section className="mt-10">
           <h2 className="mb-4 text-lg font-bold text-[var(--text-primary)]">
             {activeCategory !== null ? `${activeCategory} stories` : "All pinned stories"}
@@ -353,12 +386,10 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
             </span>
           </h2>
           <div className="divide-y divide-[var(--border)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)]">
-            {filteredPosts.map((post) => (
-              <Link
-                key={post.id}
-                className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-[var(--accent-soft)]"
-                href={getPostHref(post)}
-              >
+            {filteredPosts.map((post) => {
+              const href = getMapHref(post);
+              const content = (
+                <>
                 {post.imageUrl ? (
                   <Image
                     alt={post.title}
@@ -385,12 +416,35 @@ export function WorldMap({ posts, apiKey }: WorldMapProps) {
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
                     </svg>
                     <span>{post.locationName}</span>
-                    <span className="text-[var(--border)]">·</span>
-                    <PostDate dateString={post.createdAt} />
+                    {post.createdAt ? (
+                      <>
+                        <span className="text-[var(--border)]">·</span>
+                        <PostDate dateString={post.createdAt} />
+                      </>
+                    ) : null}
                   </div>
                 </div>
-              </Link>
-            ))}
+                </>
+              );
+
+              if (!href) {
+                return (
+                  <div key={post.id} className="flex items-start gap-4 px-5 py-4">
+                    {content}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={post.id}
+                  className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-[var(--accent-soft)]"
+                  href={href}
+                >
+                  {content}
+                </Link>
+              );
+            })}
           </div>
         </section>
       ) : null}

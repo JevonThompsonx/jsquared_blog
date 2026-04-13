@@ -71,6 +71,7 @@ describe("AdminWishlistPage", () => {
         id: "place-1",
         name: "Glacier National Park",
         locationName: "West Glacier, Montana",
+        description: "Alpine peaks and glacier-fed lakes.",
         locationLat: 48.7596,
         locationLng: -113.787,
         locationZoom: 8,
@@ -78,6 +79,12 @@ describe("AdminWishlistPage", () => {
         externalUrl: "https://example.com/glacier",
         visited: true,
         isPublic: true,
+        visitedYear: 2026,
+        imageUrl: "https://images.example.com/glacier.jpg",
+        detailSlug: "glacier-national-park",
+        linkedPostId: null,
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-01T00:00:00.000Z"),
       },
     ] as never);
 
@@ -90,5 +97,8 @@ describe("AdminWishlistPage", () => {
     expect(markup).toContain("admin-wishlist-update-form");
     expect(markup).toContain("admin-wishlist-delete-form");
     expect(markup).toContain('<input type="checkbox" name="isPublic" checked=""');
+    expect(markup).toContain('name="visitedYear"');
+    expect(markup).toContain('name="imageUrl"');
+    expect(markup).toContain('name="detailSlug"');
   });
 });

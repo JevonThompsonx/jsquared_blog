@@ -19,6 +19,7 @@ export type AdminWishlistPlaceRecord = {
   externalUrl: string | null;
   visitedYear: number | null;
   imageUrl: string | null;
+  detailSlug: string | null;
   linkedPostId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -37,6 +38,7 @@ export type CreateAdminWishlistPlaceInput = {
   externalUrl: string | null;
   visitedYear: number | null;
   imageUrl: string | null;
+  detailSlug: string | null;
   createdByUserId: string;
 };
 
@@ -54,6 +56,7 @@ export type UpdateAdminWishlistPlaceInput = {
   externalUrl: string | null;
   visitedYear: number | null;
   imageUrl: string | null;
+  detailSlug: string | null;
 };
 
 export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceInput): Promise<void> {
@@ -74,6 +77,7 @@ export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceIn
     externalUrl: input.externalUrl,
     visitedYear: input.visitedYear,
     imageUrl: input.imageUrl,
+    detailSlug: input.detailSlug,
     createdByUserId: input.createdByUserId,
     createdAt: now,
     updatedAt: now,
@@ -98,6 +102,7 @@ export async function updateAdminWishlistPlace(input: UpdateAdminWishlistPlaceIn
       externalUrl: input.externalUrl,
       visitedYear: input.visitedYear,
       imageUrl: input.imageUrl,
+      detailSlug: input.detailSlug,
       updatedAt: new Date(),
     })
     .where(eq(wishlistPlaces.id, input.id));
@@ -127,6 +132,7 @@ export async function listAdminWishlistPlaces(): Promise<AdminWishlistPlaceRecor
       externalUrl: wishlistPlaces.externalUrl,
       visitedYear: wishlistPlaces.visitedYear,
       imageUrl: wishlistPlaces.imageUrl,
+      detailSlug: wishlistPlaces.detailSlug,
       linkedPostId: wishlistPlaces.linkedPostId,
       createdAt: wishlistPlaces.createdAt,
       updatedAt: wishlistPlaces.updatedAt,

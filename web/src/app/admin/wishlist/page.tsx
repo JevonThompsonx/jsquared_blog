@@ -34,7 +34,7 @@ export default async function AdminWishlistPage() {
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Admin</p>
             <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)]">Travel wishlist</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-              Track future destinations with validated coordinates so the public wishlist map and route planner can build on stable data.
+              Track future destinations with validated coordinates, optional photos, and optional detail pages for the public wishlist.
             </p>
           </div>
           <Link
@@ -74,6 +74,18 @@ export default async function AdminWishlistPage() {
                   <span className="mb-1 block font-medium text-[var(--text-primary)]">Optional link</span>
                   <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="externalUrl" placeholder="https://example.com/place-guide" type="url" />
                 </label>
+                <label className="block text-sm text-[var(--text-secondary)]">
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Visited year <span className="font-normal text-[var(--text-secondary)]">(optional)</span></span>
+                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="visitedYear" placeholder="2026" step="1" type="number" />
+                </label>
+                <label className="block text-sm text-[var(--text-secondary)]">
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Image URL <span className="font-normal text-[var(--text-secondary)]">(optional HTTPS image)</span></span>
+                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="imageUrl" placeholder="https://images.example.com/place.jpg" type="url" />
+                </label>
+                <label className="block text-sm text-[var(--text-secondary)]">
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Detail page slug <span className="font-normal text-[var(--text-secondary)]">(optional)</span></span>
+                  <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="detailSlug" placeholder="banff-gondola" type="text" />
+                </label>
                 <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
                   <label className="inline-flex items-center gap-2">
                     <input name="visited" type="checkbox" />
@@ -103,7 +115,7 @@ export default async function AdminWishlistPage() {
             ) : (
               <ul className="divide-y divide-[var(--border)]" data-testid="admin-wishlist-list">
                 {places.map((place) => (
-                  <li key={place.id} className="px-6 py-5" data-place-id={place.id} data-testid="admin-wishlist-row">
+                  <li id={`place-${place.id}`} key={place.id} className="px-6 py-5" data-place-id={place.id} data-testid="admin-wishlist-row">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -118,6 +130,12 @@ export default async function AdminWishlistPage() {
                           <p className="mt-2 text-sm text-[var(--text-secondary)]">{place.locationName}</p>
                           {place.description ? (
                             <p className="mt-1 text-sm text-[var(--text-secondary)]">{place.description}</p>
+                          ) : null}
+                          {place.visitedYear ? (
+                            <p className="mt-1 text-xs text-[var(--accent)]">Visited year: {place.visitedYear}</p>
+                          ) : null}
+                          {place.detailSlug ? (
+                            <p className="mt-1 text-xs text-[var(--text-secondary)]">Detail page: /wishlist/{place.detailSlug}</p>
                           ) : null}
                           <p className="mt-1 text-xs text-[var(--text-secondary)]">
                             {place.locationLat.toFixed(4)}, {place.locationLng.toFixed(4)} · zoom {place.locationZoom} · sort {place.sortOrder}
@@ -150,6 +168,18 @@ export default async function AdminWishlistPage() {
                         <label className="block text-sm text-[var(--text-secondary)]">
                           <span className="mb-1 block font-medium text-[var(--text-primary)]">Optional link</span>
                           <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.externalUrl ?? ""} name="externalUrl" placeholder="https://example.com/place-guide" type="url" />
+                        </label>
+                        <label className="block text-sm text-[var(--text-secondary)]">
+                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Visited year <span className="font-normal text-[var(--text-secondary)]">(optional)</span></span>
+                          <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.visitedYear ?? ""} name="visitedYear" placeholder="2026" step="1" type="number" />
+                        </label>
+                        <label className="block text-sm text-[var(--text-secondary)]">
+                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Image URL <span className="font-normal text-[var(--text-secondary)]">(optional HTTPS image)</span></span>
+                          <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.imageUrl ?? ""} name="imageUrl" placeholder="https://images.example.com/place.jpg" type="url" />
+                        </label>
+                        <label className="block text-sm text-[var(--text-secondary)]">
+                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Detail page slug <span className="font-normal text-[var(--text-secondary)]">(optional)</span></span>
+                          <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.detailSlug ?? ""} name="detailSlug" placeholder="banff-gondola" type="text" />
                         </label>
                         <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
                           <label className="inline-flex items-center gap-2">

@@ -14,6 +14,7 @@ function makePlace(overrides: Partial<PublicWishlistPlace> & { id: string; name:
     description: null,
     visitedYear: null,
     imageUrl: null,
+    detailSlug: null,
     ...overrides,
   };
 }

@@ -30,6 +30,9 @@ export async function createWishlistPlaceAction(formData: FormData): Promise<voi
     visited: formData.get("visited") === "on",
     isPublic: formData.get("isPublic") === "on",
     externalUrl: formData.get("externalUrl"),
+    visitedYear: formData.get("visitedYear"),
+    imageUrl: formData.get("imageUrl"),
+    detailSlug: formData.get("detailSlug"),
   });
 
   if (!parsed.success) {
@@ -56,6 +59,7 @@ export async function createWishlistPlaceAction(formData: FormData): Promise<voi
 
   try {
     revalidatePath("/admin/wishlist");
+    revalidatePath("/wishlist");
   } catch (error) {
     console.error("[admin wishlist] Revalidation failed for /admin/wishlist after create", error);
   }
@@ -76,6 +80,9 @@ export async function updateWishlistPlaceAction(formData: FormData): Promise<voi
     visited: formData.get("visited") === "on",
     isPublic: formData.get("isPublic") === "on",
     externalUrl: formData.get("externalUrl"),
+    visitedYear: formData.get("visitedYear"),
+    imageUrl: formData.get("imageUrl"),
+    detailSlug: formData.get("detailSlug"),
   });
 
   if (!parsed.success) {
@@ -101,6 +108,7 @@ export async function updateWishlistPlaceAction(formData: FormData): Promise<voi
 
   try {
     revalidatePath("/admin/wishlist");
+    revalidatePath("/wishlist");
   } catch (error) {
     console.error("[admin wishlist] Revalidation failed for /admin/wishlist after update", error);
   }
@@ -126,6 +134,7 @@ export async function deleteWishlistPlaceAction(formData: FormData): Promise<voi
 
   try {
     revalidatePath("/admin/wishlist");
+    revalidatePath("/wishlist");
   } catch (error) {
     console.error("[admin wishlist] Revalidation failed for /admin/wishlist after delete", error);
   }
@@ -158,6 +167,7 @@ export async function checkOffWishlistPlaceAction(formData: FormData): Promise<v
 
   try {
     revalidatePath("/admin/wishlist");
+    revalidatePath("/wishlist");
   } catch (error) {
     console.error("[admin wishlist] Revalidation failed for /admin/wishlist after check-off", error);
   }

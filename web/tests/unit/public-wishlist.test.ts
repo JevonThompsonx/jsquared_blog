@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockOrderBy = vi.fn().mockResolvedValue([]);
-const mockWhere = vi.fn(() => ({ orderBy: mockOrderBy }));
+let whereCallCount = 0;
+const mockWhere = vi.fn(() => {
+  whereCallCount += 1;
+  return whereCallCount % 2 === 1 ? {} : { orderBy: mockOrderBy };
+});
 const mockFrom = vi.fn(() => ({ where: mockWhere }));
 const mockSelect = vi.fn(() => ({ from: mockFrom }));
 
@@ -18,6 +22,7 @@ import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 describe("listPublicWishlistPlaces", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    whereCallCount = 0;
   });
 
   it("returns only public wishlist places in sort order", async () => {
@@ -35,6 +40,7 @@ describe("listPublicWishlistPlaces", () => {
         description: "Beautiful alpine park in Montana",
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
@@ -52,6 +58,7 @@ describe("listPublicWishlistPlaces", () => {
         description: "Beautiful alpine park in Montana",
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
     ]);
 
@@ -74,7 +81,8 @@ describe("listPublicWishlistPlaces", () => {
         externalUrl: "javascript:alert('xss')",
         description: null,
         visitedYear: null,
-        imageUrl: null,
+        imageUrl: "http://images.example.com/glacier.jpg",
+        detailSlug: null,
       },
       {
         id: "place-2",
@@ -89,6 +97,7 @@ describe("listPublicWishlistPlaces", () => {
         description: "Rocky mountain gem",
         visitedYear: 2022,
         imageUrl: "https://images.example.com/banff.jpg",
+        detailSlug: "banff-rockies",
       },
     ]);
 
@@ -106,6 +115,7 @@ describe("listPublicWishlistPlaces", () => {
         description: null,
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
       },
       {
         id: "place-2",
@@ -120,6 +130,7 @@ describe("listPublicWishlistPlaces", () => {
         description: "Rocky mountain gem",
         visitedYear: 2022,
         imageUrl: "https://images.example.com/banff.jpg",
+        detailSlug: "banff-rockies",
       },
     ]);
   });

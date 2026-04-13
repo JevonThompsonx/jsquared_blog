@@ -21,6 +21,7 @@ const mockOrderBy = vi.fn().mockResolvedValue([
     externalUrl: "https://example.com/glacier",
     visitedYear: null,
     imageUrl: null,
+    detailSlug: null,
     linkedPostId: null,
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -68,6 +69,7 @@ describe("admin wishlist places DAL", () => {
       externalUrl: null,
       visitedYear: null,
       imageUrl: null,
+      detailSlug: null,
       createdByUserId: "admin-1",
     });
 
@@ -110,6 +112,7 @@ describe("admin wishlist places DAL", () => {
         externalUrl: "https://example.com/glacier",
         visitedYear: null,
         imageUrl: null,
+        detailSlug: null,
         linkedPostId: null,
         createdAt: new Date("2026-04-01T00:00:00.000Z"),
         updatedAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -132,6 +135,7 @@ describe("admin wishlist places DAL", () => {
       externalUrl: "https://example.com/updated-glacier",
       visitedYear: 2023,
       imageUrl: "https://example.com/glacier.jpg",
+      detailSlug: "updated-glacier",
     });
 
     expect(mockUpdate).toHaveBeenCalledOnce();
@@ -146,6 +150,9 @@ describe("admin wishlist places DAL", () => {
         visited: true,
         isPublic: false,
         externalUrl: "https://example.com/updated-glacier",
+        visitedYear: 2023,
+        imageUrl: "https://example.com/glacier.jpg",
+        detailSlug: "updated-glacier",
         updatedAt: expect.any(Date),
       }),
     );

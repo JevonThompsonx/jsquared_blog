@@ -21,8 +21,8 @@ export type BlogImage = {
 };
 
 export type BlogSongMetadata = {
-  title: string;
-  artist: string;
+  title: string | null;
+  artist: string | null;
   url: string;
 };
 

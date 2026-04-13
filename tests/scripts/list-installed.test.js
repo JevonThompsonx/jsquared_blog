@@ -132,6 +132,76 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('shows help and rejects unknown arguments', () => {
+    const helpResult = run(['--help']);
+    assert.strictEqual(helpResult.code, 0);
+    assert.ok(helpResult.stdout.includes('Usage: node scripts/list-installed.js'));
+
+    const badArgResult = run(['--wat']);
+    assert.strictEqual(badArgResult.code, 1);
+    assert.ok(badArgResult.stderr.includes('Unknown argument: --wat'));
+  })) passed++; else failed++;
+
+  if (test('prints invalid install-state records in human output', () => {
+    const homeDir = createTempDir('list-installed-home-');
+    const projectRoot = createTempDir('list-installed-project-');
+
+    try {
+      const statePath = path.join(projectRoot, '.cursor', 'ecc-install-state.json');
+      fs.mkdirSync(path.dirname(statePath), { recursive: true });
+      fs.writeFileSync(statePath, '{not-json', 'utf8');
+
+      const result = run([], { cwd: projectRoot, homeDir });
+      assert.strictEqual(result.code, 0, result.stderr);
+      assert.ok(result.stdout.includes('INVALID'));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('prints populated human-readable output for valid install-state records', () => {
+    const homeDir = createTempDir('list-installed-home-');
+    const projectRoot = createTempDir('list-installed-project-');
+
+    try {
+      const statePath = path.join(projectRoot, '.cursor', 'ecc-install-state.json');
+      writeState(statePath, {
+        adapter: { id: 'cursor-project', target: 'cursor', kind: 'project' },
+        targetRoot: path.join(projectRoot, '.cursor'),
+        installStatePath: statePath,
+        request: {
+          profile: 'core',
+          modules: [],
+          legacyLanguages: ['typescript'],
+          legacyMode: false,
+        },
+        resolution: {
+          selectedModules: ['rules-core', 'platform-configs'],
+          skippedModules: [],
+        },
+        operations: [],
+        source: {
+          repoVersion: CURRENT_PACKAGE_VERSION,
+          repoCommit: 'abc123',
+          manifestVersion: CURRENT_MANIFEST_VERSION,
+        },
+      });
+
+      const result = run([], { cwd: projectRoot, homeDir });
+      assert.strictEqual(result.code, 0, result.stderr);
+      assert.ok(result.stdout.includes('Installed ECC targets:'));
+      assert.ok(result.stdout.includes('- cursor-project'));
+      assert.ok(result.stdout.includes('Profile: core'));
+      assert.ok(result.stdout.includes('Modules: rules-core, platform-configs'));
+      assert.ok(result.stdout.includes('Legacy languages: typescript'));
+      assert.ok(result.stdout.includes(`Source version: ${CURRENT_PACKAGE_VERSION}`));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
 }

@@ -151,10 +151,14 @@ describe("wishlist admin actions", () => {
         ...makeValidWishlistPlaceFields({
           name: "  Glacier National Park  ",
           locationName: "  West Glacier, Montana  ",
+          description: "  Alpine lakes and long ridge walks.  ",
           sortOrder: "3",
           visited: true,
           isPublic: true,
           externalUrl: "https://example.com/glacier",
+          visitedYear: "2026",
+          imageUrl: "https://images.example.com/glacier.jpg",
+          detailSlug: "  Glacier National Park Highlights  ",
         }),
       }),
     );
@@ -163,7 +167,7 @@ describe("wishlist admin actions", () => {
     expect(vi.mocked(createAdminWishlistPlace)).toHaveBeenCalledWith({
       name: "Glacier National Park",
       locationName: "West Glacier, Montana",
-      description: null,
+      description: "Alpine lakes and long ridge walks.",
       latitude: 48.7596,
       longitude: -113.787,
       zoom: 8,
@@ -172,8 +176,9 @@ describe("wishlist admin actions", () => {
       isPublic: true,
       externalUrl: "https://example.com/glacier",
       createdByUserId: "admin-1",
-      visitedYear: null,
-      imageUrl: null,
+      visitedYear: 2026,
+      imageUrl: "https://images.example.com/glacier.jpg",
+      detailSlug: "glacier-national-park-highlights",
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });
@@ -225,10 +230,14 @@ describe("wishlist admin actions", () => {
           id: "550e8400-e29b-41d4-a716-446655440000",
           name: "  Glacier National Park  ",
           locationName: "  West Glacier, Montana  ",
+          description: "  Updated alpine trip notes.  ",
           sortOrder: "4",
           visited: true,
           isPublic: true,
           externalUrl: "https://example.com/updated-glacier",
+          visitedYear: "2027",
+          imageUrl: "https://images.example.com/updated-glacier.jpg",
+          detailSlug: "  Updated Glacier National Park  ",
         }),
       }),
     );
@@ -245,9 +254,10 @@ describe("wishlist admin actions", () => {
       visited: true,
       isPublic: true,
       externalUrl: "https://example.com/updated-glacier",
-      description: null,
-      visitedYear: null,
-      imageUrl: null,
+      description: "Updated alpine trip notes.",
+      visitedYear: 2027,
+      imageUrl: "https://images.example.com/updated-glacier.jpg",
+      detailSlug: "updated-glacier-national-park",
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });

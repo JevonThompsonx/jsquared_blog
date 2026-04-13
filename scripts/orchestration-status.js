@@ -27,27 +27,33 @@ function parseArgs(argv) {
   return { target, writePath };
 }
 
-function main() {
-  const { target, writePath } = parseArgs(process.argv);
+function main(runtime = {}) {
+  const argv = runtime.argv || process.argv;
+  const cwd = runtime.cwd || process.cwd();
+  const inspectSessionTargetFn = runtime.inspectSessionTarget || inspectSessionTarget;
+  const writeFileSync = runtime.writeFileSync || fs.writeFileSync;
+  const mkdirSync = runtime.mkdirSync || fs.mkdirSync;
+  const consoleLog = runtime.consoleLog || console.log;
+  const { target, writePath } = parseArgs(argv);
 
   if (!target) {
     usage();
     process.exit(1);
   }
 
-  const snapshot = inspectSessionTarget(target, {
-    cwd: process.cwd(),
+  const snapshot = inspectSessionTargetFn(target, {
+    cwd,
     adapterId: 'dmux-tmux'
   });
   const json = JSON.stringify(snapshot, null, 2);
 
   if (writePath) {
     const absoluteWritePath = path.resolve(writePath);
-    fs.mkdirSync(path.dirname(absoluteWritePath), { recursive: true });
-    fs.writeFileSync(absoluteWritePath, json + '\n', 'utf8');
+    mkdirSync(path.dirname(absoluteWritePath), { recursive: true });
+    writeFileSync(absoluteWritePath, json + '\n', 'utf8');
   }
 
-  console.log(json);
+  consoleLog(json);
 }
 
 if (require.main === module) {
@@ -59,4 +65,8 @@ if (require.main === module) {
   }
 }
 
-module.exports = { main };
+module.exports = {
+  usage,
+  parseArgs,
+  main,
+};

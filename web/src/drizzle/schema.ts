@@ -190,6 +190,7 @@ export const wishlistPlaces = sqliteTable(
     externalUrl: text("external_url"),
     visitedYear: integer("visited_year"),
     imageUrl: text("image_url"),
+    detailSlug: text("detail_slug").unique(),
     linkedPostId: text("linked_post_id"),
     createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),

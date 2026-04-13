@@ -1,6 +1,6 @@
 # J²Adventures Blog — Project Source of Truth Prompt
 
-#automation/AI/prompting #projects/jsquared
+Tags: `automation/AI/prompting`, `projects/jsquared`
 
 ---
 
@@ -34,7 +34,7 @@
 |-------|-------|
 | **Name** | J²Adventures Blog |
 | **Domain** | `jsquaredadventures.com` |
-| **Purpose** | Travel blog platform with rich publishing, previews, revisions, galleries, profiles, comments, bookmarks, newsletters, scheduling, maps, and SEO |
+| **Purpose** | Travel blog platform with rich publishing, previews, revisions, galleries, profiles, comments, bookmarks, newsletters, scheduling, maps, a public wishlist, a route planner, and SEO |
 | **Owner** | Jevon |
 | **Legacy App** | React + Vite frontend, Hono worker backend, Supabase auth/database/storage (retired) |
 | **Current App** | Next.js 16 App Router in `web/` with Turso/libSQL, Drizzle, Supabase Auth, Auth.js admin auth, Cloudinary, and optional Resend/Upstash/Sentry integrations |
@@ -154,6 +154,8 @@ Preserve and extend what is already shipped:
 - post layout type support
 - map/location metadata
 - song metadata on posts
+- public wishlist destinations
+- route planning over public wishlist stops
 
 ### Social and Platform Features
 - comments
@@ -537,6 +539,8 @@ jsquared_blog/
 ### Optional / conditional env
 - `AUTH_ADMIN_GITHUB_IDS` — if absent, admin access is effectively disabled
 - `NEXT_PUBLIC_STADIA_MAPS_API_KEY` — map UI degrades gracefully without it
+- `ROUTING_PROVIDER`, `GEOCODING_PROVIDER`, `GEOAPIFY_API_KEY` — required only when live route-planner geocoding/routing is enabled
+- `ROUTE_PLANNER_TIMEOUT_MS`, `GEOCODING_TIMEOUT_MS`, `ROUTE_PLANNER_MAX_STOPS` — optional route-planner tuning
 - `CRON_SECRET` — optional only for local loopback development
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — optional only for local dev/test; required in deployed environments
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL` — comment notifications
@@ -558,6 +562,8 @@ jsquared_blog/
 - `/posts/[slug]`
 - `/preview/[id]?token=...`
 - `/map`
+- `/wishlist`
+- `/route-planner`
 - `/category/[category]`
 - `/tag/[slug]`
 - `/series/[slug]`
@@ -567,6 +573,7 @@ jsquared_blog/
 
 ### Public APIs
 - `GET /api/posts`
+- `POST /api/route-plans`
 - `GET|POST /api/posts/[postId]/bookmark`
 - `GET|POST /api/posts/[postId]/comments`
 - `POST /api/posts/[postId]/view`

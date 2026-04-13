@@ -23,6 +23,7 @@ describe("adminWishlistPlaceFormSchema", () => {
       externalUrl: "https://example.com/glacier",
       visitedYear: null,
       imageUrl: null,
+      detailSlug: null,
     });
   });
 
@@ -173,6 +174,41 @@ describe("adminWishlistPlaceFormSchema", () => {
     });
 
     expect(parsed.imageUrl).toBe("https://images.example.com/glacier.jpg");
+  });
+
+  it("normalizes an optional detailSlug to kebab-case", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      detailSlug: "  Glacier National Park Highlights  ",
+    });
+
+    expect(parsed.detailSlug).toBe("glacier-national-park-highlights");
+  });
+
+  it("defaults detailSlug to null when omitted", () => {
+    const parsed = adminWishlistPlaceFormSchema.parse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+    });
+
+    expect(parsed.detailSlug).toBeNull();
+  });
+
+  it("rejects a detailSlug that normalizes to an empty string", () => {
+    const parsed = adminWishlistPlaceFormSchema.safeParse({
+      name: "Glacier National Park",
+      locationName: "West Glacier, Montana",
+      sortOrder: "",
+      externalUrl: "",
+      detailSlug: "!!!",
+    });
+
+    expect(parsed.success).toBe(false);
   });
 
   it("defaults imageUrl to null when omitted", () => {

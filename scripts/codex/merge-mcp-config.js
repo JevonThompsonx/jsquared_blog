@@ -308,4 +308,22 @@ function main() {
   log(`Done. ${toAppend.length} server(s) ${updateMcp ? 'updated' : 'added'}.`);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  DEFAULT_MCP_STARTUP_TIMEOUT_SEC,
+  GH_BOOTSTRAP,
+  PM_NAME,
+  PM_EXEC,
+  PM_EXEC_PARTS,
+  ECC_SERVERS,
+  LEGACY_ALIASES,
+  dlxServer,
+  configDiffers,
+  removeSectionFromText,
+  findSubSections,
+  removeServerFromText,
+  main,
+};

@@ -25,10 +25,23 @@ const WINDOWS_RESERVED_SESSION_IDS = new Set([
  * Get the user's home directory (cross-platform)
  */
 function getHomeDir() {
-  const explicitHome = process.env.HOME || process.env.USERPROFILE;
-  if (explicitHome && explicitHome.trim().length > 0) {
-    return path.resolve(explicitHome);
+  for (const candidate of [process.env.HOME, process.env.USERPROFILE]) {
+    if (!candidate) {
+      continue;
+    }
+
+    const normalizedCandidate = candidate.trim();
+    if (normalizedCandidate.length === 0) {
+      continue;
+    }
+
+    if (normalizedCandidate.toLowerCase() === 'undefined' || normalizedCandidate.toLowerCase() === 'null') {
+      continue;
+    }
+
+    return path.resolve(normalizedCandidate);
   }
+
   return os.homedir();
 }
 

@@ -1,21 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-const { mockPermanentRedirect } = vi.hoisted(() => ({
-  mockPermanentRedirect: vi.fn(),
-}));
-
 vi.mock("next/navigation", () => ({
-  permanentRedirect: mockPermanentRedirect,
+  permanentRedirect: vi.fn(),
 }));
 
+import { permanentRedirect } from "next/navigation";
 import RoutePlannerPage from "@/app/(blog)/route-planner/page";
 
 describe("RoutePlannerPage", () => {
   it("issues a permanent redirect to /wishlist", () => {
     RoutePlannerPage();
 
-    expect(mockPermanentRedirect).toHaveBeenCalledOnce();
-    expect(mockPermanentRedirect).toHaveBeenCalledWith("/wishlist");
+    expect(vi.mocked(permanentRedirect)).toHaveBeenCalledOnce();
+    expect(vi.mocked(permanentRedirect)).toHaveBeenCalledWith("/wishlist");
   });
 
   it("does not export dynamic or metadata (page is retired)", async () => {
