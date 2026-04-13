@@ -121,4 +121,36 @@ describe("PostSongMetadata", () => {
       expect(renderToStaticMarkup(<PostSongMetadata song={null} />)).toBe("");
     });
   });
+
+  describe("song label", () => {
+    it("shows 'Now playing' as the label instead of 'Song for this story'", () => {
+      const markup = renderToStaticMarkup(
+        <PostSongMetadata
+          song={{
+            title: "Holocene",
+            artist: "Bon Iver",
+            url: "https://open.spotify.com/track/4bHsxqR3GMjc5K5kKkXmBl",
+          }}
+        />,
+      );
+
+      expect(markup).toContain("Now playing");
+      expect(markup).not.toContain("Song for this story");
+    });
+
+    it("shows 'Now playing' on the fallback text-link layout too", () => {
+      const markup = renderToStaticMarkup(
+        <PostSongMetadata
+          song={{
+            title: "Holocene",
+            artist: "Bon Iver",
+            url: "https://music.example.com/track/123",
+          }}
+        />,
+      );
+
+      expect(markup).toContain("Now playing");
+      expect(markup).not.toContain("Song for this story");
+    });
+  });
 });

@@ -29,7 +29,7 @@ export function PostSongMetadata({ song }: { song: BlogSongMetadata | null }) {
   if (spotifyEmbed) {
     return (
       <section className="mx-auto mb-8 max-w-[68ch] rounded-2xl border border-[var(--border)] bg-[var(--accent-soft)]/40 px-4 py-4 sm:px-5">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Song for this story</p>
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Now playing</p>
         {hasDisplayMetadata ? (
           <div className="mb-3">
             <p className="text-base font-semibold text-[var(--text-primary)]">{song.title}</p>
@@ -51,7 +51,7 @@ export function PostSongMetadata({ song }: { song: BlogSongMetadata | null }) {
   // Non-Spotify URL: keep the original text + link layout.
   return (
     <section className="mx-auto mb-8 max-w-[68ch] rounded-2xl border border-[var(--border)] bg-[var(--accent-soft)]/40 px-4 py-4 sm:px-5">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Song for this story</p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Now playing</p>
       <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         {hasDisplayMetadata ? (
           <div>
