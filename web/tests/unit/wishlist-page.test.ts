@@ -56,6 +56,9 @@ describe("WishlistPage", () => {
         sortOrder: 0,
         visited: false,
         externalUrl: "https://example.com/glacier",
+        description: null,
+        visitedYear: null,
+        imageUrl: null,
       },
     ]);
 
@@ -91,5 +94,119 @@ describe("WishlistPage", () => {
       expect.any(Error),
     );
     consoleErrorSpy.mockRestore();
+  });
+
+  it("renders a location group header for each distinct locationName", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "p1",
+        name: "Lake Louise",
+        locationName: "Banff, AB",
+        locationLat: 51.4,
+        locationLng: -116.2,
+        locationZoom: 10,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: null,
+        description: null,
+        visitedYear: null,
+        imageUrl: null,
+      },
+      {
+        id: "p2",
+        name: "Olympic NP",
+        locationName: "Port Angeles, WA",
+        locationLat: 48.1,
+        locationLng: -123.4,
+        locationZoom: 8,
+        sortOrder: 1,
+        visited: false,
+        externalUrl: null,
+        description: null,
+        visitedYear: null,
+        imageUrl: null,
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).toContain('data-testid="wishlist-location-group"');
+    expect(markup).toContain("Banff, AB");
+    expect(markup).toContain("Port Angeles, WA");
+  });
+
+  it("renders a visitedYear badge when the place has a visitedYear", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "p1",
+        name: "Banff NP",
+        locationName: "Banff, AB",
+        locationLat: 51.4,
+        locationLng: -116.2,
+        locationZoom: 10,
+        sortOrder: 0,
+        visited: true,
+        externalUrl: null,
+        description: null,
+        visitedYear: 2022,
+        imageUrl: null,
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).toContain("2022");
+    expect(markup).toContain('data-testid="visited-year-badge"');
+  });
+
+  it("renders a place image when imageUrl is present", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "p1",
+        name: "Moraine Lake",
+        locationName: "Banff, AB",
+        locationLat: 51.3,
+        locationLng: -116.2,
+        locationZoom: 12,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: null,
+        description: null,
+        visitedYear: null,
+        imageUrl: "https://example.com/moraine.jpg",
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).toContain('data-testid="place-image"');
+    expect(markup).toContain("https://example.com/moraine.jpg");
+  });
+
+  it("does not render a place image when imageUrl is null", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "p1",
+        name: "Moraine Lake",
+        locationName: "Banff, AB",
+        locationLat: 51.3,
+        locationLng: -116.2,
+        locationZoom: 12,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: null,
+        description: null,
+        visitedYear: null,
+        imageUrl: null,
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    expect(markup).not.toContain('data-testid="place-image"');
   });
 });

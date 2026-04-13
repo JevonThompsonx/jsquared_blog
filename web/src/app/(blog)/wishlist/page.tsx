@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { WorldMap } from "@/components/blog/world-map";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getPublicEnv } from "@/lib/env";
+import { groupWishlistByLocation } from "@/lib/wishlist/grouping";
 import type { PublicWishlistPlace } from "@/server/queries/wishlist";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 
@@ -45,6 +46,8 @@ export default async function WishlistPage() {
     createdAt: new Date(0).toISOString(),
   }));
 
+  const locationGroups = groupWishlistByLocation(places);
+
   return (
     <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
       <SiteHeader />
@@ -71,34 +74,61 @@ export default async function WishlistPage() {
             </p>
           ) : (
             <ul className="divide-y divide-[var(--border)]" data-testid="public-wishlist-list">
-              {places.map((place) => (
-                <li key={place.id} className="px-6 py-5" data-place-id={place.id} data-testid="public-wishlist-item">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{place.name}</h2>
-                        {place.visited ? (
-                          <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
-                            Visited
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{place.locationName}</p>
-                      {place.description ? (
-                        <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{place.description}</p>
-                      ) : null}
-                    </div>
-                    {place.externalUrl ? (
-                      <a
-                        className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
-                        href={place.externalUrl}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        Learn more
-                      </a>
-                    ) : null}
+              {locationGroups.map((group) => (
+                <li key={group.locationName} data-testid="wishlist-location-group">
+                  <div className="border-b border-[var(--border)] px-6 py-3 bg-[var(--card-bg)]">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+                      {group.locationName}
+                    </p>
                   </div>
+                  <ul className="divide-y divide-[var(--border)]">
+                    {group.places.map((place) => (
+                      <li key={place.id} className="px-6 py-5" data-place-id={place.id} data-testid="public-wishlist-item">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h2 className="text-lg font-semibold text-[var(--text-primary)]">{place.name}</h2>
+                              {place.visited ? (
+                                <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
+                                  Visited
+                                </span>
+                              ) : null}
+                              {place.visitedYear ? (
+                                <span
+                                  className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]"
+                                  data-testid="visited-year-badge"
+                                >
+                                  {place.visitedYear}
+                                </span>
+                              ) : null}
+                            </div>
+                            {place.description ? (
+                              <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{place.description}</p>
+                            ) : null}
+                            {place.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                alt={place.name}
+                                className="mt-3 max-h-48 w-full rounded-lg object-cover"
+                                data-testid="place-image"
+                                src={place.imageUrl}
+                              />
+                            ) : null}
+                          </div>
+                          {place.externalUrl ? (
+                            <a
+                              className="shrink-0 text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+                              href={place.externalUrl}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              Learn more
+                            </a>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>
