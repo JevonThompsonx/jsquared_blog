@@ -233,7 +233,10 @@ export function WorldMap({ posts, apiKey, showPostList = true }: WorldMapProps) 
         </div>
       ) : null}
 
-      {/* Map */}
+      {/* Map — wrapped in .world-map-canvas so the dark-mode CSS filter
+           targets only the tile canvas, not the category pills above or any
+           sibling content outside this component. */}
+      <div className="world-map-canvas">
       <div
         className="overflow-hidden rounded-2xl border border-[var(--border)] shadow-xl"
         data-map-ready={isMapReady ? "true" : "false"}
@@ -375,6 +378,7 @@ export function WorldMap({ posts, apiKey, showPostList = true }: WorldMapProps) 
           ) : null}
         </Map>
       </div>
+      </div>{/* end .world-map-canvas */}
 
       {/* Filtered post list */}
       {showPostList && filteredPosts.length > 0 ? (

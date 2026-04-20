@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 /**
  * Slice 7 — dark-mode map contrast
  *
- * Both WorldMap and PostMap must wrap their content in an element with
- * class `world-map-container` so that the globals.css dark-mode filter
- * rule can target it.
+ * WorldMap wraps only the map canvas element in `.world-map-canvas` so that
+ * the globals.css dark-mode filter targets only the tile rendering, not the
+ * category pills above or sibling content outside the component.
+ * PostMap continues to use `.world-map-container` as its root.
  *
  * We test the rendered markup directly (SSR-style string checks) since
  * both components use react-map-gl which is client-only and not trivially
@@ -32,6 +33,10 @@ describe("world-map-container class — WorldMap", () => {
   it("has a root element with class world-map-container", () => {
     expect(worldMapSrc).toMatch(/world-map-container/);
   });
+
+  it("has an inner .world-map-canvas wrapper for the map tile element", () => {
+    expect(worldMapSrc).toMatch(/world-map-canvas/);
+  });
 });
 
 describe("world-map-container class — PostMap", () => {
@@ -48,15 +53,15 @@ const globalsCss = readFileSync(
   "utf-8",
 );
 
-describe("globals.css dark-mode filter for .world-map-container", () => {
-  it("contains a dark-mode selector targeting .world-map-container", () => {
-    expect(globalsCss).toMatch(/\[data-theme-mode="dark"\][^}]*\.world-map-container/);
+describe("globals.css dark-mode filter for .world-map-canvas", () => {
+  it("contains a dark-mode selector targeting .world-map-canvas (not .world-map-container)", () => {
+    expect(globalsCss).toMatch(/\[data-theme-mode="dark"\][^}]*\.world-map-canvas/);
   });
 
   it("applies an invert or brightness/contrast filter in dark mode", () => {
     // The rule should contain some CSS filter value
     const darkRuleMatch = globalsCss.match(
-      /\[data-theme-mode="dark"\][^{]*\.world-map-container[^{]*\{([^}]+)\}/,
+      /\[data-theme-mode="dark"\][^{]*\.world-map-canvas[^{]*\{([^}]+)\}/,
     );
     expect(darkRuleMatch).not.toBeNull();
     const ruleBody = darkRuleMatch![1];

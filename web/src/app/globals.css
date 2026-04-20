@@ -1109,31 +1109,34 @@ a {
 /* ─── Dark-mode map contrast ──────────────────────────────────────── */
 /* Tile-based maps render light backgrounds that are harsh in dark mode.
    A gentle invert + hue-rotate flips them to a dark-toned palette while
-   keeping colours roughly recognisable. */
-[data-theme-mode="dark"] .world-map-container {
+   keeping colours roughly recognisable.
+   Filter is scoped to .world-map-canvas (the map tile div only) so that
+   category pills above and any sibling content outside the component are
+   not affected. */
+[data-theme-mode="dark"] .world-map-canvas {
   filter: invert(0.88) hue-rotate(180deg) saturate(0.75) brightness(0.97);
 }
 
-[data-theme-mode="dark"] .world-map-container .maplibregl-popup-content,
-[data-theme-mode="dark"] .world-map-container .maplibregl-popup-tip,
-[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl-group,
-[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl button {
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-popup-content,
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-popup-tip,
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-ctrl-group,
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-ctrl button {
   filter: invert(1) hue-rotate(180deg) saturate(1.15) brightness(1.08);
 }
 
-[data-theme-mode="dark"] .world-map-container .maplibregl-popup-content {
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-popup-content {
   background: #172018;
   color: #e2e8e0;
   border: 1px solid rgba(180, 210, 150, 0.18);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
 }
 
-[data-theme-mode="dark"] .world-map-container .maplibregl-popup-close-button,
-[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl button {
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-popup-close-button,
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-ctrl button {
   color: #dbe7d6;
 }
 
-[data-theme-mode="dark"] .world-map-container .maplibregl-ctrl-group {
+[data-theme-mode="dark"] .world-map-canvas .maplibregl-ctrl-group {
   border: 1px solid rgba(180, 210, 150, 0.18);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
 }
