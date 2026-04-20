@@ -76,6 +76,26 @@ const optionalDetailSlugField = z.preprocess(
   ]),
 );
 
+const itemTypeField = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) return "single";
+    if (typeof value !== "string") return "single";
+    const trimmed = value.trim();
+    return trimmed === "multi" ? "multi" : "single";
+  },
+  z.enum(["single", "multi"]).default("single"),
+);
+
+const optionalParentIdField = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed || null;
+  },
+  z.string().uuid("Invalid parent id").nullable(),
+);
+
 export const adminWishlistPlaceFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   locationName: z.string().trim().min(1, "Location is required"),
@@ -87,6 +107,8 @@ export const adminWishlistPlaceFormSchema = z.object({
   visitedYear: optionalVisitedYearField,
   imageUrl: optionalHttpsUrlField,
   detailSlug: optionalDetailSlugField,
+  itemType: itemTypeField,
+  parentId: optionalParentIdField,
 });
 
 export const adminWishlistPlaceIdSchema = z.string().trim().uuid("Invalid wishlist place id");

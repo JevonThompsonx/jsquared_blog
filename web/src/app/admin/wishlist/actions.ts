@@ -33,6 +33,8 @@ export async function createWishlistPlaceAction(formData: FormData): Promise<voi
     visitedYear: formData.get("visitedYear"),
     imageUrl: formData.get("imageUrl"),
     detailSlug: formData.get("detailSlug"),
+    itemType: formData.get("itemType"),
+    parentId: formData.get("parentId"),
   });
 
   if (!parsed.success) {
@@ -83,6 +85,8 @@ export async function updateWishlistPlaceAction(formData: FormData): Promise<voi
     visitedYear: formData.get("visitedYear"),
     imageUrl: formData.get("imageUrl"),
     detailSlug: formData.get("detailSlug"),
+    itemType: formData.get("itemType"),
+    parentId: formData.get("parentId"),
   });
 
   if (!parsed.success) {

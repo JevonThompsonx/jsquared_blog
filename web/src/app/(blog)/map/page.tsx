@@ -50,7 +50,9 @@ export default async function MapPage() {
 
         {/* Map + category filter + post list */}
         {NEXT_PUBLIC_STADIA_MAPS_API_KEY && !mapLoadFailed ? (
-          <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={allPosts} />
+          <div aria-label="Explore posts by location" role="region">
+            <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={allPosts} />
+          </div>
         ) : (
           <div className="flex h-64 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] text-sm text-[var(--text-secondary)]">
             {mapLoadFailed ? (

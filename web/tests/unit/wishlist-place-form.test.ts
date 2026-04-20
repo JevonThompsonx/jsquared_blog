@@ -24,6 +24,8 @@ describe("adminWishlistPlaceFormSchema", () => {
       visitedYear: null,
       imageUrl: null,
       detailSlug: null,
+      itemType: "single",
+      parentId: null,
     });
   });
 

@@ -9,6 +9,7 @@ import { SearchInput } from "@/components/blog/search-input";
 import { ScrollToStories } from "@/components/blog/scroll-to-stories";
 import { SiteHeader } from "@/components/layout/site-header";
 import { listPublishedPosts } from "@/server/queries/posts";
+import { listAllSeasons } from "@/server/dal/seasons";
 
 const SEARCH_SUGGESTIONS = ["Sierra", "Winter", "Oregon", "Road trip"];
 
@@ -34,6 +35,15 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const search = resolvedSearchParams?.search?.trim() ?? "";
   const posts = await listPublishedPosts(20, 0, search);
+
+  // Fetch season overrides (graceful — table may not exist yet)
+  let seasonOverrides: Record<string, string> = {};
+  try {
+    const seasons = await listAllSeasons();
+    seasonOverrides = Object.fromEntries(seasons.map((s) => [s.seasonKey, s.displayName]));
+  } catch {
+    // Degrade silently; auto-generated season names will be used
+  }
 
   if (search) {
     const hasMatches = posts.length > 0;
@@ -64,7 +74,7 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
             </div>
           </div>
         </section>
-        <HomeFeed key={`feed:${search.trim().toLowerCase()}`} initialPosts={posts} initialSearch={search} />
+        <HomeFeed key={`feed:${search.trim().toLowerCase()}`} initialPosts={posts} initialSearch={search} seasonOverrides={seasonOverrides} />
       </main>
     );
   }
@@ -114,10 +124,15 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
 
       <div className="main-content main-content-visible" id="stories">
         <div className="container mx-auto px-4 pt-8 pb-2 sm:px-6 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Latest adventures</p>
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M3 17l4-8 4 4 4-6 4 5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Latest adventures
+          </p>
           <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Stories from the trail</h2>
         </div>
-        <HomeFeed key="feed:home" initialPosts={posts} initialSearch="" />
+        <HomeFeed key="feed:home" initialPosts={posts} initialSearch="" seasonOverrides={seasonOverrides} />
 
         <section className="container mx-auto px-4 pt-8 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-8 shadow-[var(--shadow)] backdrop-blur-sm sm:p-10">

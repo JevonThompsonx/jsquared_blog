@@ -65,6 +65,7 @@ export function MobileNav({
       <Dialog.Root onOpenChange={setIsOpen} open={isOpen}>
         <Dialog.Trigger asChild>
           <button
+            aria-expanded={isOpen}
             aria-label={isOpen ? "Close menu" : "Open menu"}
             className="nav-link-pill flex h-11 min-w-[2.75rem] items-center justify-center gap-2 px-3 text-sm"
             type="button"
@@ -107,7 +108,7 @@ export function MobileNav({
             </div>
 
             {/* Navigation Links */}
-            <nav className="flex flex-col gap-1.5">
+            <nav aria-label="Mobile navigation" className="flex flex-col gap-1.5">
               <Link
                 className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
                   pathname === "/" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"

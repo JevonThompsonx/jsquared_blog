@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, notExists } from "drizzle-orm";
+import { and, asc, eq, isNull, notExists } from "drizzle-orm";
 
 import { posts, wishlistPlaces } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
@@ -19,6 +19,8 @@ export type PublicWishlistPlace = {
   visitedYear: number | null;
   imageUrl: string | null;
   detailSlug: string | null;
+  itemType: "single" | "multi";
+  parentId: string | null;
 };
 
 function normalizeOptionalHttpsUrl(value: string | null): string | null {
@@ -40,29 +42,60 @@ function normalizeOptionalHttpsUrl(value: string | null): string | null {
   }
 }
 
+function mapPlace(place: {
+  id: string;
+  name: string;
+  locationName: string;
+  locationLat: number;
+  locationLng: number;
+  locationZoom: number;
+  sortOrder: number;
+  visited: boolean;
+  externalUrl: string | null;
+  description: string | null;
+  visitedYear: number | null;
+  imageUrl: string | null;
+  detailSlug: string | null;
+  itemType: "single" | "multi";
+  parentId: string | null;
+}): PublicWishlistPlace {
+  return {
+    ...place,
+    externalUrl: normalizeOptionalHttpsUrl(place.externalUrl),
+    imageUrl: normalizeOptionalHttpsUrl(place.imageUrl),
+    detailSlug: place.detailSlug ?? null,
+  };
+}
+
+const PLACE_SELECT = {
+  id: wishlistPlaces.id,
+  name: wishlistPlaces.name,
+  locationName: wishlistPlaces.locationName,
+  locationLat: wishlistPlaces.locationLat,
+  locationLng: wishlistPlaces.locationLng,
+  locationZoom: wishlistPlaces.locationZoom,
+  sortOrder: wishlistPlaces.sortOrder,
+  visited: wishlistPlaces.visited,
+  externalUrl: wishlistPlaces.externalUrl,
+  description: wishlistPlaces.description,
+  visitedYear: wishlistPlaces.visitedYear,
+  imageUrl: wishlistPlaces.imageUrl,
+  detailSlug: wishlistPlaces.detailSlug,
+  itemType: wishlistPlaces.itemType,
+  parentId: wishlistPlaces.parentId,
+} as const;
+
 export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]> {
   const db = getDb();
 
   const places = await db
-    .select({
-      id: wishlistPlaces.id,
-      name: wishlistPlaces.name,
-      locationName: wishlistPlaces.locationName,
-      locationLat: wishlistPlaces.locationLat,
-      locationLng: wishlistPlaces.locationLng,
-      locationZoom: wishlistPlaces.locationZoom,
-      sortOrder: wishlistPlaces.sortOrder,
-      visited: wishlistPlaces.visited,
-      externalUrl: wishlistPlaces.externalUrl,
-      description: wishlistPlaces.description,
-      visitedYear: wishlistPlaces.visitedYear,
-      imageUrl: wishlistPlaces.imageUrl,
-      detailSlug: wishlistPlaces.detailSlug,
-    })
+    .select(PLACE_SELECT)
     .from(wishlistPlaces)
     .where(
       and(
         eq(wishlistPlaces.isPublic, true),
+        // Only top-level items (not children of a multi-site parent)
+        isNull(wishlistPlaces.parentId),
         notExists(
           db
             .select({ id: posts.id })
@@ -73,33 +106,14 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
     )
     .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
 
-  return places.map((place) => ({
-    ...place,
-    externalUrl: normalizeOptionalHttpsUrl(place.externalUrl),
-    imageUrl: normalizeOptionalHttpsUrl(place.imageUrl),
-    detailSlug: place.detailSlug ?? null,
-  }));
+  return places.map(mapPlace);
 }
 
 export async function getPublicWishlistPlaceBySlug(slug: string): Promise<PublicWishlistPlace | null> {
   const db = getDb();
 
   const [place] = await db
-    .select({
-      id: wishlistPlaces.id,
-      name: wishlistPlaces.name,
-      locationName: wishlistPlaces.locationName,
-      locationLat: wishlistPlaces.locationLat,
-      locationLng: wishlistPlaces.locationLng,
-      locationZoom: wishlistPlaces.locationZoom,
-      sortOrder: wishlistPlaces.sortOrder,
-      visited: wishlistPlaces.visited,
-      externalUrl: wishlistPlaces.externalUrl,
-      description: wishlistPlaces.description,
-      visitedYear: wishlistPlaces.visitedYear,
-      imageUrl: wishlistPlaces.imageUrl,
-      detailSlug: wishlistPlaces.detailSlug,
-    })
+    .select(PLACE_SELECT)
     .from(wishlistPlaces)
     .where(
       and(
@@ -119,10 +133,27 @@ export async function getPublicWishlistPlaceBySlug(slug: string): Promise<Public
     return null;
   }
 
-  return {
-    ...place,
-    externalUrl: normalizeOptionalHttpsUrl(place.externalUrl),
-    imageUrl: normalizeOptionalHttpsUrl(place.imageUrl),
-    detailSlug: place.detailSlug ?? null,
-  };
+  return mapPlace(place);
+}
+
+/**
+ * Returns the child places of a multi-site wishlist item.
+ * Children are fetched regardless of their own linkedPost status since
+ * the parent controls visibility.
+ */
+export async function getPublicWishlistPlaceChildren(parentId: string): Promise<PublicWishlistPlace[]> {
+  const db = getDb();
+
+  const children = await db
+    .select(PLACE_SELECT)
+    .from(wishlistPlaces)
+    .where(
+      and(
+        eq(wishlistPlaces.parentId, parentId),
+        eq(wishlistPlaces.isPublic, true),
+      ),
+    )
+    .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
+
+  return children.map(mapPlace);
 }

@@ -7,6 +7,7 @@ import { categories, mediaAssets, postImages, postTags, posts, series, tags } fr
 import { getDb } from "@/lib/db";
 import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 import { hasPostViewCountColumn } from "@/server/dal/posts";
+import { listLinksForPost } from "@/server/dal/post-links";
 
 const adminPostStatusSchema = z.enum(["draft", "published", "scheduled"]);
 const adminPostSortSchema = z.enum(["updated-desc", "created-desc", "created-asc", "published-desc", "title-asc", "views-desc"]);
@@ -74,6 +75,7 @@ export type AdminEditablePostRecord = AdminPostRecord & {
     exifShutterSpeed: string | null;
     exifIso: number | null;
   }>;
+  links: Array<{ id: string; label: string; url: string; sortOrder: number }>;
 };
 
 export type AdminCategoryRecord = {
@@ -268,7 +270,7 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
     return null;
   }
 
-  const [postTagRows, galleryRows] = await Promise.all([
+  const [postTagRows, galleryRows, linkRows] = await Promise.all([
     db
       .select({ id: tags.id, name: tags.name, slug: tags.slug })
       .from(postTags)
@@ -296,6 +298,7 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       .innerJoin(mediaAssets, eq(postImages.mediaAssetId, mediaAssets.id))
       .where(eq(postImages.postId, postId))
       .orderBy(postImages.sortOrder),
+    listLinksForPost(postId),
   ]);
 
   return {
@@ -317,6 +320,7 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
     songUrl: post.songUrl ?? null,
     tags: postTagRows,
     galleryImages: galleryRows,
+    links: linkRows.map((l) => ({ id: l.id, label: l.label, url: l.url, sortOrder: l.sortOrder })),
   };
 }
 

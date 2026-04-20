@@ -12,6 +12,7 @@ import { CopyLinkButton } from "@/components/blog/copy-link-button";
 import { ShareButtons } from "@/components/blog/share-buttons";
 import { PostGallery } from "@/components/blog/post-gallery";
 import { PostMap } from "@/components/blog/post-map";
+import { PostLinks } from "@/components/blog/post-links";
 import { PostSongMetadata } from "@/components/blog/post-song-metadata";
 import { ProseContent } from "@/components/blog/prose-content";
 import { ReadingProgressBar } from "@/components/blog/reading-progress-bar";
@@ -138,13 +139,13 @@ export default async function PostPage({ params }: PostPageProps) {
         <div className="container mx-auto mt-4 max-w-4xl px-4 sm:mt-6 sm:px-6 lg:px-8">
           {/* Breadcrumb + admin edit */}
           <div className="mb-4 flex items-center justify-between gap-4">
-          <nav className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm text-[var(--text-secondary)]">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm text-[var(--text-secondary)]">
             <Link className="font-medium text-[var(--accent)] hover:underline" href="/">Home</Link>
-            <span className="text-[var(--border)]">/</span>
+            <span aria-hidden="true" className="text-[var(--border)]">/</span>
             {post.category ? (
               <>
                 <Link className="font-medium text-[var(--accent)] hover:underline" href={getCategoryHref(post.category)}>{post.category}</Link>
-                <span className="text-[var(--border)]">/</span>
+                <span aria-hidden="true" className="text-[var(--border)]">/</span>
               </>
             ) : null}
             <span className="text-[var(--text-primary)] font-medium truncate max-w-[18ch]">{post.title}</span>
@@ -244,6 +245,7 @@ export default async function PostPage({ params }: PostPageProps) {
                 locationName={locationData.locationName}
                 zoom={locationData.zoom}
               />
+              <PostLinks iovanderUrl={post.iovanderUrl} links={post.links ?? []} />
             </div>
           ) : null}
 

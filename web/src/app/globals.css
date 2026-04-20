@@ -7,7 +7,7 @@
   --text-secondary: #5c6758;
   --text-highlight: linear-gradient(90deg, #6d8259 0%, #50624a 100%);
   --card-bg: #fcf8f1;
-  --primary: #6f865b;
+  --primary: #4e5f40;
   --primary-light: #93a780;
   --on-primary: #ffffff;
   --btn-bg: #3d5427;
@@ -199,7 +199,8 @@ mark {
 
 .skip-link:focus {
   top: 0;
-  outline: none;
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .navbar-landing {

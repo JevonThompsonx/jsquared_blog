@@ -70,6 +70,9 @@ export function PostEditorForm({
   const [songPreview, setSongPreview] = useState<SongPreviewResponse | null>(null);
   const [songPreviewError, setSongPreviewError] = useState<string | null>(null);
   const [isSongPreviewPending, startSongPreviewTransition] = useTransition();
+  const [links, setLinks] = useState<Array<{ label: string; url: string }>>(
+    (post?.links ?? []).map((l) => ({ label: l.label, url: l.url })),
+  );
 
   useEffect(() => {
     if (showCloneConfirm) {
@@ -192,6 +195,7 @@ export function PostEditorForm({
     <form ref={formRef} action={action} className="space-y-8">
       <input name="scheduledPublishOffsetMinutes" type="hidden" value={browserOffsetMinutes} />
       <input name="returnTo" type="hidden" value={returnTo} />
+      <input name="linksJson" type="hidden" value={JSON.stringify(links.map((l, i) => ({ label: l.label, url: l.url, sortOrder: i })))} />
       <div className="sticky top-24 z-20 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-4 shadow-lg sm:px-5">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editor actions</p>
@@ -393,8 +397,8 @@ export function PostEditorForm({
             </div>
           </section>
 
-          <div>
-            <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Tags</span>
+          <div role="group" aria-labelledby="tags-label">
+            <span id="tags-label" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Tags</span>
             <TagMultiSelect
               allTags={allTags}
               defaultTagNames={post?.tags.map((t) => t.name) ?? []}
@@ -447,8 +451,8 @@ export function PostEditorForm({
             <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Categorization</p>
             <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Use a category that helps readers browse by trip type, then support it with tags for the finer details.</p>
-            <div className="mt-5">
-              <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Category</span>
+            <div role="group" aria-labelledby="category-label" className="mt-5">
+              <span id="category-label" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Category</span>
               <ComboboxInput
                 defaultValue={post?.category ?? ""}
                 name="categoryName"
@@ -474,8 +478,8 @@ export function PostEditorForm({
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Location</p>
             <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Add a location for this post. Be as specific or broad as you like — &quot;Portland, Oregon&quot;, &quot;California&quot;, or &quot;Pacific Northwest&quot; all work. Coordinates are geocoded automatically on save.</p>
             <div className="mt-5 space-y-4">
-              <div>
-                <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Location name</span>
+              <div role="group" aria-labelledby="location-name-label">
+                <span id="location-name-label" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Location name</span>
                 <LocationAutocomplete defaultValue={post?.locationName ?? ""} />
                 <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">A city, region, country, or any recognizable place name. Start typing for suggestions. Leave blank to remove the location.</span>
               </div>
@@ -490,6 +494,58 @@ export function PostEditorForm({
                 />
                 <span className="mt-1.5 block text-xs text-[var(--text-secondary)]">Optional link to the iOverlander camp or place entry for this location.</span>
               </label>
+            </div>
+          </section>
+
+            <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">External Links</p>
+            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">Add external links for this post (e.g. iOverlander, AllTrails, booking pages). HTTPS only. Max 10 links.</p>
+            <div className="mt-5 space-y-3">
+              {links.map((link, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    aria-label={`Link ${index + 1} label`}
+                    className="w-28 shrink-0 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                    onChange={(e) => {
+                      const updated = [...links];
+                      updated[index] = { ...updated[index], label: e.target.value };
+                      setLinks(updated);
+                    }}
+                    placeholder="Label"
+                    type="text"
+                    value={link.label}
+                  />
+                  <input
+                    aria-label={`Link ${index + 1} URL`}
+                    className="min-w-0 flex-1 rounded-md border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm focus:border-[var(--primary)] focus:ring focus:ring-[var(--primary)] focus:ring-opacity-50"
+                    onChange={(e) => {
+                      const updated = [...links];
+                      updated[index] = { ...updated[index], url: e.target.value };
+                      setLinks(updated);
+                    }}
+                    placeholder="https://..."
+                    type="url"
+                    value={link.url}
+                  />
+                  <button
+                    aria-label="Remove link"
+                    className="shrink-0 rounded-md px-2 py-2 text-[var(--text-secondary)] transition-colors hover:text-[var(--color-error-text)]"
+                    onClick={() => setLinks(links.filter((_, i) => i !== index))}
+                    type="button"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {links.length < 10 ? (
+                <button
+                  className="mt-2 rounded-full border border-[var(--border)] px-4 py-1.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--accent-soft)]"
+                  onClick={() => setLinks([...links, { label: "", url: "" }])}
+                  type="button"
+                >
+                  + Add link
+                </button>
+              ) : null}
             </div>
           </section>
 

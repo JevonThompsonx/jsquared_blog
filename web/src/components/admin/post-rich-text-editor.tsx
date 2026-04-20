@@ -76,7 +76,6 @@ function MenuButton({
       disabled={disabled}
       onClick={onClick}
       onMouseDown={(e) => e.preventDefault()}
-      tabIndex={-1}
       title={title}
       type="button"
     >
@@ -114,10 +113,10 @@ function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
       <button
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-label="Text style"
         className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2.5rem] bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
         onClick={() => setOpen((v) => !v)}
         onMouseDown={(e) => e.preventDefault()}
-        tabIndex={-1}
         title="Text style"
         type="button"
       >
@@ -144,7 +143,6 @@ function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
               onMouseDown={(e) => e.preventDefault()}
               role="option"
               aria-selected={opt.active}
-              tabIndex={-1}
               type="button"
             >
               {opt.active ? <span aria-hidden="true">✓</span> : <span className="w-[1ch]" />}
@@ -428,6 +426,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
         <input
           ref={fileInputRef}
           accept="image/*"
+          aria-label="Upload image"
           className="hidden"
           onChange={handleFileChange}
           type="file"
@@ -440,6 +439,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
         {showLinkInput ? (
           <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
             <input
+              aria-label="Link URL"
               className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] sm:min-w-[14rem]"
               onChange={(event) => setLinkDraft(event.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") applyLink(); }}
@@ -450,7 +450,6 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
               className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]"
               onClick={applyLink}
               onMouseDown={(e) => e.preventDefault()}
-              tabIndex={-1}
               type="button"
             >
               Apply link
@@ -459,7 +458,6 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
               className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
               onClick={() => setShowLinkInput(false)}
               onMouseDown={(e) => e.preventDefault()}
-              tabIndex={-1}
               type="button"
             >
               Cancel
@@ -475,6 +473,7 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <input
                 autoFocus
+                aria-label="Image alt text"
                 className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)]"
                 onChange={(e) => setImageDraftAlt(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") insertImage(); }}
@@ -486,7 +485,6 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
                   className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--on-primary)]"
                   onClick={insertImage}
                   onMouseDown={(e) => e.preventDefault()}
-                  tabIndex={-1}
                   type="button"
                 >
                   Insert image
@@ -495,7 +493,6 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
                   className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)]"
                   onClick={() => { setShowImagePanel(false); setPendingImageUrl(null); }}
                   onMouseDown={(e) => e.preventDefault()}
-                  tabIndex={-1}
                   type="button"
                 >
                   Cancel

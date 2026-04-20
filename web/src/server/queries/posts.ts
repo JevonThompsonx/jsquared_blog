@@ -19,6 +19,8 @@ import {
   listTagsForPost,
   type PublishedPostRecord,
 } from "@/server/dal/posts";
+import { listLinksForPost } from "@/server/dal/post-links";
+export { listLinksForPost as listPostLinks };
 import type { BlogImage, BlogPost, BlogTag } from "@/types/blog";
 
 function getRenderedPostDescription(post: Pick<PublishedPostRecord, "contentFormat" | "contentHtml" | "contentJson" | "excerpt">): string | null {
@@ -117,9 +119,10 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     return null;
   }
 
-  const [tagRows, imageRows] = await Promise.all([
+  const [tagRows, imageRows, linkRows] = await Promise.all([
     listTagsForPost(post.id),
     listImagesForPost(post.id),
+    listLinksForPost(post.id),
   ]);
 
   const images: BlogImage[] = imageRows.map((image) => ({
@@ -157,6 +160,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
       slug: tag.slug,
     })),
     images,
+    links: linkRows,
     source: "turso",
     locationName: post.locationName ?? null,
     locationLat: post.locationLat ?? null,

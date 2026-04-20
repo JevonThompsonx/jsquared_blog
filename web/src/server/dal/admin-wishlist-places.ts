@@ -21,6 +21,8 @@ export type AdminWishlistPlaceRecord = {
   imageUrl: string | null;
   detailSlug: string | null;
   linkedPostId: string | null;
+  itemType: "single" | "multi";
+  parentId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -39,6 +41,8 @@ export type CreateAdminWishlistPlaceInput = {
   visitedYear: number | null;
   imageUrl: string | null;
   detailSlug: string | null;
+  itemType: "single" | "multi";
+  parentId: string | null;
   createdByUserId: string;
 };
 
@@ -57,6 +61,8 @@ export type UpdateAdminWishlistPlaceInput = {
   visitedYear: number | null;
   imageUrl: string | null;
   detailSlug: string | null;
+  itemType: "single" | "multi";
+  parentId: string | null;
 };
 
 export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceInput): Promise<void> {
@@ -78,6 +84,8 @@ export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceIn
     visitedYear: input.visitedYear,
     imageUrl: input.imageUrl,
     detailSlug: input.detailSlug,
+    itemType: input.itemType,
+    parentId: input.parentId,
     createdByUserId: input.createdByUserId,
     createdAt: now,
     updatedAt: now,
@@ -103,6 +111,8 @@ export async function updateAdminWishlistPlace(input: UpdateAdminWishlistPlaceIn
       visitedYear: input.visitedYear,
       imageUrl: input.imageUrl,
       detailSlug: input.detailSlug,
+      itemType: input.itemType,
+      parentId: input.parentId,
       updatedAt: new Date(),
     })
     .where(eq(wishlistPlaces.id, input.id));
@@ -134,6 +144,8 @@ export async function listAdminWishlistPlaces(): Promise<AdminWishlistPlaceRecor
       imageUrl: wishlistPlaces.imageUrl,
       detailSlug: wishlistPlaces.detailSlug,
       linkedPostId: wishlistPlaces.linkedPostId,
+      itemType: wishlistPlaces.itemType,
+      parentId: wishlistPlaces.parentId,
       createdAt: wishlistPlaces.createdAt,
       updatedAt: wishlistPlaces.updatedAt,
     })

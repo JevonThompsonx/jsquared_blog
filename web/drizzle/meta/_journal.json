@@ -113,6 +113,27 @@
       "when": 1775511600000,
       "tag": "0015_wishlist_media_and_detail_slug",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1775600000000,
+      "tag": "0016_seasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1775600100000,
+      "tag": "0017_post_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1775600200000,
+      "tag": "0018_wishlist_item_type",
+      "breakpoints": true
     }
   ]
 }

@@ -161,7 +161,7 @@ export function SiteHeader() {
   const isPublicSignedIn = Boolean(publicSession?.user);
 
   return (
-    <header className="navbar-landing">
+    <header aria-label="Site header" className="navbar-landing">
       <div className="container mx-auto flex max-w-full items-center justify-between gap-4 p-4">
         <Link className="site-brand text-xl font-bold sm:text-2xl" href="/">
           J²Adventures
@@ -169,7 +169,7 @@ export function SiteHeader() {
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-3 md:flex">
-          <nav className="flex items-center gap-1">
+          <nav aria-label="Main navigation" className="flex items-center gap-1">
             <Link className="nav-link-pill" href="/">
               Home
             </Link>

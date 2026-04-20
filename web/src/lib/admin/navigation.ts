@@ -29,4 +29,9 @@ export const adminNavLinks: AdminNavLink[] = [
     label: "Manage tags",
     description: "Update tag descriptions and keep taxonomy tidy.",
   },
+  {
+    href: "/admin/seasons",
+    label: "Season names",
+    description: "Override auto-generated season labels shown on the homepage feed.",
+  },
 ];

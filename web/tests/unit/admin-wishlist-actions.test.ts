@@ -179,6 +179,8 @@ describe("wishlist admin actions", () => {
       visitedYear: 2026,
       imageUrl: "https://images.example.com/glacier.jpg",
       detailSlug: "glacier-national-park-highlights",
+      itemType: "single",
+      parentId: null,
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });
@@ -258,6 +260,8 @@ describe("wishlist admin actions", () => {
       visitedYear: 2027,
       imageUrl: "https://images.example.com/updated-glacier.jpg",
       detailSlug: "updated-glacier-national-park",
+      itemType: "single",
+      parentId: null,
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });

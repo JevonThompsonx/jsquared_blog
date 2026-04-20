@@ -26,6 +26,15 @@ export type BlogSongMetadata = {
   url: string;
 };
 
+export type BlogPostLink = {
+  id: string;
+  postId: string;
+  label: string;
+  url: string;
+  sortOrder: number;
+  createdAt: Date;
+};
+
 export type BlogPost = {
   id: string;
   slug: string;
@@ -47,6 +56,7 @@ export type BlogPost = {
   locationLng: number | null;
   locationZoom: number | null;
   iovanderUrl: string | null;
+  links?: BlogPostLink[];
   song?: BlogSongMetadata | null;
   viewCount?: number;
   commentCount: number;

@@ -133,11 +133,41 @@ export default function AboutPage() {
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               {[
-                { title: "Hiking & backpacking", body: "Day hikes, multi-day trips, the occasional Type 2 fun experience we probably should have trained harder for." },
-                { title: "Van life & camping", body: "Dispatches from Blu (our van) and nights spent under the stars." },
-                { title: "Travel", body: "Where we went, what we ate, and everything in between." },
+                {
+                  title: "Hiking & backpacking",
+                  body: "Day hikes, multi-day trips, the occasional Type 2 fun experience we probably should have trained harder for.",
+                  icon: (
+                    <svg aria-hidden="true" className="h-4 w-4 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM5 19l3-6 2 2 2-4 3 5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M15 19H9" strokeLinecap="round" />
+                    </svg>
+                  ),
+                },
+                {
+                  title: "Van life & camping",
+                  body: "Dispatches from Blu (our van) and nights spent under the stars.",
+                  icon: (
+                    <svg aria-hidden="true" className="h-4 w-4 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M1 17h2V8l4-3h8l4 3v9h2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="7" cy="17" r="1.5" />
+                      <circle cx="17" cy="17" r="1.5" />
+                      <path d="M9 5v4H5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ),
+                },
+                {
+                  title: "Travel",
+                  body: "Where we went, what we ate, and everything in between.",
+                  icon: (
+                    <svg aria-hidden="true" className="h-4 w-4 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M12 2a9 9 0 1 0 0 18A9 9 0 0 0 12 2Z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10A15.3 15.3 0 0 1 8 12a15.3 15.3 0 0 1 4-10Z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ),
+                },
               ].map((item) => (
                 <div key={item.title} className="rounded-xl bg-[var(--background)] p-4">
+                  <div className="mb-2 flex items-center gap-2">{item.icon}</div>
                   <h3 className="font-bold text-[var(--text-primary)]">{item.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">{item.body}</p>
                 </div>

@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 const notFoundError = new Error("NEXT_NOT_FOUND");
 
 vi.mock("next/navigation", () => ({
@@ -18,8 +20,17 @@ vi.mock("@/components/layout/site-header", () => ({
   SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header"),
 }));
 
+vi.mock("@/components/blog/world-map", () => ({
+  WorldMap: () => createElement("div", { "data-testid": "world-map" }, "Map"),
+}));
+
+vi.mock("@/lib/env", () => ({
+  getPublicEnv: () => ({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-key" }),
+}));
+
 vi.mock("@/server/queries/wishlist", () => ({
   getPublicWishlistPlaceBySlug: vi.fn(),
+  getPublicWishlistPlaceChildren: vi.fn().mockResolvedValue([]),
 }));
 
 import WishlistDetailPage, { generateMetadata } from "@/app/(blog)/wishlist/[slug]/page";
@@ -45,6 +56,8 @@ describe("WishlistDetailPage", () => {
       visitedYear: 2026,
       imageUrl: "https://images.example.com/banff-gondola.jpg",
       detailSlug: "banff-gondola",
+      itemType: "single",
+      parentId: null,
     });
 
     const markup = renderToStaticMarkup(
@@ -75,6 +88,8 @@ describe("WishlistDetailPage", () => {
       visitedYear: 2026,
       imageUrl: "https://images.example.com/banff-gondola.jpg",
       detailSlug: "banff-gondola",
+      itemType: "single",
+      parentId: null,
     });
 
     const metadata = await generateMetadata({ params: Promise.resolve({ slug: "banff-gondola" }) });

@@ -192,6 +192,8 @@ export const wishlistPlaces = sqliteTable(
     imageUrl: text("image_url"),
     detailSlug: text("detail_slug").unique(),
     linkedPostId: text("linked_post_id"),
+    itemType: text("item_type", { enum: ["single", "multi"] }).notNull().default("single"),
+    parentId: text("parent_id"),
     createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
@@ -200,6 +202,8 @@ export const wishlistPlaces = sqliteTable(
     createdByUserIdIdx: index("wishlist_places_created_by_user_id_idx").on(table.createdByUserId),
     sortOrderIdx: index("wishlist_places_sort_order_idx").on(table.sortOrder),
     isPublicIdx: index("wishlist_places_is_public_idx").on(table.isPublic),
+    parentIdIdx: index("wishlist_places_parent_id_idx").on(table.parentId),
+    itemTypeIdx: index("wishlist_places_item_type_idx").on(table.itemType),
   }),
 );
 
@@ -256,6 +260,36 @@ export const postBookmarks = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.userId] }),
     userIdx: index("post_bookmarks_user_id_idx").on(table.userId),
+  }),
+);
+
+export const seasons = sqliteTable(
+  "seasons",
+  {
+    id: text("id").primaryKey(),
+    seasonKey: text("season_key").notNull().unique(),
+    displayName: text("display_name").notNull(),
+    createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    createdByUserIdIdx: index("seasons_created_by_user_id_idx").on(table.createdByUserId),
+  }),
+);
+
+export const postLinks = sqliteTable(
+  "post_links",
+  {
+    id: text("id").primaryKey(),
+    postId: text("post_id").notNull().references(() => posts.id),
+    label: text("label").notNull(),
+    url: text("url").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    postIdIdx: index("post_links_post_id_idx").on(table.postId),
   }),
 );
 

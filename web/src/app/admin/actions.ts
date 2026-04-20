@@ -13,6 +13,7 @@ import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
 import { createPostRevision } from "@/server/dal/post-revisions";
 import { ensureSeriesId } from "@/server/dal/series";
 import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
+import { replaceLinksForPost } from "@/server/dal/post-links";
 import { adminPostFormSchema } from "@/server/forms/admin-post-form";
 import { derivePostContent } from "@/server/posts/content";
 import { clonePostById } from "@/server/posts/clone";
@@ -231,6 +232,36 @@ const galleryEntrySchema = z.object({
 });
 
 const galleryEntriesSchema = z.array(galleryEntrySchema);
+
+const postLinkEntrySchema = z.object({
+  label: z.string().trim().max(100).default(""),
+  url: z.string().trim().url().max(2048),
+  sortOrder: z.number().int().min(0).default(0),
+});
+
+const postLinksSchema = z.array(postLinkEntrySchema).max(10);
+
+function parseLinksJson(value: FormDataEntryValue | null): Array<{ label: string; url: string; sortOrder: number }> {
+  if (!value || typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+
+  let unknownJson: unknown;
+  try {
+    unknownJson = parseUnknownJson(value);
+  } catch {
+    return [];
+  }
+
+  const parsed = postLinksSchema.safeParse(unknownJson);
+  if (!parsed.success) {
+    return [];
+  }
+
+  return parsed.data
+    .filter((entry) => entry.url.trim().startsWith("https://"))
+    .map((entry) => ({ label: entry.label, url: entry.url, sortOrder: entry.sortOrder }));
+}
 
 function parseGalleryEntries(value: string) {
   let unknownJson: unknown;
@@ -540,6 +571,14 @@ export async function createAdminPostAction(formData: FormData) {
     });
   });
 
+  // Persist external links (best-effort: non-fatal if post_links table not yet migrated).
+  try {
+    const parsedLinks = parseLinksJson(formData.get("linksJson"));
+    await replaceLinksForPost(postId, parsedLinks);
+  } catch (error) {
+    console.error(`[admin-actions] Failed to save links for created post ${postId}`, error);
+  }
+
   revalidatePath("/");
   revalidatePath("/admin");
   if (values.status === "published") {
@@ -642,6 +681,14 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
       galleryEntries,
     });
   });
+
+  // Persist external links (best-effort: non-fatal if post_links table not yet migrated).
+  try {
+    const parsedLinks = parseLinksJson(formData.get("linksJson"));
+    await replaceLinksForPost(validPostId, parsedLinks);
+  } catch (error) {
+    console.error(`[admin-actions] Failed to save links for updated post ${validPostId}`, error);
+  }
 
   // Capture a revision snapshot of the pre-update state.
   // Best-effort: a revision failure must not block the save.

@@ -24,6 +24,9 @@ export default async function AdminWishlistPage() {
     wishlistLoadFailed = true;
   }
 
+  // Multi-site parent options (for parentId dropdown)
+  const multiPlaces = places.filter((p) => p.itemType === "multi");
+
   return (
     <main id="main-content" className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
       <SiteHeader />
@@ -62,6 +65,25 @@ export default async function AdminWishlistPage() {
                   <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="name" required type="text" />
                 </label>
                 <WishlistLocationAutocomplete />
+
+                {/* Item type */}
+                <fieldset>
+                  <legend className="mb-2 text-sm font-medium text-[var(--text-primary)]">Item type</legend>
+                  <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                    <label className="inline-flex items-center gap-2">
+                      <input defaultChecked name="itemType" type="radio" value="single" />
+                      Single location
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input name="itemType" type="radio" value="multi" />
+                      Multi-site area
+                    </label>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    Multi-site: a geographic area containing child locations. Requires a detail slug.
+                  </p>
+                </fieldset>
+
                 <label className="block text-sm text-[var(--text-secondary)]">
                   <span className="mb-1 block font-medium text-[var(--text-primary)]">Short description <span className="font-normal text-[var(--text-secondary)]">(optional, max 500 chars)</span></span>
                   <textarea className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" maxLength={500} name="description" rows={2} />
@@ -83,9 +105,23 @@ export default async function AdminWishlistPage() {
                   <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="imageUrl" placeholder="https://images.example.com/place.jpg" type="url" />
                 </label>
                 <label className="block text-sm text-[var(--text-secondary)]">
-                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Detail page slug <span className="font-normal text-[var(--text-secondary)]">(optional)</span></span>
+                  <span className="mb-1 block font-medium text-[var(--text-primary)]">Detail page slug <span className="font-normal text-[var(--text-secondary)]">(optional; required for multi-site)</span></span>
                   <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="detailSlug" placeholder="banff-gondola" type="text" />
                 </label>
+
+                {/* Parent selection for new single items */}
+                {multiPlaces.length > 0 ? (
+                  <label className="block text-sm text-[var(--text-secondary)]">
+                    <span className="mb-1 block font-medium text-[var(--text-primary)]">Parent area <span className="font-normal text-[var(--text-secondary)]">(optional — assign to a multi-site parent)</span></span>
+                    <select className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" name="parentId">
+                      <option value="">— None —</option>
+                      {multiPlaces.map((mp) => (
+                        <option key={mp.id} value={mp.id}>{mp.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+
                 <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
                   <label className="inline-flex items-center gap-2">
                     <input name="visited" type="checkbox" />
@@ -120,6 +156,9 @@ export default async function AdminWishlistPage() {
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-lg font-semibold text-[var(--text-primary)]">{place.name}</h2>
+                            {place.itemType === "multi" ? (
+                              <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]" data-testid="admin-wishlist-multi-badge">Multi-site</span>
+                            ) : null}
                             {place.isPublic ? (
                               <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]" data-testid="admin-wishlist-public-badge">Public</span>
                             ) : null}
@@ -128,6 +167,11 @@ export default async function AdminWishlistPage() {
                             ) : null}
                           </div>
                           <p className="mt-2 text-sm text-[var(--text-secondary)]">{place.locationName}</p>
+                          {place.parentId ? (
+                            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                              Child of: {places.find((p) => p.id === place.parentId)?.name ?? place.parentId}
+                            </p>
+                          ) : null}
                           {place.description ? (
                             <p className="mt-1 text-sm text-[var(--text-secondary)]">{place.description}</p>
                           ) : null}
@@ -157,6 +201,22 @@ export default async function AdminWishlistPage() {
                           </label>
                           <WishlistLocationAutocomplete defaultLocationName={place.locationName} />
                         </div>
+
+                        {/* Item type */}
+                        <fieldset>
+                          <legend className="mb-2 text-sm font-medium text-[var(--text-primary)]">Item type</legend>
+                          <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                            <label className="inline-flex items-center gap-2">
+                              <input defaultChecked={place.itemType !== "multi"} name="itemType" type="radio" value="single" />
+                              Single location
+                            </label>
+                            <label className="inline-flex items-center gap-2">
+                              <input defaultChecked={place.itemType === "multi"} name="itemType" type="radio" value="multi" />
+                              Multi-site area
+                            </label>
+                          </div>
+                        </fieldset>
+
                         <label className="block text-sm text-[var(--text-secondary)]">
                           <span className="mb-1 block font-medium text-[var(--text-primary)]">Short description <span className="font-normal text-[var(--text-secondary)]">(optional, max 500 chars)</span></span>
                           <textarea className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.description ?? ""} maxLength={500} name="description" rows={2} />
@@ -178,9 +238,25 @@ export default async function AdminWishlistPage() {
                           <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.imageUrl ?? ""} name="imageUrl" placeholder="https://images.example.com/place.jpg" type="url" />
                         </label>
                         <label className="block text-sm text-[var(--text-secondary)]">
-                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Detail page slug <span className="font-normal text-[var(--text-secondary)]">(optional)</span></span>
+                          <span className="mb-1 block font-medium text-[var(--text-primary)]">Detail page slug <span className="font-normal text-[var(--text-secondary)]">(optional; required for multi-site)</span></span>
                           <input className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.detailSlug ?? ""} name="detailSlug" placeholder="banff-gondola" type="text" />
                         </label>
+
+                        {/* Parent selection — only sensible for single items */}
+                        {place.itemType !== "multi" && multiPlaces.length > 0 ? (
+                          <label className="block text-sm text-[var(--text-secondary)]">
+                            <span className="mb-1 block font-medium text-[var(--text-primary)]">Parent area <span className="font-normal text-[var(--text-secondary)]">(optional)</span></span>
+                            <select className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" defaultValue={place.parentId ?? ""} name="parentId">
+                              <option value="">— None —</option>
+                              {multiPlaces
+                                .filter((mp) => mp.id !== place.id)
+                                .map((mp) => (
+                                  <option key={mp.id} value={mp.id}>{mp.name}</option>
+                                ))}
+                            </select>
+                          </label>
+                        ) : null}
+
                         <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
                           <label className="inline-flex items-center gap-2">
                             <input defaultChecked={place.visited} name="visited" type="checkbox" />
@@ -200,7 +276,7 @@ export default async function AdminWishlistPage() {
 
                       <form action={deleteWishlistPlaceAction} className="mt-3" data-testid="admin-wishlist-delete-form">
                         <input name="id" type="hidden" value={place.id} />
-                        <button className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:border-red-400 hover:text-red-200" type="submit">
+                        <button className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:border-red-400 hover:text-red-700" type="submit">
                           Delete destination
                         </button>
                       </form>

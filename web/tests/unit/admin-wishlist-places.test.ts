@@ -70,6 +70,8 @@ describe("admin wishlist places DAL", () => {
       visitedYear: null,
       imageUrl: null,
       detailSlug: null,
+      itemType: "single",
+      parentId: null,
       createdByUserId: "admin-1",
     });
 
@@ -136,6 +138,8 @@ describe("admin wishlist places DAL", () => {
       visitedYear: 2023,
       imageUrl: "https://example.com/glacier.jpg",
       detailSlug: "updated-glacier",
+      itemType: "single",
+      parentId: null,
     });
 
     expect(mockUpdate).toHaveBeenCalledOnce();
