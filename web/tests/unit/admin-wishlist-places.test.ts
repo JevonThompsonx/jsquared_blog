@@ -73,6 +73,7 @@ describe("admin wishlist places DAL", () => {
       itemType: "single",
       parentId: null,
       createdByUserId: "admin-1",
+      isPinned: false,
     });
 
     expect(mockInsert).toHaveBeenCalledOnce();
@@ -140,6 +141,7 @@ describe("admin wishlist places DAL", () => {
       detailSlug: "updated-glacier",
       itemType: "single",
       parentId: null,
+      isPinned: false,
     });
 
     expect(mockUpdate).toHaveBeenCalledOnce();

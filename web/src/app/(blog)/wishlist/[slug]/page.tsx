@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { WorldMap } from "@/components/blog/world-map";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getPublicEnv } from "@/lib/env";
+import { getAdminServerSession } from "@/lib/auth/session";
 import { getPublicWishlistPlaceBySlug, getPublicWishlistPlaceChildren } from "@/server/queries/wishlist";
 import type { PublicWishlistPlace } from "@/server/queries/wishlist";
 
@@ -55,12 +56,16 @@ function toMapPost(place: PublicWishlistPlace) {
 
 export default async function WishlistDetailPage({ params }: WishlistDetailPageProps) {
   const { slug } = await params;
-  const place = await getPublicWishlistPlaceBySlug(slug);
+  const [place, adminSession] = await Promise.all([
+    getPublicWishlistPlaceBySlug(slug),
+    getAdminServerSession(),
+  ]);
 
   if (!place) {
     notFound();
   }
 
+  const isAdmin = adminSession !== null;
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
 
   // Fetch children for multi-site items
@@ -68,8 +73,8 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
     ? await getPublicWishlistPlaceChildren(place.id)
     : [];
 
-  const featuredChildren = children.filter((c) => c.sortOrder < 10);
-  const otherChildren = children.filter((c) => c.sortOrder >= 10);
+  const featuredChildren = children.filter((c) => c.isPinned);
+  const otherChildren = children.filter((c) => !c.isPinned);
 
   const childMapPosts = children.map(toMapPost);
 
@@ -82,6 +87,15 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
           <Link aria-label="Back to wishlist" className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline" href="/wishlist">
             <span aria-hidden="true">← </span>Back to wishlist
           </Link>
+          {isAdmin ? (
+            <a
+              className="ml-4 text-xs font-semibold text-[var(--text-secondary)] underline-offset-4 hover:underline"
+              data-testid="admin-edit-detail-place-link"
+              href={`/admin/wishlist#place-${place.id}`}
+            >
+              Edit
+            </a>
+          ) : null}
           <p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
             {place.itemType === "multi" ? "Multi-site destination" : "Wishlist destination"}
           </p>

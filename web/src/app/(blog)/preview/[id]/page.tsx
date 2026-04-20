@@ -121,7 +121,9 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
             {statusLabel}
           </span>
           <span className="hidden text-xs text-[var(--text-secondary)] sm:block">
-            {post.status === "published" ? "Viewing live post data" : "This post is not publicly visible"}
+            {post.status === "published"
+              ? "Viewing live post data"
+              : "Not in the public feed — only accessible via this preview link"}
           </span>
         </div>
         <div className="flex items-center gap-3">

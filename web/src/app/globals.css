@@ -1111,7 +1111,7 @@ a {
    A gentle invert + hue-rotate flips them to a dark-toned palette while
    keeping colours roughly recognisable. */
 [data-theme-mode="dark"] .world-map-container {
-  filter: invert(0.9) hue-rotate(180deg) saturate(0.7) brightness(0.85);
+  filter: invert(0.88) hue-rotate(180deg) saturate(0.75) brightness(0.97);
 }
 
 [data-theme-mode="dark"] .world-map-container .maplibregl-popup-content,

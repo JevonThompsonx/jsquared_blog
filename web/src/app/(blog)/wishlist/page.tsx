@@ -54,6 +54,7 @@ export default async function WishlistPage() {
     linkLabel: place.detailSlug ? "View destination" : null,
   }));
 
+  const pinnedPlaces = places.filter((p) => p.isPinned);
   const locationGroups = groupWishlistByLocation(places);
 
   return (
@@ -76,6 +77,65 @@ export default async function WishlistPage() {
         {places.length > 0 && NEXT_PUBLIC_STADIA_MAPS_API_KEY ? (
           <div aria-label="Explore wishlist destinations on the map" role="region">
             <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={mapPlaces} showPostList={false} />
+          </div>
+        ) : null}
+
+        {/* Pinned section — shown below map, above full list */}
+        {pinnedPlaces.length > 0 ? (
+          <div className="mt-6" data-testid="pinned-wishlist-section">
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">📌 Pinned</p>
+            <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
+              {pinnedPlaces.map((place) => (
+                <li key={place.id} className="px-6 py-5" data-place-id={place.id} data-testid="pinned-wishlist-item">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <svg aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
+                        </svg>
+                        {place.detailSlug ? (
+                          <Link className="text-lg font-semibold text-[var(--text-primary)] underline-offset-4 hover:text-[var(--accent)] hover:underline" href={`/wishlist/${place.detailSlug}`}>
+                            {place.name}
+                          </Link>
+                        ) : (
+                          <h2 className="text-lg font-semibold text-[var(--text-primary)]">{place.name}</h2>
+                        )}
+                        {place.visited ? (
+                          <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">Visited</span>
+                        ) : null}
+                        {place.visitedYear ? (
+                          <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">{place.visitedYear}</span>
+                        ) : null}
+                      </div>
+                      {place.description ? (
+                        <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{place.description}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {place.externalUrl ? (
+                        <a
+                          aria-label={`Learn more about ${place.name}`}
+                          className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+                          href={place.externalUrl}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          Learn more
+                        </a>
+                      ) : null}
+                      {isAdmin ? (
+                        <a
+                          className="text-xs font-semibold text-[var(--text-secondary)] underline-offset-4 hover:underline"
+                          href={`/admin/wishlist#place-${place.id}`}
+                        >
+                          Edit
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
 

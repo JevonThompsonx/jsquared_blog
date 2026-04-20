@@ -193,6 +193,7 @@ export const wishlistPlaces = sqliteTable(
     detailSlug: text("detail_slug").unique(),
     linkedPostId: text("linked_post_id"),
     itemType: text("item_type", { enum: ["single", "multi"] }).notNull().default("single"),
+    isPinned: integer("is_pinned", { mode: "boolean" }).notNull().default(false),
     parentId: text("parent_id"),
     createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),

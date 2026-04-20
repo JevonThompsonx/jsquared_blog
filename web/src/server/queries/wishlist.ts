@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, isNull, notExists } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, notExists } from "drizzle-orm";
 
 import { posts, wishlistPlaces } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
@@ -20,6 +20,7 @@ export type PublicWishlistPlace = {
   imageUrl: string | null;
   detailSlug: string | null;
   itemType: "single" | "multi";
+  isPinned: boolean;
   parentId: string | null;
 };
 
@@ -57,6 +58,7 @@ function mapPlace(place: {
   imageUrl: string | null;
   detailSlug: string | null;
   itemType: "single" | "multi";
+  isPinned: boolean;
   parentId: string | null;
 }): PublicWishlistPlace {
   return {
@@ -82,6 +84,7 @@ const PLACE_SELECT = {
   imageUrl: wishlistPlaces.imageUrl,
   detailSlug: wishlistPlaces.detailSlug,
   itemType: wishlistPlaces.itemType,
+  isPinned: wishlistPlaces.isPinned,
   parentId: wishlistPlaces.parentId,
 } as const;
 
@@ -105,8 +108,7 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
           ),
         ),
       )
-      .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
-
+      .orderBy(desc(wishlistPlaces.isPinned), asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
     return places.map(mapPlace);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

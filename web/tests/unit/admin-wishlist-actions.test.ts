@@ -181,6 +181,7 @@ describe("wishlist admin actions", () => {
       detailSlug: "glacier-national-park-highlights",
       itemType: "single",
       parentId: null,
+      isPinned: false,
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });
@@ -262,6 +263,7 @@ describe("wishlist admin actions", () => {
       detailSlug: "updated-glacier-national-park",
       itemType: "single",
       parentId: null,
+      isPinned: false,
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/admin/wishlist");
   });

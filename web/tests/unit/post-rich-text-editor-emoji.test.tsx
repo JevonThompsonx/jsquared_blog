@@ -40,8 +40,10 @@ const fakeEditor = {
   getAttributes: vi.fn(() => ({})),
   getHTML: vi.fn(() => "<p>Hello world</p>"),
   getJSON: vi.fn(() => ({ type: "doc", content: [{ type: "paragraph" }] })),
-  state: { storedMarks: null },
+  state: { storedMarks: null, selection: { empty: true } },
   view: { dispatch: vi.fn() },
+  on: vi.fn(),
+  off: vi.fn(),
 };
 
 vi.mock("@/app/admin/actions", () => ({

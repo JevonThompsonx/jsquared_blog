@@ -26,6 +26,11 @@ vi.mock("@/components/blog/world-map", () => ({
 
 vi.mock("@/lib/env", () => ({
   getPublicEnv: () => ({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-key" }),
+  getServerEnv: vi.fn(() => ({})),
+}));
+
+vi.mock("@/lib/auth/session", () => ({
+  getAdminServerSession: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@/server/queries/wishlist", () => ({
@@ -58,6 +63,7 @@ describe("WishlistDetailPage", () => {
       detailSlug: "banff-gondola",
       itemType: "single",
       parentId: null,
+      isPinned: false,
     });
 
     const markup = renderToStaticMarkup(
@@ -90,6 +96,7 @@ describe("WishlistDetailPage", () => {
       detailSlug: "banff-gondola",
       itemType: "single",
       parentId: null,
+      isPinned: false,
     });
 
     const metadata = await generateMetadata({ params: Promise.resolve({ slug: "banff-gondola" }) });

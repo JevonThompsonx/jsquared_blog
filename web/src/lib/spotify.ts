@@ -25,7 +25,10 @@ export function parseSpotifyEmbedUrl(url: string | null | undefined): SpotifyEmb
       return null;
     }
 
-    if (parsed.port || parsed.hash || parsed.search) {
+    // Reject non-standard ports or credentials. Allow query strings and hashes
+    // because Spotify share links commonly include ?si=<tracking_id> — we strip
+    // those and build a canonical URL from the path alone.
+    if (parsed.port) {
       return null;
     }
 

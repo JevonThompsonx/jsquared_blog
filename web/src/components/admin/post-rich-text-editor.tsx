@@ -159,6 +159,121 @@ function ToolbarDivider(): React.JSX.Element {
   return <span className="hidden h-6 w-px shrink-0 bg-[var(--border)] sm:block" aria-hidden="true" />;
 }
 
+/**
+ * Floating bubble menu that appears above the current text selection.
+ * Implemented without @tiptap/react BubbleMenu (not available in TipTap v3).
+ * Uses window.getSelection() to derive viewport-relative position, renders
+ * as position:fixed so scrolling does not displace it.
+ */
+function FloatingBubbleMenu({ editor }: { editor: Editor }): React.JSX.Element | null {
+  const [selRect, setSelRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    function handleSelectionUpdate(): void {
+      const { selection } = editor.state;
+      if (selection.empty) {
+        setSelRect(null);
+        return;
+      }
+      const domSel = window.getSelection();
+      if (!domSel || domSel.rangeCount === 0) {
+        setSelRect(null);
+        return;
+      }
+      const r = domSel.getRangeAt(0).getBoundingClientRect();
+      // Guard against node selections or zero-width rects (e.g. image nodes)
+      setSelRect(r.width > 0 ? r : null);
+    }
+
+    function handleBlur(): void {
+      setSelRect(null);
+    }
+
+    editor.on("selectionUpdate", handleSelectionUpdate);
+    editor.on("blur", handleBlur);
+    return () => {
+      editor.off("selectionUpdate", handleSelectionUpdate);
+      editor.off("blur", handleBlur);
+    };
+  }, [editor]);
+
+  if (!selRect) return null;
+
+  // Position the popup 8 px above the selection midpoint, fixed to viewport.
+  const top = selRect.top - 8;
+  const left = selRect.left + selRect.width / 2;
+
+  return (
+    <div
+      style={{ position: "fixed", top, left, transform: "translate(-50%, -100%)", zIndex: 9999 }}
+    >
+      <div className="flex items-center gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1 shadow-lg backdrop-blur-[12px]">
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run()}
+          className={`flex items-center justify-center rounded px-2.5 py-1.5 text-sm font-bold transition-colors min-h-[2rem] min-w-[2rem] ${editor.isActive("bold") ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"}`}
+          title="Bold"
+          aria-pressed={editor.isActive("bold")}
+        >
+          B
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run()}
+          className={`flex items-center justify-center rounded px-2.5 py-1.5 text-sm font-semibold italic transition-colors min-h-[2rem] min-w-[2rem] ${editor.isActive("italic") ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"}`}
+          title="Italic"
+          aria-pressed={editor.isActive("italic")}
+        >
+          I
+        </button>
+        <span className="mx-0.5 h-4 w-px bg-[var(--border)]" aria-hidden="true" />
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 2 }).run()}
+          className={`flex items-center justify-center rounded px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2rem] min-w-[2rem] ${editor.isActive("heading", { level: 2 }) ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"}`}
+          title="Heading 2"
+          aria-pressed={editor.isActive("heading", { level: 2 })}
+        >
+          H2
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 3 }).run()}
+          className={`flex items-center justify-center rounded px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2rem] min-w-[2rem] ${editor.isActive("heading", { level: 3 }) ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"}`}
+          title="Heading 3"
+          aria-pressed={editor.isActive("heading", { level: 3 })}
+        >
+          H3
+        </button>
+        <span className="mx-0.5 h-4 w-px bg-[var(--border)]" aria-hidden="true" />
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            const href = editor.getAttributes("link").href ?? "";
+            const url = window.prompt("Link URL", href);
+            if (url === null) return;
+            if (url.trim() === "") {
+              editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").unsetLink().run();
+            } else {
+              editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").setLink({ href: url.trim() }).run();
+            }
+          }}
+          className={`flex items-center justify-center rounded px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2rem] min-w-[2rem] ${editor.isActive("link") ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"}`}
+          title="Link"
+          aria-pressed={editor.isActive("link")}
+        >
+          🔗
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element | null {
   const [linkDraft, setLinkDraft] = useState("");
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -696,6 +811,10 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
           </div>
         </div>
       )}
+
+      {/* Floating BubbleMenu — appears on text selection */}
+      {editor ? <FloatingBubbleMenu editor={editor} /> : null}
+
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm">
         <EditorMenuBar editor={editor} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-xs leading-6 text-[var(--text-secondary)]">

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireAdminSession } from "@/lib/auth/session";
 import { geocodeLocation } from "@/lib/geocode";
+import { slugify } from "@/lib/utils";
 import {
   createAdminWishlistPlace,
   deleteAdminWishlistPlace,
@@ -29,6 +30,7 @@ export async function createWishlistPlaceAction(formData: FormData): Promise<voi
     sortOrder: formData.get("sortOrder"),
     visited: formData.get("visited") === "on",
     isPublic: formData.get("isPublic") === "on",
+    isPinned: formData.get("isPinned") === "on",
     externalUrl: formData.get("externalUrl"),
     visitedYear: formData.get("visitedYear"),
     imageUrl: formData.get("imageUrl"),
@@ -47,8 +49,14 @@ export async function createWishlistPlaceAction(formData: FormData): Promise<voi
   }
 
   try {
+    // Auto-generate detailSlug for multi-site items that have none
+    const detailSlug =
+      parsed.data.detailSlug ??
+      (parsed.data.itemType === "multi" ? slugify(parsed.data.name) || null : null);
+
     await createAdminWishlistPlace({
       ...parsed.data,
+      detailSlug,
       latitude: geo.lat,
       longitude: geo.lng,
       zoom: geo.zoom,
@@ -81,6 +89,7 @@ export async function updateWishlistPlaceAction(formData: FormData): Promise<voi
     sortOrder: formData.get("sortOrder"),
     visited: formData.get("visited") === "on",
     isPublic: formData.get("isPublic") === "on",
+    isPinned: formData.get("isPinned") === "on",
     externalUrl: formData.get("externalUrl"),
     visitedYear: formData.get("visitedYear"),
     imageUrl: formData.get("imageUrl"),
@@ -99,8 +108,14 @@ export async function updateWishlistPlaceAction(formData: FormData): Promise<voi
   }
 
   try {
+    // Auto-generate detailSlug for multi-site items that have none
+    const detailSlug =
+      parsed.data.detailSlug ??
+      (parsed.data.itemType === "multi" ? slugify(parsed.data.name) || null : null);
+
     await updateAdminWishlistPlace({
       ...parsed.data,
+      detailSlug,
       latitude: geo.lat,
       longitude: geo.lng,
       zoom: geo.zoom,

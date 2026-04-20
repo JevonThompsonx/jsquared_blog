@@ -33,7 +33,8 @@ export async function listLinksForPost(postId: string): Promise<PostLink[]> {
     }));
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
+    const causeMsg = error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    if (msg.includes("no such table") || msg.includes("SQLITE_ERROR") || causeMsg.includes("no such table")) {
       return [];
     }
     throw error;

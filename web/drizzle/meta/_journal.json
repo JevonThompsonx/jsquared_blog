@@ -134,6 +134,13 @@
       "when": 1775600200000,
       "tag": "0018_wishlist_item_type",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1775700000000,
+      "tag": "0019_wishlist_pinned",
+      "breakpoints": true
     }
   ]
 }

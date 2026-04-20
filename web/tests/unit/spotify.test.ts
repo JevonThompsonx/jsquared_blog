@@ -16,9 +16,19 @@ describe("parseSpotifyEmbedUrl", () => {
     expect(parseSpotifyEmbedUrl("https://open.spotify.com/album/1ATL5GLyefJaxhQzSPVrLX")?.kind).toBe("album");
   });
 
-  it("rejects URLs with query params, hashes, or credentials", () => {
-    expect(parseSpotifyEmbedUrl("https://open.spotify.com/track/abc123?si=token")).toBeNull();
-    expect(parseSpotifyEmbedUrl("https://open.spotify.com/track/abc123#frag")).toBeNull();
+  it("accepts share URLs with ?si= query param (Spotify share links always include it)", () => {
+    const result = parseSpotifyEmbedUrl("https://open.spotify.com/track/4bHsxqR3GMjc5K5kKkXmBl?si=abc123token");
+    expect(result?.kind).toBe("track");
+    expect(result?.id).toBe("4bHsxqR3GMjc5K5kKkXmBl");
+    // Embed URL must not include the ?si= param
+    expect(result?.embedUrl).toBe("https://open.spotify.com/embed/track/4bHsxqR3GMjc5K5kKkXmBl?utm_source=generator&theme=0");
+  });
+
+  it("accepts share URLs with both ?si= and #fragment", () => {
+    expect(parseSpotifyEmbedUrl("https://open.spotify.com/track/4bHsxqR3GMjc5K5kKkXmBl?si=abc#frag")?.kind).toBe("track");
+  });
+
+  it("rejects credentials", () => {
     expect(parseSpotifyEmbedUrl("https://user:pass@open.spotify.com/track/abc123")).toBeNull();
   });
 

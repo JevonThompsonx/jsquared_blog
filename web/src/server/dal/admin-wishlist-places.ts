@@ -16,6 +16,7 @@ export type AdminWishlistPlaceRecord = {
   sortOrder: number;
   visited: boolean;
   isPublic: boolean;
+  isPinned: boolean;
   externalUrl: string | null;
   visitedYear: number | null;
   imageUrl: string | null;
@@ -37,6 +38,7 @@ export type CreateAdminWishlistPlaceInput = {
   sortOrder: number;
   visited: boolean;
   isPublic: boolean;
+  isPinned: boolean;
   externalUrl: string | null;
   visitedYear: number | null;
   imageUrl: string | null;
@@ -57,6 +59,7 @@ export type UpdateAdminWishlistPlaceInput = {
   sortOrder: number;
   visited: boolean;
   isPublic: boolean;
+  isPinned: boolean;
   externalUrl: string | null;
   visitedYear: number | null;
   imageUrl: string | null;
@@ -80,6 +83,7 @@ export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceIn
     sortOrder: input.sortOrder,
     visited: input.visited,
     isPublic: input.isPublic,
+    isPinned: input.isPinned,
     externalUrl: input.externalUrl,
     visitedYear: input.visitedYear,
     imageUrl: input.imageUrl,
@@ -107,6 +111,7 @@ export async function updateAdminWishlistPlace(input: UpdateAdminWishlistPlaceIn
       sortOrder: input.sortOrder,
       visited: input.visited,
       isPublic: input.isPublic,
+      isPinned: input.isPinned,
       externalUrl: input.externalUrl,
       visitedYear: input.visitedYear,
       imageUrl: input.imageUrl,
@@ -127,30 +132,47 @@ export async function deleteAdminWishlistPlace(id: string): Promise<void> {
 export async function listAdminWishlistPlaces(): Promise<AdminWishlistPlaceRecord[]> {
   const db = getDb();
 
-  return db
-    .select({
-      id: wishlistPlaces.id,
-      name: wishlistPlaces.name,
-      locationName: wishlistPlaces.locationName,
-      description: wishlistPlaces.description,
-      locationLat: wishlistPlaces.locationLat,
-      locationLng: wishlistPlaces.locationLng,
-      locationZoom: wishlistPlaces.locationZoom,
-      sortOrder: wishlistPlaces.sortOrder,
-      visited: wishlistPlaces.visited,
-      isPublic: wishlistPlaces.isPublic,
-      externalUrl: wishlistPlaces.externalUrl,
-      visitedYear: wishlistPlaces.visitedYear,
-      imageUrl: wishlistPlaces.imageUrl,
-      detailSlug: wishlistPlaces.detailSlug,
-      linkedPostId: wishlistPlaces.linkedPostId,
-      itemType: wishlistPlaces.itemType,
-      parentId: wishlistPlaces.parentId,
-      createdAt: wishlistPlaces.createdAt,
-      updatedAt: wishlistPlaces.updatedAt,
-    })
-    .from(wishlistPlaces)
-    .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), desc(wishlistPlaces.createdAt));
+  try {
+    return await db
+      .select({
+        id: wishlistPlaces.id,
+        name: wishlistPlaces.name,
+        locationName: wishlistPlaces.locationName,
+        description: wishlistPlaces.description,
+        locationLat: wishlistPlaces.locationLat,
+        locationLng: wishlistPlaces.locationLng,
+        locationZoom: wishlistPlaces.locationZoom,
+        sortOrder: wishlistPlaces.sortOrder,
+        visited: wishlistPlaces.visited,
+        isPublic: wishlistPlaces.isPublic,
+        isPinned: wishlistPlaces.isPinned,
+        externalUrl: wishlistPlaces.externalUrl,
+        visitedYear: wishlistPlaces.visitedYear,
+        imageUrl: wishlistPlaces.imageUrl,
+        detailSlug: wishlistPlaces.detailSlug,
+        linkedPostId: wishlistPlaces.linkedPostId,
+        itemType: wishlistPlaces.itemType,
+        parentId: wishlistPlaces.parentId,
+        createdAt: wishlistPlaces.createdAt,
+        updatedAt: wishlistPlaces.updatedAt,
+      })
+      .from(wishlistPlaces)
+      .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), desc(wishlistPlaces.createdAt));
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const causeMsg = error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    if (
+      msg.includes("no such column") ||
+      msg.includes("no such table") ||
+      msg.includes("SQLITE_ERROR") ||
+      causeMsg.includes("no such column") ||
+      causeMsg.includes("no such table")
+    ) {
+      // Migration not yet applied — return empty list rather than crashing the admin page.
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function setWishlistPlaceLinkedPost(id: string, postId: string | null): Promise<void> {

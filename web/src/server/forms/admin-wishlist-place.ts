@@ -103,6 +103,7 @@ export const adminWishlistPlaceFormSchema = z.object({
   sortOrder: optionalIntegerField(0),
   visited: z.boolean().optional().default(false),
   isPublic: z.boolean().optional().default(true),
+  isPinned: z.boolean().optional().default(false),
   externalUrl: optionalHttpsUrlField,
   visitedYear: optionalVisitedYearField,
   imageUrl: optionalHttpsUrlField,

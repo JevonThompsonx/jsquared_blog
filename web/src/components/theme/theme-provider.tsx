@@ -312,7 +312,7 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--overlay-chip-bg": "rgba(251, 246, 235, 0.13)",
       "--overlay-chip-border": "rgba(251, 246, 235, 0.18)",
       "--overlay-chip-text": "#fffaf0",
-      "--card-image-filter": "brightness(0.9) saturate(0.98) contrast(1.02)",
+      "--card-image-filter": "saturate(0.98) contrast(1.01)",
     },
     lichen: {
       "--background": "linear-gradient(180deg, #1a241d 0%, #223028 44%, #2c3d34 100%)",
@@ -374,7 +374,7 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--overlay-chip-bg": "rgba(251, 246, 235, 0.13)",
       "--overlay-chip-border": "rgba(251, 246, 235, 0.18)",
       "--overlay-chip-text": "#fffaf0",
-      "--card-image-filter": "brightness(0.9) saturate(1) contrast(1.03)",
+      "--card-image-filter": "saturate(1) contrast(1.01)",
     },
   },
 };

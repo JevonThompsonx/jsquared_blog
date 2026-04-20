@@ -131,6 +131,10 @@ export default async function AdminWishlistPage() {
                     <input defaultChecked name="isPublic" type="checkbox" />
                     Show publicly
                   </label>
+                  <label className="inline-flex items-center gap-2">
+                    <input name="isPinned" type="checkbox" />
+                    Pin to top of list
+                  </label>
                 </div>
                 <button className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold" type="submit">
                   Save destination
@@ -161,6 +165,9 @@ export default async function AdminWishlistPage() {
                             ) : null}
                             {place.isPublic ? (
                               <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]" data-testid="admin-wishlist-public-badge">Public</span>
+                            ) : null}
+                            {place.isPinned ? (
+                              <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]" data-testid="admin-wishlist-pinned-badge">📌 Pinned</span>
                             ) : null}
                             {place.visited ? (
                               <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]" data-testid="admin-wishlist-visited-badge">Visited</span>
@@ -265,6 +272,10 @@ export default async function AdminWishlistPage() {
                           <label className="inline-flex items-center gap-2">
                             <input defaultChecked={place.isPublic} name="isPublic" type="checkbox" />
                             Show publicly
+                          </label>
+                          <label className="inline-flex items-center gap-2">
+                            <input defaultChecked={place.isPinned} name="isPinned" type="checkbox" />
+                            Pin to top of list
                           </label>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
