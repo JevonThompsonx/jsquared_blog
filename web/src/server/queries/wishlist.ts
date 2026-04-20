@@ -86,54 +86,70 @@ const PLACE_SELECT = {
 } as const;
 
 export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]> {
-  const db = getDb();
+  try {
+    const db = getDb();
 
-  const places = await db
-    .select(PLACE_SELECT)
-    .from(wishlistPlaces)
-    .where(
-      and(
-        eq(wishlistPlaces.isPublic, true),
-        // Only top-level items (not children of a multi-site parent)
-        isNull(wishlistPlaces.parentId),
-        notExists(
-          db
-            .select({ id: posts.id })
-            .from(posts)
-            .where(and(eq(posts.id, wishlistPlaces.linkedPostId), eq(posts.status, "published"))),
+    const places = await db
+      .select(PLACE_SELECT)
+      .from(wishlistPlaces)
+      .where(
+        and(
+          eq(wishlistPlaces.isPublic, true),
+          // Only top-level items (not children of a multi-site parent)
+          isNull(wishlistPlaces.parentId),
+          notExists(
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .where(and(eq(posts.id, wishlistPlaces.linkedPostId), eq(posts.status, "published"))),
+          ),
         ),
-      ),
-    )
-    .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
+      )
+      .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
 
-  return places.map(mapPlace);
+    return places.map(mapPlace);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function getPublicWishlistPlaceBySlug(slug: string): Promise<PublicWishlistPlace | null> {
-  const db = getDb();
+  try {
+    const db = getDb();
 
-  const [place] = await db
-    .select(PLACE_SELECT)
-    .from(wishlistPlaces)
-    .where(
-      and(
-        eq(wishlistPlaces.isPublic, true),
-        eq(wishlistPlaces.detailSlug, slug),
-        notExists(
-          db
-            .select({ id: posts.id })
-            .from(posts)
-            .where(and(eq(posts.id, wishlistPlaces.linkedPostId), eq(posts.status, "published"))),
+    const [place] = await db
+      .select(PLACE_SELECT)
+      .from(wishlistPlaces)
+      .where(
+        and(
+          eq(wishlistPlaces.isPublic, true),
+          eq(wishlistPlaces.detailSlug, slug),
+          notExists(
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .where(and(eq(posts.id, wishlistPlaces.linkedPostId), eq(posts.status, "published"))),
+          ),
         ),
-      ),
-    )
-    .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
+      )
+      .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
 
-  if (!place) {
-    return null;
+    if (!place) {
+      return null;
+    }
+
+    return mapPlace(place);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
+      return null;
+    }
+    throw error;
   }
-
-  return mapPlace(place);
 }
 
 /**
@@ -142,18 +158,26 @@ export async function getPublicWishlistPlaceBySlug(slug: string): Promise<Public
  * the parent controls visibility.
  */
 export async function getPublicWishlistPlaceChildren(parentId: string): Promise<PublicWishlistPlace[]> {
-  const db = getDb();
+  try {
+    const db = getDb();
 
-  const children = await db
-    .select(PLACE_SELECT)
-    .from(wishlistPlaces)
-    .where(
-      and(
-        eq(wishlistPlaces.parentId, parentId),
-        eq(wishlistPlaces.isPublic, true),
-      ),
-    )
-    .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
+    const children = await db
+      .select(PLACE_SELECT)
+      .from(wishlistPlaces)
+      .where(
+        and(
+          eq(wishlistPlaces.parentId, parentId),
+          eq(wishlistPlaces.isPublic, true),
+        ),
+      )
+      .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
 
-  return children.map(mapPlace);
+    return children.map(mapPlace);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
+      return [];
+    }
+    throw error;
+  }
 }

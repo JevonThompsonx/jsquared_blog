@@ -45,29 +45,45 @@ export async function upsertSeason(
   displayName: string,
   createdByUserId: string,
 ): Promise<void> {
-  const db = getDb();
-  const now = new Date();
+  try {
+    const db = getDb();
+    const now = new Date();
 
-  await db
-    .insert(seasons)
-    .values({
-      id,
-      seasonKey,
-      displayName,
-      createdByUserId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: seasons.seasonKey,
-      set: {
+    await db
+      .insert(seasons)
+      .values({
+        id,
+        seasonKey,
         displayName,
+        createdByUserId,
+        createdAt: now,
         updatedAt: now,
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: seasons.seasonKey,
+        set: {
+          displayName,
+          updatedAt: now,
+        },
+      });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function deleteSeasonByKey(seasonKey: string): Promise<void> {
-  const db = getDb();
-  await db.delete(seasons).where(eq(seasons.seasonKey, seasonKey));
+  try {
+    const db = getDb();
+    await db.delete(seasons).where(eq(seasons.seasonKey, seasonKey));
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
+      return;
+    }
+    throw error;
+  }
 }
