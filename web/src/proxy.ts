@@ -59,10 +59,20 @@ export function proxy(request: NextRequest): NextResponse {
 
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
+  // In development, allow localhost origins (covers direct access, Tailscale, etc.)
+  // and ws:// for Turbopack HMR WebSocket connections.
+  const devSources = isProduction ? [] : [
+    "http://localhost:*",
+    "ws://localhost:*",
+    `http://${request.nextUrl.hostname}:*`,
+    `ws://${request.nextUrl.hostname}:*`,
+  ];
+
   const imgSrc = [
     "'self'",
     "data:",
     "blob:",
+    ...devSources,
     "https://res.cloudinary.com",
     "https://*.cloudinary.com",
     "https://*.supabase.co",
@@ -75,6 +85,7 @@ export function proxy(request: NextRequest): NextResponse {
 
   const connectSrc = [
     "'self'",
+    ...devSources,
     "https://*.supabase.co",
     "wss://*.supabase.co",
     "https://*.sentry.io",

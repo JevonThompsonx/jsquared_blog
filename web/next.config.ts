@@ -60,6 +60,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   typedRoutes: true,
   poweredByHeader: false,
+  allowedDevOrigins: ["debai", "192.168.3.43"],
   async headers() {
     return [
       {
