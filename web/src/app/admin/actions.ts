@@ -704,9 +704,8 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         songUrl: caps.songUrl ? (existingPost as { songUrl?: string | null }).songUrl ?? null : null,
         savedByUserId: authorId,
       });
-    } catch {
-      // Non-fatal: log to stderr so it's visible in Vercel logs but don't rethrow.
-      console.error(`[revisions] Failed to create revision for post ${validPostId}`);
+    } catch (error) {
+      console.error(`[revisions] Failed to create revision for post ${validPostId}`, error);
     }
   }
 

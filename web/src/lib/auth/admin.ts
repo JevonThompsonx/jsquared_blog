@@ -168,8 +168,12 @@ export function buildAdminAuthOptions(): NextAuthOptions {
           return `${baseUrl}${url}`;
         }
 
-        if (new URL(url).origin === baseUrl) {
-          return url;
+        try {
+          if (new URL(url).origin === baseUrl) {
+            return url;
+          }
+        } catch {
+          // Invalid URL format — fall through to default redirect
         }
 
         return `${baseUrl}/admin`;

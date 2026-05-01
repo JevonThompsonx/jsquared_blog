@@ -17,9 +17,10 @@ export function groupWishlistByLocation(places: PublicWishlistPlace[]): Wishlist
   for (const place of places) {
     if (!map.has(place.locationName)) {
       order.push(place.locationName);
-      map.set(place.locationName, []);
+      map.set(place.locationName, [place]);
+    } else {
+      map.set(place.locationName, [...map.get(place.locationName)!, place]);
     }
-    map.get(place.locationName)!.push(place);
   }
 
   return order.map((locationName) => ({

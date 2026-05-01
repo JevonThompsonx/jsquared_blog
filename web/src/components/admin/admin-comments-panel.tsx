@@ -110,14 +110,13 @@ function buildThreads(flat: AdminCommentDTO[], sortBy: AdminCommentSortOption): 
   for (const c of flat) {
     if (c.parentId) {
       const existing = replyMap.get(c.parentId) ?? [];
-      existing.push(c);
-      replyMap.set(c.parentId, existing);
+      replyMap.set(c.parentId, [...existing, c]);
     }
   }
 
-  // Sort replies oldest-first always
-  for (const replies of replyMap.values()) {
-    replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  // Sort replies oldest-first always — create sorted copies in place
+  for (const [parentId, replies] of replyMap) {
+    replyMap.set(parentId, [...replies].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
   }
 
   // Sort top-level by the selected option

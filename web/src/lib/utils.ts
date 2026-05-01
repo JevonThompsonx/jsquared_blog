@@ -136,7 +136,10 @@ export function groupPostsBySeason(posts: BlogPost[]): SeasonPostGroup[] {
     const existingGroup = groups.get(key);
 
     if (existingGroup) {
-      existingGroup.posts.push(post);
+      groups.set(key, {
+        ...existingGroup,
+        posts: [...existingGroup.posts, post],
+      });
       continue;
     }
 

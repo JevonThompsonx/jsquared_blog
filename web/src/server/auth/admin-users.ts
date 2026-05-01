@@ -93,7 +93,7 @@ export async function ensureGitHubAdminUser(identity: GitHubAdminIdentity): Prom
       VALUES (?, ?, 'admin', ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         primary_email = excluded.primary_email,
-        role = 'admin',
+        role = CASE WHEN users.role = 'admin' THEN 'admin' ELSE excluded.role END,
         updated_at = excluded.updated_at
     `,
     args: [userId, email, timestamp, timestamp],

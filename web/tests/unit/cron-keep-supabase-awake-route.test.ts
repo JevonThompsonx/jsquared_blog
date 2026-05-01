@@ -22,11 +22,17 @@ describe("GET /api/cron/keep-supabase-awake", () => {
   });
 
   it("returns throttled response when rate limited", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CRON_SECRET", "very-secret-token");
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 30, remaining: 0, resetAt: Date.now() + 60_000 });
     const throttled = NextResponse.json({ error: "Too many requests" }, { status: 429 });
     vi.mocked(tooManyRequests).mockReturnValue(throttled);
 
-    const response = await GET(new Request("http://localhost/api/cron/keep-supabase-awake"));
+    const response = await GET(
+      new Request("http://localhost/api/cron/keep-supabase-awake", {
+        headers: { authorization: "Bearer very-secret-token" },
+      }),
+    );
 
     expect(response).toBe(throttled);
     expect(vi.mocked(pingSupabaseKeepalive)).not.toHaveBeenCalled();

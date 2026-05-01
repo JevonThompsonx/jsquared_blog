@@ -47,19 +47,24 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const { limit, offset, search, category, tag } = parse.data;
 
-  let posts;
-  if (category) {
-    posts = await listPublishedPostsByCategory(category, limit, offset);
-  } else if (tag) {
-    posts = await listPublishedPostsByTagSlug(tag, limit, offset);
-  } else {
-    posts = await listPublishedPosts(limit, offset, search);
-  }
+  try {
+    let posts;
+    if (category) {
+      posts = await listPublishedPostsByCategory(category, limit, offset);
+    } else if (tag) {
+      posts = await listPublishedPostsByTagSlug(tag, limit, offset);
+    } else {
+      posts = await listPublishedPosts(limit, offset, search);
+    }
 
-  return NextResponse.json({
-    posts,
-    limit,
-    offset,
-    hasMore: posts.length === limit,
-  });
+    return NextResponse.json({
+      posts,
+      limit,
+      offset,
+      hasMore: posts.length === limit,
+    });
+  } catch (error) {
+    console.error("[posts] Failed to list posts", error);
+    return NextResponse.json({ error: "Failed to load posts" }, { status: 500 });
+  }
 }

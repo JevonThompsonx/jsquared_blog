@@ -11,14 +11,14 @@ import { pingSupabaseKeepalive } from "@/server/supabase/keepalive";
 // UI: none; operational endpoint for keeping Supabase warm
 
 export async function GET(request: Request): Promise<NextResponse> {
-  const rl = await checkRateLimit(`cron-keep-supabase-awake:${getClientIp(request)}`, 30, 60_000);
-  if (!rl.allowed) {
-    return tooManyRequests(rl);
-  }
-
   const authError = requireCronAuthorization(request);
   if (authError) {
     return authError;
+  }
+
+  const rl = await checkRateLimit(`cron-keep-supabase-awake:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.allowed) {
+    return tooManyRequests(rl);
   }
 
   try {

@@ -44,7 +44,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: "Invalid bulk update request" }, { status: 400 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Invalid bulk update request" }, { status: 400 });
+    }
+    console.error("[bulk-status] Failed to update posts", error);
+    return NextResponse.json({ error: "Failed to update posts" }, { status: 500 });
   }
 }

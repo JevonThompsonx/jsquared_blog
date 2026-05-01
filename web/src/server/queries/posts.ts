@@ -65,8 +65,7 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
   const tagsByPostId = new Map<string, BlogTag[]>();
   for (const row of tagRows) {
     const existing = tagsByPostId.get(row.postId) ?? [];
-    existing.push({ id: row.tagId, name: row.name, slug: row.slug });
-    tagsByPostId.set(row.postId, existing);
+    tagsByPostId.set(row.postId, [...existing, { id: row.tagId, name: row.name, slug: row.slug }]);
   }
 
   return postRows.map((post) => ({
@@ -119,10 +118,11 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     return null;
   }
 
-  const [tagRows, imageRows, linkRows] = await Promise.all([
+  const [tagRows, imageRows, linkRows, commentCountRows] = await Promise.all([
     listTagsForPost(post.id),
     listImagesForPost(post.id),
     listLinksForPost(post.id),
+    listCommentCountsByPostIds([post.id]),
   ]);
 
   const images: BlogImage[] = imageRows.map((image) => ({
@@ -169,7 +169,7 @@ async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost |
     iovanderUrl: post.iovanderUrl ?? null,
     song: getSongMetadata(post),
     viewCount: post.viewCount,
-    commentCount: 0,
+    commentCount: commentCountRows.get(post.id) ?? 0,
     authorId: post.authorId,
     readingTimeMinutes: getPostReadingTime(post),
   };

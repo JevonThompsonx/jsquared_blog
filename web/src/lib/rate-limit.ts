@@ -138,8 +138,9 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
     return { allowed: false, limit, remaining: 0, resetAt: entry.resetAt };
   }
 
-  entry.count++;
-  return { allowed: true, limit, remaining: limit - entry.count, resetAt: entry.resetAt };
+  const newCount = entry.count + 1;
+  store.set(key, { ...entry, count: newCount });
+  return { allowed: true, limit, remaining: limit - newCount, resetAt: entry.resetAt };
 }
 
 // ---------------------------------------------------------------------------

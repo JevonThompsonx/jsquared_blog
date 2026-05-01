@@ -352,12 +352,16 @@ GET  /feed.xml
 
 **Security headers** ship from `web/src/proxy.ts` (dynamic CSP/nonces) and `web/next.config.ts` (remaining static headers).
 
+**Middleware** (`web/src/middleware.ts` / `web/src/proxy.ts`) is required for CSRF protection on state-changing admin requests and dynamic CSP headers with per-request nonces. It cannot be removed.
+
 ---
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, auth flow, data model, API routes, deployment |
+| [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
 | [docs/ARCHITECTURE-IMPROVEMENTS.md](./docs/ARCHITECTURE-IMPROVEMENTS.md) | Architecture notes and follow-up ideas |
 
 ---
