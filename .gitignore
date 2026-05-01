@@ -84,22 +84,9 @@ logs/
 __pycache__/
 *.pyc
 
-# Task files (Claude Code teams)
-tasks/
-
-# Personal configs (if any)
+# Personal configs
 personal/
 private/
-
-# Session templates (not committed)
-examples/sessions/*.tmp
-
-# Local drafts
-marketing/
-.dmux/
-.dmux-hooks/
-.claude/worktrees/
-.claude/scheduled_tasks.lock
 
 # Temporary files
 tmp/
@@ -108,15 +95,5 @@ temp/
 *.bak
 *.backup
 
-# Observer temp files (continuous-learning-v2)
-.observer-tmp/
-
-# Rust build artifacts
-ecc2/target/
-
-# Bootstrap pipeline outputs
-# Generated lock files in tool subdirectories
-.opencode/package-lock.json
-.opencode/node_modules/
+# Vercel
 .vercel/
-assets/images/security/badrudi-exploit.mp4

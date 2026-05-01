@@ -33,10 +33,8 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 jsquared_blog/
 ├── web/             # Active Next.js application
 ├── docs/            # Plans, handoffs, deployment, workflow notes
-├── CLAUDE.md        # Architecture + repo guidance
-├── AGENTS.md        # Multi-model ownership + coordination
-├── TODO.md          # Practical backlog / tracker
-└── prompt.md        # Project prompt / architecture guardrails
+├── assets/          # Static assets
+└── testImages/      # Test image fixtures
 ```
 
 ---
@@ -343,11 +341,6 @@ GET  /feed.xml
 
 | Document | Purpose |
 |----------|---------|
-| [CLAUDE.md](./CLAUDE.md) | Complete technical reference |
-| [AGENTS.md](./AGENTS.md) | Model ownership and coordination |
-| [TODO.md](./TODO.md) | Feature tracker & roadmap |
-| [docs/COMMAND-AGENT-MAP.md](./docs/COMMAND-AGENT-MAP.md) | Command and agent routing reference |
-| [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) | Common setup and workflow fixes |
 | [docs/ARCHITECTURE-IMPROVEMENTS.md](./docs/ARCHITECTURE-IMPROVEMENTS.md) | Architecture notes and follow-up ideas |
 
 ---
