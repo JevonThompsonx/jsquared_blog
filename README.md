@@ -57,6 +57,23 @@ bun install
 
 Copy `web/.env.example` to `web/.env.local` and fill in the values your environment needs.
 
+For **unit tests**, Vitest loads `web/.env.test.local` automatically via the env-loader. Create this file with dummy values to satisfy the Zod schema validation at module init time (no real credentials needed for unit tests):
+
+```bash
+# Minimal test env — satisfies schema, no real services
+TURSO_DATABASE_URL=https://test-db.turso.io
+TURSO_AUTH_TOKEN=test-token
+AUTH_SECRET=test-secret-minimum-32-characters!!
+AUTH_GITHUB_ID=test-id
+AUTH_GITHUB_SECRET=test-secret
+CLOUDINARY_CLOUD_NAME=test
+CLOUDINARY_API_KEY=test-key
+CLOUDINARY_API_SECRET=test-secret
+SUPABASE_URL=https://test.supabase.co
+SUPABASE_ANON_KEY=test-key
+CRON_SECRET=test-cron-secret-min-16
+```
+
 Required app/runtime variables:
 
 ```bash
