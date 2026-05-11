@@ -677,9 +677,13 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     // Explicit toggles (Ctrl+B, toolbar buttons) still work because they
     // either apply marks directly (when text is selected) or set storedMarks
     // after our clearing (toolbar clicks don't fire mousedown on the editor).
+    // Explicitly set scrollIntoView=false on the storedMarks dispatch so the
+    // cursor doesn't snap to the top of the editor on every click.
     onSelectionUpdate: ({ editor: e }) => {
       if (isMouseDownRef.current && e.state.storedMarks !== null) {
-        e.view.dispatch(e.state.tr.setStoredMarks(null));
+        const tr = e.state.tr.setStoredMarks(null);
+        tr.scrollIntoView = false;
+        e.view.dispatch(tr);
       }
     },
     immediatelyRender: false,
@@ -786,7 +790,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
             <span className="rounded-full border border-[var(--border)] px-3 py-1">~{readingMinutes} min read</span>
           </div>
         </div>
-        <div className="min-h-[20rem] px-4 py-4 text-sm text-[var(--text-primary)] sm:min-h-[24rem]">
+        <div className="min-h-[20rem] px-4 py-4 text-sm text-[var(--text-primary)] sm:min-h-[24rem]" style={{ overflowAnchor: "none" }}>
           <EditorContent editor={editor} />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-[var(--border)] bg-[var(--background)] px-4 py-3 text-xs leading-6 text-[var(--text-secondary)]">
