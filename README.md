@@ -241,6 +241,10 @@ bun run ./scripts/seed-rich-content.ts
 
 ## Database Setup
 
+### Disaster Recovery
+
+See [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) for recovering accidentally deleted posts via Turso point-in-time branching.
+
 ### New Project Setup
 Apply Drizzle migrations against Turso from `web/`:
 ```bash
@@ -363,6 +367,8 @@ GET  /feed.xml
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, auth flow, data model, API routes, deployment |
 | [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
 | [docs/ARCHITECTURE-IMPROVEMENTS.md](./docs/ARCHITECTURE-IMPROVEMENTS.md) | Architecture notes and follow-up ideas |
+| [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) | Post deletion recovery via Turso PITR |
+| [docs/AGENTS.md](./docs/AGENTS.md) | OpenCode agent workflow instructions |
 
 ---
 

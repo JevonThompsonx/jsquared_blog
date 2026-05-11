@@ -84,77 +84,6 @@ function MenuButton({
   );
 }
 
-function TextStyleDropdown({ editor }: { editor: Editor }): React.JSX.Element {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(e: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-
-  const isHeadingActive = editor.isActive("heading");
-
-  const options = [
-    { label: "Paragraph", active: !isHeadingActive, action: () => editor.chain().focus(undefined, { scrollIntoView: false }).setParagraph().run() },
-    { label: "Heading 2", active: editor.isActive("heading", { level: 2 }), action: () => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 2 }).run() },
-    { label: "Heading 3", active: editor.isActive("heading", { level: 3 }), action: () => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 3 }).run() },
-    { label: "Heading 4", active: editor.isActive("heading", { level: 4 }), action: () => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 4 }).run() },
-  ];
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        aria-label="Text style"
-        className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-semibold transition-colors min-h-[2.5rem] bg-[var(--card-bg)] text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
-        onClick={() => setOpen((v) => !v)}
-        onMouseDown={(e) => e.preventDefault()}
-        title="Text style"
-        type="button"
-      >
-        {/* Static label — pilcrow icon */}
-        <span aria-hidden="true">¶</span>
-        <svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {open ? (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[10rem] rounded-lg border border-[var(--border)] bg-[var(--card-bg)] py-1 shadow-lg" role="listbox">
-          {options.map((opt) => (
-            <button
-              key={opt.label}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
-                opt.active
-                  ? "border-l-[3px] border-l-[var(--primary)] bg-[var(--accent-soft)] font-semibold text-[var(--accent)]"
-                  : "border-l-[3px] border-l-transparent text-[var(--text-primary)] hover:bg-[var(--accent-soft)]"
-              }`}
-              onClick={() => {
-                opt.action();
-                setOpen(false);
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-              role="option"
-              aria-selected={opt.active}
-              type="button"
-            >
-              {opt.active ? <span aria-hidden="true">✓</span> : <span className="w-[1ch]" />}
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function ToolbarDivider(): React.JSX.Element {
   return <span className="hidden h-6 w-px shrink-0 bg-[var(--border)] sm:block" aria-hidden="true" />;
 }
@@ -419,8 +348,35 @@ function EditorMenuBar({ editor }: { editor: Editor | null }): React.JSX.Element
       >
         {/* Horizontally scrollable button row for mobile */}
         <div className="flex items-center gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] sm:flex-wrap sm:gap-2 sm:overflow-x-visible">
-          {/* Group: Text Style */}
-          <TextStyleDropdown editor={editor} />
+          {/* Group: Paragraph, H2, H3, H4 */}
+          <MenuButton
+            active={!editor.isActive("heading")}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).setParagraph().run()}
+            title="Paragraph"
+          >
+            ¶
+          </MenuButton>
+          <MenuButton
+            active={editor.isActive("heading", { level: 2 })}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 2 }).run()}
+            title="Heading 2"
+          >
+            H2
+          </MenuButton>
+          <MenuButton
+            active={editor.isActive("heading", { level: 3 })}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 3 }).run()}
+            title="Heading 3"
+          >
+            H3
+          </MenuButton>
+          <MenuButton
+            active={editor.isActive("heading", { level: 4 })}
+            onClick={() => editor.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level: 4 }).run()}
+            title="Heading 4"
+          >
+            H4
+          </MenuButton>
 
           <ToolbarDivider />
 

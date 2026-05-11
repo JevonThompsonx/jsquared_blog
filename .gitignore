@@ -97,3 +97,7 @@ temp/
 
 # Vercel
 .vercel/
+
+# Internal docs (not for GitHub)
+docs/DISASTER-RECOVERY.md
+docs/AGENTS.md
