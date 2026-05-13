@@ -14,14 +14,14 @@
     "./web"
   ],
   "scripts": {
-    "dev": "bun run --cwd web dev",
-    "build": "bun run --cwd web build",
-    "lint": "bun run --cwd web lint",
-    "test": "bun run --cwd web test",
-    "dev:web": "bun run --cwd web dev",
-    "build:web": "bun run --cwd web build",
-    "lint:web": "bun run --cwd web lint",
-    "test:web": "bun run --cwd web test"
+    "dev": "pnpm --filter web run dev",
+    "build": "pnpm --filter web run build",
+    "lint": "pnpm --filter web run lint",
+    "test": "pnpm --filter web run test",
+    "dev:web": "pnpm --filter web run dev",
+    "build:web": "pnpm --filter web run build",
+    "lint:web": "pnpm --filter web run lint",
+    "test:web": "pnpm --filter web run test"
   },
   "devDependencies": {
     "vercel": "^50.42.0"
@@ -29,5 +29,5 @@
   "engines": {
     "node": ">=18"
   },
-  "packageManager": "yarn@4.9.2+sha512.1fc009bc09d13cfd0e19efa44cbfc2b9cf6ca61482725eb35bbc5e257e093ebf4130db6dfe15d604ff4b79efd8e1e8e99b25fa7d0a6197c9f9826358d4d65c3c"
+  "packageManager": "pnpm@11.1.1"
 }

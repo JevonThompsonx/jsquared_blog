@@ -4,18 +4,18 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "bun run ./scripts/build.ts",
+    "build": "tsx ./scripts/build.ts",
     "start": "next start",
     "lint": "eslint .",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun run ./scripts/migrate.ts",
-    "db:import:supabase": "bun run ./scripts/import-supabase.ts",
+    "db:migrate": "tsx ./scripts/migrate.ts",
+    "db:import:supabase": "tsx ./scripts/import-supabase.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "e2e:capture-admin-state": "node --import tsx/esm ./scripts/capture-admin-storage-state.ts",
-    "e2e:capture-public-state": "bunx tsx ./scripts/capture-public-storage-state.ts",
-    "seed:e2e": "bun run ./scripts/seed-e2e-fixtures.ts",
-    "seed:wishlist": "bun run ./scripts/seed-wishlist.ts"
+    "e2e:capture-public-state": "tsx ./scripts/capture-public-storage-state.ts",
+    "seed:e2e": "tsx ./scripts/seed-e2e-fixtures.ts",
+    "seed:wishlist": "tsx ./scripts/seed-wishlist.ts"
   },
   "dependencies": {
     "@libsql/client": "0.17.2",

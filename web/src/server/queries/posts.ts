@@ -18,6 +18,7 @@ import {
   listTagsByPostIds,
   listTagsForPost,
   type PublishedPostRecord,
+  type PublishedPostTagRecord,
 } from "@/server/dal/posts";
 import { listLinksForPost } from "@/server/dal/post-links";
 export { listLinksForPost as listPostLinks };
@@ -58,8 +59,14 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
 
   const postIds = postRows.map((post) => post.id);
   const [tagRows, commentCounts] = await Promise.all([
-    listTagsByPostIds(postIds),
-    listCommentCountsByPostIds(postIds),
+    listTagsByPostIds(postIds).catch((err) => {
+      console.warn("listTagsByPostIds failed, degrading tags:", err);
+      return [] as PublishedPostTagRecord[];
+    }),
+    listCommentCountsByPostIds(postIds).catch((err) => {
+      console.warn("listCommentCountsByPostIds failed, degrading comment counts:", err);
+      return new Map<string, number>();
+    }),
   ]);
 
   const tagsByPostId = new Map<string, BlogTag[]>();
@@ -180,13 +187,18 @@ export async function listAllPublishedPosts(): Promise<BlogPost[]> {
 }
 
 export async function listPublishedPosts(limit = 12, offset = 0, search?: string): Promise<BlogPost[]> {
-  if (search?.trim()) {
-    const allRows = await listAllPublishedPostRecords();
-    const allPosts = await withTags(allRows);
-    return filterPublishedPosts(allPosts, search).slice(offset, offset + limit);
-  }
+  try {
+    if (search?.trim()) {
+      const allRows = await listAllPublishedPostRecords();
+      const allPosts = await withTags(allRows);
+      return filterPublishedPosts(allPosts, search).slice(offset, offset + limit);
+    }
 
-  return withTags(await listPublishedPostRecords(limit, offset));
+    return withTags(await listPublishedPostRecords(limit, offset));
+  } catch (err) {
+    console.warn("listPublishedPosts failed, returning empty feed:", err);
+    return [];
+  }
 }
 
 export async function listPublishedPostsByCategory(category: string, limit = 12, offset = 0): Promise<BlogPost[]> {
