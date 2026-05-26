@@ -4,7 +4,7 @@ import { configuredPublicPostSlug } from "./helpers/public";
 
 test.describe("logged-out post comments gate", () => {
   test("published post comments prompt sign-in with a return path", async ({ browser }) => {
-    test.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    test.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     const postPath = `/posts/${configuredPublicPostSlug}`;
 

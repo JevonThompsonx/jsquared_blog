@@ -117,14 +117,17 @@ export function AdminDashboard({
   const lastResultIndex = totalCount === 0 ? 0 : firstResultIndex + posts.length - 1;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync controlled input with URL param changes
     setSearchInput(activeQuery);
   }, [activeQuery]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync controlled input with page changes
     setPageJumpInput(String(page));
   }, [page]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection when filters change
     setSelectedPostIds(new Set());
   }, [page, activeQuery, activeStatus, activeCategory, activeSort]);
 

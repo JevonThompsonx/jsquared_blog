@@ -7,7 +7,7 @@
 //
 // Steps:
 //   1. Start the dev server:
-//        bun run dev
+//        pnpm run dev
 //
 //   2. Log in as a public Supabase user (sign up at /signup if needed).
 //

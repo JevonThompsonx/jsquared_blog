@@ -248,6 +248,7 @@ export function AccountSettings() {
   useEffect(() => {
     if (didInit.current || !supabase) return;
     didInit.current = true;
+    let cancelled = false;
 
     void (async () => {
       try {
@@ -264,12 +265,13 @@ export function AccountSettings() {
         });
 
         if (!res.ok) {
-          setLoadError("Failed to load profile. Please refresh.");
+          if (!cancelled) setLoadError("Failed to load profile. Please refresh.");
           return;
         }
 
         const json = profileResponseSchema.parse(await res.json());
         const loaded = json.profile;
+        if (cancelled) return;
         setProfile(loaded);
         setDisplayName(loaded.displayName);
         setAvatarUrl(loaded.avatarUrl ?? "");
@@ -279,13 +281,16 @@ export function AccountSettings() {
           if (saved) restorePreference(saved.mode, saved.lightLook, saved.darkLook);
         }
       } catch {
-        setLoadError("Failed to load profile. Please refresh.");
+        if (!cancelled) setLoadError("Failed to load profile. Please refresh.");
       }
     })();
+
+    return () => { cancelled = true; };
   }, [supabase, restorePreference]);
 
   useEffect(() => {
     if (supabaseBootstrap.unavailable) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync loadError with bootstrap failure state
       setLoadError("Failed to load profile. Please refresh.");
     }
   }, [supabaseBootstrap.unavailable]);

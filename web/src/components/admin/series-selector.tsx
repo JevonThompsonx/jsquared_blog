@@ -30,6 +30,7 @@ export function SeriesSelector({
 
   useEffect(() => {
     if (!selectedSeries) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset taken numbers when no series selected
       setTakenNumbers([]);
       return;
     }

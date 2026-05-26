@@ -31,7 +31,7 @@
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| **Runtime** | Bun (dev), Node.js (prod) | Package manager, local dev server |
+| **Runtime** | Node.js, pnpm | Package manager, local dev server |
 | **Framework** | Next.js 16 App Router | Pages, API routes, server components |
 | **Primary DB** | Turso (libSQL) + Drizzle ORM | Content store: posts, users, comments, media, wishlist |
 | **Public Auth** | Supabase Auth | Email/password + OAuth for public users |
@@ -415,7 +415,7 @@ vercel.json (web/)
 ### Build Pipeline
 
 ```
-bun run build (web/scripts/build.ts)
+pnpm run build (web/scripts/build.ts)
     |
     Sentry source map upload (if SENTRY_AUTH_TOKEN set)
     |

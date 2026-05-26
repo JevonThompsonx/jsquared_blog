@@ -38,10 +38,10 @@ publicTest.describe("authenticated public-user flows", () => {
 
   publicTest.skip(!canRunAuthenticatedFlows, configuredPublicEmail
     ? getPublicStorageStateHint()
-    : "Run bun run seed:e2e to provision the public E2E email fixture.");
+    : "Run pnpm run seed:e2e to provision the public E2E email fixture.");
 
   publicTest("signed-in user can save a post and see it in bookmarks", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await page.goto(`/posts/${configuredPublicPostSlug}`);
 
@@ -63,7 +63,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can remove a saved post from bookmarks", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await page.goto(`/posts/${configuredPublicPostSlug}`);
 
@@ -171,7 +171,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can open the seeded post author's public profile", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await page.goto(`/posts/${configuredPublicPostSlug}`);
 
@@ -209,7 +209,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can post a comment on the seeded fixture post", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await setPublicRequestScope(page, "post-comment");
 
@@ -236,7 +236,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user still sees a newly posted comment when the mutation response omits refreshed comments", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await setPublicRequestScope(page, "post-comment-refetch-fallback");
 
@@ -294,7 +294,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user still sees a newly posted reply when the mutation response omits refreshed comments", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await setPublicRequestScope(page, "reply-comment-refetch-fallback");
 
@@ -375,7 +375,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user sees a non-fatal load error when comment refetch fails after a successful post", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await setPublicRequestScope(page, "post-comment-refetch-failure");
 
@@ -446,7 +446,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can reply to a comment on the seeded fixture post", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await setPublicRequestScope(page, "reply-comment");
 
@@ -489,7 +489,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can like and unlike a freshly created comment on the seeded fixture post", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
 
     await setPublicRequestScope(page, "like-comment");
 
@@ -540,7 +540,7 @@ publicTest.describe("authenticated public-user flows", () => {
   });
 
   publicTest("signed-in user can delete one of their own comments on the seeded fixture post", async ({ page }) => {
-    publicTest.skip(!configuredPublicPostSlug, "Run bun run seed:e2e to provision the public E2E post slug.");
+    publicTest.skip(!configuredPublicPostSlug, "Run pnpm run seed:e2e to provision the public E2E post slug.");
     publicTest.setTimeout(90_000);
 
     await setPublicRequestScope(page, "delete-own-comment");

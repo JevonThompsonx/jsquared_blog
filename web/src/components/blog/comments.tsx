@@ -303,6 +303,7 @@ export function Comments({ postId }: { postId: string }) {
   }, [accessToken, postId, sortBy]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchComments setState happens async after await, not cascading
     void fetchComments();
   }, [fetchComments]);
 

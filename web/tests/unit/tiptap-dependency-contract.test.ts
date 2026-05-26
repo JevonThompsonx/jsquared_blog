@@ -38,12 +38,10 @@ describe("tiptap direct dependency contract", () => {
   it("keeps the workspace lockfile in sync for @tiptap/core", () => {
     const packageJson = readWebPackageJson();
     const expectedCoreVersion = packageJson.dependencies?.["@tiptap/core"];
-    const bunLockPath = path.resolve(process.cwd(), "..", "bun.lock");
-    const bunLock = readFileSync(bunLockPath, "utf8");
+    const lockFilePath = path.resolve(process.cwd(), "..", "pnpm-lock.yaml");
+    const lockFile = readFileSync(lockFilePath, "utf8");
 
     expect(expectedCoreVersion).toBeTruthy();
-    expect(bunLock).toContain('"web": {');
-    expect(bunLock).toContain(`"@tiptap/core": "${expectedCoreVersion}"`);
-    expect(bunLock).toContain(`"@tiptap/core@${expectedCoreVersion}"`);
+    expect(lockFile).toContain(`'@tiptap/core@${expectedCoreVersion}':`);
   });
 });

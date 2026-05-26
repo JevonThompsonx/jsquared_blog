@@ -1,6 +1,6 @@
 #!/bin/bash
 cd server
-~/.bun/bin/bun run dev &
+pnpm run dev &
 SERVER_PID=$!
 sleep 5
 echo "Testing pagination API..."

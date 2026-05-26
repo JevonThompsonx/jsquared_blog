@@ -12,7 +12,7 @@ const canRunAuthenticatedFlows = hasPublicStorageState && Boolean(configuredPubl
 publicTest.describe("authenticated bookmarks error states", () => {
   publicTest.skip(!canRunAuthenticatedFlows, configuredPublicEmail
     ? getPublicStorageStateHint()
-    : "Run bun run seed:e2e to provision the public E2E email fixture.");
+    : "Run pnpm run seed:e2e to provision the public E2E email fixture.");
 
   publicTest("signed-in users fall back to the sign-in prompt when bookmark loading is unauthorized", async ({ page }) => {
     await page.route("**/api/bookmarks", async (route) => {

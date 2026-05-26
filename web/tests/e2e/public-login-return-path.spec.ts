@@ -9,7 +9,7 @@ const publicPassword = process.env.E2E_PUBLIC_PASSWORD?.trim() || "";
 
 test.describe("public login return path", () => {
   test("fresh public login returns to the requested signed-in route", async ({ page }) => {
-    test.skip(!publicEmail || !publicPassword, "Run bun run seed:e2e to provision public fixture credentials for live login coverage.");
+    test.skip(!publicEmail || !publicPassword, "Run pnpm run seed:e2e to provision public fixture credentials for live login coverage.");
 
     await page.goto("/login?redirectTo=/account");
 

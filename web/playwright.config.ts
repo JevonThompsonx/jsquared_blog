@@ -15,7 +15,7 @@ function getLocalWebServerConfig() {
     const port = parsedUrl.port || "3000";
 
     return {
-      command: `bun run dev -- --port ${port}`,
+      command: `pnpm run dev -- --port ${port}`,
       url: baseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

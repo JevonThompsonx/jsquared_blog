@@ -23,7 +23,7 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 | **Styling** | TailwindCSS 4 + CSS variables |
 | **Testing** | Vitest + Playwright |
 | **Deployment** | Vercel |
-| **Runtime / package manager** | Bun |
+| **Runtime / package manager** | pnpm |
 
 ---
 
@@ -42,7 +42,8 @@ jsquared_blog/
 ## Quick Start
 
 ### Prerequisites
-- [Bun](https://bun.sh/docs/installation)
+- [pnpm](https://pnpm.io/installation)
+- [Node.js](https://nodejs.org/) >= 18
 - Turso database credentials
 - Supabase project credentials
 - Cloudinary credentials
@@ -50,7 +51,7 @@ jsquared_blog/
 
 ### 1. Install Dependencies
 ```bash
-bun install
+pnpm install
 ```
 
 ### 2. Configure Environment Variables
@@ -121,12 +122,12 @@ Notes:
 - Geoapify route-planner variables are required only if you want `/route-planner` and `POST /api/route-plans` to return live route suggestions instead of `503 Route planner unavailable`.
 - Newsletter signup safely returns a non-fatal skipped result when Resend newsletter config is absent.
 - `SENTRY_AUTH_TOKEN` is only needed when uploading source maps during production builds.
-- Optional Playwright/E2E helper variables also live in `web/.env.example`; `bun run seed:e2e` writes managed fixture values to `web/.env.test.local`.
+- Optional Playwright/E2E helper variables also live in `web/.env.example`; `pnpm run seed:e2e` writes managed fixture values to `web/.env.test.local`.
 
 ### 3. Run Development Server
 ```bash
 cd web
-bun run dev
+pnpm run dev
 ```
 
 App runs at `http://localhost:3000`.
@@ -137,15 +138,15 @@ Admin:
 
 ```bash
 cd web
-bun run e2e:capture-admin-state
+pnpm run e2e:capture-admin-state
 ```
 
 Public fixture:
 
 ```bash
 cd web
-bun run seed:e2e
-bun run e2e:capture-public-state
+pnpm run seed:e2e
+pnpm run e2e:capture-public-state
 ```
 
 ---
@@ -215,26 +216,26 @@ bun run e2e:capture-public-state
 ```bash
 cd web
 
-bun run dev
-bun run lint
-bunx tsc --noEmit
-bun run test
-bun run test:e2e
-bun run build
+pnpm run dev
+pnpm run lint
+pnpm exec tsc --noEmit
+pnpm run test
+pnpm run test:e2e
+pnpm run build
 
 # Drizzle / Turso
-bun run db:generate
-bun run db:migrate
-bun run db:import:supabase
+pnpm run db:generate
+pnpm run db:migrate
+pnpm run db:import:supabase
 
 # E2E helpers
-bun run e2e:capture-admin-state
-bun run e2e:capture-public-state
-bun run seed:e2e
+pnpm run e2e:capture-admin-state
+pnpm run e2e:capture-public-state
+pnpm run seed:e2e
 
 # Content helpers
-bun run ./scripts/seed-series-categories.ts
-bun run ./scripts/seed-rich-content.ts
+pnpm run ./scripts/seed-series-categories.ts
+pnpm run ./scripts/seed-rich-content.ts
 ```
 
 ---
@@ -249,15 +250,15 @@ See [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) for recovering acci
 Apply Drizzle migrations against Turso from `web/`:
 ```bash
 cd web
-bun run db:migrate
+pnpm run db:migrate
 ```
 
 Optional local content helpers:
 
 ```bash
 cd web
-bun run ./scripts/seed-series-categories.ts
-bun run ./scripts/seed-rich-content.ts
+pnpm run ./scripts/seed-series-categories.ts
+pnpm run ./scripts/seed-rich-content.ts
 ```
 
 ### Core Tables
@@ -342,12 +343,12 @@ GET  /feed.xml
 
 | Check | Tool | Command |
 |-------|------|---------|
-| Type-check | TypeScript | `cd web && bunx tsc --noEmit` |
-| Lint | ESLint | `cd web && bun run lint` |
-| Unit tests | Vitest | `cd web && bun run test` |
-| E2E smoke | Playwright | `cd web && bun run test:e2e` |
-| Admin auth capture | Playwright | `cd web && bun run e2e:capture-admin-state` |
-| Public auth capture | Playwright | `cd web && bun run e2e:capture-public-state` |
+| Type-check | TypeScript | `cd web && pnpm exec tsc --noEmit` |
+| Lint | ESLint | `cd web && pnpm run lint` |
+| Unit tests | Vitest | `cd web && pnpm run test` |
+| E2E smoke | Playwright | `cd web && pnpm run test:e2e` |
+| Admin auth capture | Playwright | `cd web && pnpm run e2e:capture-admin-state` |
+| Public auth capture | Playwright | `cd web && pnpm run e2e:capture-public-state` |
 | CI | GitHub Actions | Auto-runs on PR / push to `main` |
 
 **Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.

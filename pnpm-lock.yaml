@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@sentry/cli':
+        specifier: 2.58.5
+        version: 2.58.5
       vercel:
         specifier: ^50.42.0
         version: 50.44.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(rollup@4.60.3)(typescript@5.9.3)

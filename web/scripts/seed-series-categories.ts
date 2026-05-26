@@ -1,6 +1,6 @@
 /**
  * Seed test series and categories for admin editor development.
- * Run: bun run ./scripts/seed-series-categories.ts
+ * Run: pnpm run seed-series-categories
  */
 
 import { getDb } from "../src/lib/db-core";

@@ -1,6 +1,6 @@
 /**
  * Seed location data onto existing published posts for map testing.
- * Run: bun run ./scripts/seed-locations.ts
+ * Run: pnpm run seed-locations
  */
 
 import { eq } from "drizzle-orm";

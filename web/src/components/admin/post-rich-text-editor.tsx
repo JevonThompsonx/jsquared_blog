@@ -677,12 +677,11 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
     // Explicit toggles (Ctrl+B, toolbar buttons) still work because they
     // either apply marks directly (when text is selected) or set storedMarks
     // after our clearing (toolbar clicks don't fire mousedown on the editor).
-    // Explicitly set scrollIntoView=false on the storedMarks dispatch so the
-    // cursor doesn't snap to the top of the editor on every click.
+    // Don't call scrollIntoView() on the storedMarks dispatch so the cursor
+    // doesn't snap to the top of the editor on every click.
     onSelectionUpdate: ({ editor: e }) => {
       if (isMouseDownRef.current && e.state.storedMarks !== null) {
         const tr = e.state.tr.setStoredMarks(null);
-        tr.scrollIntoView = false;
         e.view.dispatch(tr);
       }
     },
@@ -723,6 +722,7 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset dismiss when warnings change
     setWarningsDismissed(false);
   }, [warningSignature]);
 
