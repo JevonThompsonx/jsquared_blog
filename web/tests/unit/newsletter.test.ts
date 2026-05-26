@@ -61,7 +61,6 @@ describe("newsletter service", () => {
       firstName: "Jevon",
       lastName: undefined,
       unsubscribed: false,
-      properties: { source: "footer-form" },
     });
     expect(vi.mocked(addResendContactToSegmentByEmail)).toHaveBeenCalledWith("reader@example.com", "segment-123");
   });
@@ -135,7 +134,6 @@ describe("newsletter service", () => {
       unsubscribed: false,
       firstName: undefined,
       lastName: undefined,
-      properties: { source: "footer-form" },
     });
     expect(vi.mocked(addResendContactToSegmentByEmail)).toHaveBeenCalledWith("reader@example.com", "segment-123");
   });

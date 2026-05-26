@@ -22,14 +22,6 @@ function getNewsletterSegmentId(): string | null {
   return segmentId ? segmentId : null;
 }
 
-function getNewsletterProperties(source?: string): Record<string, string> | undefined {
-  if (!source) {
-    return undefined;
-  }
-
-  return { source };
-}
-
 export function isNewsletterConfigured(): boolean {
   return Boolean(getResendApiKey() && getNewsletterSegmentId());
 }
@@ -41,7 +33,6 @@ export async function subscribeToNewsletter(input: SubscribeToNewsletterValues):
   }
 
   const existingContact = await getResendContactByEmail(input.email);
-  const properties = getNewsletterProperties(input.source);
 
   if (!existingContact) {
     await createResendContact({
@@ -49,7 +40,6 @@ export async function subscribeToNewsletter(input: SubscribeToNewsletterValues):
       firstName: input.firstName,
       lastName: input.lastName,
       unsubscribed: false,
-      properties,
     });
 
     await addResendContactToSegmentByEmail(input.email, segmentId);
@@ -74,10 +64,6 @@ export async function subscribeToNewsletter(input: SubscribeToNewsletterValues):
     unsubscribed: false,
     firstName: input.firstName ?? existingContact.firstName ?? undefined,
     lastName: input.lastName ?? existingContact.lastName ?? undefined,
-    properties: {
-      ...existingContact.properties,
-      ...properties,
-    },
   });
   if (!isInNewsletterSegment) {
     await addResendContactToSegmentByEmail(input.email, segmentId);
