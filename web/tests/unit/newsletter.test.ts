@@ -6,7 +6,6 @@ vi.mock("@/lib/email/resend", () => ({
   getResendApiKey: vi.fn(),
   getResendConfig: vi.fn(),
   getResendContactByEmail: vi.fn(),
-  listResendContactSegmentsByEmail: vi.fn(),
   sendResendEmail: vi.fn(),
   updateResendContactByEmail: vi.fn(),
 }));
@@ -17,7 +16,6 @@ import {
   getResendApiKey,
   getResendConfig,
   getResendContactByEmail,
-  listResendContactSegmentsByEmail,
   sendResendEmail,
   updateResendContactByEmail,
 } from "@/lib/email/resend";
@@ -73,7 +71,7 @@ describe("newsletter service", () => {
     expect(vi.mocked(addResendContactToSegmentByEmail)).toHaveBeenCalledWith("reader@example.com", "segment-123");
   });
 
-  it("returns already-subscribed when the contact is active and already in the segment", async () => {
+  it("returns already-subscribed when add-to-segment throws for an active contact", async () => {
     process.env.RESEND_NEWSLETTER_SEGMENT_ID = "segment-123";
     vi.mocked(getResendApiKey).mockReturnValue("resend-key");
     vi.mocked(getResendContactByEmail).mockResolvedValue({
@@ -85,18 +83,15 @@ describe("newsletter service", () => {
       createdAt: "2026-03-20T12:00:00.000Z",
       properties: {},
     });
-    vi.mocked(listResendContactSegmentsByEmail).mockResolvedValue([
-      { id: "segment-123", name: "Newsletter", createdAt: "2026-03-20T12:00:00.000Z" },
-    ]);
+    vi.mocked(addResendContactToSegmentByEmail).mockRejectedValue(new Error("already in segment"));
 
     const result = await subscribeToNewsletter({ email: "reader@example.com" });
 
     expect(result).toEqual({ status: "already-subscribed" });
     expect(vi.mocked(updateResendContactByEmail)).not.toHaveBeenCalled();
-    expect(vi.mocked(addResendContactToSegmentByEmail)).not.toHaveBeenCalled();
   });
 
-  it("adds the newsletter segment for active contacts that are not yet subscribed to it", async () => {
+  it("adds segment for existing active contacts when add-to-segment succeeds", async () => {
     process.env.RESEND_NEWSLETTER_SEGMENT_ID = "segment-123";
     vi.mocked(getResendApiKey).mockReturnValue("resend-key");
     vi.mocked(getResendContactByEmail).mockResolvedValue({
@@ -108,7 +103,6 @@ describe("newsletter service", () => {
       createdAt: "2026-03-20T12:00:00.000Z",
       properties: {},
     });
-    vi.mocked(listResendContactSegmentsByEmail).mockResolvedValue([]);
     vi.mocked(addResendContactToSegmentByEmail).mockResolvedValue({ id: "segment-123" });
 
     const result = await subscribeToNewsletter({ email: "reader@example.com" });
@@ -118,7 +112,7 @@ describe("newsletter service", () => {
     expect(vi.mocked(updateResendContactByEmail)).not.toHaveBeenCalled();
   });
 
-  it("reactivates unsubscribed contacts and adds the segment when needed", async () => {
+  it("reactivates unsubscribed contacts and adds the segment", async () => {
     process.env.RESEND_NEWSLETTER_SEGMENT_ID = "segment-123";
     vi.mocked(getResendApiKey).mockReturnValue("resend-key");
     vi.mocked(getResendContactByEmail).mockResolvedValue({
@@ -130,7 +124,6 @@ describe("newsletter service", () => {
       createdAt: "2026-03-20T12:00:00.000Z",
       properties: { source: "old-form" },
     });
-    vi.mocked(listResendContactSegmentsByEmail).mockResolvedValue([]);
     vi.mocked(updateResendContactByEmail).mockResolvedValue({ id: "contact-1" });
     vi.mocked(addResendContactToSegmentByEmail).mockResolvedValue({ id: "segment-123" });
 
@@ -145,35 +138,43 @@ describe("newsletter service", () => {
     });
     expect(vi.mocked(addResendContactToSegmentByEmail)).toHaveBeenCalledWith("reader@example.com", "segment-123");
   });
+
+  it("returns subscribed even when add-to-segment fails for reactivated contacts", async () => {
+    process.env.RESEND_NEWSLETTER_SEGMENT_ID = "segment-123";
+    vi.mocked(getResendApiKey).mockReturnValue("resend-key");
+    vi.mocked(getResendContactByEmail).mockResolvedValue({
+      id: "contact-1",
+      email: "reader@example.com",
+      unsubscribed: true,
+      firstName: null,
+      lastName: null,
+      createdAt: "2026-03-20T12:00:00.000Z",
+      properties: {},
+    });
+    vi.mocked(updateResendContactByEmail).mockResolvedValue({ id: "contact-1" });
+    vi.mocked(addResendContactToSegmentByEmail).mockRejectedValue(new Error("already in segment"));
+
+    const result = await subscribeToNewsletter({ email: "reader@example.com" });
+
+    expect(result).toEqual({ status: "subscribed", source: "updated" });
+    expect(vi.mocked(updateResendContactByEmail)).toHaveBeenCalled();
+  });
 });
 
 describe("buildWelcomeEmail", () => {
-  it("includes the first name in the greeting when provided", () => {
-    const email = buildWelcomeEmail({ email: "a@b.com", firstName: "Jevon" });
-    expect(email.subject).toBe("Welcome to Jevon and Jessica's adventure blog");
-    expect(email.html).toContain("Jevon");
-    expect(email.text).toContain("Jevon");
-  });
-
-  it("uses 'adventurer' as fallback when no firstName is given", () => {
-    const email = buildWelcomeEmail({ email: "a@b.com" });
-    expect(email.html).toContain("adventurer");
-    expect(email.text).toContain("adventurer");
-  });
-
-  it("escapes HTML in the firstName to prevent XSS", () => {
-    const email = buildWelcomeEmail({ email: "a@b.com", firstName: "<script>alert('xss')</script>" });
-    expect(email.html).not.toContain("<script>");
-    expect(email.html).toContain("&lt;script&gt;");
-  });
-
-  it("sets a specific subject line", () => {
+  it("has a fixed heading in the subject line", () => {
     const email = buildWelcomeEmail({ email: "a@b.com" });
     expect(email.subject).toBe("Welcome to Jevon and Jessica's adventure blog");
+  });
+
+  it("has a fixed heading in the html and text versions", () => {
+    const email = buildWelcomeEmail({ email: "a@b.com" });
+    expect(email.html).toContain("Welcome to Jevon and Jessica's Adventure Blog!");
+    expect(email.text).toContain("Welcome to Jevon and Jessica's Adventure Blog!");
   });
 
   it("returns both html and text versions", () => {
-    const email = buildWelcomeEmail({ email: "a@b.com", firstName: "Test" });
+    const email = buildWelcomeEmail({ email: "a@b.com" });
     expect(email.html).toBeTruthy();
     expect(email.text).toBeTruthy();
     expect(email.html).not.toBe(email.text);

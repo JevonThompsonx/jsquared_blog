@@ -26,16 +26,6 @@ const resendContactSchema = z.object({
   properties: z.record(z.string(), z.string()).optional(),
 });
 
-const resendSegmentSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  created_at: z.string(),
-});
-
-const resendContactSegmentsSchema = z.object({
-  data: z.array(resendSegmentSchema),
-});
-
 const resendMutationSchema = z.object({
   id: z.string(),
 });
@@ -60,12 +50,6 @@ export type ResendContact = {
   lastName: string | null;
   createdAt: string;
   properties: Record<string, string>;
-};
-
-export type ResendSegment = {
-  id: string;
-  name: string;
-  createdAt: string;
 };
 
 type CreateResendContactInput = {
@@ -143,14 +127,6 @@ function toResendContact(contact: z.infer<typeof resendContactSchema>): ResendCo
   };
 }
 
-function toResendSegment(segment: z.infer<typeof resendSegmentSchema>): ResendSegment {
-  return {
-    id: segment.id,
-    name: segment.name,
-    createdAt: segment.created_at,
-  };
-}
-
 export function getResendApiKey(): string | null {
   const result = resendApiKeySchema.safeParse(process.env);
   if (!result.success) {
@@ -225,24 +201,6 @@ export async function updateResendContactByEmail(input: UpdateResendContactInput
     },
     resendMutationSchema,
   );
-}
-
-export async function listResendContactSegmentsByEmail(email: string): Promise<ResendSegment[]> {
-  const apiKey = getResendApiKey();
-  if (!apiKey) {
-    throw new ResendApiError(503, "Resend API key is not configured");
-  }
-
-  const payload = await resendJsonRequest(
-    `/contacts/${encodeURIComponent(email)}/segments`,
-    {
-      method: "GET",
-      headers: buildResendHeaders(apiKey, false),
-    },
-    resendContactSegmentsSchema,
-  );
-
-  return payload.data.map(toResendSegment);
 }
 
 export async function addResendContactToSegmentByEmail(email: string, segmentId: string): Promise<{ id: string }> {
