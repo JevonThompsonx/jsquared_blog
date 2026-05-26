@@ -4,8 +4,10 @@ vi.mock("@/lib/email/resend", () => ({
   addResendContactToSegmentByEmail: vi.fn(),
   createResendContact: vi.fn(),
   getResendApiKey: vi.fn(),
+  getResendConfig: vi.fn(),
   getResendContactByEmail: vi.fn(),
   listResendContactSegmentsByEmail: vi.fn(),
+  sendResendEmail: vi.fn(),
   updateResendContactByEmail: vi.fn(),
 }));
 
@@ -13,11 +15,17 @@ import {
   addResendContactToSegmentByEmail,
   createResendContact,
   getResendApiKey,
+  getResendConfig,
   getResendContactByEmail,
   listResendContactSegmentsByEmail,
+  sendResendEmail,
   updateResendContactByEmail,
 } from "@/lib/email/resend";
-import { subscribeToNewsletter } from "@/server/services/newsletter";
+import {
+  buildWelcomeEmail,
+  sendNewsletterWelcomeEmail,
+  subscribeToNewsletter,
+} from "@/server/services/newsletter";
 
 describe("newsletter service", () => {
   const originalSegmentId = process.env.RESEND_NEWSLETTER_SEGMENT_ID;
@@ -42,7 +50,7 @@ describe("newsletter service", () => {
     expect(vi.mocked(createResendContact)).not.toHaveBeenCalled();
   });
 
-  it("creates a new contact and adds it to the configured segment", async () => {
+  it("creates a new contact, adds to segment, and fires welcome email", async () => {
     process.env.RESEND_NEWSLETTER_SEGMENT_ID = "segment-123";
     vi.mocked(getResendApiKey).mockReturnValue("resend-key");
     vi.mocked(getResendContactByEmail).mockResolvedValue(null);
@@ -136,5 +144,77 @@ describe("newsletter service", () => {
       lastName: undefined,
     });
     expect(vi.mocked(addResendContactToSegmentByEmail)).toHaveBeenCalledWith("reader@example.com", "segment-123");
+  });
+});
+
+describe("buildWelcomeEmail", () => {
+  it("includes the first name in the greeting when provided", () => {
+    const email = buildWelcomeEmail({ email: "a@b.com", firstName: "Jevon" });
+    expect(email.subject).toBe("Welcome to J² Adventures!");
+    expect(email.html).toContain("Jevon");
+    expect(email.text).toContain("Jevon");
+  });
+
+  it("uses 'adventurer' as fallback when no firstName is given", () => {
+    const email = buildWelcomeEmail({ email: "a@b.com" });
+    expect(email.html).toContain("adventurer");
+    expect(email.text).toContain("adventurer");
+  });
+
+  it("escapes HTML in the firstName to prevent XSS", () => {
+    const email = buildWelcomeEmail({ email: "a@b.com", firstName: "<script>alert('xss')</script>" });
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).toContain("&lt;script&gt;");
+  });
+
+  it("always has a subject line", () => {
+    const email = buildWelcomeEmail({ email: "a@b.com" });
+    expect(email.subject).toBeTruthy();
+  });
+
+  it("returns both html and text versions", () => {
+    const email = buildWelcomeEmail({ email: "a@b.com", firstName: "Test" });
+    expect(email.html).toBeTruthy();
+    expect(email.text).toBeTruthy();
+    expect(email.html).not.toBe(email.text);
+  });
+});
+
+describe("sendNewsletterWelcomeEmail", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("skips when resend config is missing", async () => {
+    vi.mocked(getResendConfig).mockReturnValue(null);
+
+    const result = await sendNewsletterWelcomeEmail({ email: "a@b.com" });
+
+    expect(result).toBe("skipped");
+    expect(vi.mocked(sendResendEmail)).not.toHaveBeenCalled();
+  });
+
+  it("sends welcome email when resend is configured", async () => {
+    vi.mocked(getResendConfig).mockReturnValue({ apiKey: "key", fromEmail: "noreply@j2.com" });
+    vi.mocked(sendResendEmail).mockResolvedValue("sent");
+
+    const result = await sendNewsletterWelcomeEmail({ email: "a@b.com", firstName: "Jevon" });
+
+    expect(result).toBe("sent");
+    expect(vi.mocked(sendResendEmail)).toHaveBeenCalledWith({
+      to: "a@b.com",
+      subject: "Welcome to J² Adventures!",
+      html: expect.stringContaining("Jevon"),
+      text: expect.stringContaining("Jevon"),
+    });
+  });
+
+  it("returns skipped when sendResendEmail throws", async () => {
+    vi.mocked(getResendConfig).mockReturnValue({ apiKey: "key", fromEmail: "noreply@j2.com" });
+    vi.mocked(sendResendEmail).mockRejectedValue(new Error("Resend API down"));
+
+    const result = await sendNewsletterWelcomeEmail({ email: "a@b.com" });
+
+    expect(result).toBe("skipped");
   });
 });
