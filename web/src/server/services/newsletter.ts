@@ -34,22 +34,28 @@ export function buildWelcomeEmail(input: { email: string; firstName?: string }):
   text: string;
 } {
   const displayName = input.firstName ?? "adventurer";
-  const subject = "Welcome to J² Adventures!";
+  const subject = "Welcome to Jevon and Jessica's adventure blog";
   const html = [
     `<h1>Welcome to J² Adventures, ${escapeHtml(displayName)}!</h1>`,
-    `<p>You're now subscribed to the newsletter. You'll get updates on new posts, trail reports, and adventures.</p>`,
+    `<p>You're now subscribed to the newsletter! You'll get updates on new posts, trail reports, and adventures.</p>`,
+    `<p>Every great adventure begins with a single step — and you've just taken yours. Whether you're here for trail tales, gear chatter, or just to see what trouble Jevon and Jessica get into next, we're glad to have you along for the ride.</p>`,
+    `<p>Grab a map, lace up your boots, and keep an eye on your inbox. The next trail report is already brewing.</p>`,
     `<p>If you ever want to unsubscribe, just click the unsubscribe link in any email.</p>`,
-    `<p>Happy trails,<br/>The J² Team</p>`,
+    `<p>Happy trails,<br/>Jevon & Jessica</p>`,
   ].join("");
   const text = [
     `Welcome to J² Adventures, ${displayName}!`,
     "",
-    "You're now subscribed to the newsletter. You'll get updates on new posts, trail reports, and adventures.",
+    "You're now subscribed to the newsletter! You'll get updates on new posts, trail reports, and adventures.",
+    "",
+    "Every great adventure begins with a single step — and you've just taken yours. Whether you're here for trail tales, gear chatter, or just to see what trouble Jevon and Jessica get into next, we're glad to have you along for the ride.",
+    "",
+    "Grab a map, lace up your boots, and keep an eye on your inbox. The next trail report is already brewing.",
     "",
     "If you ever want to unsubscribe, just click the unsubscribe link in any email.",
     "",
     "Happy trails,",
-    "The J² Team",
+    "Jevon & Jessica",
   ].join("\n");
   return { subject, html, text };
 }

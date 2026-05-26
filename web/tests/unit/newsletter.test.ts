@@ -150,7 +150,7 @@ describe("newsletter service", () => {
 describe("buildWelcomeEmail", () => {
   it("includes the first name in the greeting when provided", () => {
     const email = buildWelcomeEmail({ email: "a@b.com", firstName: "Jevon" });
-    expect(email.subject).toBe("Welcome to J² Adventures!");
+    expect(email.subject).toBe("Welcome to Jevon and Jessica's adventure blog");
     expect(email.html).toContain("Jevon");
     expect(email.text).toContain("Jevon");
   });
@@ -167,9 +167,9 @@ describe("buildWelcomeEmail", () => {
     expect(email.html).toContain("&lt;script&gt;");
   });
 
-  it("always has a subject line", () => {
+  it("sets a specific subject line", () => {
     const email = buildWelcomeEmail({ email: "a@b.com" });
-    expect(email.subject).toBeTruthy();
+    expect(email.subject).toBe("Welcome to Jevon and Jessica's adventure blog");
   });
 
   it("returns both html and text versions", () => {
@@ -203,7 +203,7 @@ describe("sendNewsletterWelcomeEmail", () => {
     expect(result).toBe("sent");
     expect(vi.mocked(sendResendEmail)).toHaveBeenCalledWith({
       to: "a@b.com",
-      subject: "Welcome to J² Adventures!",
+      subject: "Welcome to Jevon and Jessica's adventure blog",
       html: expect.stringContaining("Jevon"),
       text: expect.stringContaining("Jevon"),
     });
