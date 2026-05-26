@@ -1,12 +1,6 @@
 {
   "files": [],
-  "references": [
-    { "path": "./shared" },
-    { "path": "./server" },
-    { "path": "./client" }
-  ],
   "compilerOptions": {
-    // This is the BASE configuration that others will extend.
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
     "module": "ESNext",

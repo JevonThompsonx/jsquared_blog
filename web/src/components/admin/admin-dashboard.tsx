@@ -226,7 +226,6 @@ export function AdminDashboard({
         }, 4000);
         router.refresh();
       } catch (err: unknown) {
-        console.error("Bulk publish failed:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
         setToastMessage(`Failed to publish posts: ${message}`);
         setTimeout(() => {
@@ -248,7 +247,6 @@ export function AdminDashboard({
         }, 4000);
         router.refresh();
       } catch (err: unknown) {
-        console.error("Bulk unpublish failed:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
         setToastMessage(`Failed to unpublish posts: ${message}`);
         setTimeout(() => {
@@ -264,7 +262,6 @@ export function AdminDashboard({
         const result = await createPostPreviewLinkAction(postId);
         window.open(result.previewPath, "_blank", "noopener,noreferrer");
       } catch (err: unknown) {
-        console.error("Preview failed:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
         setToastMessage(`Failed to create preview: ${message}`);
         setTimeout(() => {
@@ -284,7 +281,6 @@ export function AdminDashboard({
         }, 4000);
         router.push(getAdminEditorRoute(searchParams, result.postId, "cloned"));
       } catch (err: unknown) {
-        console.error("Clone failed:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
         setToastMessage(`Failed to clone post: ${message}`);
         setTimeout(() => {
@@ -322,7 +318,6 @@ export function AdminDashboard({
         }, 4000);
         router.refresh();
       } catch (err: unknown) {
-        console.error("Delete failed:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
         setToastMessage(`Failed to delete: ${message}`);
         setTimeout(() => {

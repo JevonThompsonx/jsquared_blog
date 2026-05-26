@@ -21,12 +21,12 @@ function stripCountry(displayName: string): string {
 
 export async function GET(request: Request): Promise<NextResponse> {
   const session = await requireAdminSession();
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const ip = getClientIp(request);
-  const rateLimitResult = await checkRateLimit(`location-autocomplete:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
+  const rateLimitResult = await checkRateLimit(`location-autocomplete:${session.user.id}:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!rateLimitResult.allowed) {
     return tooManyRequests(rateLimitResult);
   }

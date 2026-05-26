@@ -697,8 +697,8 @@ export function PostRichTextEditor({ contentJson, inputName, excerpt }: { conten
       try {
         const result = await validatePostContentWarningsAction(tiptapJson, excerpt);
         setBackendWarnings(result.warnings);
-      } catch (err) {
-        console.error("Failed to validate content:", err);
+      } catch {
+        // Validation warnings are non-critical; silently fall back
       } finally {
         setIsValidating(false);
       }
