@@ -10,9 +10,6 @@
     "travel-blog",
     "nextjs"
   ],
-  "workspaces": [
-    "./web"
-  ],
   "scripts": {
     "dev": "pnpm --filter web run dev",
     "build": "pnpm --filter web run build",
@@ -24,6 +21,7 @@
     "test:web": "pnpm --filter web run test"
   },
   "devDependencies": {
+    "@sentry/cli": "2.58.5",
     "vercel": "^50.42.0"
   },
   "engines": {

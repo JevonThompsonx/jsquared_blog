@@ -1,6 +1,6 @@
 /**
  * Seed stable admin E2E fixtures and persist their IDs for Playwright smoke tests.
- * Run: bun run seed:e2e
+ * Run: pnpm run seed:e2e
  */
 
 import path from "node:path";
@@ -375,7 +375,7 @@ async function main(): Promise<void> {
 
   if (!category) {
     throw new Error(
-      `Missing category ${FIXTURE_CATEGORY_ID}. Run bun run ./scripts/seed-series-categories.ts before seeding E2E fixtures.`,
+      `Missing category ${FIXTURE_CATEGORY_ID}. Run pnpm run seed-series-categories before seeding E2E fixtures.`,
     );
   }
 

@@ -12,7 +12,7 @@ test.describe("post login return path", () => {
   test("signing in from the bookmark gate returns to the post with bookmark controls unlocked", async ({ page }) => {
     test.skip(
       !publicEmail || !publicPassword || !publicPostSlug,
-      "Run bun run seed:e2e to provision public fixture credentials and a public post slug for live post login coverage.",
+      "Run pnpm run seed:e2e to provision public fixture credentials and a public post slug for live post login coverage.",
     );
 
     const postPath = `/posts/${publicPostSlug}`;
@@ -44,7 +44,7 @@ test.describe("post login return path", () => {
   test("signing in from the comments gate returns to the post with the comment composer unlocked", async ({ page }) => {
     test.skip(
       !publicEmail || !publicPassword || !publicPostSlug,
-      "Run bun run seed:e2e to provision public fixture credentials and a public post slug for live post login coverage.",
+      "Run pnpm run seed:e2e to provision public fixture credentials and a public post slug for live post login coverage.",
     );
 
     const postPath = `/posts/${publicPostSlug}`;

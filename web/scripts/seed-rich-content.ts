@@ -3,7 +3,7 @@
  * exercises all prose styling: h2–h4 headings, bold, italic, blockquote,
  * ul, ol, hr, inline images (Unsplash), and links.
  *
- * Run: bun run ./scripts/seed-rich-content.ts
+ * Run: pnpm run seed-rich-content
  */
 
 import { eq, inArray } from "drizzle-orm";

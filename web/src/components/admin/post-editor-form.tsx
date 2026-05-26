@@ -121,10 +121,12 @@ export function PostEditorForm({
   const spotifyEmbed = useMemo(() => parseSpotifyEmbedUrl(songUrlDraft), [songUrlDraft]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-only: capture timezone offset (must be empty during SSR)
     setBrowserOffsetMinutes(new Date().getTimezoneOffset().toString());
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clear previous error before new async preview
     setSongPreviewError(null);
 
     const trimmedUrl = songUrlDraft.trim();
@@ -150,8 +152,8 @@ export function PostEditorForm({
 
           setSongPreview(payload);
 
-          setSongTitleDraft((current) => current.trim() || !payload.song.title ? current : payload.song.title);
-          setSongArtistDraft((current) => current.trim() || !payload.song.artist ? current : payload.song.artist);
+          setSongTitleDraft((current) => (current.trim() || !payload.song.title) ? current : payload.song.title);
+          setSongArtistDraft((current) => (current.trim() || !payload.song.artist) ? current : payload.song.artist);
         } catch (error) {
           setSongPreview(null);
           setSongPreviewError(error instanceof Error ? error.message : "Song preview unavailable");

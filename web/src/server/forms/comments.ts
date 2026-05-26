@@ -16,8 +16,18 @@ export const postCommentsParamsSchema = z.object({
   postId: postIdSchema,
 });
 
+// Strip HTML tags from comment content to prevent XSS in email rendering
+function stripHtmlTags(value: string): string {
+  return value.replace(/<[^>]*>/g, "");
+}
+
 export const createCommentSchema = z.object({
-  content: z.string().trim().min(1, "Comment is required").max(2000, "Comment is too long"),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Comment is required")
+    .max(2000, "Comment is too long")
+    .transform(stripHtmlTags),
   parentId: commentIdSchema.optional(),
 });
 

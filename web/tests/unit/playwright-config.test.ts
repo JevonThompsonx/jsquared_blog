@@ -41,7 +41,7 @@ describe("playwright config", () => {
     const { default: config } = await importConfigModule();
 
     expect(config.webServer).toEqual({
-      command: "bun run dev -- --port 4123",
+      command: "pnpm run dev -- --port 4123",
       url: "http://localhost:4123",
       reuseExistingServer: true,
       timeout: 120_000,

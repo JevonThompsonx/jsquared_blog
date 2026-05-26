@@ -1,6 +1,6 @@
 /**
  * Seed stable wishlist destinations for local/admin testing.
- * Run: bun run seed:wishlist
+ * Run: pnpm run seed:wishlist
  */
 
 import { profiles, users, wishlistPlaces } from "../src/drizzle/schema";

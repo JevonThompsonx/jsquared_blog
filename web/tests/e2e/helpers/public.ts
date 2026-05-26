@@ -112,7 +112,7 @@ if (publicStorageStatePath) {
 
 export function getPublicStorageStateHint(): string {
   return `${getStorageStateHint({
-    command: "bun run e2e:capture-public-state",
+    command: "pnpm run e2e:capture-public-state",
     label: "playwright/.auth/public.json",
   })} after configuring E2E_PUBLIC_EMAIL and E2E_PUBLIC_PASSWORD, and regenerate the matching metadata when fixtures change.`;
 }

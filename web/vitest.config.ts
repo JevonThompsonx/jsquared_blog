@@ -32,7 +32,6 @@ const tsEsbuildPlugin = {
 };
 
 export default defineConfig({
-  oxc: false,
   plugins: [tsEsbuildPlugin],
   resolve: {
     alias: {

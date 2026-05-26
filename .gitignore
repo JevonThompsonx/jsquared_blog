@@ -98,6 +98,16 @@ temp/
 # Vercel
 .vercel/
 
+# Lockfiles from other package managers (should not exist after pnpm migration)
+bun.lock
+yarn.lock
+.yarnrc.yml
+
 # Internal docs (not for GitHub)
 docs/DISASTER-RECOVERY.md
 docs/AGENTS.md
+
+# Agent configuration (user-specific, not project code)
+.opencode/
+.vercel
+.env*.local

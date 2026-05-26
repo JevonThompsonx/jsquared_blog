@@ -63,6 +63,7 @@ export function RevisionHistory({ postId }: { postId: string }) {
 
   useEffect(() => {
     if (!isOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- show loading indicator before async fetch
     setIsLoading(true);
     fetch(`/api/admin/posts/${postId}/revisions`)
       .then(res => res.json())

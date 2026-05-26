@@ -1,6 +1,6 @@
 /**
  * Capture a reusable Playwright storage state for public Supabase email/password smoke tests.
- * Usage: bun run e2e:capture-public-state
+ * Usage: pnpm run e2e:capture-public-state
  * Required env: E2E_PUBLIC_EMAIL, E2E_PUBLIC_PASSWORD
  * Optional env: E2E_BASE_URL, E2E_PUBLIC_STORAGE_STATE, E2E_CAPTURE_HEADLESS=0
  */
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
 
   if (!publicPostSlug || !fixtureGeneratedAt) {
     throw new Error(
-      "E2E_PUBLIC_POST_SLUG and E2E_PUBLIC_FIXTURE_GENERATED_AT must be set before capturing public storage state. Run bun run seed:e2e first.",
+      "E2E_PUBLIC_POST_SLUG and E2E_PUBLIC_FIXTURE_GENERATED_AT must be set before capturing public storage state. Run pnpm run seed:e2e first.",
     );
   }
 
@@ -92,7 +92,7 @@ async function main(): Promise<void> {
   });
 
   if (!(await isBaseUrlReachable(baseURL))) {
-    throw new Error(`No app server is reachable at ${baseURL}. Start the app first (for example: bun run dev).`);
+    throw new Error(`No app server is reachable at ${baseURL}. Start the app first (for example: pnpm run dev).`);
   }
 
   const browser = await chromium.launch({ headless });

@@ -509,7 +509,7 @@ adminTest.describe("authenticated admin smoke tests", () => {
   });
 
   adminTest("admin moderation page shows inline delete confirmation when comments exist", async ({ page }) => {
-    adminTest.skip(!configuredAdminPostId, "Run bun run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
+    adminTest.skip(!configuredAdminPostId, "Run pnpm run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
 
     await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
 
@@ -525,7 +525,7 @@ adminTest.describe("authenticated admin smoke tests", () => {
   });
 
   adminTest("admin can moderate the seeded comment fixture", async ({ page }) => {
-    adminTest.skip(!configuredAdminPostId, "Run bun run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
+    adminTest.skip(!configuredAdminPostId, "Run pnpm run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
     adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
 
     await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);

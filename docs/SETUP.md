@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- **Bun** >= 1.x (recommended runtime). Install: `curl -fsSL https://bun.sh/install | bash`
+- **pnpm** >= 8.x (package manager). Install: `npm install -g pnpm`
 - **Node.js** >= 18
 - **Git** for version control
 
@@ -12,14 +12,14 @@
 
 ```bash
 # Install dependencies (from repo root)
-bun install
+pnpm install
 
 # Copy environment file
 cp web/.env.example web/.env.local
 
 # Fill in required values (see below), then:
 cd web
-bun run dev
+pnpm run dev
 ```
 
 App runs at `http://localhost:3000`.
@@ -105,17 +105,17 @@ Vitest auto-loads `web/.env.test.local` via the env-loader. No real credentials 
 3. Run migrations:
    ```bash
    cd web
-   bun run db:migrate
+   pnpm run db:migrate
    ```
 
 4. (Optional) Generate new migration after schema changes:
    ```bash
-   bun run db:generate
+   pnpm run db:generate
    ```
 
 5. (Optional) Import data from Supabase:
    ```bash
-   bun run db:import:supabase
+   pnpm run db:import:supabase
    ```
 
 ### Supabase
@@ -144,7 +144,7 @@ The full schema is defined in `web/src/drizzle/schema.ts` with 19 tables. Key ty
 
 ```bash
 cd web
-bun run dev
+pnpm run dev
 ```
 
 Opens at `http://localhost:3000` with hot module replacement.
@@ -153,7 +153,7 @@ Opens at `http://localhost:3000` with hot module replacement.
 
 ```bash
 cd web
-bun run build
+pnpm run build
 ```
 
 Uses `scripts/build.ts` which wraps `next build` with Sentry source map upload.
@@ -162,9 +162,9 @@ Uses `scripts/build.ts` which wraps `next build` with Sentry source map upload.
 
 ```bash
 cd web
-bun run lint
+pnpm run lint
 # Or for strict type checking:
-cd web && bunx tsc --noEmit
+cd web && pnpm exec tsc --noEmit
 ```
 
 ---
@@ -175,7 +175,7 @@ cd web && bunx tsc --noEmit
 
 ```bash
 cd web
-bun run test
+pnpm run test
 ```
 
 Loads `web/.env.test.local` automatically. Tests live in `web/tests/unit/`.
@@ -191,7 +191,7 @@ Configuration: `web/vitest.config.ts`
 
 ```bash
 cd web
-bun run test:e2e
+pnpm run test:e2e
 ```
 
 Configuration: `web/playwright.config.ts`
@@ -209,11 +209,11 @@ Before running E2E tests against a deployed instance, capture auth states:
 ```bash
 # Admin (requires GitHub OAuth login)
 cd web
-bun run e2e:capture-admin-state
+pnpm run e2e:capture-admin-state
 
 # Public user (requires Supabase test account)
-bun run seed:e2e
-bun run e2e:capture-public-state
+pnpm run seed:e2e
+pnpm run e2e:capture-public-state
 ```
 
 ---
@@ -224,7 +224,7 @@ bun run e2e:capture-public-state
 
 ```bash
 cd web
-bun run seed:e2e
+pnpm run seed:e2e
 ```
 
 Creates a publishable test post, category, tags, and a Supabase user for E2E testing. Writes fixture metadata to `web/.env.test.local`.
@@ -233,7 +233,7 @@ Creates a publishable test post, category, tags, and a Supabase user for E2E tes
 
 ```bash
 cd web
-bun run seed:wishlist
+pnpm run seed:wishlist
 ```
 
 Seeds example wishlist destinations.
@@ -242,7 +242,7 @@ Seeds example wishlist destinations.
 
 ```bash
 cd web
-bun run ./scripts/seed-series-categories.ts
+pnpm run ./scripts/seed-series-categories.ts
 ```
 
 Creates default series and categories for content organization.
@@ -251,7 +251,7 @@ Creates default series and categories for content organization.
 
 ```bash
 cd web
-bun run ./scripts/seed-rich-content.ts
+pnpm run ./scripts/seed-rich-content.ts
 ```
 
 Seeds a post with sample rich content (images, formatting, etc.).
@@ -260,7 +260,7 @@ Seeds a post with sample rich content (images, formatting, etc.).
 
 ```bash
 cd web
-bun run ./scripts/seed-locations.ts
+pnpm run ./scripts/seed-locations.ts
 ```
 
 Seeds location metadata for geotagged content.
@@ -337,7 +337,7 @@ Set `CRON_SECRET` in Vercel environment. Cron invocations include `Authorization
 ### Build Command
 
 ```bash
-bun run build
+pnpm run build
 ```
 
 Runs from `web/` directory (Vercel is configured to use `web/` as the root).
@@ -365,31 +365,31 @@ This means `web/.env.local` overrides `.env`, and test env files take highest pr
 
 ```bash
 # Development
-bun run dev                          # Start dev server (from web/)
+pnpm run dev                          # Start dev server (from web/)
 
 # Database
-bun run db:generate                  # Generate Drizzle migration
-bun run db:migrate                   # Apply pending migrations
-bun run db:import:supabase           # Import data from Supabase
+pnpm run db:generate                  # Generate Drizzle migration
+pnpm run db:migrate                   # Apply pending migrations
+pnpm run db:import:supabase           # Import data from Supabase
 
 # Testing
-bun run test                         # Run unit tests (Vitest)
-bun run test:e2e                     # Run E2E tests (Playwright)
+pnpm run test                         # Run unit tests (Vitest)
+pnpm run test:e2e                     # Run E2E tests (Playwright)
 
 # Code Quality
-bun run lint                         # Run ESLint
-bunx tsc --noEmit                    # TypeScript type check
+pnpm run lint                         # Run ESLint
+pnpm exec tsc --noEmit                    # TypeScript type check
 
 # E2E Auth Setup
-bun run seed:e2e                     # Seed E2E test fixtures
-bun run e2e:capture-admin-state      # Capture admin auth state for E2E
-bun run e2e:capture-public-state     # Capture public auth state for E2E
+pnpm run seed:e2e                     # Seed E2E test fixtures
+pnpm run e2e:capture-admin-state      # Capture admin auth state for E2E
+pnpm run e2e:capture-public-state     # Capture public auth state for E2E
 
 # Seeding
-bun run ./scripts/seed-series-categories.ts   # Seed series/categories
-bun run ./scripts/seed-rich-content.ts        # Seed sample rich content
-bun run ./scripts/seed-wishlist.ts            # Seed wishlist places
+pnpm run ./scripts/seed-series-categories.ts   # Seed series/categories
+pnpm run ./scripts/seed-rich-content.ts        # Seed sample rich content
+pnpm run ./scripts/seed-wishlist.ts            # Seed wishlist places
 
 # Building
-bun run build                        # Production build with Sentry
+pnpm run build                        # Production build with Sentry
 ```

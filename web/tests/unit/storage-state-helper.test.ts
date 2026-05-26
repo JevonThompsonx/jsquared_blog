@@ -38,8 +38,8 @@ describe("storage state helper", () => {
   });
 
   it("formats capture hints consistently", () => {
-    expect(getStorageStateHint({ command: "bun run e2e:capture-admin-state", label: "playwright/.auth/admin.json" })).toBe(
-      "Set the explicit storage-state env or create playwright/.auth/admin.json with `bun run e2e:capture-admin-state`.",
+    expect(getStorageStateHint({ command: "pnpm run e2e:capture-admin-state", label: "playwright/.auth/admin.json" })).toBe(
+      "Set the explicit storage-state env or create playwright/.auth/admin.json with `pnpm run e2e:capture-admin-state`.",
     );
   });
 });

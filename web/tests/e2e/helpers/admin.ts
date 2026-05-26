@@ -70,7 +70,7 @@ if (adminStorageStatePath) {
 
 export function getAdminStorageStateHint(): string {
   return getStorageStateHint({
-    command: "bun run e2e:capture-admin-state",
+    command: "pnpm run e2e:capture-admin-state",
     label: "playwright/.auth/admin.json",
   });
 }
