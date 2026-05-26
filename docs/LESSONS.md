@@ -115,6 +115,22 @@ Regularly audit `.gitignore` and committed artifacts. Stale files accumulate. A 
 
 ---
 
+## 9. CSP style-src Hardening (Remove 'unsafe-inline')
+
+### Problem
+Production `style-src` had `'unsafe-inline'` — allowed any inline `<style>` block, defeating nonce-based CSP. 63+ React `style={}` patterns needed the inline allowance, but `style-src` was too broad.
+
+### Fix
+- Split into `style-src 'self' 'nonce-${nonce}'` (production) — nonce covers `<style>` elements
+- Added `style-src-attr 'unsafe-inline'` — narrower directive covering only element-level `style` attributes (React `style={}`), not `<style>` blocks
+- Dev keeps `style-src 'self' 'unsafe-inline'` (Next.js HMR doesn't support nonce on injected CSS)
+- Relies on Next.js 16 render pipeline auto-applying nonce to `<style>` elements (extracts from `script-src` directive, propagates as `ctx.nonce`)
+
+### Lesson
+`style-src-attr` is a separate CSP directive that only controls inline `style` attributes (not `<style>` elements). Use it to allow React `style={}` without granting broad `<style>` block injection. Never use `'unsafe-inline'` in `style-src` in production — nonce covers every legitimate `<style>` element if the framework propagates nonces correctly.
+
+---
+
 ## Key Takeaways
 
 1. **Config drift**: Root configs drift from reality (shared/server/client dirs deleted but references remain). Audit during every major change.

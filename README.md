@@ -23,7 +23,7 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 | **Styling** | TailwindCSS 4 + CSS variables |
 | **Testing** | Vitest + Playwright |
 | **Deployment** | Vercel |
-| **Runtime / package manager** | pnpm |
+| **Runtime / package manager** | pnpm (primary), bun (dev-only for `bunx`) |
 
 ---
 
@@ -34,7 +34,9 @@ jsquared_blog/
 ├── web/             # Active Next.js application
 ├── docs/            # Plans, handoffs, deployment, workflow notes
 ├── assets/          # Static assets
-└── testImages/      # Test image fixtures
+├── testImages/      # Test image fixtures
+├── .sentryclirc     # Sentry CLI org/project config
+└── test-api.sh      # Quick smoke test script
 ```
 
 ---
@@ -353,7 +355,7 @@ GET  /feed.xml
 
 **Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.
 
-**Content sanitization** uses an allowlist-based `sanitize-html` pipeline before rendering prose.
+**Content sanitization** uses an allowlist-based `sanitize-html` pipeline before rendering prose. `sanitize-html` is pinned to exact `2.17.2` (2.17.3 had an XSS vulnerability). Comment content is additionally stripped of HTML tags via Zod `.transform(stripHtmlTags)` before storage.
 
 **Security headers** ship from `web/src/proxy.ts` (dynamic CSP/nonces) and `web/next.config.ts` (remaining static headers).
 
@@ -367,6 +369,7 @@ GET  /feed.xml
 |----------|---------|
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, auth flow, data model, API routes, deployment |
 | [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
+| [docs/LESSONS.md](./docs/LESSONS.md) | Lessons learned from codebase reviews |
 | [docs/ARCHITECTURE-IMPROVEMENTS.md](./docs/ARCHITECTURE-IMPROVEMENTS.md) | Architecture notes and follow-up ideas |
 | [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) | Post deletion recovery via Turso PITR |
 | [docs/AGENTS.md](./docs/AGENTS.md) | OpenCode agent workflow instructions |

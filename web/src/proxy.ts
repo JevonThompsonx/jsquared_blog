@@ -111,8 +111,11 @@ export function proxy(request: NextRequest): NextResponse {
       .filter(Boolean)
       .join(" "),
     "script-src-attr 'none'",
-    // style-src keeps unsafe-inline: Tailwind/CSS-in-JS needs it; style nonces are a separate effort
-    "style-src 'self' 'unsafe-inline'",
+    // style-src: nonce covers <style> from next/font + Next.js CSS injection
+    // style-src-attr 'unsafe-inline' covers 63+ React style={} patterns (low risk, no code exec)
+    // unsafe-inline only in dev (same conditional pattern as script-src)
+    isProduction ? `style-src 'self' 'nonce-${nonce}'` : "style-src 'self' 'unsafe-inline'",
+    isProduction ? "style-src-attr 'unsafe-inline'" : null,
     `img-src ${imgSrc}`,
     "font-src 'self' data: https://fonts.stadiamaps.com",
     `connect-src ${connectSrc}`,

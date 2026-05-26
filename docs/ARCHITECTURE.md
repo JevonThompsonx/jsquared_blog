@@ -1,6 +1,6 @@
 # J2 Adventures Architecture
 
-**Last Updated:** 2026-05-01
+**Last Updated:** 2026-05-25
 
 ## System Architecture Overview
 
@@ -31,7 +31,7 @@
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| **Runtime** | Node.js, pnpm | Package manager, local dev server |
+| **Runtime** | Node.js, pnpm (primary) | Package manager, local dev server |
 | **Framework** | Next.js 16 App Router | Pages, API routes, server components |
 | **Primary DB** | Turso (libSQL) + Drizzle ORM | Content store: posts, users, comments, media, wishlist |
 | **Public Auth** | Supabase Auth | Email/password + OAuth for public users |
@@ -307,7 +307,7 @@ checkRateLimit(key, limit, windowMs)
 - **Redis key prefix**: `j2:rl:*`
 - **Fallback**: In-memory `Map<string, { count, resetAt }>` with sweep every 100 writes
 - **IP extraction**: `x-forwarded-for` header (first IP), falls back to `x-real-ip`, then `"unknown"`
-- **Rate limit keys**: Typically `"<route>:<ip>"` (e.g., `"comment:203.0.113.1"`)
+- **Rate limit keys**: Typically `"<route>:<userId>:<ip>"` — location-autocomplete key includes `session.user.id` for per-admin tracking
 - **429 response**: Returns JSON error with `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After` headers
 
 ### Configuration Per Endpoint
@@ -454,14 +454,16 @@ proxy.ts middleware runs on EVERY request (via middleware.ts)
 
 ### 3. CSP Headers
 
-Dynamic per-request CSP is set in `proxy.ts`:
+Dynamic per-request CSP is set in `proxy.ts`. Production and dev use different `style-src` policies:
 
+**Production (hardened):**
 ```
 Content-Security-Policy:
   default-src 'self';
   script-src 'self' 'nonce-{random}' 'wasm-unsafe-eval' https://plausible.io;
   script-src-attr 'none';
-  style-src 'self' 'unsafe-inline';
+  style-src 'self' 'nonce-{random}';
+  style-src-attr 'unsafe-inline';
   img-src 'self' data: blob: https://res.cloudinary.com ...;
   font-src 'self' data: https://fonts.stadiamaps.com;
   connect-src 'self' https://*.supabase.co ... https://res.cloudinary.com;
@@ -470,8 +472,18 @@ Content-Security-Policy:
   frame-src 'self' https://open.spotify.com;
   form-action 'self';
   frame-ancestors 'none';
-  upgrade-insecure-requests (production only)
+  upgrade-insecure-requests
 ```
+
+**Dev:**
+- `style-src 'self' 'unsafe-inline'` (no nonce, no `style-src-attr`)
+- Same dev condition pattern as `script-src` (`'unsafe-eval'` vs `'wasm-unsafe-eval'`)
+
+**Why this split:**
+
+- `'unsafe-inline'` removed from production `style-src` — nonce covers all `<style>` elements (next/font, CSS-in-JS output). Next.js 16 render pipeline auto-extracts nonce from `script-src` directive and propagates as `ctx.nonce` to `<style>` elements, so no manual injection needed.
+- `style-src-attr 'unsafe-inline'` is required for 63+ React `style={}` inline style patterns across the codebase. This directive only covers element-level style attributes, not `<style>` blocks — low risk (no code execution vector).
+- Dev keeps `'unsafe-inline'` in `style-src` because Next.js dev mode injects hot-reload CSS directly without nonce support.
 
 Additional static headers set in `next.config.ts`:
 - `Referrer-Policy`, `X-Content-Type-Options`, `X-Frame-Options`
@@ -488,6 +500,8 @@ Additional static headers set in `next.config.ts`:
 ### 5. Content Security
 
 - User-provided HTML is sanitized through an allowlist-based `sanitize-html` pipeline
+- `sanitize-html` pinned to exact version `2.17.2` — 2.17.3 had an XSS vulnerability, pinned to avoid accidental bump
+- Comment content is stripped of HTML tags via a Zod `.transform(stripHtmlTags)` before storage (defense-in-depth against XSS in email rendering)
 - Post content is stored as canonical Tiptap JSON, with derived HTML/plain-text
 - Legacy HTML migration is behind an allowlist sanitization
 
@@ -496,59 +510,63 @@ Additional static headers set in `next.config.ts`:
 - Upstash Redis-backed sliding window in production (globally consistent)
 - In-memory fallback in dev/test only
 - Fails CLOSED in deployed environments (throws error if Redis not configured)
+- Location-autocomplete rate limit key includes `session.user.id` for per-admin tracking (not just IP)
 
 ---
 
 ## Directory Structure
 
 ```
-jsquared_blog/
-  web/                          # Next.js application
-    src/
-      app/                      # Next.js App Router pages + API routes
-        (blog)/                 # Public blog pages (posts, map, wishlist, etc.)
-        (public-auth)/          # Supabase auth pages (login, signup)
-        account/                # Public account settings
-        admin/                  # Admin dashboard and editors
-        api/                    # API routes (public, admin, cron)
-        settings/               # Theme/settings page
-      components/               # React components
-      drizzle/
-        schema.ts               # All 19 Drizzle table definitions
-      lib/                      # Client libraries and utilities
-        auth/                   # Admin auth (Auth.js config, session helpers)
-        cloudinary/             # Image upload, transform, EXIF parsing
-        email/                  # Resend email integration
-        supabase/               # Supabase auth (client + server)
-        rate-limit.ts           # Rate limiter (Upstash + in-memory fallback)
-        env.ts                  # Zod-validated env schema
-        env-loader.ts           # Dotenv file loading with precedence
-        cron-auth.ts            # Bearer token auth for cron endpoints
-        geocode.ts              # Nominatim geocoding
-      server/                   # Server-only business logic
-        auth/                   # Admin/public user DB operations
-        dal/                    # Data access layer (posts, comments, etc.)
-        forms/                  # Form validation logic
-        posts/                  # Post operations (clone, publish, preview, etc.)
-        queries/                # Read queries (posts, wishlist, dashboard)
-        services/               # External service integrations (email, newsletter)
-        supabase/               # Supabase keepalive
-        feeds/                  # RSS feed generation
-      middleware.ts             # Delegates to proxy.ts
-      proxy.ts                  # CSRF + CSP middleware
-      instrumentation.ts        # Sentry initialization
-    drizzle/                    # Drizzle Kit migration files
-    scripts/                    # Build, migration, seed, E2E helper scripts
-    tests/                      # Unit (Vitest) + E2E (Playwright) tests
-    next.config.ts              # Next.js config + static security headers
-    vitest.config.ts            # Vitest configuration
-    playwright.config.ts        # Playwright configuration
-    drizzle.config.ts           # Drizzle Kit configuration
+.sentryclirc                  # Sentry CLI config (org/project)
+test-api.sh                   # Quick smoke test script
 
-  docs/
-    ARCHITECTURE.md             # This file
-    SETUP.md                    # Setup and configuration guide
-    VERCEL-CLI-REFERENCE.md     # Vercel CLI commands reference
+web/                          # Next.js application
+  src/
+    app/                      # Next.js App Router pages + API routes
+      (blog)/                 # Public blog pages (posts, map, wishlist, etc.)
+      (public-auth)/          # Supabase auth pages (login, signup)
+      account/                # Public account settings
+      admin/                  # Admin dashboard and editors
+      api/                    # API routes (public, admin, cron)
+      settings/               # Theme/settings page
+    components/               # React components
+    drizzle/
+      schema.ts               # All 19 Drizzle table definitions
+    lib/                      # Client libraries and utilities
+      auth/                   # Admin auth (Auth.js config, session helpers)
+      cloudinary/             # Image upload, transform, EXIF parsing
+      email/                  # Resend email integration
+      supabase/               # Supabase auth (client + server)
+      rate-limit.ts           # Rate limiter (Upstash + in-memory fallback)
+      env.ts                  # Zod-validated env schema
+      env-loader.ts           # Dotenv file loading with precedence
+      cron-auth.ts            # Bearer token auth for cron endpoints
+      geocode.ts              # Nominatim geocoding
+    server/                   # Server-only business logic
+      auth/                   # Admin/public user DB operations
+      dal/                    # Data access layer (posts, comments, etc.)
+      forms/                  # Form validation logic
+      posts/                  # Post operations (clone, publish, preview, etc.)
+      queries/                # Read queries (posts, wishlist, dashboard)
+      services/               # External service integrations (email, newsletter)
+      supabase/               # Supabase keepalive
+      feeds/                  # RSS feed generation
+    middleware.ts             # Delegates to proxy.ts
+    proxy.ts                  # CSRF + CSP middleware
+    instrumentation.ts        # Sentry initialization
+  drizzle/                    # Drizzle Kit migration files
+  scripts/                    # Build, migration, seed, E2E helper scripts
+  tests/                      # Unit (Vitest) + E2E (Playwright) tests
+  next.config.ts              # Next.js config + static security headers
+  vitest.config.ts            # Vitest configuration
+  playwright.config.ts        # Playwright configuration
+  drizzle.config.ts           # Drizzle Kit configuration
+
+docs/
+  ARCHITECTURE.md             # This file
+  SETUP.md                    # Setup and configuration guide
+  VERCEL-CLI-REFERENCE.md     # Vercel CLI commands reference
+  LESSONS.md                  # Lessons learned from codebase reviews
 ```
 
 ---
@@ -568,7 +586,7 @@ jsquared_blog/
 | @tiptap/* | ^3.22.3 | Rich text editor |
 | maplibre-gl | ^5.22.0 | Map rendering |
 | react-map-gl | ^8.1.0 | React map component |
-| sanitize-html | ^2.17.2 | HTML content sanitization |
+| sanitize-html | 2.17.2 (exact) | HTML content sanitization — pinned to avoid XSS vuln in 2.17.3 |
 | zod | ^4.3.6 | Schema validation |
 | tailwindcss | ^4.2.2 | CSS framework |
 
@@ -578,3 +596,4 @@ jsquared_blog/
 
 - [SETUP.md](./SETUP.md) - Environment setup and configuration
 - [VERCEL-CLI-REFERENCE.md](./VERCEL-CLI-REFERENCE.md) - Vercel CLI commands
+- [LESSONS.md](./LESSONS.md) - Lessons learned from codebase reviews

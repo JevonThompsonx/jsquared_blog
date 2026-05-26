@@ -48,6 +48,9 @@ describe("middleware security hardening", () => {
     expect(response.headers.get("Expires")).toBe("0");
     expect(csp).not.toBeNull();
     expect(csp).toContain("script-src-attr 'none'");
+    expect(csp).toContain("style-src 'self'");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain("style-src-attr");
     expect(csp).toContain("frame-src 'self' https://open.spotify.com");
     expect(csp).toContain("manifest-src 'self'");
   });
@@ -61,5 +64,20 @@ describe("middleware security hardening", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBeNull();
+  });
+
+  it("applies CSP to non-admin routes", () => {
+    const request = new NextRequest("https://jsquaredadventures.com/about", {
+      method: "GET",
+    });
+
+    const response = proxy(request);
+    const csp = response.headers.get("Content-Security-Policy");
+
+    expect(csp).not.toBeNull();
+    expect(csp).toContain("style-src");
+    expect(csp).toContain("script-src");
+    expect(csp).toContain("img-src");
+    expect(csp).toContain("default-src 'self'");
   });
 });

@@ -1,11 +1,12 @@
 # J2 Adventures Setup Guide
 
-**Last Updated:** 2026-05-01
+**Last Updated:** 2026-05-25
 
 ## Prerequisites
 
-- **pnpm** >= 8.x (package manager). Install: `npm install -g pnpm`
+- **pnpm** >= 8.x (primary package manager). Install: `npm install -g pnpm`
 - **Node.js** >= 18
+- **bun** (optional, dev-only for `bunx` one-off runs)
 - **Git** for version control
 
 ## Quick Start
