@@ -7,8 +7,8 @@
 ```
                     Browser
                        |
-                 Vercel Edge (proxy.ts)
-                  middleware (CSRF + CSP)
+           Vercel Edge (web/src/proxy.ts)
+             proxy() — CSRF + CSP + nonce
                        |
             Next.js 16 App Router
               /              \
@@ -141,7 +141,9 @@ Request to API route
 
 ## Data Model
 
-### 19 Drizzle Tables (Turso/libSQL)
+### 18 Drizzle Tables + 1 Adapter-Managed (Turso/libSQL)
+
+`sessions` is managed by the Auth.js Turso adapter, not defined in `schema.ts`.
 
 | Table | Key Columns | Purpose |
 |-------|------------|---------|
@@ -435,10 +437,10 @@ pnpm run build (web/scripts/build.ts)
 - **Cron routes**: Protected by Bearer token with constant-time comparison
 - **Public routes**: No auth required (read-only for anonymous users)
 
-### 2. CSRF Protection (middleware)
+### 2. CSRF Protection (proxy.ts)
 
 ```
-proxy.ts middleware runs on EVERY request (via middleware.ts)
+web/src/proxy.ts — exports proxy() with middleware config matcher
     |
     Is it a state-changing method (POST, PUT, PATCH, DELETE)?
     AND is it an admin path (/admin or /api/admin/*)?
@@ -454,7 +456,7 @@ proxy.ts middleware runs on EVERY request (via middleware.ts)
 
 ### 3. CSP Headers
 
-Dynamic per-request CSP is set in `proxy.ts`. Production and dev use different `style-src` policies:
+Dynamic per-request CSP is set via `proxy.ts`. Production and dev use different `style-src` policies:
 
 **Production (hardened):**
 ```
@@ -467,12 +469,15 @@ Content-Security-Policy:
   img-src 'self' data: blob: https://res.cloudinary.com ...;
   font-src 'self' data: https://fonts.stadiamaps.com;
   connect-src 'self' https://*.supabase.co ... https://res.cloudinary.com;
-  media-src 'self' data: blob:;
-  worker-src 'self' blob:;
-  frame-src 'self' https://open.spotify.com;
-  form-action 'self';
-  frame-ancestors 'none';
-  upgrade-insecure-requests
+   manifest-src 'self';
+   object-src 'none';
+   base-uri 'self';
+   media-src 'self' data: blob:;
+   worker-src 'self' blob:;
+   frame-src 'self' https://open.spotify.com;
+   form-action 'self';
+   frame-ancestors 'none';
+   upgrade-insecure-requests
 ```
 
 **Dev:**
@@ -509,7 +514,7 @@ Additional static headers set in `next.config.ts`:
 
 - Upstash Redis-backed sliding window in production (globally consistent)
 - In-memory fallback in dev/test only
-- Fails CLOSED in deployed environments (throws error if Redis not configured)
+- `env.ts` `assertRateLimitConfiguration()` throws at module load if Upstash creds missing in deployed envs — fails CLOSED
 - Location-autocomplete rate limit key includes `session.user.id` for per-admin tracking (not just IP)
 
 ---
@@ -551,8 +556,7 @@ web/                          # Next.js application
       services/               # External service integrations (email, newsletter)
       supabase/               # Supabase keepalive
       feeds/                  # RSS feed generation
-    middleware.ts             # Delegates to proxy.ts
-    proxy.ts                  # CSRF + CSP middleware
+    proxy.ts                  # CSRF + CSP + Next.js middleware config (matcher + export)
     instrumentation.ts        # Sentry initialization
   drizzle/                    # Drizzle Kit migration files
   scripts/                    # Build, migration, seed, E2E helper scripts
@@ -564,6 +568,7 @@ web/                          # Next.js application
 
 docs/
   ARCHITECTURE.md             # This file
+  CODING.md                   # Codemap and contributor reference
   SETUP.md                    # Setup and configuration guide
   VERCEL-CLI-REFERENCE.md     # Vercel CLI commands reference
   LESSONS.md                  # Lessons learned from codebase reviews
@@ -595,5 +600,7 @@ docs/
 ## Related Areas
 
 - [SETUP.md](./SETUP.md) - Environment setup and configuration
+- [CODING.md](./CODING.md) - Codemap and contributor reference
 - [VERCEL-CLI-REFERENCE.md](./VERCEL-CLI-REFERENCE.md) - Vercel CLI commands
 - [LESSONS.md](./LESSONS.md) - Lessons learned from codebase reviews
+- [README.md](../README.md) - Project overview and quick start

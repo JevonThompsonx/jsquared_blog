@@ -128,7 +128,7 @@ Vitest auto-loads `web/.env.test.local` via the env-loader. No real credentials 
 
 ### Drizzle Schema
 
-The full schema is defined in `web/src/drizzle/schema.ts` with 19 tables. Key types:
+The full schema is defined in `web/src/drizzle/schema.ts` with 18 tables. Auth.js manages a `sessions` table via its Turso adapter. Key types:
 
 ```typescript
 // Tables: users, auth_accounts, profiles, posts, post_revisions,
@@ -266,6 +266,15 @@ pnpm run ./scripts/seed-locations.ts
 
 Seeds location metadata for geotagged content.
 
+### Wishlist Places
+
+```bash
+cd web
+pnpm run seed:wishlist
+```
+
+Seeds example wishlist destinations.
+
 ---
 
 ## Optional Integrations
@@ -387,9 +396,10 @@ pnpm run e2e:capture-admin-state      # Capture admin auth state for E2E
 pnpm run e2e:capture-public-state     # Capture public auth state for E2E
 
 # Seeding
+pnpm run seed:wishlist                         # Seed wishlist places
 pnpm run ./scripts/seed-series-categories.ts   # Seed series/categories
 pnpm run ./scripts/seed-rich-content.ts        # Seed sample rich content
-pnpm run ./scripts/seed-wishlist.ts            # Seed wishlist places
+pnpm run ./scripts/seed-locations.ts           # Seed location metadata
 
 # Building
 pnpm run build                        # Production build with Sentry

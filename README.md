@@ -33,7 +33,6 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 jsquared_blog/
 ├── web/             # Active Next.js application
 ├── docs/            # Plans, handoffs, deployment, workflow notes
-├── assets/          # Static assets
 ├── testImages/      # Test image fixtures
 ├── .sentryclirc     # Sentry CLI org/project config
 └── test-api.sh      # Quick smoke test script
@@ -236,8 +235,10 @@ pnpm run e2e:capture-public-state
 pnpm run seed:e2e
 
 # Content helpers
+pnpm run seed:wishlist                    # Seed example wishlist destinations
 pnpm run ./scripts/seed-series-categories.ts
 pnpm run ./scripts/seed-rich-content.ts
+pnpm run ./scripts/seed-locations.ts
 ```
 
 ---
@@ -263,7 +264,7 @@ pnpm run ./scripts/seed-series-categories.ts
 pnpm run ./scripts/seed-rich-content.ts
 ```
 
-### Core Tables
+### Core Tables (18 Drizzle + 1 adapter-managed)
 - `users` / `auth_accounts` - Local authorization + provider-linked identities
 - `profiles` - Public profile data, avatars, theme preference
 - `posts` - Blog posts, scheduling, content format, view count, location and song metadata
@@ -271,11 +272,14 @@ pnpm run ./scripts/seed-rich-content.ts
 - `post_revisions` - Admin revision history and restore snapshots
 - `media_assets` - Uploaded media metadata and EXIF fields
 - `post_images` - Gallery ordering, focal points, captions
+- `post_links` - External links per post
 - `series` - Linked post series metadata
+- `seasons` - Seasonal homepage hero grouping
 - `comments` - Post comments with visibility / moderation state
 - `comment_likes` - Comment likes (one per user)
 - `post_bookmarks` - Saved posts per public user
 - `categories`, `tags`, `post_tags` - Taxonomy
+- `sessions` - Auth.js Turso adapter-managed
 
 ---
 
@@ -297,6 +301,8 @@ GET  /map                         # World map of posts
 GET  /wishlist                    # Public travel wishlist
 GET  /route-planner               # Public route planner
 GET  /admin/wishlist              # Admin wishlist editor
+GET  /admin/tags                  # Admin tag management
+GET  /admin/seasons               # Admin season management
 GET  /category/[category]         # Category feed
 GET  /tag/[slug]                  # Tag feed
 GET  /series/[slug]               # Series detail
@@ -322,8 +328,10 @@ POST /api/route-plans
 GET  /api/admin/posts
 POST /api/admin/posts/clone
 POST /api/admin/posts/preview
-POST /api/admin/song-preview        # Admin-only song preview/autofill helper
+POST /api/admin/song-preview        # Admin-only song metadata preview/autofill
 POST /api/admin/posts/bulk-status
+GET  /api/admin/posts/warnings      # Content warning checks
+GET  /api/admin/location-autocomplete # Location autocomplete
 POST /api/admin/comments/moderate
 GET  /api/admin/posts/[postId]/comments
 GET  /api/admin/posts/[postId]/revisions
@@ -351,7 +359,7 @@ GET  /feed.xml
 | E2E smoke | Playwright | `cd web && pnpm run test:e2e` |
 | Admin auth capture | Playwright | `cd web && pnpm run e2e:capture-admin-state` |
 | Public auth capture | Playwright | `cd web && pnpm run e2e:capture-public-state` |
-| CI | GitHub Actions | Auto-runs on PR / push to `main` |
+| CI | Vercel | Auto-deploys on push to `main` |
 
 **Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.
 
@@ -359,7 +367,7 @@ GET  /feed.xml
 
 **Security headers** ship from `web/src/proxy.ts` (dynamic CSP/nonces) and `web/next.config.ts` (remaining static headers).
 
-**Middleware** (`web/src/middleware.ts` / `web/src/proxy.ts`) is required for CSRF protection on state-changing admin requests and dynamic CSP headers with per-request nonces. It cannot be removed.
+**Middleware** (`web/src/proxy.ts`) handles CSRF protection on state-changing admin requests and dynamic CSP headers with per-request nonces. The file is named `proxy.ts` but exports a `proxy()` function and Next.js middleware `config` matcher.
 
 ---
 
@@ -368,11 +376,11 @@ GET  /feed.xml
 | Document | Purpose |
 |----------|---------|
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, auth flow, data model, API routes, deployment |
+| [docs/CODING.md](./docs/CODING.md) | Codemap: file patterns, conventions, component organization |
 | [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
 | [docs/LESSONS.md](./docs/LESSONS.md) | Lessons learned from codebase reviews |
-| [docs/ARCHITECTURE-IMPROVEMENTS.md](./docs/ARCHITECTURE-IMPROVEMENTS.md) | Architecture notes and follow-up ideas |
 | [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) | Post deletion recovery via Turso PITR |
-| [docs/AGENTS.md](./docs/AGENTS.md) | OpenCode agent workflow instructions |
+| [docs/VERCEL-CLI-REFERENCE.md](./docs/VERCEL-CLI-REFERENCE.md) | Vercel CLI operational reference |
 
 ---
 
