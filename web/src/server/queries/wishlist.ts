@@ -114,11 +114,8 @@ export async function listPublicWishlistPlaces(): Promise<PublicWishlistPlace[]>
       .orderBy(desc(wishlistPlaces.isPinned), asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
     return places.map(mapPlace);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
-      return [];
-    }
-    throw error;
+    console.warn("[wishlist] Failed to load public wishlist places, returning empty list", error);
+    return [];
   }
 }
 
@@ -149,11 +146,8 @@ export async function getPublicWishlistPlaceBySlug(slug: string): Promise<Public
 
     return mapPlace(place);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
-      return null;
-    }
-    throw error;
+    console.warn("[wishlist] Failed to load wishlist place by slug", slug, error);
+    return null;
   }
 }
 
@@ -179,11 +173,8 @@ export async function getPublicWishlistPlaceChildren(parentId: string): Promise<
 
     return children.map(mapPlace);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
-      return [];
-    }
-    throw error;
+    console.warn("[wishlist] Failed to load wishlist place children for parent", parentId, error);
+    return [];
   }
 }
 
@@ -215,11 +206,8 @@ export async function getSiblingMultiSites(currentId: string): Promise<PublicWis
 
     return siblings.filter((s) => s.id !== currentId).map(mapPlace);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
-      return [];
-    }
-    throw error;
+    console.warn("[wishlist] Failed to load sibling multi-sites for", currentId, error);
+    return [];
   }
 }
 
