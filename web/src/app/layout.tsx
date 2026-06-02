@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://jsquaredadventures.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://jsquaredadventures.com"),
   title: {
     default: "J²Adventures",
     template: "%s | J²Adventures",
@@ -63,7 +63,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         {process.env.NODE_ENV === "production" ? (
           <Script
             data-api="/_stats/api/event"
-            data-domain="jsquaredadventures.com"
+            data-domain={process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBLIC_SITE_URL).hostname : "jsquaredadventures.com"}
             defer
             nonce={nonce}
             src="/_stats/js/script.js"

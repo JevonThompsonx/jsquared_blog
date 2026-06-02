@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { SITE_URL } from "@/lib/utils";
+
 const GEOCODE_TIMEOUT_MS = 4_000;
 
 export type GeoResult = {
@@ -15,7 +17,7 @@ export async function geocodeLocation(locationName: string): Promise<GeoResult |
   try {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "jsquaredadventures.com (travel blog)" },
+      headers: { "User-Agent": `${SITE_URL} (travel blog)` },
       signal: abortController.signal,
     });
 

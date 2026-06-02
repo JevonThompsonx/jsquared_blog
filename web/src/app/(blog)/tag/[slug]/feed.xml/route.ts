@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getTagFeedHref } from "@/lib/utils";
+import { getTagFeedHref, SITE_URL } from "@/lib/utils";
 import { getTagBySlug } from "@/server/dal/posts";
 import { buildRssXml, createRssResponse } from "@/server/feeds/rss";
 import { listPublishedPostsByTagSlug } from "@/server/queries/posts";
@@ -26,8 +26,8 @@ export async function GET(_request: Request, context: { params: Promise<unknown>
     buildRssXml({
       title: `${tag.name} - J²Adventures`,
       description: tag.description ?? `Latest J²Adventures posts tagged ${tag.name}.`,
-      siteUrl: `https://jsquaredadventures.com/tag/${tag.slug}`,
-      selfUrl: `https://jsquaredadventures.com${getTagFeedHref(tag.slug)}`,
+      siteUrl: `${SITE_URL}/tag/${tag.slug}`,
+      selfUrl: `${SITE_URL}${getTagFeedHref(tag.slug)}`,
       posts,
     }),
   );

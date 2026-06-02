@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getCategoryFeedHref } from "@/lib/utils";
+import { getCategoryFeedHref, SITE_URL } from "@/lib/utils";
 import { buildRssXml, createRssResponse } from "@/server/feeds/rss";
 import { listPublishedPostsByCategory } from "@/server/queries/posts";
 
@@ -39,8 +39,8 @@ export async function GET(_request: Request, context: { params: Promise<unknown>
     buildRssXml({
       title: `${category} - J²Adventures`,
       description: `Latest J²Adventures posts filed under ${category}.`,
-      siteUrl: `https://jsquaredadventures.com/category/${encodeURIComponent(category)}`,
-      selfUrl: `https://jsquaredadventures.com${getCategoryFeedHref(category)}`,
+      siteUrl: `${SITE_URL}/category/${encodeURIComponent(category)}`,
+      selfUrl: `${SITE_URL}${getCategoryFeedHref(category)}`,
       posts,
     }),
   );

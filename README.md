@@ -1,6 +1,6 @@
 # J²Adventures Blog
 
-A production travel blog platform built around the live Next.js app in `web/`. It supports rich publishing, expiring previews, post revisions, maps, galleries, comments, bookmarks, public accounts, a public wishlist, a route planner, GitHub-based admin tooling, newsletters, and production SEO for `jsquaredadventures.com`.
+A production travel blog platform built around the live Next.js app in `web/`. It supports rich publishing, expiring previews, post revisions, maps, galleries, comments, bookmarks, public accounts, a public wishlist, GitHub-based admin tooling, newsletters, and production SEO for `jsquaredadventures.com`.
 
 **Live Site**: [jsquaredadventures.com](https://jsquaredadventures.com)
 
@@ -16,7 +16,7 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 | **Public Auth** | Supabase Auth |
 | **Admin Auth** | Auth.js + GitHub OAuth |
 | **Storage** | Cloudinary |
-| **Routing / geocoding** | Geoapify (route planner) |
+| **Routing / geocoding** | Geoapify |
 | **Email** | Resend (newsletter + comment notifications) |
 | **Rate limiting** | Upstash Redis in deployed envs, in-memory locally/tests |
 | **Observability** | Sentry (optional) |
@@ -120,7 +120,6 @@ SUPABASE_SERVICE_ROLE_KEY=... # tooling / seed / import scripts
 Notes:
 - `CRON_SECRET` is optional only for local loopback development, but required for deployed cron routes.
 - Upstash credentials are required in deployed environments because rate limiting fails closed there.
-- Geoapify route-planner variables are required only if you want `/route-planner` and `POST /api/route-plans` to return live route suggestions instead of `503 Route planner unavailable`.
 - Newsletter signup safely returns a non-fatal skipped result when Resend newsletter config is absent.
 - `SENTRY_AUTH_TOKEN` is only needed when uploading source maps during production builds.
 - Optional Playwright/E2E helper variables also live in `web/.env.example`; `pnpm run seed:e2e` writes managed fixture values to `web/.env.test.local`.
@@ -177,7 +176,6 @@ pnpm run e2e:capture-public-state
 
 ### Travel Tools
 - Public wishlist page with map/list rendering for future destinations
-- Route planner at `/route-planner` that suggests public wishlist stops between an origin and destination
 - Visited wishlist stops excluded by default, with an opt-in include-visited toggle
 - Admin wishlist editor supports place names, autocompleted locations, optional info links, short descriptions, and public/private visibility
 - New wishlist entries default to public visibility
@@ -279,7 +277,6 @@ pnpm run ./scripts/seed-rich-content.ts
 - `comment_likes` - Comment likes (one per user)
 - `post_bookmarks` - Saved posts per public user
 - `categories`, `tags`, `post_tags` - Taxonomy
-- `sessions` - Auth.js Turso adapter-managed
 
 ---
 
@@ -299,7 +296,6 @@ GET  /posts/[slug]                # Published post detail
 GET  /preview/[id]?token=...      # Admin or token preview
 GET  /map                         # World map of posts
 GET  /wishlist                    # Public travel wishlist
-GET  /route-planner               # Public route planner
 GET  /admin/wishlist              # Admin wishlist editor
 GET  /admin/tags                  # Admin tag management
 GET  /admin/seasons               # Admin season management
@@ -323,7 +319,6 @@ GET  /api/account/profile
 PATCH /api/account/profile
 POST /api/account/avatar
 POST /api/newsletter
-POST /api/route-plans
 
 GET  /api/admin/posts
 POST /api/admin/posts/clone

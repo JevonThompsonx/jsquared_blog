@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
-import { getCategoryFeedHref } from "@/lib/utils";
+import { getCategoryFeedHref, SITE_URL } from "@/lib/utils";
 import { countPublishedPostsByCategory } from "@/server/dal/posts";
 import { listPublishedPostsByCategory } from "@/server/queries/posts";
 
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     description: `Explore all ${label} adventures on J²Adventures.`,
     alternates: {
       types: {
-        "application/rss+xml": `https://jsquaredadventures.com${getCategoryFeedHref(label)}`,
+        "application/rss+xml": `${SITE_URL}${getCategoryFeedHref(label)}`,
       },
     },
   };

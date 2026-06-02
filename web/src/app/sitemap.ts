@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
-import { getCanonicalPostUrl } from "@/lib/utils";
+import { getCanonicalPostUrl, SITE_URL } from "@/lib/utils";
 import { listPublishedPosts } from "@/server/queries/posts";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseEntry: MetadataRoute.Sitemap[number] = {
-    url: "https://jsquaredadventures.com",
+    url: SITE_URL,
     lastModified: new Date(),
     changeFrequency: "daily",
     priority: 1,

@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
-import { getTagFeedHref } from "@/lib/utils";
+import { getTagFeedHref, SITE_URL } from "@/lib/utils";
 import { countPublishedPostsByTagSlug, getTagBySlug } from "@/server/dal/posts";
 import { listPublishedPostsByTagSlug } from "@/server/queries/posts";
 
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
     description,
     alternates: {
       types: {
-        "application/rss+xml": `https://jsquaredadventures.com${getTagFeedHref(tag.slug)}`,
+        "application/rss+xml": `${SITE_URL}${getTagFeedHref(tag.slug)}`,
       },
     },
   };

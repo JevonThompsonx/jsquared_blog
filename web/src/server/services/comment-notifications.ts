@@ -38,6 +38,7 @@ import "server-only";
 
 import { z } from "zod";
 
+import { escapeHtml } from "@/lib/content";
 import { getResendConfig, sendResendEmail } from "@/lib/email/resend";
 import { getCanonicalPostUrl } from "@/lib/utils";
 import type { CommentNotificationRecord } from "@/server/dal/comments";
@@ -68,15 +69,6 @@ function getNotificationRecipient(): string | null {
 
   const parsedRecipient = commentNotificationRecipientSchema.safeParse(recipient);
   return parsedRecipient.success ? parsedRecipient.data : null;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 function getCommentExcerpt(content: string): string {

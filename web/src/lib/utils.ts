@@ -1,6 +1,7 @@
 import { htmlToPlainText } from "@/lib/content";
 import type { BlogPost } from "@/types/blog";
 
+export const SITE_URL = "https://jsquaredadventures.com";
 const SEASON_LABELS: readonly ["Winter", "Spring", "Summer", "Fall"] = ["Winter", "Spring", "Summer", "Fall"];
 
 type SeasonIndex = 0 | 1 | 2 | 3;
@@ -65,7 +66,7 @@ export function getPostHref(post: Pick<BlogPost, "id" | "title" | "slug">): `/po
 }
 
 export function getCanonicalPostUrl(post: Pick<BlogPost, "id" | "title" | "slug">): string {
-  return `https://jsquaredadventures.com${getPostHref(post)}`;
+  return `${SITE_URL}${getPostHref(post)}`;
 }
 
 export function getCategoryHref(category: string): `/category/${string}` {

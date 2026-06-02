@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/auth/session";
+import { SITE_URL } from "@/lib/utils";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
@@ -43,7 +44,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       headers: {
         // Nominatim usage policy requires a descriptive User-Agent identifying the app
         // and contact info so Nominatim can reach the operator if needed.
-        "User-Agent": "jsquared-blog/1.0 (https://jsquaredadventures.com)",
+        "User-Agent": `jsquared-blog/1.0 (${SITE_URL})`,
       },
     });
     const data: NominatimResult[] = await res.json();

@@ -24,7 +24,7 @@ import { publishPosts, unpublishPosts, type PostPublishResult } from "@/server/p
 import { generateUniquePostSlug } from "@/server/posts/slug";
 import { ADMIN_FLASH_COOKIE_NAME, getAdminFlashCookieOptions, type AdminFlashKind } from "@/lib/admin-flash";
 import { geocodeLocation, type GeoResult } from "@/lib/geocode";
-import { slugify } from "@/lib/utils";
+import { SITE_URL, slugify } from "@/lib/utils";
 
 type DbExecutor = Pick<ReturnType<typeof getDb>, "query" | "select" | "insert" | "update" | "delete">;
 type AdminReturnRoute = "/admin" | `/admin?${string}`;
@@ -167,7 +167,7 @@ function normalizeAdminReturnTo(value: FormDataEntryValue | null): AdminReturnRo
   }
 
   try {
-    const url = new URL(trimmedValue, "https://jsquaredadventures.com");
+    const url = new URL(trimmedValue, SITE_URL);
     if (url.pathname !== "/admin") {
       return "/admin";
     }
@@ -185,7 +185,7 @@ function normalizeAdminReturnTo(value: FormDataEntryValue | null): AdminReturnRo
 }
 
 function buildAdminPostReturnPath(returnTo: AdminReturnRoute, postId: string, flag: "saved" | "cloned" | "editRemoved"): AdminReturnRoute {
-  const url = new URL(returnTo, "https://jsquaredadventures.com");
+  const url = new URL(returnTo, SITE_URL);
   url.searchParams.set("postId", postId);
   url.searchParams.set(flag, "1");
   const nextSearch = url.searchParams.toString();
