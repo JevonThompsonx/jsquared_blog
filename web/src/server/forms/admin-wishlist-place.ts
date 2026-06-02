@@ -96,6 +96,16 @@ const optionalParentIdField = z.preprocess(
   z.string().uuid("Invalid parent id").nullable(),
 );
 
+const detailLevelField = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) return "full_page";
+    if (typeof value !== "string") return "full_page";
+    const trimmed = value.trim();
+    return trimmed === "name_location" ? "name_location" : "full_page";
+  },
+  z.enum(["full_page", "name_location"]).default("full_page"),
+);
+
 export const adminWishlistPlaceFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   locationName: z.string().trim().min(1, "Location is required"),
@@ -109,6 +119,7 @@ export const adminWishlistPlaceFormSchema = z.object({
   imageUrl: optionalHttpsUrlField,
   detailSlug: optionalDetailSlugField,
   itemType: itemTypeField,
+  detailLevel: detailLevelField,
   parentId: optionalParentIdField,
 });
 

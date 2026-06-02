@@ -20,6 +20,7 @@ export type PublicWishlistPlace = {
   imageUrl: string | null;
   detailSlug: string | null;
   itemType: "single" | "multi";
+  detailLevel: "full_page" | "name_location";
   isPinned: boolean;
   parentId: string | null;
 };
@@ -58,6 +59,7 @@ function mapPlace(place: {
   imageUrl: string | null;
   detailSlug: string | null;
   itemType: "single" | "multi";
+  detailLevel: "full_page" | "name_location";
   isPinned: boolean;
   parentId: string | null;
 }): PublicWishlistPlace {
@@ -84,6 +86,7 @@ const PLACE_SELECT = {
   imageUrl: wishlistPlaces.imageUrl,
   detailSlug: wishlistPlaces.detailSlug,
   itemType: wishlistPlaces.itemType,
+  detailLevel: wishlistPlaces.detailLevel,
   isPinned: wishlistPlaces.isPinned,
   parentId: wishlistPlaces.parentId,
 } as const;
@@ -182,4 +185,68 @@ export async function getPublicWishlistPlaceChildren(parentId: string): Promise<
     }
     throw error;
   }
+}
+
+/**
+ * Returns all public top-level multi-site places for sidebar navigation.
+ * Excludes the current place (by id) from the results.
+ */
+export async function getSiblingMultiSites(currentId: string): Promise<PublicWishlistPlace[]> {
+  try {
+    const db = getDb();
+
+    const siblings = await db
+      .select(PLACE_SELECT)
+      .from(wishlistPlaces)
+      .where(
+        and(
+          eq(wishlistPlaces.isPublic, true),
+          isNull(wishlistPlaces.parentId),
+          eq(wishlistPlaces.itemType, "multi"),
+          notExists(
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .where(and(eq(posts.id, wishlistPlaces.linkedPostId), eq(posts.status, "published"))),
+          ),
+        ),
+      )
+      .orderBy(asc(wishlistPlaces.sortOrder), asc(wishlistPlaces.name), asc(wishlistPlaces.createdAt));
+
+    return siblings.filter((s) => s.id !== currentId).map(mapPlace);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("no such column") || msg.includes("no such table") || msg.includes("SQLITE_ERROR")) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/**
+ * Returns a multi-site place with its direct children and grandchildren
+ * (children of child multi-sites). Used by the multi-site detail page.
+ */
+export async function getMultiSiteDetailBySlug(slug: string): Promise<{
+  place: PublicWishlistPlace;
+  children: PublicWishlistPlace[];
+  grandchildren: Map<string, PublicWishlistPlace[]>;
+} | null> {
+  const place = await getPublicWishlistPlaceBySlug(slug);
+  if (!place || place.itemType !== "multi") {
+    return null;
+  }
+
+  const children = await getPublicWishlistPlaceChildren(place.id);
+
+  // Fetch grandchildren for any child that is itself a multi-site
+  const grandchildren = new Map<string, PublicWishlistPlace[]>();
+  const childMultiSites = children.filter((c) => c.itemType === "multi");
+
+  for (const child of childMultiSites) {
+    const grandChildren = await getPublicWishlistPlaceChildren(child.id);
+    grandchildren.set(child.id, grandChildren);
+  }
+
+  return { place, children, grandchildren };
 }

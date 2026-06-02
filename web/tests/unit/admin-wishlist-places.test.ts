@@ -71,6 +71,7 @@ describe("admin wishlist places DAL", () => {
       imageUrl: null,
       detailSlug: null,
       itemType: "single",
+      detailLevel: "full_page",
       parentId: null,
       createdByUserId: "admin-1",
       isPinned: false,
@@ -140,6 +141,7 @@ describe("admin wishlist places DAL", () => {
       imageUrl: "https://example.com/glacier.jpg",
       detailSlug: "updated-glacier",
       itemType: "single",
+      detailLevel: "full_page",
       parentId: null,
       isPinned: false,
     });

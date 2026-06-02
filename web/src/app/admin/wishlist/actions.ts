@@ -36,6 +36,7 @@ export async function createWishlistPlaceAction(formData: FormData): Promise<voi
     imageUrl: formData.get("imageUrl"),
     detailSlug: formData.get("detailSlug"),
     itemType: formData.get("itemType"),
+    detailLevel: formData.get("detailLevel"),
     parentId: formData.get("parentId"),
   });
 
@@ -95,6 +96,7 @@ export async function updateWishlistPlaceAction(formData: FormData): Promise<voi
     imageUrl: formData.get("imageUrl"),
     detailSlug: formData.get("detailSlug"),
     itemType: formData.get("itemType"),
+    detailLevel: formData.get("detailLevel"),
     parentId: formData.get("parentId"),
   });
 

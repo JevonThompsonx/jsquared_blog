@@ -23,6 +23,7 @@ export type AdminWishlistPlaceRecord = {
   detailSlug: string | null;
   linkedPostId: string | null;
   itemType: "single" | "multi";
+  detailLevel: "full_page" | "name_location";
   parentId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +45,7 @@ export type CreateAdminWishlistPlaceInput = {
   imageUrl: string | null;
   detailSlug: string | null;
   itemType: "single" | "multi";
+  detailLevel: "full_page" | "name_location";
   parentId: string | null;
   createdByUserId: string;
 };
@@ -65,6 +67,7 @@ export type UpdateAdminWishlistPlaceInput = {
   imageUrl: string | null;
   detailSlug: string | null;
   itemType: "single" | "multi";
+  detailLevel: "full_page" | "name_location";
   parentId: string | null;
 };
 
@@ -89,6 +92,7 @@ export async function createAdminWishlistPlace(input: CreateAdminWishlistPlaceIn
     imageUrl: input.imageUrl,
     detailSlug: input.detailSlug,
     itemType: input.itemType,
+    detailLevel: input.detailLevel,
     parentId: input.parentId,
     createdByUserId: input.createdByUserId,
     createdAt: now,
@@ -117,6 +121,7 @@ export async function updateAdminWishlistPlace(input: UpdateAdminWishlistPlaceIn
       imageUrl: input.imageUrl,
       detailSlug: input.detailSlug,
       itemType: input.itemType,
+      detailLevel: input.detailLevel,
       parentId: input.parentId,
       updatedAt: new Date(),
     })
@@ -152,6 +157,7 @@ export async function listAdminWishlistPlaces(): Promise<AdminWishlistPlaceRecor
         detailSlug: wishlistPlaces.detailSlug,
         linkedPostId: wishlistPlaces.linkedPostId,
         itemType: wishlistPlaces.itemType,
+        detailLevel: wishlistPlaces.detailLevel,
         parentId: wishlistPlaces.parentId,
         createdAt: wishlistPlaces.createdAt,
         updatedAt: wishlistPlaces.updatedAt,

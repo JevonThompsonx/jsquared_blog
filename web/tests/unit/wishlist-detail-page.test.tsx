@@ -36,6 +36,8 @@ vi.mock("@/lib/auth/session", () => ({
 vi.mock("@/server/queries/wishlist", () => ({
   getPublicWishlistPlaceBySlug: vi.fn(),
   getPublicWishlistPlaceChildren: vi.fn().mockResolvedValue([]),
+  getSiblingMultiSites: vi.fn().mockResolvedValue([]),
+  getMultiSiteDetailBySlug: vi.fn().mockResolvedValue(null),
 }));
 
 import WishlistDetailPage, { generateMetadata } from "@/app/(blog)/wishlist/[slug]/page";
@@ -62,6 +64,7 @@ describe("WishlistDetailPage", () => {
       imageUrl: "https://images.example.com/banff-gondola.jpg",
       detailSlug: "banff-gondola",
       itemType: "single",
+      detailLevel: "full_page",
       parentId: null,
       isPinned: false,
     });
@@ -95,6 +98,7 @@ describe("WishlistDetailPage", () => {
       imageUrl: "https://images.example.com/banff-gondola.jpg",
       detailSlug: "banff-gondola",
       itemType: "single",
+      detailLevel: "full_page",
       parentId: null,
       isPinned: false,
     });

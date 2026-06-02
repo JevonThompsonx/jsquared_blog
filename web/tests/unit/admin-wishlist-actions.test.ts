@@ -180,6 +180,7 @@ describe("wishlist admin actions", () => {
       imageUrl: "https://images.example.com/glacier.jpg",
       detailSlug: "glacier-national-park-highlights",
       itemType: "single",
+      detailLevel: "full_page",
       parentId: null,
       isPinned: false,
     });
@@ -262,6 +263,7 @@ describe("wishlist admin actions", () => {
       imageUrl: "https://images.example.com/updated-glacier.jpg",
       detailSlug: "updated-glacier-national-park",
       itemType: "single",
+      detailLevel: "full_page",
       parentId: null,
       isPinned: false,
     });

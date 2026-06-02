@@ -6,6 +6,7 @@ import { groupWishlistByLocation } from "@/lib/wishlist/grouping";
 function makePlace(overrides: Partial<PublicWishlistPlace> & { id: string; name: string; locationName: string }): PublicWishlistPlace {
   return {
     itemType: "single" as const,
+    detailLevel: "full_page" as const,
     parentId: null,
     locationLat: 48.0,
     locationLng: -120.0,

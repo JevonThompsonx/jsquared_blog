@@ -84,6 +84,24 @@ export default async function AdminWishlistPage() {
                   </p>
                 </fieldset>
 
+                {/* Detail level for single sites */}
+                <fieldset>
+                  <legend className="mb-2 text-sm font-medium text-[var(--text-primary)]">Detail page level</legend>
+                  <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                    <label className="inline-flex items-center gap-2">
+                      <input defaultChecked name="detailLevel" type="radio" value="full_page" />
+                      Full page (image, description, link)
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input name="detailLevel" type="radio" value="name_location" />
+                      Name &amp; location only
+                    </label>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    Name &amp; location: shows just the name and location on the detail page.
+                  </p>
+                </fieldset>
+
                 <label className="block text-sm text-[var(--text-secondary)]">
                   <span className="mb-1 block font-medium text-[var(--text-primary)]">Short description <span className="font-normal text-[var(--text-secondary)]">(optional, max 500 chars)</span></span>
                   <textarea className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--input-text)]" maxLength={500} name="description" rows={2} />
@@ -223,6 +241,23 @@ export default async function AdminWishlistPage() {
                             </label>
                           </div>
                         </fieldset>
+
+                        {/* Detail level for single sites */}
+                        {place.itemType !== "multi" ? (
+                          <fieldset>
+                            <legend className="mb-2 text-sm font-medium text-[var(--text-primary)]">Detail page level</legend>
+                            <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                              <label className="inline-flex items-center gap-2">
+                                <input defaultChecked={place.detailLevel !== "name_location"} name="detailLevel" type="radio" value="full_page" />
+                                Full page (image, description, link)
+                              </label>
+                              <label className="inline-flex items-center gap-2">
+                                <input defaultChecked={place.detailLevel === "name_location"} name="detailLevel" type="radio" value="name_location" />
+                                Name &amp; location only
+                              </label>
+                            </div>
+                          </fieldset>
+                        ) : null}
 
                         <label className="block text-sm text-[var(--text-secondary)]">
                           <span className="mb-1 block font-medium text-[var(--text-primary)]">Short description <span className="font-normal text-[var(--text-secondary)]">(optional, max 500 chars)</span></span>
