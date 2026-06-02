@@ -16,6 +16,9 @@ Sentry.init({
   // Structured logs forwarded to Sentry's Logs product
   enableLogs: true,
 
+  // Disable client reports (SDK telemetry about dropped events)
+  sendClientReports: false,
+
   integrations: [
     Sentry.replayIntegration(),
   ],

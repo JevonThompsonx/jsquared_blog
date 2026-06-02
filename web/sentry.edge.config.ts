@@ -8,6 +8,9 @@ Sentry.init({
   sendDefaultPii: true,
   enableLogs: true,
 
+  // Disable client reports (SDK telemetry about dropped events)
+  sendClientReports: false,
+
   debug: false,
   enabled: process.env.NODE_ENV === "production",
 });
