@@ -13,6 +13,7 @@ const navigationLinks: FooterLink[] = [
   { href: "/map", label: "Map" },
   { href: "/about", label: "About" },
   { href: "/wishlist", label: "Wishlist" },
+  { href: "/accessibility", label: "Accessibility" },
 ];
 
 const contentLinks: FooterLink[] = [

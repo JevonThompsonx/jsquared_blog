@@ -92,4 +92,12 @@ describe("SiteFooter", () => {
     const footer = container.querySelector("footer");
     expect(footer?.getAttribute("aria-label")).toBe("Site footer");
   });
+
+  it("exposes an accessibility statement link in the footer", () => {
+    render();
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/accessibility");
+    const accessibilityLink = container.querySelector('a[href="/accessibility"]');
+    expect(accessibilityLink?.textContent?.toLowerCase()).toContain("accessibility");
+  });
 });
