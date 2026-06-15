@@ -24,7 +24,7 @@
 | 2 | `feat/layout-footer-and-nav` | ✅ Merged | [#43](https://github.com/JevonThompsonx/jsquared_blog/pull/43) | 2026-06-15 | 3-4h | Footer, back-to-top, dark error page |
 | 3 | `chore/schema-hardening` | 🔵 Ready | — | — | 2-3h | FK constraints, indexes, audit timestamps |
 | 4 | `feat/taxonomy-browse` | 🟢 In Progress | — | — | 3-4h | /tags and /categories browse pages |
-| 5 | `feat/admin-taxonomy-crud` | 🔵 Ready (unblocked) | — | — | 4-5h | Category CRUD, tag create/delete |
+| 5 | `feat/admin-taxonomy-crud` | 🟢 In Progress | — | — | 4-5h | Category CRUD, tag create/delete |
 | 6 | `feat/revision-completeness` | 🔵 Ready (unblocked) | — | — | 4-5h | Full revision restore |
 | 7 | `feat/performance-and-reliability` | 🔵 Ready | — | — | 5-6h | Caching, image opt, Sentry, rate limits |
 | 8 | `feat/site-search` | 🔵 Ready | — | — | 4-6h | /search page, Cmd+K shortcut |
@@ -37,7 +37,7 @@
 - 🟢 **In Progress** — Currently being worked on (see "Active Branch" below)
 - ✅ **Merged** — Done and shipped to main
 
-**Active Branch:** `feat/taxonomy-browse` — adding /tags and /categories browse pages
+**Active Branch:** Branches 4 & 5 in progress (taxonomy-browse and admin-taxonomy-crud)
 
 ---
 

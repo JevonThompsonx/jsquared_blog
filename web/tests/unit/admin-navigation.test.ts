@@ -8,6 +8,16 @@ describe("adminNavLinks", () => {
     expect(hrefs).toContain("/admin/wishlist");
   });
 
+  it("includes a Manage categories link for taxonomy CRUD", () => {
+    const hrefs = adminNavLinks.map((l) => l.href);
+    expect(hrefs).toContain("/admin/categories");
+  });
+
+  it("includes a Manage tags link for taxonomy CRUD", () => {
+    const hrefs = adminNavLinks.map((l) => l.href);
+    expect(hrefs).toContain("/admin/tags");
+  });
+
   it("does not expose a top-level route-planner link in admin nav", () => {
     const hrefs = adminNavLinks.map((l) => l.href);
     expect(hrefs).not.toContain("/route-planner");
