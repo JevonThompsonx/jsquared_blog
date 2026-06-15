@@ -52,7 +52,7 @@ export function SiteFooter() {
   return (
     <footer
       aria-label="Site footer"
-      className="mt-16 border-t border-[var(--border)] bg-[var(--card-bg)]/60 backdrop-blur-sm"
+      className="site-footer relative mt-20 border-t border-[var(--border)] bg-[var(--card-bg)]/60 backdrop-blur-sm"
     >
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
@@ -117,7 +117,7 @@ export function SiteFooter() {
 
         <div className="mt-10 border-t border-[var(--border)] pt-6">
           <p className="text-xs text-[var(--text-secondary)]">
-            © {year} J² Adventures. All rights reserved.
+            © {year} J² Adventures
           </p>
         </div>
       </div>

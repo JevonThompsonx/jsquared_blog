@@ -64,6 +64,10 @@
   --overlay-chip-text: #f7f0e6;
   --card-image-filter: saturate(0.96) contrast(0.98);
 
+  /* Footer page-to-footer fade — solid color matching the bottom of the page
+     background gradient so the footer's top edge blends with the page above. */
+  --footer-fade-color: #d7dfd2;
+
   /* Status colors */
   --color-info: #0f766e;
   --color-info-text: #115e59;
@@ -115,6 +119,7 @@
   --color-success-soft-bg: #064e3b; /* emerald-950 */
   --color-success-soft-border: #065f46; /* emerald-800 */
   --color-success-text: #6ee7b7; /* emerald-300 */
+  --footer-fade-color: #111812;
 }
 
 * {
@@ -201,6 +206,33 @@ mark {
   top: 0;
   outline: 3px solid var(--primary);
   outline-offset: 2px;
+}
+
+/* Site footer — page-to-footer transition.
+   The page background is a vertical gradient that ends in a sage tone; the
+   footer sits at 60% card-bg. A 100px pseudo-element gradient on the footer's
+   top edge tints that band with the page's bottom color, so the sage of the
+   page softly bleeds into the cream of the footer instead of starting with a
+   hard border. pointer-events:none keeps it decorative. */
+.site-footer {
+  position: relative;
+  isolation: isolate;
+}
+
+.site-footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(
+    to bottom,
+    var(--footer-fade-color) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
 .navbar-landing {
