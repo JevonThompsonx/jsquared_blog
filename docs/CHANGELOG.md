@@ -13,6 +13,23 @@
 
 ---
 
+## [0.4.1] — 2026-06-15
+
+### Branch: `feat/seo-and-discovery` (PR #42)
+
+#### Added
+- **`robots.txt`** with crawl directives — allows public pages (posts, tags, categories, series, authors, wishlist, map, about), disallows admin/api/account/preview/auth routes, references sitemap.xml, declares canonical host
+- **Twitter card meta tags** on post pages — adds `twitter.images` so shared links on Twitter/X show the post's featured image
+- **Expanded sitemap** — now includes static pages (`/map`, `/about`, `/wishlist`), all category pages, all tag pages, and all series pages (not just homepage and posts)
+- **Sitemap unit tests** — 4 new tests covering base entry, static pages, taxonomy entries, and database failure fallback
+
+#### Changed
+- **`SITE_URL` is now env-driven** — reads from `NEXT_PUBLIC_SITE_URL` env var with fallback to production URL, allowing the same code to work across dev/staging/prod
+- **Seasonal hero** — populated with kicker ("Travel stories from the road") and subtitle ("Field notes, maps, and photo-led stories from the places we wander.") instead of empty strings
+- **Vitest config** — stubs `NEXT_PUBLIC_SITE_URL=https://jsquaredadventures.com` for consistent test runs across environments
+
+---
+
 ## [0.4.0] — 2026-06-15
 
 ### Changed
