@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - **pnpm** >= 8.x (primary package manager). Install: `npm install -g pnpm`
-- **Node.js** >= 18
+- **Node.js** >= 22.13 (pnpm 11 requirement; see `.tool-versions` for the pinned version)
 - **bun** (optional, dev-only for `bunx` one-off runs)
 - **Git** for version control
 

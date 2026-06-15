@@ -44,7 +44,7 @@ jsquared_blog/
 
 ### Prerequisites
 - [pnpm](https://pnpm.io/installation)
-- [Node.js](https://nodejs.org/) >= 18
+- [Node.js](https://nodejs.org/) >= 22.13
 - Turso database credentials
 - Supabase project credentials
 - Cloudinary credentials
