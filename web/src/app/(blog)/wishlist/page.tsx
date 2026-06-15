@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { WorldMap } from "@/components/blog/world-map";
@@ -196,13 +197,15 @@ export default async function WishlistPage() {
                               <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{place.description}</p>
                             ) : null}
                             {place.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
+                              <Image
                                 alt={place.name}
                                 className="mt-3 max-h-48 w-full rounded-lg object-cover"
                                 data-testid="place-image"
+                                height={192}
                                 loading="lazy"
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                 src={place.imageUrl}
+                                width={1200}
                               />
                             ) : null}
                           </div>
