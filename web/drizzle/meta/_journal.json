@@ -162,6 +162,13 @@
       "when": 1781554800000,
       "tag": "0022_schema_hardening_timestamps",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1779024000000,
+      "tag": "0023_post_revisions_metadata",
+      "breakpoints": true
     }
   ]
 }
