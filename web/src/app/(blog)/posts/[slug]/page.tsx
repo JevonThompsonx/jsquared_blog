@@ -328,7 +328,16 @@ export default async function PostPage({ params }: PostPageProps) {
                     <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[var(--text-secondary)]">
                       {htmlToPlainText(relatedPost.excerpt ?? relatedPost.description ?? "").slice(0, 120)}
                     </p>
-                    <span className="mt-4 text-xs font-bold uppercase tracking-[0.1em] text-[var(--accent)]">Read story →</span>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <PostDate className="text-xs text-[var(--text-secondary)]" dateString={relatedPost.publishedAt ?? relatedPost.createdAt} />
+                      {relatedPost.readingTimeMinutes ? (
+                        <>
+                          <span aria-hidden="true" className="text-xs text-[var(--text-secondary)] opacity-50">·</span>
+                          <span className="text-xs text-[var(--text-secondary)]">{relatedPost.readingTimeMinutes} min read</span>
+                        </>
+                      ) : null}
+                    </div>
+                    <span className="mt-3 text-xs font-bold uppercase tracking-[0.1em] text-[var(--accent)]">Read story →</span>
                   </div>
                 </Link>
               ))}
