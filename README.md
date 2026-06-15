@@ -373,7 +373,7 @@ GET  /feed.xml
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, auth flow, data model, API routes, deployment |
 | [docs/CODING.md](./docs/CODING.md) | Codemap: file patterns, conventions, component organization |
 | [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
-| [docs/LESSONS.md](./docs/LESSONS.md) | Lessons learned from codebase reviews |
+| [docs/KNOWLEDGE_BASE.md](./docs/KNOWLEDGE_BASE.md) | Living reference of project-specific gotchas (SQLite, Drizzle, Turso, React 19, Next.js). Agents add to this when they discover new patterns. |
 | [docs/IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) | Prioritized backlog of tech debt, features, security, and perf work |
 | [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) | Post deletion recovery via Turso PITR |
 | [docs/VERCEL-CLI-REFERENCE.md](./docs/VERCEL-CLI-REFERENCE.md) | Vercel CLI operational reference |
