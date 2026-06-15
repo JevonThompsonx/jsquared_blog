@@ -8,7 +8,7 @@
 
 ## [Unreleased]
 
-### Branch: `feat/admin-taxonomy-crud` (PR #45)
+### Branch: `feat/admin-taxonomy-crud` (PR #49)
 
 #### Admin UI
 
@@ -40,6 +40,32 @@
 - `web/tests/unit/admin-tags-page.test.tsx` — Extended to cover the new create form, error banner for SlugTaken/TagInUse, and the disabled delete state.
 - `web/tests/unit/admin-taxonomy-form.test.ts` — Direct Zod schema coverage (create, update, id, slug normalization, description length cap).
 - `web/tests/unit/admin-navigation.test.ts` — Asserts the new "Manage categories" link.
+
+### Branch: `feat/revision-completeness` (PR #47)
+
+#### Database schema
+- **post_revisions metadata columns** — Added nullable columns to capture the full post state in every revision:
+  - `layout_type` (enum: standard | split-horizontal | split-vertical | hover)
+  - `category_id` (FK → `categories.id`)
+  - `featured_image_id` (FK → `media_assets.id`)
+  - `location_name`, `location_lat`, `location_lng`, `location_zoom`
+- **Migration** `0023_post_revisions_metadata.sql` — adds the new columns and FKs. All columns nullable so existing revisions remain valid; no data backfill required.
+
+#### Application code
+- **DAL** `web/src/server/dal/post-revisions.ts`:
+  - `PostRevisionRecord` and `createPostRevision` extended to accept/persist the new metadata fields.
+  - `listPostRevisions` and `getPostRevisionById` return the expanded record.
+  - `restorePostRevisionAtomically` snapshots the live post's expanded fields into a pre-restore revision, then writes every captured field (layout, category, featured image, location, song) back onto the post. Defensive against missing columns via `getPostColumnCapabilities()`.
+- **Column capabilities** `web/src/server/dal/post-column-capabilities.ts` — new `categoryId` and `featuredImageId` flags.
+- **Admin actions** `web/src/app/admin/actions.ts` — `updateAdminPostAction` now selects and forwards the expanded post fields to `createPostRevision`.
+- **API routes**:
+  - `GET /api/admin/posts/[postId]/revisions` returns `layoutType`, `categoryId`, `featuredImageId`, `locationName` per row.
+  - `GET /api/admin/posts/[postId]/revisions/[revisionId]` returns the expanded revision plus resolved `categoryName`, `featuredImageUrl`, `featuredImageAlt`, location lat/lng/zoom, and song fields.
+- **Admin UI** `web/src/components/admin/revision-history.tsx` — the detail panel now shows layout, category, featured image preview, location, and song metadata.
+
+#### Tests
+- New `web/tests/unit/post-revisions-dal-expanded.test.ts` — verifies `restorePostRevisionAtomically` snapshots and restores every expanded field, plus capability-based omission when columns are missing.
+- Updated `post-column-capabilities.test.ts`, `post-revisions-route.test.ts`, `post-revision-route.test.ts`, and `update-post-revision-capture.test.ts` to cover the expanded record shape and the new columns in capabilities / restore inputs.
 
 ---
 
