@@ -176,6 +176,12 @@ export function SiteHeader() {
             <Link className="nav-link-pill" href="/map">
               Map
             </Link>
+            <Link className="nav-link-pill" href="/categories">
+              Categories
+            </Link>
+            <Link className="nav-link-pill" href="/tags">
+              Tags
+            </Link>
             <Link className="nav-link-pill" href="/about">
               About
             </Link>

@@ -137,4 +137,18 @@ describe("SiteHeader", () => {
     expect(container.querySelector('a[href="/admin"]')).toBeNull();
     expect(container.textContent).toContain("Sign in");
   });
+
+  it("renders taxonomy browse links in the public navigation", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+
+    await renderHeader();
+
+    const tagsLink = container.querySelector('a[href="/tags"]');
+    const categoriesLink = container.querySelector('a[href="/categories"]');
+
+    expect(tagsLink).not.toBeNull();
+    expect(tagsLink?.textContent).toContain("Tags");
+    expect(categoriesLink).not.toBeNull();
+    expect(categoriesLink?.textContent).toContain("Categories");
+  });
 });

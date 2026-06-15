@@ -129,6 +129,24 @@ export function MobileNav({
               </Link>
               <Link
                 className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
+                  pathname === "/categories" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
+                }`}
+                href="/categories"
+                onClick={closeMenu}
+              >
+                Categories
+              </Link>
+              <Link
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
+                  pathname === "/tags" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
+                }`}
+                href="/tags"
+                onClick={closeMenu}
+              >
+                Tags
+              </Link>
+              <Link
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-bold transition-all ${
                   pathname === "/about" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-primary)] hover:bg-[var(--accent-soft)]/50"
                 }`}
                 href="/about"
