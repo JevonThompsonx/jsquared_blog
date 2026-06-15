@@ -1,5 +1,8 @@
 ---
 Responsive Design Plan
+
+> **Note:** This plan is mirrored as items R1–R7 in [`docs/IMPROVEMENTS.md`](./IMPROVEMENTS.md). When picking up an item from this list, also update the R-section there to keep the backlog in sync.
+
 Current State Assessment
 Good baseline exists: Container patterns (px-4 sm:px-6 lg:px-8), mobile nav drawer, responsive grids, viewport meta. Most public pages work reasonably on mobile.
 Key gaps: Admin editor (complex), account settings (0 breakpoints in 741 lines), auth forms (0 breakpoints), globals.css hero adjustments, and several overflow/margin issues.
