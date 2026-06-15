@@ -98,6 +98,7 @@ async function ensureCategoryIdTx(tx: DbExecutor, categoryName: string | undefin
   }
 
   const categoryId = `category-${categorySlug}`;
+  const now = new Date();
 
   await tx
     .insert(categories)
@@ -106,12 +107,15 @@ async function ensureCategoryIdTx(tx: DbExecutor, categoryName: string | undefin
       name: trimmedName,
       slug: categorySlug,
       description: null,
+      createdAt: now,
+      updatedAt: now,
     })
     .onConflictDoUpdate({
       target: categories.id,
       set: {
         name: trimmedName,
         slug: categorySlug,
+        updatedAt: now,
       },
     });
 
@@ -335,9 +339,10 @@ async function syncTagsForPostTx(tx: DbExecutor, postId: string, tagNames: strin
     const tagId = existing?.id ?? `tag-${slug}`;
 
     if (!existing) {
+      const now = new Date();
       await tx
         .insert(tags)
-        .values({ id: tagId, name: tagName, slug })
+        .values({ id: tagId, name: tagName, slug, createdAt: now, updatedAt: now })
         .onConflictDoNothing();
     }
 

@@ -125,10 +125,11 @@ export async function ensureSeriesId(title: string): Promise<string | null> {
   if (existing) return existing.id;
 
   const id = `series-${slug}`;
+  const now = new Date();
   await db
     .insert(series)
-    .values({ id, title: trimmedTitle, slug, description: null, createdAt: new Date() })
-    .onConflictDoUpdate({ target: series.id, set: { title: trimmedTitle, slug } });
+    .values({ id, title: trimmedTitle, slug, description: null, createdAt: now, updatedAt: now })
+    .onConflictDoUpdate({ target: series.id, set: { title: trimmedTitle, slug, updatedAt: now } });
 
   return id;
 }
