@@ -3,8 +3,10 @@ import { headers } from "next/headers";
 import { Lora } from "next/font/google";
 import Script from "next/script";
 
+import { SiteFooter } from "@/components/layout/site-footer";
 import { AppProviders } from "@/components/providers/app-providers";
 import { ServiceWorkerRegistry } from "@/components/pwa-registry";
+import { BackToTop } from "@/components/ui/back-to-top";
 
 import "./globals.css";
 
@@ -59,6 +61,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           Skip to main content
         </a>
         <AppProviders>{children}</AppProviders>
+        <SiteFooter />
+        <BackToTop />
         <ServiceWorkerRegistry />
         {process.env.NODE_ENV === "production" ? (
           <Script

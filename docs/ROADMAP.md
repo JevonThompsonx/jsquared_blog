@@ -21,7 +21,7 @@
 | # | Branch | Status | PR | Merged | Effort | Ships |
 |---|--------|--------|----|--------|--------|-------|
 | 1 | `feat/seo-and-discovery` | ✅ Merged | [#42](https://github.com/JevonThompsonx/jsquared_blog/pull/42) | 2026-06-15 | 2-3h | robots.txt, sitemap, social cards, hero |
-| 2 | `feat/layout-footer-and-nav` | 🔵 Ready | — | — | 3-4h | Footer, back-to-top, dark error page |
+| 2 | `feat/layout-footer-and-nav` | 🟢 In Progress | — | — | 3-4h | Footer, back-to-top, dark error page |
 | 3 | `chore/schema-hardening` | 🔵 Ready | — | — | 2-3h | FK constraints, indexes, audit timestamps |
 | 4 | `feat/taxonomy-browse` | 🟡 Blocked on #3 | — | — | 3-4h | /tags and /categories browse pages |
 | 5 | `feat/admin-taxonomy-crud` | 🟡 Blocked on #3 | — | — | 4-5h | Category CRUD, tag create/delete |
@@ -37,7 +37,7 @@
 - 🟢 **In Progress** — Currently being worked on (see "Active Branch" below)
 - ✅ **Merged** — Done and shipped to main
 
-**Active Branch:** *(none — Branch 1 merged, ready to start next)*
+**Active Branch:** `feat/layout-footer-and-nav` — Started 2026-06-15
 
 ---
 
