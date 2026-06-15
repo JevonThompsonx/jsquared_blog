@@ -1,7 +1,7 @@
 import { htmlToPlainText } from "@/lib/content";
 import type { BlogPost } from "@/types/blog";
 
-export const SITE_URL = "https://jsquaredadventures.com";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jsquaredadventures.com";
 const SEASON_LABELS: readonly ["Winter", "Spring", "Summer", "Fall"] = ["Winter", "Spring", "Summer", "Fall"];
 
 type SeasonIndex = 0 | 1 | 2 | 3;
