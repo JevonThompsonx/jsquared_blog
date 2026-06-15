@@ -1,6 +1,6 @@
 # Branch 4: `feat/taxonomy-browse`
 
-**Status:** 🟡 Blocked on Branch 3
+**Status:** 🟢 In Progress (PR open)
 **Estimated effort:** 3-4 hours
 **Depends on:** Branch 3 (uses `createdAt`/`updatedAt` on categories/tags for display)
 
@@ -15,13 +15,13 @@ Add browse pages for tags and categories so users can discover content by explor
 ## Checklist
 
 ### 4.1 Create tag browse page (`/tags`)
-- [ ] Create `web/src/app/(blog)/tags/page.tsx`
-- [ ] Fetch all tags with post counts (use new DAL function)
-- [ ] Display as grid of cards: tag name, slug, post count, description
-- [ ] Each card links to `/tag/[slug]`
-- [ ] Sort by post count (descending) or alphabetically
-- [ ] Responsive: grid on desktop, stack on mobile
-- [ ] Add loading skeleton: `web/src/app/(blog)/tags/loading.tsx`
+- [x] Create `web/src/app/(blog)/tags/page.tsx`
+- [x] Fetch all tags with post counts (use new DAL function)
+- [x] Display as grid of cards: tag name, slug, post count, description
+- [x] Each card links to `/tag/[slug]`
+- [x] Sort by post count (descending) or alphabetically
+- [x] Responsive: grid on desktop, stack on mobile
+- [x] Add loading skeleton: `web/src/app/(blog)/tags/loading.tsx`
 
 **Files:**
 - `web/src/app/(blog)/tags/page.tsx` (new)
@@ -30,13 +30,13 @@ Add browse pages for tags and categories so users can discover content by explor
 ---
 
 ### 4.2 Create category browse page (`/categories`)
-- [ ] Create `web/src/app/(blog)/categories/page.tsx`
-- [ ] Fetch all categories with post counts
-- [ ] Display as grid of cards: category name, description, post count
-- [ ] Each card links to `/category/[slug]`
-- [ ] Sort by post count (descending) or alphabetically
-- [ ] Responsive: grid on desktop, stack on mobile
-- [ ] Add loading skeleton: `web/src/app/(blog)/categories/loading.tsx`
+- [x] Create `web/src/app/(blog)/categories/page.tsx`
+- [x] Fetch all categories with post counts
+- [x] Display as grid of cards: category name, description, post count
+- [x] Each card links to `/category/[slug]`
+- [x] Sort by post count (descending) or alphabetically
+- [x] Responsive: grid on desktop, stack on mobile
+- [x] Add loading skeleton: `web/src/app/(blog)/categories/loading.tsx`
 
 **Files:**
 - `web/src/app/(blog)/categories/page.tsx` (new)
@@ -45,36 +45,42 @@ Add browse pages for tags and categories so users can discover content by explor
 ---
 
 ### 4.3 Add navigation links
-- [ ] Edit `web/src/components/layout/site-header.tsx` or footer
-- [ ] Add "Tags" and "Categories" links to nav
-- [ ] Or: add to footer (if footer exists from Branch 2)
-- [ ] Consider: add to mobile nav as well
+- [x] Edit `web/src/components/layout/site-header.tsx` or footer
+- [x] Add "Tags" and "Categories" links to nav
+- [x] Or: add to footer (if footer exists from Branch 2)
+- [x] Consider: add to mobile nav as well
 
 **Files:**
-- `web/src/components/layout/site-header.tsx` and/or `web/src/components/layout/site-footer.tsx`
+- `web/src/components/layout/site-header.tsx` (updated)
+- `web/src/components/layout/mobile-nav.tsx` (updated)
+- `web/src/components/layout/site-footer.tsx` (already covered by Branch 2)
 
 ---
 
 ### 4.4 Add DAL functions
-- [ ] Add `listAllTagsWithCountsForBrowse()` to `web/src/server/dal/admin-tags.ts` (or create `web/src/server/dal/tags.ts`)
-- [ ] Add `listAllCategoriesWithCounts()` to new `web/src/server/dal/categories.ts`
-- [ ] Both functions return: name, slug, description, postCount, createdAt, updatedAt
-- [ ] Both use existing patterns from `admin-tags.ts`
+- [x] Add `listAllTagsForBrowse()` to new `web/src/server/dal/taxonomy-browse.ts`
+- [x] Add `listAllCategoriesForBrowse()` to new `web/src/server/dal/taxonomy-browse.ts`
+- [x] Both functions return: name, slug, description, postCount, createdAt, updatedAt
+- [x] Both use existing patterns from `admin-tags.ts`
 
 **Files:**
-- `web/src/server/dal/admin-tags.ts` or `web/src/server/dal/tags.ts` (new)
-- `web/src/server/dal/categories.ts` (new)
+- `web/src/server/dal/taxonomy-browse.ts` (new)
 
 ---
 
 ### 4.5 Add unit tests
-- [ ] Test `listAllTagsWithCountsForBrowse()` returns correct counts
-- [ ] Test `listAllCategoriesWithCounts()` returns correct counts
-- [ ] Test `/tags` page renders with mock data
-- [ ] Test `/categories` page renders with mock data
+- [x] Test `listAllTagsForBrowse()` returns correct counts
+- [x] Test `listAllCategoriesForBrowse()` returns correct counts
+- [x] Test `/tags` page renders with mock data
+- [x] Test `/categories` page renders with mock data
 
 **Files:**
-- `web/tests/unit/` (add new test files)
+- `web/tests/unit/taxonomy-browse-dal.test.ts` (new)
+- `web/tests/unit/tags-page.test.tsx` (new)
+- `web/tests/unit/categories-page.test.tsx` (new)
+- `web/tests/unit/site-header.test.tsx` (updated)
+- `web/tests/unit/mobile-nav.test.tsx` (updated)
+- `web/tests/unit/sitemap.test.ts` (updated)
 
 ---
 
