@@ -1,6 +1,6 @@
 **Project**: J² Adventures blog
 **Stack**: Next.js 16 App Router, TypeScript strict, Turso/libSQL + Drizzle ORM, Supabase Auth, Auth.js/GitHub OAuth, Cloudinary, Upstash Redis, Sentry, TailwindCSS 4
-**Package manager**: Bun (dev), pnpm (ci)
+**Package manager**: pnpm (primary), bun (dev-only for `bunx` one-off commands)
 **Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run lint`, `pnpm run test`, `pnpm run test:e2e`, `pnpm dlx tsc --noEmit`
 **Env**: Zod-validated via `web/src/lib/env.ts`; loads `.env.test.local` → `.env.local` → `.env` → `.dev.vars`
 **Tests**: `web/tests/unit/` (Vitest), `web/tests/e2e/` (Playwright)

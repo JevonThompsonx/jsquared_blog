@@ -505,7 +505,7 @@ Additional static headers set in `next.config.ts`:
 ### 5. Content Security
 
 - User-provided HTML is sanitized through an allowlist-based `sanitize-html` pipeline
-- `sanitize-html` pinned to exact version `2.17.2` — 2.17.3 had an XSS vulnerability, pinned to avoid accidental bump
+- `sanitize-html` pinned to exact version `2.17.5` — 2.17.3 had an XSS vulnerability, pinned to avoid accidental bump
 - Comment content is stripped of HTML tags via a Zod `.transform(stripHtmlTags)` before storage (defense-in-depth against XSS in email rendering)
 - Post content is stored as canonical Tiptap JSON, with derived HTML/plain-text
 - Legacy HTML migration is behind an allowlist sanitization
@@ -591,7 +591,7 @@ docs/
 | @tiptap/* | ^3.22.3 | Rich text editor |
 | maplibre-gl | ^5.22.0 | Map rendering |
 | react-map-gl | ^8.1.0 | React map component |
-| sanitize-html | 2.17.2 (exact) | HTML content sanitization — pinned to avoid XSS vuln in 2.17.3 |
+| sanitize-html | 2.17.5 (exact) | HTML content sanitization — pinned to avoid XSS vuln in 2.17.3 |
 | zod | ^4.3.6 | Schema validation |
 | tailwindcss | ^4.2.2 | CSS framework |
 

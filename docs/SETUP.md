@@ -266,15 +266,6 @@ pnpm run ./scripts/seed-locations.ts
 
 Seeds location metadata for geotagged content.
 
-### Wishlist Places
-
-```bash
-cd web
-pnpm run seed:wishlist
-```
-
-Seeds example wishlist destinations.
-
 ---
 
 ## Optional Integrations
@@ -368,6 +359,22 @@ Runs from `web/` directory (Vercel is configured to use `web/` as the root).
 8. `.dev.vars` (repo root)
 
 This means `web/.env.local` overrides `.env`, and test env files take highest priority.
+
+---
+
+## pnpm Workspace Overrides
+
+`pnpm-workspace.yaml` contains a small set of security-driven overrides applied across the dependency tree:
+
+| Package | Override | Reason |
+|---------|----------|--------|
+| `postcss` | `>=8.5.10` | Addresses a known postcss vulnerability in older 8.4.x versions |
+| `ws` | `>=8.20.1` | Addresses a `ws` vulnerability (CVE) in older 8.x versions |
+| `uuid` | `>=11.1.1` | Addresses a `uuid` vulnerability in older 10.x/8.x versions |
+
+These overrides are intentionally minimal and security-focused. They apply transitively to any package in the dependency tree that depends on these. Review and update them when bumping major dependencies.
+
+`allowBuilds` permits native build steps for these packages (required by Sentry CLI, esbuild, sharp, and unrs-resolver).
 
 ---
 

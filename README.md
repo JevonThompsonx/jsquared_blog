@@ -358,7 +358,7 @@ GET  /feed.xml
 
 **Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.
 
-**Content sanitization** uses an allowlist-based `sanitize-html` pipeline before rendering prose. `sanitize-html` is pinned to exact `2.17.2` (2.17.3 had an XSS vulnerability). Comment content is additionally stripped of HTML tags via Zod `.transform(stripHtmlTags)` before storage.
+**Content sanitization** uses an allowlist-based `sanitize-html` pipeline before rendering prose. `sanitize-html` is pinned to exact `2.17.5` to avoid the XSS vulnerability in `2.17.3`. Comment content is additionally stripped of HTML tags via Zod `.transform(stripHtmlTags)` before storage.
 
 **Security headers** ship from `web/src/proxy.ts` (dynamic CSP/nonces) and `web/next.config.ts` (remaining static headers).
 
