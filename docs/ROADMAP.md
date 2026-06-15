@@ -20,7 +20,7 @@
 
 | # | Branch | Status | PR | Merged | Effort | Ships |
 |---|--------|--------|----|--------|--------|-------|
-| 1 | `feat/seo-and-discovery` | 🔵 Ready | — | — | 2-3h | robots.txt, sitemap, social cards, hero |
+| 1 | `feat/seo-and-discovery` | 🟢 In Progress | — | — | 2-3h | robots.txt, sitemap, social cards, hero |
 | 2 | `feat/layout-footer-and-nav` | 🔵 Ready | — | — | 3-4h | Footer, back-to-top, dark error page |
 | 3 | `chore/schema-hardening` | 🔵 Ready | — | — | 2-3h | FK constraints, indexes, audit timestamps |
 | 4 | `feat/taxonomy-browse` | 🟡 Blocked on #3 | — | — | 3-4h | /tags and /categories browse pages |
@@ -37,7 +37,7 @@
 - 🟢 **In Progress** — Currently being worked on (see "Active Branch" below)
 - ✅ **Merged** — Done and shipped to main
 
-**Active Branch:** *(none — ready to start)*
+**Active Branch:** `feat/seo-and-discovery` — Started 2026-06-15
 
 ---
 
