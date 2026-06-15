@@ -66,8 +66,10 @@ describe("SiteFooter", () => {
     expect(hrefs).toContain("/feed.xml");
   });
 
-  it("renders the newsletter signup form", () => {
+  it("renders the newsletter signup form with the 'Stay on the trail' heading", () => {
     render();
+    expect(container.textContent).toContain("Stay on the trail");
+    expect(container.textContent).toContain("Get notified when we post new stories");
     expect(container.querySelector("[data-testid='newsletter-form']")).toBeTruthy();
   });
 

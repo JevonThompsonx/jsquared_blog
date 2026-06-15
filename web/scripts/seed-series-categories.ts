@@ -34,7 +34,7 @@ async function main() {
   for (const s of TEST_SERIES) {
     await db
       .insert(series)
-      .values({ ...s, createdAt: now })
+      .values({ ...s, createdAt: now, updatedAt: now })
       .onConflictDoNothing();
     console.log(`  ✓ ${s.title}`);
   }
@@ -43,7 +43,7 @@ async function main() {
   for (const c of TEST_CATEGORIES) {
     await db
       .insert(categories)
-      .values(c)
+      .values({ ...c, createdAt: now, updatedAt: now })
       .onConflictDoNothing();
     console.log(`  ✓ ${c.name}`);
   }

@@ -552,22 +552,28 @@ async function main() {
     }
 
     if (distinctCategories.length > 0) {
+      const now = new Date();
       await tx.insert(categories).values(
         distinctCategories.map((categoryName) => ({
           id: toCategoryId(categoryName),
           name: categoryName,
           slug: slugify(categoryName),
           description: null,
+          createdAt: now,
+          updatedAt: now,
         }))
       );
     }
 
     if (tagRows.length > 0) {
+      const now = new Date();
       await tx.insert(tags).values(
         tagRows.map((tag) => ({
           id: toLegacyTagId(tag.id),
           name: tag.name,
           slug: tag.slug,
+          createdAt: now,
+          updatedAt: now,
         }))
       );
     }

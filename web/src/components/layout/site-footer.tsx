@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { NewsletterSignupForm } from "@/components/blog/newsletter-signup-form";
-import { SITE_URL } from "@/lib/utils";
 
 type FooterLink = {
   href: string;
@@ -21,11 +20,6 @@ const contentLinks: FooterLink[] = [
   { href: "/categories", label: "Categories" },
   { href: "/series", label: "Series" },
   { href: "/feed.xml", label: "RSS Feed", external: true },
-];
-
-const socialLinks: FooterLink[] = [
-  { href: "https://www.instagram.com/jsquaredadventures", label: "Instagram", external: true },
-  { href: "https://www.youtube.com/@jsquaredadventures", label: "YouTube", external: true },
 ];
 
 function FooterLinkItem({ link }: { link: FooterLink }) {
@@ -121,18 +115,10 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-4 border-t border-[var(--border)] pt-6 sm:flex-row sm:items-center">
+        <div className="mt-10 border-t border-[var(--border)] pt-6">
           <p className="text-xs text-[var(--text-secondary)]">
-            © {year} {SITE_URL.replace(/^https?:\/\//, "")}. All rights reserved.
+            © {year} J² Adventures. All rights reserved.
           </p>
-          {socialLinks.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <span className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Follow</span>
-              {socialLinks.map((link) => (
-                <FooterLinkItem key={link.href} link={link} />
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
     </footer>

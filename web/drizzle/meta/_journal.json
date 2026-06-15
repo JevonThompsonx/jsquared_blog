@@ -148,6 +148,20 @@
       "when": 1780435200000,
       "tag": "0020_wishlist_detail_level",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1781554800000,
+      "tag": "0021_wishlist_linked_post_fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1781554800000,
+      "tag": "0022_schema_hardening_timestamps",
+      "breakpoints": true
     }
   ]
 }

@@ -1,10 +1,18 @@
 # Branch 3: `chore/schema-hardening`
 
-**Status:** 🔵 Ready to start
+**Status:** 🟢 In Progress
 **Estimated effort:** 2-3 hours
 **Depends on:** Nothing
 
-> ⚠️ **This branch modifies the database schema. It requires a Drizzle migration. Test carefully on a local database first, then apply to production.**
+> ⚠️ **This branch modifies the database schema. It requires Drizzle migrations. Test carefully on a local database first, then apply to production.**
+
+### Companion cleanup
+
+The branch also picks up a small UI cleanup: the homepage had a redundant
+"Stay on the trail" newsletter section just above the footer. The user
+asked to keep the footer newsletter form and remove the homepage one.
+That cleanup is committed alongside this branch (the footer fix was
+misclassified on Branch 2).
 
 ---
 
