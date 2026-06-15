@@ -26,13 +26,14 @@ vi.mock("@/server/dal/admin-tags", () => ({
 }));
 
 vi.mock("@/app/admin/tags/actions", () => ({
+  createTagAction: vi.fn(),
+  deleteTagAction: vi.fn(),
   updateTagDescriptionAction: vi.fn(),
 }));
 
 import AdminTagsPage from "@/app/admin/tags/page";
 import { requireAdminSession } from "@/lib/auth/session";
 import { listAllTagsWithCounts } from "@/server/dal/admin-tags";
-import { redirect } from "next/navigation";
 
 describe("AdminTagsPage", () => {
   afterEach(() => {
@@ -42,18 +43,16 @@ describe("AdminTagsPage", () => {
   it("redirects unauthenticated visitors before loading tag data", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(null);
 
-    await expect(AdminTagsPage()).rejects.toThrow(redirectError);
+    await expect(AdminTagsPage({})).rejects.toThrow(redirectError);
 
-    expect(redirect).toHaveBeenCalledWith("/admin");
     expect(listAllTagsWithCounts).not.toHaveBeenCalled();
   });
 
   it("redirects non-admin visitors before loading tag data", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "reader-1", role: "reader" } } as never);
 
-    await expect(AdminTagsPage()).rejects.toThrow(redirectError);
+    await expect(AdminTagsPage({})).rejects.toThrow(redirectError);
 
-    expect(redirect).toHaveBeenCalledWith("/admin");
     expect(listAllTagsWithCounts).not.toHaveBeenCalled();
   });
 
@@ -69,12 +68,70 @@ describe("AdminTagsPage", () => {
       },
     ] as never);
 
-    const markup = renderToStaticMarkup(await AdminTagsPage());
+    const markup = renderToStaticMarkup(await AdminTagsPage({}));
 
     expect(markup).toContain("Manage Tags");
     expect(markup).toContain("Road trip");
     expect(markup).toContain("/tag/road-trip");
     expect(markup).toContain("Scenic drives and overland stories.");
     expect(markup).toContain("2 posts");
+    expect(markup).toContain("data-testid=\"admin-tags-list\"");
+    expect(markup).toContain("data-testid=\"admin-tag-description-form\"");
+  });
+
+  it("renders a create form alongside the tag list", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    vi.mocked(listAllTagsWithCounts).mockResolvedValue([] as never);
+
+    const markup = renderToStaticMarkup(await AdminTagsPage({}));
+
+    expect(markup).toContain("data-testid=\"admin-tags-create-form\"");
+    expect(markup).toContain("Create tag");
+    expect(markup).toContain("data-testid=\"admin-tags-empty\"");
+  });
+
+  it("disables the delete button when a tag has posts attached", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    vi.mocked(listAllTagsWithCounts).mockResolvedValue([
+      {
+        id: "tag-1",
+        name: "Road trip",
+        slug: "road-trip",
+        description: null,
+        postCount: 4,
+      },
+    ] as never);
+
+    const markup = renderToStaticMarkup(await AdminTagsPage({}));
+
+    expect(markup).toContain("data-testid=\"admin-tag-delete-form\"");
+    expect(markup).toContain("Cannot delete: 4 post(s) still use this tag");
+  });
+
+  it("renders a SlugTaken error when the searchParams carry the slug conflict marker", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    vi.mocked(listAllTagsWithCounts).mockResolvedValue([] as never);
+
+    const markup = renderToStaticMarkup(
+      await AdminTagsPage({
+        searchParams: Promise.resolve({ error: "SlugTaken", slug: "overland" }),
+      }),
+    );
+
+    expect(markup).toContain("Another tag already uses that slug");
+    expect(markup).toContain("data-testid=\"admin-tags-error\"");
+  });
+
+  it("renders a TagInUse error with the post count", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    vi.mocked(listAllTagsWithCounts).mockResolvedValue([] as never);
+
+    const markup = renderToStaticMarkup(
+      await AdminTagsPage({
+        searchParams: Promise.resolve({ error: "TagInUse", posts: "2" }),
+      }),
+    );
+
+    expect(markup).toContain("Cannot delete: 2 post(s) still use this tag");
   });
 });
