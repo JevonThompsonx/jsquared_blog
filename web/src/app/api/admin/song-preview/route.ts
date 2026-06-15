@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/session";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
@@ -7,6 +8,10 @@ import { getSongPreviewMetadata } from "@/lib/post-song-metadata";
 const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60_000;
 const SPOTIFY_OEMBED_ENDPOINT = "https://open.spotify.com/oembed";
+
+const songPreviewSchema = z.object({
+  url: z.string().url().max(2048),
+});
 
 function isSafeSpotifyArtworkUrl(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -41,13 +46,18 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid song preview request" }, { status: 422 });
+    return NextResponse.json({ error: "Invalid song preview request" }, { status: 400 });
   }
 
-  const url = typeof body === "object" && body !== null && "url" in body && typeof body.url === "string" ? body.url.trim() : "";
-  if (!url) {
-    return NextResponse.json({ error: "Invalid song preview request" }, { status: 422 });
+  const parsed = songPreviewSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid song preview request", details: parsed.error.issues },
+      { status: 400 },
+    );
   }
+
+  const { url } = parsed.data;
 
   const preview = getSongPreviewMetadata({ songUrl: url, songTitle: "", songArtist: "" });
   if (!preview) {
