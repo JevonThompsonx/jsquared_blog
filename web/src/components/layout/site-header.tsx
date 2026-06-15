@@ -78,6 +78,7 @@ export function SiteHeader() {
   const searchParams = useSearchParams();
   const [publicSession, setPublicSession] = useState<Session | null>(null);
   const searchDebounceRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const currentSearch = searchParams?.get("q") ?? "";
 
   function navigateToSearch(value: string, mode: "push" | "replace") {
@@ -125,6 +126,20 @@ export function SiteHeader() {
       searchDebounceRef.current = null;
     }, 300);
   }
+
+  useEffect(() => {
+    function handleShortcutKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && (event.key === "k" || event.key === "K")) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcutKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleShortcutKeyDown);
+    };
+  }, []);
 
   useEffect(() => clearPendingSearchNavigation, []);
 
@@ -195,7 +210,8 @@ export function SiteHeader() {
               key={`desktop-search:${pathname}:${currentSearch}`}
               name="q"
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search stories…"
+              placeholder="Search stories… (⌘K)"
+              ref={searchInputRef}
               type="search"
             />
             <button

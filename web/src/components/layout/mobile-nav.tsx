@@ -94,7 +94,7 @@ export function MobileNav({
                   key={`mobile-search:${pathname}:${currentSearch}`}
                   name="q"
                   onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Search stories…"
+                  placeholder="Search stories… (⌘K)"
                   type="search"
                 />
                 <button
