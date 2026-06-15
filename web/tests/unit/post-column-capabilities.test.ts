@@ -62,6 +62,8 @@ describe("post column capability detection", () => {
 
     await expect(getPostColumnCapabilities()).resolves.toEqual({
       layoutType: true,
+      categoryId: false,
+      featuredImageId: false,
       locationName: true,
       locationLat: true,
       locationLng: true,
@@ -83,6 +85,8 @@ describe("post column capability detection", () => {
 
     await expect(getPostColumnCapabilities()).resolves.toEqual({
       layoutType: false,
+      categoryId: false,
+      featuredImageId: false,
       locationName: false,
       locationLat: false,
       locationLng: false,

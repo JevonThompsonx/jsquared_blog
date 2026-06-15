@@ -10,7 +10,7 @@ import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/dr
 import { requireAdminSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
-import { createPostRevision } from "@/server/dal/post-revisions";
+import { createPostRevision, type PostRevisionLayoutType } from "@/server/dal/post-revisions";
 import { ensureSeriesId } from "@/server/dal/series";
 import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 import { replaceLinksForPost } from "@/server/dal/post-links";
@@ -633,6 +633,13 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         title: true,
         contentJson: true,
         excerpt: true,
+        ...(caps.layoutType ? { layoutType: true as const } : {}),
+        ...(caps.categoryId ? { categoryId: true as const } : {}),
+        ...(caps.featuredImageId ? { featuredImageId: true as const } : {}),
+        ...(caps.locationName ? { locationName: true as const } : {}),
+        ...(caps.locationLat ? { locationLat: true as const } : {}),
+        ...(caps.locationLng ? { locationLng: true as const } : {}),
+        ...(caps.locationZoom ? { locationZoom: true as const } : {}),
         ...(caps.songTitle ? { songTitle: true as const } : {}),
         ...(caps.songArtist ? { songArtist: true as const } : {}),
         ...(caps.songUrl ? { songUrl: true as const } : {}),
@@ -699,14 +706,36 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   // Best-effort: a revision failure must not block the save.
   if (existingPost) {
     try {
+      const existingTyped = existingPost as {
+        title: string;
+        contentJson: string;
+        excerpt: string | null;
+        layoutType?: PostRevisionLayoutType | null;
+        categoryId?: string | null;
+        featuredImageId?: string | null;
+        locationName?: string | null;
+        locationLat?: number | null;
+        locationLng?: number | null;
+        locationZoom?: number | null;
+        songTitle?: string | null;
+        songArtist?: string | null;
+        songUrl?: string | null;
+      };
       await createPostRevision({
         postId: validPostId,
-        title: existingPost.title,
-        contentJson: existingPost.contentJson,
-        excerpt: existingPost.excerpt ?? null,
-        songTitle: caps.songTitle ? (existingPost as { songTitle?: string | null }).songTitle ?? null : null,
-        songArtist: caps.songArtist ? (existingPost as { songArtist?: string | null }).songArtist ?? null : null,
-        songUrl: caps.songUrl ? (existingPost as { songUrl?: string | null }).songUrl ?? null : null,
+        title: existingTyped.title,
+        contentJson: existingTyped.contentJson,
+        excerpt: existingTyped.excerpt ?? null,
+        layoutType: caps.layoutType ? (existingTyped.layoutType ?? null) : null,
+        categoryId: caps.categoryId ? (existingTyped.categoryId ?? null) : null,
+        featuredImageId: caps.featuredImageId ? (existingTyped.featuredImageId ?? null) : null,
+        locationName: caps.locationName ? (existingTyped.locationName ?? null) : null,
+        locationLat: caps.locationLat ? (existingTyped.locationLat ?? null) : null,
+        locationLng: caps.locationLng ? (existingTyped.locationLng ?? null) : null,
+        locationZoom: caps.locationZoom ? (existingTyped.locationZoom ?? null) : null,
+        songTitle: caps.songTitle ? (existingTyped.songTitle ?? null) : null,
+        songArtist: caps.songArtist ? (existingTyped.songArtist ?? null) : null,
+        songUrl: caps.songUrl ? (existingTyped.songUrl ?? null) : null,
         savedByUserId: authorId,
       });
     } catch (error) {

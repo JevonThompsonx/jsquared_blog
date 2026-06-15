@@ -4,6 +4,8 @@ import { getDbClient } from "@/lib/db";
 
 export type PostColumnCapabilities = {
   layoutType: boolean;
+  categoryId: boolean;
+  featuredImageId: boolean;
   locationName: boolean;
   locationLat: boolean;
   locationLng: boolean;
@@ -17,6 +19,8 @@ export type PostColumnCapabilities = {
 
 const DEFAULT_POST_COLUMN_CAPABILITIES: PostColumnCapabilities = {
   layoutType: false,
+  categoryId: false,
+  featuredImageId: false,
   locationName: false,
   locationLat: false,
   locationLng: false,
@@ -30,6 +34,8 @@ const DEFAULT_POST_COLUMN_CAPABILITIES: PostColumnCapabilities = {
 
 const POST_COLUMN_NAMES: Record<keyof PostColumnCapabilities, string> = {
   layoutType: "layout_type",
+  categoryId: "category_id",
+  featuredImageId: "featured_image_id",
   locationName: "location_name",
   locationLat: "location_lat",
   locationLng: "location_lng",
@@ -61,6 +67,8 @@ export async function getPostColumnCapabilities(): Promise<PostColumnCapabilitie
 
         return {
           layoutType: availableColumns.has(POST_COLUMN_NAMES.layoutType),
+          categoryId: availableColumns.has(POST_COLUMN_NAMES.categoryId),
+          featuredImageId: availableColumns.has(POST_COLUMN_NAMES.featuredImageId),
           locationName: availableColumns.has(POST_COLUMN_NAMES.locationName),
           locationLat: availableColumns.has(POST_COLUMN_NAMES.locationLat),
           locationLng: availableColumns.has(POST_COLUMN_NAMES.locationLng),

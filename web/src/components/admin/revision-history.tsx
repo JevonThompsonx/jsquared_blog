@@ -8,12 +8,32 @@ type PostRevision = {
   revisionNum: number;
   title: string;
   excerpt: string | null;
+  layoutType: string | null;
+  categoryId: string | null;
+  featuredImageId: string | null;
+  locationName: string | null;
   savedAt: string;
   label: string | null;
 };
 
 type RevisionDetail = PostRevision & {
   contentJson: string;
+  categoryName: string | null;
+  featuredImageUrl: string | null;
+  featuredImageAlt: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationZoom: number | null;
+  songTitle: string | null;
+  songArtist: string | null;
+  songUrl: string | null;
+};
+
+const LAYOUT_LABELS: Record<string, string> = {
+  standard: "Standard",
+  "split-horizontal": "Split Horizontal",
+  "split-vertical": "Split Vertical",
+  hover: "Hover",
 };
 
 /** Extract readable plain text from a Tiptap/ProseMirror JSON content tree. */
@@ -50,6 +70,24 @@ function extractTextFromTiptapJson(contentJson: string): string {
   } catch {
     return "(unable to preview content)";
   }
+}
+
+function formatLayout(layoutType: string | null): string | null {
+  if (!layoutType) return null;
+  return LAYOUT_LABELS[layoutType] ?? layoutType;
+}
+
+function formatLocation(detail: RevisionDetail): string | null {
+  if (!detail.locationName && detail.locationLat == null && detail.locationLng == null) {
+    return null;
+  }
+  if (detail.locationName) {
+    return detail.locationName;
+  }
+  if (detail.locationLat != null && detail.locationLng != null) {
+    return `${detail.locationLat.toFixed(4)}, ${detail.locationLng.toFixed(4)}`;
+  }
+  return null;
 }
 
 export function RevisionHistory({ postId }: { postId: string }) {
@@ -134,17 +172,24 @@ export function RevisionHistory({ postId }: { postId: string }) {
                     <p className="mt-1 text-xs text-[var(--text-secondary)]">Every time you save the post a revision is captured here.</p>
                   </div>
                 ) : (
-                  revisions.map(rev => (
-                    <button
-                      key={rev.id}
-                      onClick={() => loadDetail(rev.id)}
-                      className={`block w-full text-left rounded-lg p-3 text-sm transition-colors ${selectedRevision?.id === rev.id ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--background)] border border-[var(--border)]"}`}
-                    >
-                      <div className="font-medium">Rev {rev.revisionNum}: {new Date(rev.savedAt).toLocaleString()}</div>
-                      <div className="mt-1 truncate opacity-80">{rev.title}</div>
-                      {rev.label && <div className="mt-1 text-xs opacity-70 italic">{rev.label}</div>}
-                    </button>
-                  ))
+                  revisions.map(rev => {
+                    const layoutLabel = formatLayout(rev.layoutType);
+                    return (
+                      <button
+                        key={rev.id}
+                        onClick={() => loadDetail(rev.id)}
+                        className={`block w-full text-left rounded-lg p-3 text-sm transition-colors ${selectedRevision?.id === rev.id ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--background)] border border-[var(--border)]"}`}
+                      >
+                        <div className="font-medium">Rev {rev.revisionNum}: {new Date(rev.savedAt).toLocaleString()}</div>
+                        <div className="mt-1 truncate opacity-80">{rev.title}</div>
+                        <div className="mt-1 flex flex-wrap gap-1 text-xs opacity-80">
+                          {layoutLabel && <span className="rounded bg-black/10 px-1.5 py-0.5">{layoutLabel}</span>}
+                          {rev.locationName && <span className="rounded bg-black/10 px-1.5 py-0.5 truncate max-w-full">📍 {rev.locationName}</span>}
+                        </div>
+                        {rev.label && <div className="mt-1 text-xs opacity-70 italic">{rev.label}</div>}
+                      </button>
+                    );
+                  })
                 )}
               </div>
               
@@ -168,7 +213,63 @@ export function RevisionHistory({ postId }: { postId: string }) {
                     {selectedRevision.excerpt && (
                       <p className="text-sm italic text-[var(--text-secondary)]">{selectedRevision.excerpt}</p>
                     )}
-                    <div className="mt-4 rounded-lg bg-[var(--card-bg)] p-4 border border-[var(--border)]">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {(() => {
+                        const layoutLabel = formatLayout(selectedRevision.layoutType);
+                        return layoutLabel ? (
+                          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3">
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Layout</p>
+                            <p className="text-sm text-[var(--text-primary)]">{layoutLabel}</p>
+                          </div>
+                        ) : null;
+                      })()}
+                      {selectedRevision.categoryName ? (
+                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Category</p>
+                          <p className="text-sm text-[var(--text-primary)]">{selectedRevision.categoryName}</p>
+                        </div>
+                      ) : null}
+                      {(() => {
+                        const location = formatLocation(selectedRevision);
+                        return location ? (
+                          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3 sm:col-span-2">
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Location</p>
+                            <p className="text-sm text-[var(--text-primary)]">{location}</p>
+                            {selectedRevision.locationLat != null && selectedRevision.locationLng != null ? (
+                              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                {selectedRevision.locationLat.toFixed(4)}, {selectedRevision.locationLng.toFixed(4)}
+                                {selectedRevision.locationZoom != null ? ` · zoom ${selectedRevision.locationZoom}` : ""}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null;
+                      })()}
+                      {selectedRevision.songTitle ? (
+                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3 sm:col-span-2">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Song</p>
+                          <p className="text-sm text-[var(--text-primary)]">
+                            {selectedRevision.songTitle} — {selectedRevision.songArtist ?? "Unknown artist"}
+                          </p>
+                          {selectedRevision.songUrl ? (
+                            <a href={selectedRevision.songUrl} target="_blank" rel="noreferrer noopener" className="mt-1 inline-block text-xs text-[var(--primary)] underline">
+                              Open song link
+                            </a>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                    {selectedRevision.featuredImageUrl ? (
+                      <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Featured image</p>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL resolved server-side */}
+                        <img
+                          src={selectedRevision.featuredImageUrl}
+                          alt={selectedRevision.featuredImageAlt ?? "Featured image"}
+                          className="max-h-48 w-auto rounded-md object-contain"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="rounded-lg bg-[var(--card-bg)] p-4 border border-[var(--border)]">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Content preview</p>
                       <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--text-primary)]">
                         {extractTextFromTiptapJson(selectedRevision.contentJson)}

@@ -7,6 +7,8 @@ import { getDb } from "@/lib/db";
 import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
 import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 
+export type PostRevisionLayoutType = "standard" | "split-horizontal" | "split-vertical" | "hover";
+
 export type PostRevisionRecord = {
   id: string;
   postId: string;
@@ -14,6 +16,13 @@ export type PostRevisionRecord = {
   title: string;
   contentJson: string;
   excerpt: string | null;
+  layoutType?: PostRevisionLayoutType | null;
+  categoryId?: string | null;
+  featuredImageId?: string | null;
+  locationName?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  locationZoom?: number | null;
   songTitle?: string | null;
   songArtist?: string | null;
   songUrl?: string | null;
@@ -21,6 +30,96 @@ export type PostRevisionRecord = {
   savedAt: Date;
   label: string | null;
 };
+
+type PostRevisionColumns = {
+  id: typeof postRevisions.id;
+  postId: typeof postRevisions.postId;
+  revisionNum: typeof postRevisions.revisionNum;
+  title: typeof postRevisions.title;
+  contentJson: typeof postRevisions.contentJson;
+  excerpt: typeof postRevisions.excerpt;
+  layoutType: typeof postRevisions.layoutType;
+  categoryId: typeof postRevisions.categoryId;
+  featuredImageId: typeof postRevisions.featuredImageId;
+  locationName: typeof postRevisions.locationName;
+  locationLat: typeof postRevisions.locationLat;
+  locationLng: typeof postRevisions.locationLng;
+  locationZoom: typeof postRevisions.locationZoom;
+  songTitle: typeof postRevisions.songTitle;
+  songArtist: typeof postRevisions.songArtist;
+  songUrl: typeof postRevisions.songUrl;
+  savedByUserId: typeof postRevisions.savedByUserId;
+  savedAt: typeof postRevisions.savedAt;
+  label: typeof postRevisions.label;
+};
+
+const REVISION_COLUMN_SELECTION: PostRevisionColumns = {
+  id: postRevisions.id,
+  postId: postRevisions.postId,
+  revisionNum: postRevisions.revisionNum,
+  title: postRevisions.title,
+  contentJson: postRevisions.contentJson,
+  excerpt: postRevisions.excerpt,
+  layoutType: postRevisions.layoutType,
+  categoryId: postRevisions.categoryId,
+  featuredImageId: postRevisions.featuredImageId,
+  locationName: postRevisions.locationName,
+  locationLat: postRevisions.locationLat,
+  locationLng: postRevisions.locationLng,
+  locationZoom: postRevisions.locationZoom,
+  songTitle: postRevisions.songTitle,
+  songArtist: postRevisions.songArtist,
+  songUrl: postRevisions.songUrl,
+  savedByUserId: postRevisions.savedByUserId,
+  savedAt: postRevisions.savedAt,
+  label: postRevisions.label,
+};
+
+type RevisionRow = {
+  id: string;
+  postId: string;
+  revisionNum: number;
+  title: string;
+  contentJson: string;
+  excerpt: string | null;
+  layoutType: string | null;
+  categoryId: string | null;
+  featuredImageId: string | null;
+  locationName: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationZoom: number | null;
+  songTitle: string | null;
+  songArtist: string | null;
+  songUrl: string | null;
+  savedByUserId: string;
+  savedAt: Date;
+  label: string | null;
+};
+
+function mapRevisionRow(row: RevisionRow): PostRevisionRecord {
+  return {
+    id: row.id,
+    postId: row.postId,
+    revisionNum: row.revisionNum,
+    title: row.title,
+    contentJson: row.contentJson,
+    excerpt: row.excerpt,
+    layoutType: (row.layoutType as PostRevisionLayoutType | null) ?? null,
+    categoryId: row.categoryId,
+    featuredImageId: row.featuredImageId,
+    locationName: row.locationName,
+    locationLat: row.locationLat,
+    locationLng: row.locationLng,
+    locationZoom: row.locationZoom,
+    songTitle: row.songTitle,
+    songArtist: row.songArtist,
+    songUrl: row.songUrl,
+    savedByUserId: row.savedByUserId,
+    savedAt: new Date(row.savedAt),
+    label: row.label,
+  };
+}
 
 /**
  * Lists revisions for a post, most recent first.
@@ -31,40 +130,14 @@ export async function listPostRevisions(postId: string, limit: number, offset: n
   const db = getDb();
 
   const rows = await db
-    .select({
-      id: postRevisions.id,
-      postId: postRevisions.postId,
-      revisionNum: postRevisions.revisionNum,
-      title: postRevisions.title,
-      contentJson: postRevisions.contentJson,
-      excerpt: postRevisions.excerpt,
-      songTitle: postRevisions.songTitle,
-      songArtist: postRevisions.songArtist,
-      songUrl: postRevisions.songUrl,
-      savedByUserId: postRevisions.savedByUserId,
-      savedAt: postRevisions.savedAt,
-      label: postRevisions.label,
-    })
+    .select(REVISION_COLUMN_SELECTION)
     .from(postRevisions)
     .where(eq(postRevisions.postId, postId))
     .orderBy(desc(postRevisions.revisionNum))
     .limit(limit)
     .offset(offset);
 
-  return rows.map((row) => ({
-    id: row.id,
-    postId: row.postId,
-    revisionNum: row.revisionNum,
-      title: row.title,
-      contentJson: row.contentJson,
-      excerpt: row.excerpt,
-      songTitle: row.songTitle,
-      songArtist: row.songArtist,
-      songUrl: row.songUrl,
-      savedByUserId: row.savedByUserId,
-    savedAt: new Date(row.savedAt),
-    label: row.label,
-  }));
+  return rows.map((row) => mapRevisionRow(row as RevisionRow));
 }
 
 /**
@@ -74,43 +147,17 @@ export async function getPostRevisionById(postId: string, revisionId: string): P
   const db = getDb();
 
   const rows = await db
-    .select({
-      id: postRevisions.id,
-      postId: postRevisions.postId,
-      revisionNum: postRevisions.revisionNum,
-      title: postRevisions.title,
-      contentJson: postRevisions.contentJson,
-      excerpt: postRevisions.excerpt,
-      songTitle: postRevisions.songTitle,
-      songArtist: postRevisions.songArtist,
-      songUrl: postRevisions.songUrl,
-      savedByUserId: postRevisions.savedByUserId,
-      savedAt: postRevisions.savedAt,
-      label: postRevisions.label,
-    })
+    .select(REVISION_COLUMN_SELECTION)
     .from(postRevisions)
     .where(eq(postRevisions.id, revisionId))
     .limit(1);
 
-  const row = rows[0];
+  const row = rows[0] as RevisionRow | undefined;
   if (!row || row.postId !== postId) {
     return null;
   }
 
-  return {
-    id: row.id,
-    postId: row.postId,
-    revisionNum: row.revisionNum,
-    title: row.title,
-    contentJson: row.contentJson,
-    excerpt: row.excerpt,
-    songTitle: row.songTitle,
-    songArtist: row.songArtist,
-    songUrl: row.songUrl,
-    savedByUserId: row.savedByUserId,
-    savedAt: new Date(row.savedAt),
-    label: row.label,
-  };
+  return mapRevisionRow(row);
 }
 
 /**
@@ -123,6 +170,13 @@ export async function createPostRevision(input: {
   title: string;
   contentJson: string;
   excerpt: string | null;
+  layoutType?: PostRevisionLayoutType | null;
+  categoryId?: string | null;
+  featuredImageId?: string | null;
+  locationName?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  locationZoom?: number | null;
   songTitle?: string | null;
   songArtist?: string | null;
   songUrl?: string | null;
@@ -145,13 +199,20 @@ export async function createPostRevision(input: {
     id,
     postId: input.postId,
     revisionNum: nextRevisionNum,
-      title: input.title,
-      contentJson: input.contentJson,
-      excerpt: input.excerpt,
-      songTitle: input.songTitle ?? null,
-      songArtist: input.songArtist ?? null,
-      songUrl: input.songUrl ?? null,
-      savedByUserId: input.savedByUserId,
+    title: input.title,
+    contentJson: input.contentJson,
+    excerpt: input.excerpt,
+    layoutType: input.layoutType ?? null,
+    categoryId: input.categoryId ?? null,
+    featuredImageId: input.featuredImageId ?? null,
+    locationName: input.locationName ?? null,
+    locationLat: input.locationLat ?? null,
+    locationLng: input.locationLng ?? null,
+    locationZoom: input.locationZoom ?? null,
+    songTitle: input.songTitle ?? null,
+    songArtist: input.songArtist ?? null,
+    songUrl: input.songUrl ?? null,
+    savedByUserId: input.savedByUserId,
     savedAt: now,
     label: input.label ?? null,
   });
@@ -163,6 +224,13 @@ export async function createPostRevision(input: {
     title: input.title,
     contentJson: input.contentJson,
     excerpt: input.excerpt,
+    layoutType: input.layoutType ?? null,
+    categoryId: input.categoryId ?? null,
+    featuredImageId: input.featuredImageId ?? null,
+    locationName: input.locationName ?? null,
+    locationLat: input.locationLat ?? null,
+    locationLng: input.locationLng ?? null,
+    locationZoom: input.locationZoom ?? null,
     songTitle: input.songTitle ?? null,
     songArtist: input.songArtist ?? null,
     songUrl: input.songUrl ?? null,
@@ -228,6 +296,13 @@ export async function restorePostRevisionAtomically(input: {
         slug: posts.slug,
         contentJson: posts.contentJson,
         excerpt: posts.excerpt,
+        layoutType: caps.layoutType ? posts.layoutType : sql<null>`null`,
+        categoryId: caps.categoryId ? posts.categoryId : sql<null>`null`,
+        featuredImageId: caps.featuredImageId ? posts.featuredImageId : sql<null>`null`,
+        locationName: caps.locationName ? posts.locationName : sql<null>`null`,
+        locationLat: caps.locationLat ? posts.locationLat : sql<null>`null`,
+        locationLng: caps.locationLng ? posts.locationLng : sql<null>`null`,
+        locationZoom: caps.locationZoom ? posts.locationZoom : sql<null>`null`,
         songTitle: caps.songTitle ? posts.songTitle : sql<null>`null`,
         songArtist: caps.songArtist ? posts.songArtist : sql<null>`null`,
         songUrl: caps.songUrl ? posts.songUrl : sql<null>`null`,
@@ -257,6 +332,13 @@ export async function restorePostRevisionAtomically(input: {
       title: snapshot.title,
       contentJson: snapshot.contentJson,
       excerpt: snapshot.excerpt,
+      layoutType: snapshot.layoutType ?? null,
+      categoryId: snapshot.categoryId ?? null,
+      featuredImageId: snapshot.featuredImageId ?? null,
+      locationName: snapshot.locationName ?? null,
+      locationLat: snapshot.locationLat ?? null,
+      locationLng: snapshot.locationLng ?? null,
+      locationZoom: snapshot.locationZoom ?? null,
       songTitle: snapshot.songTitle ?? null,
       songArtist: snapshot.songArtist ?? null,
       songUrl: snapshot.songUrl ?? null,
@@ -273,6 +355,13 @@ export async function restorePostRevisionAtomically(input: {
         contentHtml: input.derivedContent.contentHtml,
         contentPlainText: input.derivedContent.contentPlainText,
         excerpt: input.derivedContent.excerpt,
+        ...(caps.layoutType ? { layoutType: input.revision.layoutType ?? null } : {}),
+        ...(caps.categoryId ? { categoryId: input.revision.categoryId ?? null } : {}),
+        ...(caps.featuredImageId ? { featuredImageId: input.revision.featuredImageId ?? null } : {}),
+        ...(caps.locationName ? { locationName: input.revision.locationName ?? null } : {}),
+        ...(caps.locationLat ? { locationLat: input.revision.locationLat ?? null } : {}),
+        ...(caps.locationLng ? { locationLng: input.revision.locationLng ?? null } : {}),
+        ...(caps.locationZoom ? { locationZoom: input.revision.locationZoom ?? null } : {}),
         ...(caps.songTitle ? { songTitle: normalizedSongMetadata.songTitle } : {}),
         ...(caps.songArtist ? { songArtist: normalizedSongMetadata.songArtist } : {}),
         ...(caps.songUrl ? { songUrl: normalizedSongMetadata.songUrl } : {}),
