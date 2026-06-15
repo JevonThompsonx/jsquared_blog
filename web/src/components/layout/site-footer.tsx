@@ -1,8 +1,5 @@
 import Link from "next/link";
 
-import { NewsletterSignupForm } from "@/components/blog/newsletter-signup-form";
-import { SITE_URL } from "@/lib/utils";
-
 type FooterLink = {
   href: string;
   label: string;
@@ -21,11 +18,6 @@ const contentLinks: FooterLink[] = [
   { href: "/categories", label: "Categories" },
   { href: "/series", label: "Series" },
   { href: "/feed.xml", label: "RSS Feed", external: true },
-];
-
-const socialLinks: FooterLink[] = [
-  { href: "https://www.instagram.com/jsquaredadventures", label: "Instagram", external: true },
-  { href: "https://www.youtube.com/@jsquaredadventures", label: "YouTube", external: true },
 ];
 
 function FooterLinkItem({ link }: { link: FooterLink }) {
@@ -61,7 +53,7 @@ export function SiteFooter() {
       className="mt-16 border-t border-[var(--border)] bg-[var(--card-bg)]/60 backdrop-blur-sm"
     >
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
           <div>
             <h2 className="text-lg font-bold text-[var(--text-primary)]">J²Adventures</h2>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
@@ -109,30 +101,12 @@ export function SiteFooter() {
               ))}
             </ul>
           </nav>
-
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Stay on the trail</h3>
-            <p className="mt-3 text-sm text-[var(--text-secondary)]">
-              Get notified when we post new stories.
-            </p>
-            <div className="mt-3">
-              <NewsletterSignupForm source="footer" />
-            </div>
-          </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-4 border-t border-[var(--border)] pt-6 sm:flex-row sm:items-center">
+        <div className="mt-10 border-t border-[var(--border)] pt-6">
           <p className="text-xs text-[var(--text-secondary)]">
-            © {year} {SITE_URL.replace(/^https?:\/\//, "")}. All rights reserved.
+            © {year} J² Adventures. All rights reserved.
           </p>
-          {socialLinks.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <span className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Follow</span>
-              {socialLinks.map((link) => (
-                <FooterLinkItem key={link.href} link={link} />
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
     </footer>
