@@ -8,10 +8,42 @@
 
 ## [Unreleased]
 
-### Planned
-- See [`docs/ROADMAP.md`](ROADMAP.md) for the 10-branch improvement plan
+### Branch: `feat/admin-taxonomy-crud` (PR #45)
+
+#### Admin UI
+
+- **`/admin/categories` page** — New admin surface for category CRUD. Lists every category with name, slug, post count, description, and creation/update timestamps. Inline rename and description form per row, plus a "Create category" form on the left. "Delete" button is disabled and tooltipped when the category still has posts attached.
+- **`/admin/tags` page extended** — Added "Create tag" form and per-row "Delete tag" button. Existing tag description editing is preserved. The delete button is disabled and tooltipped when the tag still has posts attached.
+- **Admin nav** — New "Manage categories" entry placed before "Manage tags" in the admin nav.
+
+#### Server actions
+
+- `web/src/app/admin/categories/actions.ts` — `createCategoryAction`, `updateCategoryAction`, `deleteCategoryAction`. All validate with Zod, surface stable redirects for `InvalidCategory`, `SlugTaken`, and `CategoryInUse`, and revalidate `/admin/categories` + `/categories`.
+- `web/src/app/admin/tags/actions.ts` — Added `createTagAction` and `deleteTagAction` alongside the existing `updateTagDescriptionAction`. Same stable-redirect error model.
+
+#### Data layer
+
+- **`web/src/server/dal/categories.ts`** (new) — `listAllCategoriesWithCounts`, `getCategoryBySlug`, `getCategoryById`, `categorySlugExists`, `createCategory`, `updateCategory`, `deleteCategory`. `createCategory` and `updateCategory` set/refresh `created_at` and `updated_at` (Branch 3 audit columns). `deleteCategory` counts posts that reference the category and throws `CategoryInUseError` if any exist; this is surfaced as a friendly redirect rather than a 500.
+- **`web/src/server/dal/admin-tags.ts`** — Added `createTag`, `updateTag`, `deleteTag`, `tagSlugExists`, and the `TagInUseError` / `TagSlugConflictError` sentinels. `createTag` populates both audit timestamps; `updateTag` refreshes `updated_at`. `deleteTag` blocks deletion when posts still reference the tag.
+
+#### Forms
+
+- **`web/src/server/forms/admin-taxonomy.ts`** (new) — Zod schemas for category create/update/id and tag create/id. Slugs are auto-normalised to `^[a-z0-9]+(?:-[a-z0-9]+)*$` and descriptions capped at 500 chars.
+
+#### Tests
+
+- `web/tests/unit/categories-dal.test.ts` — `listAllCategoriesWithCounts` (timestamp coercion, null description), `getCategoryBySlug/Id`, `categorySlugExists`, `createCategory` (timestamp parity, blank-name rejection, slug-conflict), `updateCategory` (updatedAt refresh, slug-conflict), `deleteCategory` (in-use prevention, string-coerced counts).
+- `web/tests/unit/admin-tags-dal.test.ts` — `createTag` (timestamp parity, slug conflict), `updateTag` (timestamp refresh, same-slug re-save), `updateTagDescription` (null passthrough), `deleteTag` (in-use prevention), `tagSlugExists`, plus a sanity check on `listAllTagsWithCounts`.
+- `web/tests/unit/admin-categories-actions.test.ts` — Auth gate, validation gate, slug conflict redirect, in-use redirect, generic save-failure surface, revalidation on success.
+- `web/tests/unit/admin-tag-create-delete-actions.test.ts` — Same auth/validation/conflict coverage for the new tag actions.
+- `web/tests/unit/admin-categories-page.test.tsx` — Redirect on missing auth, redirect on non-admin, row render, empty state, SlugTaken + CategoryInUse error surfaces, disabled delete when posts exist, create-form render, load-failure path.
+- `web/tests/unit/admin-tags-page.test.tsx` — Extended to cover the new create form, error banner for SlugTaken/TagInUse, and the disabled delete state.
+- `web/tests/unit/admin-taxonomy-form.test.ts` — Direct Zod schema coverage (create, update, id, slug normalization, description length cap).
+- `web/tests/unit/admin-navigation.test.ts` — Asserts the new "Manage categories" link.
 
 ---
+
+## [0.4.3] — 2026-06-15
 
 ## [0.4.3] — 2026-06-15
 
