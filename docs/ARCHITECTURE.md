@@ -571,7 +571,7 @@ docs/
   CODING.md                   # Codemap and contributor reference
   SETUP.md                    # Setup and configuration guide
   VERCEL-CLI-REFERENCE.md     # Vercel CLI commands reference
-  LESSONS.md                  # Lessons learned from codebase reviews
+  KNOWLEDGE_BASE.md           # Living reference of project-specific gotchas (SQLite/Drizzle/Turso/React/Next.js). Agents add to this when they discover new patterns.
 ```
 
 ---
@@ -602,5 +602,5 @@ docs/
 - [SETUP.md](./SETUP.md) - Environment setup and configuration
 - [CODING.md](./CODING.md) - Codemap and contributor reference
 - [VERCEL-CLI-REFERENCE.md](./VERCEL-CLI-REFERENCE.md) - Vercel CLI commands
-- [LESSONS.md](./LESSONS.md) - Lessons learned from codebase reviews
+- [KNOWLEDGE_BASE.md](./KNOWLEDGE_BASE.md) - Living reference of project-specific gotchas and workarounds (SQLite, Drizzle, Turso, React 19, Next.js). Agents add to this when they discover new patterns.
 - [README.md](../README.md) - Project overview and quick start

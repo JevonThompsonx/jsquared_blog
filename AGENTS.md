@@ -21,6 +21,20 @@
 4. Add entry to `docs/CHANGELOG.md` when complete
 5. Commit tracking updates with the branch
 
+### 📖 Knowledge Base (Project-Specific Reference)
+
+**Before any non-trivial change**, consult [`docs/KNOWLEDGE_BASE.md`](docs/KNOWLEDGE_BASE.md) — a living reference of SQLite/Drizzle/Turso/React/Next.js gotchas discovered during this project.
+
+Categories covered: SQLite quirks, Drizzle migrations, Turso connectivity, React 19 testing, Next.js App Router, Vitest config, tooling, security, and code quality.
+
+**Your responsibilities as an agent:**
+- **Consult before debugging** — if you hit something that takes more than 5 minutes to figure out, the answer is probably in the knowledge base or should be added
+- **Add new entries** — if you discover a new gotcha, append a new entry using the format in the knowledge base (every field required: Problem, Gotcha, Solution, Verified, Last verified, Discovered in)
+- **Update existing entries** — if you try a documented approach and it fails, update the entry in place and change the `Last verified` date. Never delete — historical context matters
+- **Challenge assumptions** — if you can prove a documented approach is wrong, overwrite it with the new approach. Include evidence
+
+This is project-specific (not global opencode config) and is the canonical reference point regardless of which harness is running.
+
 ### Protocol
 
 **Phase 0: REQUIREMENTS LOCK [GATE]**
