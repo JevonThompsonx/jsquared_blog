@@ -4,6 +4,9 @@ import { z } from "zod";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
 import { requireAdminSession } from "@/lib/auth/session";
+import { getDb } from "@/lib/db";
+import { categories, mediaAssets } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
 import { getPostRevisionById } from "@/server/dal/post-revisions";
 
 const paramsSchema = z.object({
@@ -38,6 +41,31 @@ export async function GET(
       return NextResponse.json({ error: "Revision not found" }, { status: 404 });
     }
 
+    let categoryName: string | null = null;
+    let featuredImageUrl: string | null = null;
+    let featuredImageAlt: string | null = null;
+
+    if (revision.categoryId) {
+      const db = getDb();
+      const catRows = await db
+        .select({ name: categories.name })
+        .from(categories)
+        .where(eq(categories.id, revision.categoryId))
+        .limit(1);
+      categoryName = catRows[0]?.name ?? null;
+    }
+
+    if (revision.featuredImageId) {
+      const db = getDb();
+      const mediaRows = await db
+        .select({ secureUrl: mediaAssets.secureUrl, altText: mediaAssets.altText })
+        .from(mediaAssets)
+        .where(eq(mediaAssets.id, revision.featuredImageId))
+        .limit(1);
+      featuredImageUrl = mediaRows[0]?.secureUrl ?? null;
+      featuredImageAlt = mediaRows[0]?.altText ?? null;
+    }
+
     return NextResponse.json({
       id: revision.id,
       postId: revision.postId,
@@ -45,6 +73,19 @@ export async function GET(
       title: revision.title,
       excerpt: revision.excerpt,
       contentJson: revision.contentJson,
+      layoutType: revision.layoutType ?? null,
+      categoryId: revision.categoryId ?? null,
+      categoryName,
+      featuredImageId: revision.featuredImageId ?? null,
+      featuredImageUrl,
+      featuredImageAlt,
+      locationName: revision.locationName ?? null,
+      locationLat: revision.locationLat ?? null,
+      locationLng: revision.locationLng ?? null,
+      locationZoom: revision.locationZoom ?? null,
+      songTitle: revision.songTitle ?? null,
+      songArtist: revision.songArtist ?? null,
+      songUrl: revision.songUrl ?? null,
       savedByUserId: revision.savedByUserId,
       savedAt: revision.savedAt.toISOString(),
       label: revision.label,
