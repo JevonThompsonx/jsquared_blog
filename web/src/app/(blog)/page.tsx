@@ -24,9 +24,9 @@ type SeasonalHero = {
 function getSeasonalHero(): SeasonalHero {
   return {
     backgroundImage: "url('/images/welcome.webp')",
-    kicker: "",
+    kicker: "Travel stories from the road",
     title: "J²Adventures",
-    subtitle: "",
+    subtitle: "Field notes, maps, and photo-led stories from the places we wander.",
     note: "",
   };
 }
