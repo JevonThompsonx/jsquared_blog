@@ -39,7 +39,7 @@ describe("sitemap", () => {
     expect(entries[0].changeFrequency).toBe("daily");
   });
 
-  it("includes static pages (map, about, wishlist)", async () => {
+  it("includes static pages (map, about, wishlist, tags, categories)", async () => {
     vi.mocked(listPublishedPosts).mockResolvedValue([]);
     vi.mocked(listAdminCategories).mockResolvedValue([]);
     vi.mocked(listAllTagsWithCounts).mockResolvedValue([]);
@@ -51,6 +51,8 @@ describe("sitemap", () => {
     expect(urls.some((u) => u.endsWith("/map"))).toBe(true);
     expect(urls.some((u) => u.endsWith("/about"))).toBe(true);
     expect(urls.some((u) => u.endsWith("/wishlist"))).toBe(true);
+    expect(urls.some((u) => u.endsWith("/tags"))).toBe(true);
+    expect(urls.some((u) => u.endsWith("/categories"))).toBe(true);
   });
 
   it("includes category, tag, and series pages when data is available", async () => {

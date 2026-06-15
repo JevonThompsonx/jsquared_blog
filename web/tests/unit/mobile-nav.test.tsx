@@ -116,4 +116,13 @@ describe("MobileNav", () => {
     expect(activeLinks).toHaveLength(1);
     expect(activeLinks[0]?.getAttribute("href")).toBe("/admin/wishlist");
   });
+
+  it("exposes the taxonomy browse links to mobile visitors", async () => {
+    usePathnameMock.mockReturnValue("/");
+
+    await renderNav(null);
+
+    expect(container.querySelector('a[href="/tags"]')?.textContent).toContain("Tags");
+    expect(container.querySelector('a[href="/categories"]')?.textContent).toContain("Categories");
+  });
 });
