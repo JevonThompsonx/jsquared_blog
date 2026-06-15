@@ -6,6 +6,7 @@ export const series = sqliteTable("series", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
 export const users = sqliteTable("users", {
@@ -46,6 +47,8 @@ export const categories = sqliteTable("categories", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
 export const mediaAssets = sqliteTable(
@@ -172,6 +175,8 @@ export const tags = sqliteTable("tags", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
 export const wishlistPlaces = sqliteTable(
@@ -191,11 +196,11 @@ export const wishlistPlaces = sqliteTable(
     visitedYear: integer("visited_year"),
     imageUrl: text("image_url"),
     detailSlug: text("detail_slug").unique(),
-    linkedPostId: text("linked_post_id"),
+    linkedPostId: text("linked_post_id").references(() => posts.id),
     itemType: text("item_type", { enum: ["single", "multi"] }).notNull().default("single"),
     detailLevel: text("detail_level", { enum: ["full_page", "name_location"] }).notNull().default("full_page"),
     isPinned: integer("is_pinned", { mode: "boolean" }).notNull().default(false),
-    parentId: text("parent_id"),
+    parentId: text("parent_id").references((): any => wishlistPlaces.id),
     createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
@@ -206,6 +211,7 @@ export const wishlistPlaces = sqliteTable(
     isPublicIdx: index("wishlist_places_is_public_idx").on(table.isPublic),
     parentIdIdx: index("wishlist_places_parent_id_idx").on(table.parentId),
     itemTypeIdx: index("wishlist_places_item_type_idx").on(table.itemType),
+    linkedPostIdIdx: index("wishlist_places_linked_post_id_idx").on(table.linkedPostId),
   }),
 );
 
@@ -217,6 +223,7 @@ export const postTags = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.tagId] }),
+    tagIdIdx: index("post_tags_tag_id_idx").on(table.tagId),
   }),
 );
 
