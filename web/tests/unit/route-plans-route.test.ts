@@ -1,4 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { NextResponse } from "next/server";
+
+const { checkRateLimitMock, getClientIpMock, tooManyRequestsMock } = vi.hoisted(() => ({
+  checkRateLimitMock: vi.fn(),
+  getClientIpMock: vi.fn(() => "203.0.113.5"),
+  tooManyRequestsMock: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: checkRateLimitMock,
+  getClientIp: getClientIpMock,
+  tooManyRequests: tooManyRequestsMock,
+}));
 
 function seedRequiredServerEnv() {
   process.env.TURSO_DATABASE_URL ??= "https://example-db.turso.io";
@@ -21,8 +34,27 @@ async function loadRouteModule() {
   return routeModulePromise;
 }
 
+function allowRateLimit() {
+  checkRateLimitMock.mockResolvedValue({
+    allowed: true,
+    limit: 10,
+    remaining: 9,
+    resetAt: Date.now() + 60_000,
+  });
+}
+
+function blockRateLimit() {
+  checkRateLimitMock.mockResolvedValue({
+    allowed: false,
+    limit: 10,
+    remaining: 0,
+    resetAt: Date.now() + 60_000,
+  });
+}
+
 describe("POST /api/route-plans", () => {
   it("returns 410 with a wishlist redirect target", async () => {
+    allowRateLimit();
     const { POST } = await loadRouteModule();
 
     const response = await POST(
@@ -45,6 +77,7 @@ describe("POST /api/route-plans", () => {
   });
 
   it("returns the same retired response for invalid payloads", async () => {
+    allowRateLimit();
     const { POST } = await loadRouteModule();
 
     const response = await POST(
@@ -62,7 +95,28 @@ describe("POST /api/route-plans", () => {
     });
   });
 
+  it("returns 429 when the per-IP rate limit is exceeded", async () => {
+    blockRateLimit();
+    const { POST } = await loadRouteModule();
+
+    const response = await POST(
+      new Request("http://localhost/api/route-plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "public-wishlist" }),
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    expect(checkRateLimitMock).toHaveBeenCalledWith(
+      expect.stringContaining("route-plans:"),
+      expect.any(Number),
+      expect.any(Number),
+    );
+  });
+
   it("keeps the route on the node runtime", async () => {
+    allowRateLimit();
     const { runtime } = await loadRouteModule();
 
     expect(runtime).toBe("nodejs");
