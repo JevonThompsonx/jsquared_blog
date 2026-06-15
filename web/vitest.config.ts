@@ -43,5 +43,8 @@ export default defineConfig({
     environment: "node",
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     testTimeout: 30_000,
+    env: {
+      NEXT_PUBLIC_SITE_URL: "https://jsquaredadventures.com",
+    },
   },
 });
