@@ -45,6 +45,7 @@ function forbiddenResponse(pathname: string): NextResponse {
 //   1. The Content-Security-Policy response header (authorises scripts with that nonce)
 //   2. The x-nonce request header (forwarded to Server Components so they can render <Script nonce>)
 export function proxy(request: NextRequest): NextResponse {
+  const start = Date.now();
   const pathname = request.nextUrl.pathname;
 
   if (isStateChangingMethod(request.method) && (isAdminPath(pathname) || isAdminApiPath(pathname))) {
@@ -53,7 +54,9 @@ export function proxy(request: NextRequest): NextResponse {
     const hasAllowedOrigin = originHeader !== null && isSameOrigin(originHeader, request.nextUrl.origin);
 
     if (!hasAllowedOrigin || !allowsFetchSite(fetchSiteHeader)) {
-      return forbiddenResponse(pathname);
+      const forbidden = forbiddenResponse(pathname);
+      logRequest(request.method, pathname, forbidden.status, start);
+      return forbidden;
     }
   }
 
@@ -148,7 +151,16 @@ export function proxy(request: NextRequest): NextResponse {
     response.headers.set("Expires", "0");
   }
 
+  logRequest(request.method, pathname, response.status, start);
+
   return response;
+}
+
+function logRequest(method: string, pathname: string, status: number, startedAt: number): void {
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
+  console.info(`[proxy] ${method} ${pathname} ${status} ${Date.now() - startedAt}ms`);
 }
 
 // Apply to all routes except static assets and Next.js internals

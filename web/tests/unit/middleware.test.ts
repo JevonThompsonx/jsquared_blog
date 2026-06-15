@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+
+const consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
 import { proxy } from "@/proxy";
 
 describe("middleware security hardening", () => {
+  afterEach(() => {
+    consoleInfoSpy.mockClear();
+  });
+
   it("blocks cross-site admin API mutations", async () => {
     const request = new NextRequest("https://jsquaredadventures.com/api/admin/posts", {
       method: "POST",
@@ -79,5 +85,52 @@ describe("middleware security hardening", () => {
     expect(csp).toContain("script-src");
     expect(csp).toContain("img-src");
     expect(csp).toContain("default-src 'self'");
+  });
+});
+
+describe("proxy request logging", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  beforeEach(() => {
+    consoleInfoSpy.mockClear();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  it("does not log when NODE_ENV is not 'production'", () => {
+    process.env.NODE_ENV = "development";
+    const request = new NextRequest("https://jsquaredadventures.com/about", { method: "GET" });
+    proxy(request);
+
+    expect(consoleInfoSpy).not.toHaveBeenCalled();
+  });
+
+  it("logs method, path, status, and duration in production", () => {
+    process.env.NODE_ENV = "production";
+    const request = new NextRequest("https://jsquaredadventures.com/about", { method: "GET" });
+    const response = proxy(request);
+
+    expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+    const message = consoleInfoSpy.mock.calls[0]?.[0] as string;
+    expect(message).toMatch(/^\[proxy\] GET \/about 200 \d+ms$/);
+    expect(response.status).toBe(200);
+  });
+
+  it("logs the original response status when the proxy short-circuits with 403", () => {
+    process.env.NODE_ENV = "production";
+    const request = new NextRequest("https://jsquaredadventures.com/api/admin/posts", {
+      method: "POST",
+      headers: {
+        origin: "https://attacker.example",
+        "sec-fetch-site": "cross-site",
+      },
+    });
+    const response = proxy(request);
+
+    expect(response.status).toBe(403);
+    const message = consoleInfoSpy.mock.calls[0]?.[0] as string;
+    expect(message).toMatch(/^\[proxy\] POST \/api\/admin\/posts 403 \d+ms$/);
   });
 });
