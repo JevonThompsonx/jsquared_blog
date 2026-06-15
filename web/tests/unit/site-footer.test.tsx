@@ -84,6 +84,7 @@ describe("SiteFooter", () => {
     render();
     const year = new Date().getFullYear();
     expect(container.textContent).toContain(String(year));
+    expect(container.textContent).not.toContain("All rights reserved");
   });
 
   it("uses an accessible footer landmark", () => {
