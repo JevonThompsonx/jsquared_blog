@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { NewsletterSignupForm } from "@/components/blog/newsletter-signup-form";
+
 type FooterLink = {
   href: string;
   label: string;
@@ -53,7 +55,7 @@ export function SiteFooter() {
       className="mt-16 border-t border-[var(--border)] bg-[var(--card-bg)]/60 backdrop-blur-sm"
     >
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <h2 className="text-lg font-bold text-[var(--text-primary)]">J²Adventures</h2>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
@@ -101,6 +103,16 @@ export function SiteFooter() {
               ))}
             </ul>
           </nav>
+
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Stay on the trail</h3>
+            <p className="mt-3 text-sm text-[var(--text-secondary)]">
+              Get notified when we post new stories.
+            </p>
+            <div className="mt-3">
+              <NewsletterSignupForm source="footer" />
+            </div>
+          </div>
         </div>
 
         <div className="mt-10 border-t border-[var(--border)] pt-6">
