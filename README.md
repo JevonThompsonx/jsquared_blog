@@ -374,6 +374,7 @@ GET  /feed.xml
 | [docs/CODING.md](./docs/CODING.md) | Codemap: file patterns, conventions, component organization |
 | [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
 | [docs/LESSONS.md](./docs/LESSONS.md) | Lessons learned from codebase reviews |
+| [docs/IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) | Prioritized backlog of tech debt, features, security, and perf work |
 | [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) | Post deletion recovery via Turso PITR |
 | [docs/VERCEL-CLI-REFERENCE.md](./docs/VERCEL-CLI-REFERENCE.md) | Vercel CLI operational reference |
 
