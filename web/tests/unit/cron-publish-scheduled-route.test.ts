@@ -19,9 +19,19 @@ vi.mock("@/server/dal/admin-wishlist-places", () => ({
   deactivateLinkedWishlistPlaces: vi.fn(() => Promise.resolve()),
 }));
 
+const { addBreadcrumbMock } = vi.hoisted(() => ({
+  addBreadcrumbMock: vi.fn(),
+}));
+
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+  addBreadcrumb: addBreadcrumbMock,
+}));
+
 import { GET } from "@/app/api/cron/publish-scheduled/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";
+import { addBreadcrumb } from "@/lib/sentry";
 import { publishDueScheduledPosts } from "@/server/posts/publish";
 
 describe("GET /api/cron/publish-scheduled", () => {
@@ -152,5 +162,69 @@ describe("GET /api/cron/publish-scheduled", () => {
     });
     expect(vi.mocked(revalidatePath)).toHaveBeenNthCalledWith(1, "/");
     expect(vi.mocked(revalidatePath)).toHaveBeenNthCalledWith(2, "/admin");
+  });
+
+  it("emits a sentry breadcrumb with scanned/published/errors metrics after a clean run", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CRON_SECRET", "very-secret-token");
+
+    vi.mocked(publishDueScheduledPosts).mockResolvedValue({
+      scannedCount: 4,
+      publishedCount: 2,
+      updatedPostIds: ["post-1", "post-2"],
+      nowIso: "2026-03-29T21:00:00.000Z",
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/cron/publish-scheduled", {
+        headers: { authorization: "Bearer very-secret-token" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(addBreadcrumb)).toHaveBeenCalledWith(
+      "cron.publish-scheduled",
+      expect.objectContaining({
+        scanned: 4,
+        published: 2,
+        errors: 0,
+      }),
+      "cron",
+    );
+  });
+
+  it("counts revalidation and wishlist errors in the breadcrumb", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CRON_SECRET", "very-secret-token");
+
+    const { deactivateLinkedWishlistPlaces } = await import("@/server/dal/admin-wishlist-places");
+
+    vi.mocked(publishDueScheduledPosts).mockResolvedValue({
+      scannedCount: 3,
+      publishedCount: 1,
+      updatedPostIds: ["post-9"],
+      nowIso: "2026-03-29T21:00:00.000Z",
+    });
+    vi.mocked(revalidatePath).mockImplementationOnce(() => {
+      throw new Error("cache backend unavailable");
+    });
+    vi.mocked(deactivateLinkedWishlistPlaces).mockRejectedValueOnce(new Error("wishlist offline"));
+
+    const response = await GET(
+      new Request("http://localhost/api/cron/publish-scheduled", {
+        headers: { authorization: "Bearer very-secret-token" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(addBreadcrumb)).toHaveBeenCalledWith(
+      "cron.publish-scheduled",
+      expect.objectContaining({
+        scanned: 3,
+        published: 1,
+        errors: 2,
+      }),
+      "cron",
+    );
   });
 });

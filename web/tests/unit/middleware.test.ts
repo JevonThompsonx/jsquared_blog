@@ -89,18 +89,19 @@ describe("middleware security hardening", () => {
 });
 
 describe("proxy request logging", () => {
-  const originalNodeEnv = process.env.NODE_ENV;
+  const env = process.env as Record<string, string | undefined>;
+  const originalNodeEnv = env.NODE_ENV;
 
   beforeEach(() => {
     consoleInfoSpy.mockClear();
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    env.NODE_ENV = originalNodeEnv;
   });
 
   it("does not log when NODE_ENV is not 'production'", () => {
-    process.env.NODE_ENV = "development";
+    env.NODE_ENV = "development";
     const request = new NextRequest("https://jsquaredadventures.com/about", { method: "GET" });
     proxy(request);
 
@@ -108,7 +109,7 @@ describe("proxy request logging", () => {
   });
 
   it("logs method, path, status, and duration in production", () => {
-    process.env.NODE_ENV = "production";
+    env.NODE_ENV = "production";
     const request = new NextRequest("https://jsquaredadventures.com/about", { method: "GET" });
     const response = proxy(request);
 
@@ -119,7 +120,7 @@ describe("proxy request logging", () => {
   });
 
   it("logs the original response status when the proxy short-circuits with 403", () => {
-    process.env.NODE_ENV = "production";
+    env.NODE_ENV = "production";
     const request = new NextRequest("https://jsquaredadventures.com/api/admin/posts", {
       method: "POST",
       headers: {

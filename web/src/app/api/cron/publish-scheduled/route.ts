@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { requireCronAuthorization } from "@/lib/cron-auth";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { addBreadcrumb } from "@/lib/sentry";
 import { publishDueScheduledPosts } from "@/server/posts/publish";
 import { deactivateLinkedWishlistPlaces } from "@/server/dal/admin-wishlist-places";
 
@@ -41,15 +42,19 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
+  let errors = 0;
+
   try {
     revalidatePath("/");
   } catch (error) {
+    errors += 1;
     console.error("[cron] publish-scheduled revalidation failed for /:", error);
   }
 
   try {
     revalidatePath("/admin");
   } catch (error) {
+    errors += 1;
     console.error("[cron] publish-scheduled revalidation failed for /admin:", error);
   }
 
@@ -58,9 +63,21 @@ export async function GET(request: Request): Promise<NextResponse> {
       await deactivateLinkedWishlistPlaces(result.updatedPostIds);
       revalidatePath("/wishlist");
     } catch (err) {
+      errors += 1;
       console.error("[cron] deactivateLinkedWishlistPlaces failed:", err);
     }
   }
+
+  addBreadcrumb(
+    "cron.publish-scheduled",
+    {
+      scanned: result.scannedCount,
+      published: result.publishedCount,
+      errors,
+      nowIso: result.nowIso,
+    },
+    "cron",
+  );
 
   return NextResponse.json({
     scanned: result.scannedCount,
