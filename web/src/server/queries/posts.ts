@@ -1,5 +1,7 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
+
 import { getReadingTimeMinutes, renderTiptapJson } from "@/lib/content";
 import { cdnImageUrl } from "@/lib/cloudinary/transform";
 import { getSongMetadata } from "@/lib/post-song-metadata";
@@ -186,7 +188,7 @@ export async function listAllPublishedPosts(): Promise<BlogPost[]> {
   return withTags(await listAllPublishedPostRecords());
 }
 
-export async function listPublishedPosts(limit = 12, offset = 0, search?: string): Promise<BlogPost[]> {
+async function listPublishedPostsUncached(limit = 12, offset = 0, search?: string): Promise<BlogPost[]> {
   try {
     if (search?.trim()) {
       const allRows = await listAllPublishedPostRecords();
@@ -200,6 +202,12 @@ export async function listPublishedPosts(limit = 12, offset = 0, search?: string
     return [];
   }
 }
+
+export const listPublishedPosts = unstable_cache(
+  listPublishedPostsUncached,
+  ["listPublishedPosts"],
+  { revalidate: 30, tags: ["posts"] },
+);
 
 export async function listPublishedPostsByCategory(category: string, limit = 12, offset = 0): Promise<BlogPost[]> {
   return withTags(await listPublishedPostRecordsByCategory(category, limit, offset));

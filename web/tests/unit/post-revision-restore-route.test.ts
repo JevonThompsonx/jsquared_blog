@@ -8,6 +8,7 @@ vi.mock("@/lib/rate-limit", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
