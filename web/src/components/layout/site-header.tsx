@@ -78,19 +78,19 @@ export function SiteHeader() {
   const searchParams = useSearchParams();
   const [publicSession, setPublicSession] = useState<Session | null>(null);
   const searchDebounceRef = useRef<number | null>(null);
-  const currentSearch = searchParams?.get("search") ?? "";
+  const currentSearch = searchParams?.get("q") ?? "";
 
   function navigateToSearch(value: string, mode: "push" | "replace") {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
     const trimmedValue = value.trim();
 
     if (trimmedValue) {
-      params.set("search", trimmedValue);
+      params.set("q", trimmedValue);
     } else {
-      params.delete("search");
+      params.delete("q");
     }
 
-    const nextUrl: "/" | `/?${string}` = params.toString() ? `/?${params.toString()}` : "/";
+    const nextUrl: "/search" | `/search?${string}` = params.toString() ? `/search?${params.toString()}` : "/search";
 
     if (mode === "replace") {
       router.replace(nextUrl);
@@ -110,7 +110,7 @@ export function SiteHeader() {
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const submittedValue = formData.get("search");
+    const submittedValue = formData.get("q");
     clearPendingSearchNavigation();
     navigateToSearch(typeof submittedValue === "string" ? submittedValue : "", "push");
   }
@@ -119,7 +119,7 @@ export function SiteHeader() {
     clearPendingSearchNavigation();
 
     searchDebounceRef.current = window.setTimeout(() => {
-      if (value !== currentSearch && (pathname === "/" || value.trim())) {
+      if (value !== currentSearch && (pathname === "/search" || value.trim())) {
         navigateToSearch(value, "replace");
       }
       searchDebounceRef.current = null;
@@ -187,13 +187,13 @@ export function SiteHeader() {
             </Link>
           </nav>
 
-          <form action="/" className="relative" onSubmit={handleSearchSubmit}>
+          <form action="/search" className="relative" onSubmit={handleSearchSubmit}>
             <input
               aria-label="Search stories"
               className="search-input h-11 w-40 rounded-full border py-2 pl-4 pr-9 text-sm transition-[width] duration-200 focus:w-52 lg:w-52 lg:focus:w-64"
               defaultValue={currentSearch}
               key={`desktop-search:${pathname}:${currentSearch}`}
-              name="search"
+              name="q"
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search stories…"
               type="search"
