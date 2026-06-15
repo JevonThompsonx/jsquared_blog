@@ -1,6 +1,6 @@
 # Branch 7: `feat/performance-and-reliability`
 
-**Status:** 🔵 Ready to start
+**Status:** 🟢 In Progress
 **Estimated effort:** 5-6 hours
 **Depends on:** Nothing
 

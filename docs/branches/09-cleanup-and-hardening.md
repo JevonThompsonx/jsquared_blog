@@ -1,6 +1,6 @@
 # Branch 9: `chore/cleanup-and-hardening`
 
-**Status:** 🔵 Ready to start
+**Status:** 🟢 In Progress
 **Estimated effort:** 3-4 hours
 **Depends on:** Nothing
 

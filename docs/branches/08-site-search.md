@@ -1,6 +1,6 @@
 # Branch 8: `feat/site-search`
 
-**Status:** 🔵 Ready to start
+**Status:** 🟢 In Progress
 **Estimated effort:** 4-6 hours
 **Depends on:** Nothing
 

@@ -1,6 +1,6 @@
 # Branch 10: `feat/polish`
 
-**Status:** 🔵 Ready to start
+**Status:** 🟢 In Progress
 **Estimated effort:** 4-5 hours
 **Depends on:** Nothing
 

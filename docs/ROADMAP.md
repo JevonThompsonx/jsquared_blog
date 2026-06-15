@@ -26,10 +26,10 @@
 | 4 | `feat/taxonomy-browse` | ✅ Merged | [#48](https://github.com/JevonThompsonx/jsquared_blog/pull/48) | 2026-06-15 | 3-4h | /tags and /categories browse pages |
 | 5 | `feat/admin-taxonomy-crud` | ✅ Merged | [#49](https://github.com/JevonThompsonx/jsquared_blog/pull/49) | 2026-06-15 | 4-5h | Category CRUD, tag create/delete |
 | 6 | `feat/revision-completeness` | ✅ Merged | [#47](https://github.com/JevonThompsonx/jsquared_blog/pull/47) | 2026-06-15 | 4-5h | Full revision restore |
-| 7 | `feat/performance-and-reliability` | 🔵 Ready | — | — | 5-6h | Caching, image opt, Sentry, rate limits |
-| 8 | `feat/site-search` | 🔵 Ready | — | — | 4-6h | /search page, Cmd+K shortcut |
-| 9 | `chore/cleanup-and-hardening` | 🔵 Ready | — | — | 3-4h | Zod validation, Cloudinary cleanup, logging |
-| 10 | `feat/polish` | 🔵 Ready | — | — | 4-5h | Print styles, a11y, PWA, social links |
+| 7 | `feat/performance-and-reliability` | 🟢 In Progress | — | — | 5-6h | Caching, image opt, Sentry, rate limits |
+| 8 | `feat/site-search` | 🟢 In Progress | — | — | 4-6h | /search page, Cmd+K shortcut |
+| 9 | `chore/cleanup-and-hardening` | 🟢 In Progress | — | — | 3-4h | Zod validation, Cloudinary cleanup, logging |
+| 10 | `feat/polish` | 🟢 In Progress | — | — | 4-5h | Print styles, a11y, PWA, social links |
 | patch | `fix/footer-polish` | ✅ Merged | [#46](https://github.com/JevonThompsonx/jsquared_blog/pull/46) | 2026-06-15 | 30min | Removed "All rights reserved", gradient transition above footer |
 | docs | `docs/knowledge-base` | ✅ Merged | [#45](https://github.com/JevonThompsonx/jsquared_blog/pull/45) | 2026-06-15 | 1h | KNOWLEDGE_BASE.md created, LESSONS.md merged in |
 
@@ -39,12 +39,22 @@
 - 🟢 **In Progress** — Currently being worked on (see "Active Branch" below)
 - ✅ **Merged** — Done and shipped to main
 
-**Active Branch:** *(none — branches 1-6 merged; branches 7-10 remain 🔵 Ready)*
+**Active Branch:** 4 parallel worktrees — `feat/performance-and-reliability`, `feat/site-search`, `chore/cleanup-and-hardening`, `feat/polish` (branches 7-10)
 
 ## Updated: 2026-06-15 — Phases 1 and 2 complete
 
 - **Phase 1 (branches 1, 2, 3, 7, 8, 9, 10)** — Branches 1, 2, 3 merged. Branches 7, 8, 9, 10 remain 🔵 Ready.
 - **Phase 2 (branches 4, 5, 6)** — All three merged after Branch 3 unblocked them. Knowledge base (Branch docs/knowledge-base) and footer polish (Branch fix/footer-polish) also shipped as part of the parallel rollout.
+
+## Updated: 2026-06-15 — Phase 3 (branches 7-10) in progress
+
+Four worktrees dispatched in parallel:
+- `jsquared_blog_branch7` — `feat/performance-and-reliability`
+- `jsquared_blog_branch8` — `feat/site-search`
+- `jsquared_blog_branch9` — `chore/cleanup-and-hardening`
+- `jsquared_blog_branch10` — `feat/polish`
+
+File scope is well-isolated. Expected merge order: 9 (cleanup, smallest surface) → 7 (perf, touches admin actions) → 8 (search) → 10 (polish, touches footer).
 
 ---
 
