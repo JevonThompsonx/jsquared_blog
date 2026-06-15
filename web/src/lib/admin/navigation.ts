@@ -25,9 +25,14 @@ export const adminNavLinks: AdminNavLink[] = [
     description: "Manage the destinations that power the public wishlist experiences.",
   },
   {
+    href: "/admin/categories",
+    label: "Manage categories",
+    description: "Create, rename, or retire the section names that group stories.",
+  },
+  {
     href: "/admin/tags",
     label: "Manage tags",
-    description: "Update tag descriptions and keep taxonomy tidy.",
+    description: "Create or retire tags and keep their archive copy crisp.",
   },
   {
     href: "/admin/seasons",
