@@ -37,6 +37,7 @@ describe("playwright config", () => {
 
   it("starts a managed dev server only for localhost targets", async () => {
     vi.stubEnv("E2E_BASE_URL", "http://localhost:4123");
+    vi.stubEnv("CI", "");
 
     const { default: config } = await importConfigModule();
 
@@ -50,6 +51,7 @@ describe("playwright config", () => {
 
   it("does not start a managed dev server for remote targets", async () => {
     vi.stubEnv("E2E_BASE_URL", "https://staging.example.com");
+    vi.stubEnv("CI", "");
 
     const { default: config } = await importConfigModule();
 
