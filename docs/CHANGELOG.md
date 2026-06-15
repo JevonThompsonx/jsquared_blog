@@ -13,6 +13,24 @@
 
 ---
 
+## [0.4.2] — 2026-06-15
+
+### Branch: `feat/layout-footer-and-nav` (PR #43)
+
+#### Added
+- **Site footer** — New `<SiteFooter />` component renders on every page with brand, navigation (Home, Map, About, Wishlist), discovery (Tags, Categories, Series, RSS), newsletter re-CTA, back-to-top anchor, copyright, and social media links (Instagram, YouTube)
+- **Back-to-top button** — New `<BackToTop />` floating button appears after scrolling 500px, smooth scroll to top, respects `prefers-reduced-motion`
+- **Footer unit tests** — 7 new tests covering brand, navigation links, discovery links, newsletter form, back-to-top anchor, copyright year, and accessible landmark
+- **Back-to-top unit tests** — 6 new tests covering accessibility label, initial hidden state, visibility after scroll, scroll-to-top behavior, and `prefers-reduced-motion` handling
+
+#### Changed
+- **Global error page** — Now uses `@media (prefers-color-scheme: dark)` to show appropriate colors, eliminating the jarring light-mode flash dark-mode users experienced
+
+#### Fixed
+- **Dark mode global error** — Page no longer renders with hardcoded light colors when user prefers dark mode
+
+---
+
 ## [0.4.1] — 2026-06-15
 
 ### Branch: `feat/seo-and-discovery` (PR #42)
