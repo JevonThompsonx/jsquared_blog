@@ -65,6 +65,12 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       url: canonical,
       images: post.imageUrl ? [{ url: post.imageUrl }] : undefined,
     },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
+      images: post.imageUrl ? [post.imageUrl] : undefined,
+    },
   };
 }
 
