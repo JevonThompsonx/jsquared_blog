@@ -1,6 +1,6 @@
 # Branch 6: `feat/revision-completeness`
 
-**Status:** 🟡 Blocked on Branch 3
+**Status:** ✅ Merged (PR #47, 2026-06-15)
 **Estimated effort:** 4-5 hours
 **Depends on:** Branch 3 (schema conventions)
 

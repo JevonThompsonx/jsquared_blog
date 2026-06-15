@@ -6,70 +6,52 @@
 
 ---
 
-## [Unreleased]
+## [0.4.4] — 2026-06-15
 
-### Branch: `feat/admin-taxonomy-crud` (PR #49)
+### Branches: `feat/taxonomy-browse` (PR #48), `feat/admin-taxonomy-crud` (PR #49), `feat/revision-completeness` (PR #47), `fix/footer-polish` (PR #46), `docs/knowledge-base` (PR #45)
 
-#### Admin UI
+#### Branch: `feat/taxonomy-browse` (PR #48)
 
-- **`/admin/categories` page** — New admin surface for category CRUD. Lists every category with name, slug, post count, description, and creation/update timestamps. Inline rename and description form per row, plus a "Create category" form on the left. "Delete" button is disabled and tooltipped when the category still has posts attached.
-- **`/admin/tags` page extended** — Added "Create tag" form and per-row "Delete tag" button. Existing tag description editing is preserved. The delete button is disabled and tooltipped when the tag still has posts attached.
-- **Admin nav** — New "Manage categories" entry placed before "Manage tags" in the admin nav.
+- **/tags and /categories browse pages** — New public landing pages listing all tags and categories with post counts. Cards link through to the existing per-taxonomy feeds.
+- **Sitemap entries** — `/tags` and `/categories` added as static entries (weekly change frequency, priority 0.6).
+- **Navigation** — `site-header.tsx` and `mobile-nav.tsx` now expose Tags and Categories with active-state highlighting.
+- **DAL** — New `web/src/server/dal/taxonomy-browse.ts` exposing `listAllTagsForBrowse()` and `listAllCategoriesForBrowse()` (uses `COUNT(CASE WHEN posts.status = 'published')` so unpublished posts don't inflate counts).
+- **Tests** — 19 new tests across 5 files (DAL, /tags page, /categories page, header nav, mobile nav, sitemap update).
 
-#### Server actions
+#### Branch: `feat/admin-taxonomy-crud` (PR #49)
 
-- `web/src/app/admin/categories/actions.ts` — `createCategoryAction`, `updateCategoryAction`, `deleteCategoryAction`. All validate with Zod, surface stable redirects for `InvalidCategory`, `SlugTaken`, and `CategoryInUse`, and revalidate `/admin/categories` + `/categories`.
-- `web/src/app/admin/tags/actions.ts` — Added `createTagAction` and `deleteTagAction` alongside the existing `updateTagDescriptionAction`. Same stable-redirect error model.
+- **/admin/categories page** — New admin surface for category CRUD. Lists every category with name, slug, post count, description, and creation/update timestamps. Inline rename and description form per row, plus a "Create category" form. "Delete" button is disabled and tooltipped when the category still has posts attached.
+- **/admin/tags page extended** — Added "Create tag" form and per-row "Delete tag" button. Existing tag description editing is preserved. Delete is disabled when posts still reference the tag.
+- **Admin nav** — New "Manage categories" entry placed before "Manage tags".
+- **Server actions** — `createCategoryAction`, `updateCategoryAction`, `deleteCategoryAction` in `web/src/app/admin/categories/actions.ts`; `createTagAction`, `deleteTagAction` in `web/src/app/admin/tags/actions.ts`. All validate with Zod and surface stable redirects for `InvalidCategory`, `SlugTaken`, `CategoryInUse`, etc.
+- **DAL** — New `web/src/server/dal/categories.ts` (`listAllCategoriesWithCounts`, `getCategoryBySlug`, `getCategoryById`, `categorySlugExists`, `createCategory`, `updateCategory`, `deleteCategory`). `admin-tags.ts` extended with `createTag`, `updateTag`, `deleteTag`, `tagSlugExists`, plus `TagInUseError` / `TagSlugConflictError` sentinels. Audit timestamps populated/refreshed.
+- **Forms** — New `web/src/server/forms/admin-taxonomy.ts` Zod schemas. Slugs auto-normalised to `^[a-z0-9]+(?:-[a-z0-9]+)*$`, descriptions capped at 500 chars.
+- **Tests** — ~70 new test cases across 8 files covering DAL, actions, page rendering, error surfaces, and disabled-delete states.
 
-#### Data layer
+#### Branch: `feat/revision-completeness` (PR #47)
 
-- **`web/src/server/dal/categories.ts`** (new) — `listAllCategoriesWithCounts`, `getCategoryBySlug`, `getCategoryById`, `categorySlugExists`, `createCategory`, `updateCategory`, `deleteCategory`. `createCategory` and `updateCategory` set/refresh `created_at` and `updated_at` (Branch 3 audit columns). `deleteCategory` counts posts that reference the category and throws `CategoryInUseError` if any exist; this is surfaced as a friendly redirect rather than a 500.
-- **`web/src/server/dal/admin-tags.ts`** — Added `createTag`, `updateTag`, `deleteTag`, `tagSlugExists`, and the `TagInUseError` / `TagSlugConflictError` sentinels. `createTag` populates both audit timestamps; `updateTag` refreshes `updated_at`. `deleteTag` blocks deletion when posts still reference the tag.
+- **post_revisions metadata columns** — Added nullable columns to capture the full post state in every revision: `layout_type`, `category_id` (FK → `categories.id`), `featured_image_id` (FK → `media_assets.id`), `location_name`, `location_lat`, `location_lng`, `location_zoom`. Migration `0023_post_revisions_metadata.sql`.
+- **DAL** — `web/src/server/dal/post-revisions.ts` extended: `createPostRevision`, `listPostRevisions`, `getPostRevisionById` now handle the new fields. `restorePostRevisionAtomically` snapshots the live post's expanded fields into a pre-restore revision, then writes every captured field (layout, category, featured image, location, song) back onto the post. Defensive against missing columns via `getPostColumnCapabilities()`.
+- **Column capabilities** — `web/src/server/dal/post-column-capabilities.ts` extended with `categoryId` and `featuredImageId` flags.
+- **Admin actions** — `updateAdminPostAction` now selects and forwards the expanded post fields to `createPostRevision`.
+- **API routes** — List and detail routes return the expanded record plus resolved `categoryName`, `featuredImageUrl`, `featuredImageAlt`, location lat/lng/zoom, and song fields.
+- **Admin UI** — `revision-history.tsx` detail panel now shows layout, category, featured image preview, location, and song metadata.
+- **Tests** — New `web/tests/unit/post-revisions-dal-expanded.test.ts` (7 cases) covers snapshot+restore of every expanded field, capability-based omission, and the post-not-found path. Updated 4 existing tests for the new record shape.
 
-#### Forms
+#### Branch: `fix/footer-polish` (PR #46)
 
-- **`web/src/server/forms/admin-taxonomy.ts`** (new) — Zod schemas for category create/update/id and tag create/id. Slugs are auto-normalised to `^[a-z0-9]+(?:-[a-z0-9]+)*$` and descriptions capped at 500 chars.
+- **Removed "All rights reserved"** from the footer copyright line. Now just `© {year} J² Adventures`.
+- **Improved page-to-footer transition** — `mt-20` (80px) breathing room + a 100px `::before` gradient fade on the footer's top edge. The gradient uses a new `--footer-fade-color` CSS variable (light: `#d7dfd2`, dark: `#111812`) that matches the bottom tone of the page background, so the sage/cream blend flows smoothly into the card-bg footer body instead of starting with a hard border.
+- **Tests** — Footer test updated to match the new copyright copy and verify the gradient class.
 
-#### Tests
+#### Branch: `docs/knowledge-base` (PR #45)
 
-- `web/tests/unit/categories-dal.test.ts` — `listAllCategoriesWithCounts` (timestamp coercion, null description), `getCategoryBySlug/Id`, `categorySlugExists`, `createCategory` (timestamp parity, blank-name rejection, slug-conflict), `updateCategory` (updatedAt refresh, slug-conflict), `deleteCategory` (in-use prevention, string-coerced counts).
-- `web/tests/unit/admin-tags-dal.test.ts` — `createTag` (timestamp parity, slug conflict), `updateTag` (timestamp refresh, same-slug re-save), `updateTagDescription` (null passthrough), `deleteTag` (in-use prevention), `tagSlugExists`, plus a sanity check on `listAllTagsWithCounts`.
-- `web/tests/unit/admin-categories-actions.test.ts` — Auth gate, validation gate, slug conflict redirect, in-use redirect, generic save-failure surface, revalidation on success.
-- `web/tests/unit/admin-tag-create-delete-actions.test.ts` — Same auth/validation/conflict coverage for the new tag actions.
-- `web/tests/unit/admin-categories-page.test.tsx` — Redirect on missing auth, redirect on non-admin, row render, empty state, SlugTaken + CategoryInUse error surfaces, disabled delete when posts exist, create-form render, load-failure path.
-- `web/tests/unit/admin-tags-page.test.tsx` — Extended to cover the new create form, error banner for SlugTaken/TagInUse, and the disabled delete state.
-- `web/tests/unit/admin-taxonomy-form.test.ts` — Direct Zod schema coverage (create, update, id, slug normalization, description length cap).
-- `web/tests/unit/admin-navigation.test.ts` — Asserts the new "Manage categories" link.
-
-### Branch: `feat/revision-completeness` (PR #47)
-
-#### Database schema
-- **post_revisions metadata columns** — Added nullable columns to capture the full post state in every revision:
-  - `layout_type` (enum: standard | split-horizontal | split-vertical | hover)
-  - `category_id` (FK → `categories.id`)
-  - `featured_image_id` (FK → `media_assets.id`)
-  - `location_name`, `location_lat`, `location_lng`, `location_zoom`
-- **Migration** `0023_post_revisions_metadata.sql` — adds the new columns and FKs. All columns nullable so existing revisions remain valid; no data backfill required.
-
-#### Application code
-- **DAL** `web/src/server/dal/post-revisions.ts`:
-  - `PostRevisionRecord` and `createPostRevision` extended to accept/persist the new metadata fields.
-  - `listPostRevisions` and `getPostRevisionById` return the expanded record.
-  - `restorePostRevisionAtomically` snapshots the live post's expanded fields into a pre-restore revision, then writes every captured field (layout, category, featured image, location, song) back onto the post. Defensive against missing columns via `getPostColumnCapabilities()`.
-- **Column capabilities** `web/src/server/dal/post-column-capabilities.ts` — new `categoryId` and `featuredImageId` flags.
-- **Admin actions** `web/src/app/admin/actions.ts` — `updateAdminPostAction` now selects and forwards the expanded post fields to `createPostRevision`.
-- **API routes**:
-  - `GET /api/admin/posts/[postId]/revisions` returns `layoutType`, `categoryId`, `featuredImageId`, `locationName` per row.
-  - `GET /api/admin/posts/[postId]/revisions/[revisionId]` returns the expanded revision plus resolved `categoryName`, `featuredImageUrl`, `featuredImageAlt`, location lat/lng/zoom, and song fields.
-- **Admin UI** `web/src/components/admin/revision-history.tsx` — the detail panel now shows layout, category, featured image preview, location, and song metadata.
-
-#### Tests
-- New `web/tests/unit/post-revisions-dal-expanded.test.ts` — verifies `restorePostRevisionAtomically` snapshots and restores every expanded field, plus capability-based omission when columns are missing.
-- Updated `post-column-capabilities.test.ts`, `post-revisions-route.test.ts`, `post-revision-route.test.ts`, and `update-post-revision-capture.test.ts` to cover the expanded record shape and the new columns in capabilities / restore inputs.
+- **Created `docs/KNOWLEDGE_BASE.md`** — 28 entries across 8 categories (SQLite/Drizzle, Turso, React 19 Testing, Next.js App Router, Vitest, Tooling, Security/CSP, Code Quality). Every entry has `Discovered in`, `Last verified`, `Problem`, `Gotcha`, `Solution`, `Verified` fields. Future agents must add entries for non-obvious gotchas and update entries in place (with date change) when proven wrong.
+- **Deleted `docs/LESSONS.md`** — its 9 entries from the bun→pnpm migration were merged into KNOWLEDGE_BASE.md in the new entry format.
+- **Updated `AGENTS.md`** — new "Knowledge Base" section pointing to the file and explaining the agent's responsibilities (consult, add, update, challenge).
+- **Updated `docs/ARCHITECTURE.md`** and `README.md` — point to KNOWLEDGE_BASE.md.
 
 ---
-
-## [0.4.3] — 2026-06-15
 
 ## [0.4.3] — 2026-06-15
 

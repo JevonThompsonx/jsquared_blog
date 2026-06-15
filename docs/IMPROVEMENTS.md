@@ -246,10 +246,13 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
 
 ## Operational
 
-### O1. Get the forgejo tunnel back online
+### O1. ~~Get the forgejo tunnel back online~~ ✅ RESOLVED
 - **Why:** Forgejo remote returns 530 (Argo Tunnel down). Local/origin/forgejo are out of sync.
-- **Action:** Restore Argo Tunnel, push the 4 missing commits to forgejo.
-- **Effort:** External (infrastructure)
+- **Resolution:** SSH was unreachable because Docker bound port 2222 to `127.0.0.1` only. Fixed by:
+  1. Changed Docker binding to `0.0.0.0:2222:22/tcp` on roadman
+  2. Added SSH config entry routing `forge.jsquaredadventures.com` → `roadman:2222` via Tailscale
+  3. Populated `/data/git/.ssh/authorized_keys` in the forgejo container
+- **Date resolved:** 2026-06-15
 
 ### O2. Add E2E tests to CI
 - **Why:** E2E suite exists but isn't run on PR. Risk of regressions in user-facing flows.

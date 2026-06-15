@@ -1,6 +1,6 @@
 # Branch 5: `feat/admin-taxonomy-crud`
 
-**Status:** 🟢 In Progress (PR pending)
+**Status:** ✅ Merged (PR #49, 2026-06-15)
 **Estimated effort:** 4-5 hours
 **Depends on:** Branch 3 (uses `createdAt`/`updatedAt` on categories/tags)
 

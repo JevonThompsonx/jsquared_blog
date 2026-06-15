@@ -1,6 +1,6 @@
 # Branch 4: `feat/taxonomy-browse`
 
-**Status:** 🟢 In Progress (PR open)
+**Status:** ✅ Merged (PR #48, 2026-06-15)
 **Estimated effort:** 3-4 hours
 **Depends on:** Branch 3 (uses `createdAt`/`updatedAt` on categories/tags for display)
 
