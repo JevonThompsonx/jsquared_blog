@@ -1,9 +1,19 @@
 # Improvement & Feature Backlog
 
 **Created:** 2026-06-15
+**Last updated:** 2026-06-15
 **Status:** Project is at a stable place; this is the prioritized backlog of future work.
 
+> **⚠️ This document is the high-level backlog. For active branch tracking, see [`docs/ROADMAP.md`](ROADMAP.md) and [`docs/branches/`](branches/).**
+>
+> **Tracking workflow:**
+> - Check [`docs/ROADMAP.md`](ROADMAP.md) for branch status (🔵 Ready / 🟡 Blocked / 🟢 In Progress / ✅ Merged)
+> - Each branch has a detailed checklist in [`docs/branches/`](branches/)
+> - Completed work is logged in [`docs/CHANGELOG.md`](CHANGELOG.md)
+
 This document lists concrete improvements, refactors, and feature work that has been identified for the J² Adventures blog. Items are grouped by area and roughly prioritized within each group.
+
+Many items in this backlog have been organized into the 10-branch implementation plan tracked in [`docs/ROADMAP.md`](ROADMAP.md). The M/S/P/F/R/D/O sections below are the conceptual breakdown; the branches are the execution plan.
 
 ---
 

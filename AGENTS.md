@@ -7,6 +7,20 @@
 **Security**: CSP with per-request nonces (`web/src/proxy.ts`), CSRF on admin routes, Zod at API boundaries, `sanitize-html` allowlist
 **Review companion**: `.opencode/review-prompt.md` — run AFTER implementation
 
+### 🚨 START HERE: Feature Work Tracking
+
+**Before starting any feature work**, read:
+1. [`docs/ROADMAP.md`](docs/ROADMAP.md) — Master tracking document with branch status
+2. [`docs/branches/`](docs/branches/) — One file per branch with detailed checklists
+3. [`docs/CHANGELOG.md`](docs/CHANGELOG.md) — Log of completed work
+
+**Workflow:**
+1. Check `docs/ROADMAP.md` status table for branch status (🔵 Ready / 🟡 Blocked / 🟢 In Progress / ✅ Merged)
+2. Read the branch detail file for the work you're picking up
+3. Update status table when starting (🔵 → 🟢) and when done (🟢 → ✅)
+4. Add entry to `docs/CHANGELOG.md` when complete
+5. Commit tracking updates with the branch
+
 ### Protocol
 
 **Phase 0: REQUIREMENTS LOCK [GATE]**
