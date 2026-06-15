@@ -13,6 +13,43 @@
 
 ---
 
+## [0.4.3] — 2026-06-15
+
+### Branch: `chore/schema-hardening` (PR #44)
+
+#### Database schema
+
+- **wishlist_places.linked_post_id FK** — Added foreign key to `posts.id` (rebuilt table to actually enforce the constraint; original migration 0014's inline `REFERENCES` was parsed but not enforced by SQLite on `ALTER TABLE ADD COLUMN`). Invalid inserts now fail with FOREIGN KEY constraint error.
+- **wishlist_places.parent_id FK** — Drizzle schema updated with `.references()` to match the existing FK in the DB (no migration needed).
+- **wishlist_places.linked_post_id index** — Added for join performance.
+- **post_tags.tag_id index** — Added to speed up tag-listing queries.
+- **series.updated_at** — Added (rebuilt for NOT NULL constraint). Existing rows populated from `created_at`.
+- **categories.created_at, categories.updated_at** — Added (rebuilt for NOT NULL). Existing rows populated with current time.
+- **tags.created_at, tags.updated_at** — Added (rebuilt for NOT NULL). Existing rows populated with current time.
+
+#### Application code
+
+- **DAL inserts** — All insert paths for series, categories, and tags now set `created_at`/`updated_at`:
+  - `src/server/dal/series.ts`
+  - `src/app/admin/actions.ts` (category and tag upsert)
+  - `scripts/seed-series-categories.ts`
+  - `scripts/import-supabase.ts`
+
+#### Migrations
+
+- `0021_wishlist_linked_post_fk.sql` — rebuild wishlist_places with FK on linked_post_id
+- `0022_schema_hardening_timestamps.sql` — rebuild series/categories/tags with audit timestamps, add post_tags index
+
+#### UI cleanup (companion)
+
+- **Homepage newsletter section removed** — The "Stay on the trail" section above the footer was redundant. Footer (added in 0.4.2) is the preferred location for newsletter signup.
+
+#### Data integrity verified
+
+All row counts preserved before/after migration: 18 categories, 13 tags, 5 series, 9 wishlist_places, 2 post_tags. FK constraint on `linked_post_id` verified by attempting invalid insert (rejected with FOREIGN KEY constraint error).
+
+---
+
 ## [0.4.2] — 2026-06-15
 
 ### Branch: `feat/layout-footer-and-nav` (PR #43)

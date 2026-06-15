@@ -23,9 +23,9 @@
 | 1 | `feat/seo-and-discovery` | ✅ Merged | [#42](https://github.com/JevonThompsonx/jsquared_blog/pull/42) | 2026-06-15 | 2-3h | robots.txt, sitemap, social cards, hero |
 | 2 | `feat/layout-footer-and-nav` | ✅ Merged | [#43](https://github.com/JevonThompsonx/jsquared_blog/pull/43) | 2026-06-15 | 3-4h | Footer, back-to-top, dark error page |
 | 3 | `chore/schema-hardening` | 🔵 Ready | — | — | 2-3h | FK constraints, indexes, audit timestamps |
-| 4 | `feat/taxonomy-browse` | 🟡 Blocked on #3 | — | — | 3-4h | /tags and /categories browse pages |
-| 5 | `feat/admin-taxonomy-crud` | 🟡 Blocked on #3 | — | — | 4-5h | Category CRUD, tag create/delete |
-| 6 | `feat/revision-completeness` | 🟡 Blocked on #3 | — | — | 4-5h | Full revision restore |
+| 4 | `feat/taxonomy-browse` | 🔵 Ready (unblocked) | — | — | 3-4h | /tags and /categories browse pages |
+| 5 | `feat/admin-taxonomy-crud` | 🔵 Ready (unblocked) | — | — | 4-5h | Category CRUD, tag create/delete |
+| 6 | `feat/revision-completeness` | 🔵 Ready (unblocked) | — | — | 4-5h | Full revision restore |
 | 7 | `feat/performance-and-reliability` | 🔵 Ready | — | — | 5-6h | Caching, image opt, Sentry, rate limits |
 | 8 | `feat/site-search` | 🔵 Ready | — | — | 4-6h | /search page, Cmd+K shortcut |
 | 9 | `chore/cleanup-and-hardening` | 🔵 Ready | — | — | 3-4h | Zod validation, Cloudinary cleanup, logging |
@@ -37,7 +37,7 @@
 - 🟢 **In Progress** — Currently being worked on (see "Active Branch" below)
 - ✅ **Merged** — Done and shipped to main
 
-**Active Branch:** *(none — Branches 1 and 2 merged, ready to start next)*
+**Active Branch:** *(none — Branches 1, 2, and 3 merged)*
 
 ---
 

@@ -1,6 +1,6 @@
 # Branch 3: `chore/schema-hardening`
 
-**Status:** 🟢 In Progress
+**Status:** ✅ Merged (PR #44, 2026-06-15)
 **Estimated effort:** 2-3 hours
 **Depends on:** Nothing
 
@@ -14,7 +14,124 @@ asked to keep the footer newsletter form and remove the homepage one.
 That cleanup is committed alongside this branch (the footer fix was
 misclassified on Branch 2).
 
+### Results
+
+| Check | What was done | Outcome |
+|-------|---------------|---------|
+| 3.1 FK + index on `wishlistPlaces.linkedPostId` | Migration 0021 rebuilds `wishlist_places` with the FK; index added | ✅ FK verified — invalid inserts now fail |
+| 3.2 FK on `wishlistPlaces.parentId` | Already in DB; Drizzle schema updated for consistency | ✅ Schema synced, no migration needed |
+| 3.3 `updatedAt` on `series` | Migration 0022 rebuilds `series` with `updated_at NOT NULL` | ✅ Existing 5 rows populated from `created_at` |
+| 3.4 `createdAt`/`updatedAt` on `categories` | Migration 0022 rebuilds `categories` | ✅ Existing 18 rows populated with current time |
+| 3.5 `createdAt`/`updatedAt` on `tags` | Migration 0022 rebuilds `tags` | ✅ Existing 13 rows populated with current time |
+| 3.6 Index on `postTags.tagId` | Added via `CREATE INDEX post_tags_tag_id_idx` | ✅ Index present |
+
+### Application code updates
+
+- `src/server/dal/series.ts:128-131` — series insert + onConflictDoUpdate set `updatedAt`
+- `src/app/admin/actions.ts:102-116` — category upsert sets timestamps
+- `src/app/admin/actions.ts:337-343` — tag insert sets timestamps
+- `scripts/seed-series-categories.ts:35-48` — seed data includes timestamps
+- `scripts/import-supabase.ts:554-572` — import batch includes timestamps
+
+### Migration approach
+
+SQLite does not support `ALTER TABLE ADD COLUMN` with non-constant defaults, so affected tables are rebuilt via the `__new_*` pattern. `PRAGMA foreign_keys=OFF` is used during rebuilds to allow `DROP TABLE` on tables referenced by FKs in other tables.
+
+### Companion UI cleanup
+
+- `web/src/app/(blog)/page.tsx:155-167` — Removed the homepage "Stay on the trail" section
+- `web/src/components/layout/site-footer.tsx` — Re-added the "Stay on the trail" footer newsletter (was incorrectly removed in Branch 2)
+- `web/tests/unit/home-page.test.tsx:78` — Updated test to expect no inline newsletter
+
 ---
+
+## Checklist (all complete)
+
+### 3.1 Add FK + index on `wishlistPlaces.linkedPostId`
+- [x] Edit `web/src/drizzle/schema.ts:194` — add `.references(() => posts.id)`
+- [x] Add `linkedPostIdIdx` index in table config
+- [x] Generate migration: hand-written 0021 (drizzle-kit CLI broken in this env)
+- [x] Review generated SQL (rebuild pattern)
+- [x] Apply to production DB via libsql client
+- [x] Verify FK by attempting invalid insert — rejected ✅
+
+### 3.2 Add FK on `wishlistPlaces.parentId`
+- [x] Drizzle schema updated with `.references(() => wishlistPlaces.id)` cast
+- [x] FK already exists in DB; no migration needed
+- [x] Drizzle schema now matches DB state
+
+### 3.3 Add `updatedAt` to `series`
+- [x] Edit `web/src/drizzle/schema.ts:9`
+- [x] Hand-written migration 0022 rebuilds series with `updated_at NOT NULL`
+- [x] Applied to production DB
+- [x] Updated `web/src/server/dal/series.ts` to set `updatedAt`
+- [x] Existing 5 rows populated from `created_at`
+
+### 3.4 Add `createdAt`/`updatedAt` to `categories`
+- [x] Edit `web/src/drizzle/schema.ts:48-49`
+- [x] Migration 0022 rebuilds categories
+- [x] Applied to production DB
+- [x] Updated `web/src/app/admin/actions.ts` to set timestamps
+- [x] Updated import-supabase.ts script
+- [x] Existing 18 rows populated with current time
+
+### 3.5 Add `createdAt`/`updatedAt` to `tags`
+- [x] Edit `web/src/drizzle/schema.ts:175-176`
+- [x] Migration 0022 rebuilds tags
+- [x] Applied to production DB
+- [x] Updated `web/src/app/admin/actions.ts` to set timestamps
+- [x] Updated import-supabase.ts script
+- [x] Existing 13 rows populated with current time
+
+### 3.6 Add index on `postTags.tagId`
+- [x] Edit `web/src/drizzle/schema.ts:222` — add `tagIdIdx` in table config
+- [x] Migration 0022 includes `CREATE INDEX post_tags_tag_id_idx`
+- [x] Applied to production DB — index present ✅
+
+---
+
+## Commits
+
+```
+91ca73f  test: update home-page test to expect no inline newsletter
+e22f609  chore: set audit timestamps on series/categories/tags inserts
+1034675  docs: mark Branch 3 in progress with companion cleanup note
+[earlier] chore: add FK and audit timestamps to taxonomy and wishlist tables
+[earlier] fix: keep footer newsletter, remove homepage newsletter section
+[earlier] fix: remove newsletter and social sections from footer
+```
+
+(Squash-merged into main as PR #44; branch deleted.)
+
+---
+
+## PR
+
+[#44](https://github.com/JevonThompsonx/jsquared_blog/pull/44)
+
+---
+
+## Acceptance Criteria
+
+- [x] All 6 checklist items complete
+- [x] Migrations generated and committed
+- [x] Migrations applied to production DB successfully
+- [x] CI passes
+- [x] PR created and merged to main
+- [x] `docs/ROADMAP.md` status table updated to ✅ Merged
+- [x] `docs/CHANGELOG.md` entry added (v0.4.3)
+- [x] Branch deleted
+
+---
+
+## Post-Merge Actions
+
+After this branch merges, the following branches become unblocked:
+- Branch 4: `feat/taxonomy-browse` (uses timestamps on categories/tags) — 🔵 Ready
+- Branch 5: `feat/admin-taxonomy-crud` (uses timestamps) — 🔵 Ready
+- Branch 6: `feat/revision-completeness` (schema conventions established) — 🔵 Ready
+
+All three have been marked 🔵 Ready in `docs/ROADMAP.md`.
 
 ## Goal
 
