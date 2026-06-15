@@ -7,6 +7,10 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 vi.mock("@/server/queries/posts", () => ({
   listPublishedPosts: vi.fn(),
   listPublishedPostsByCategory: vi.fn(),
@@ -15,6 +19,7 @@ vi.mock("@/server/queries/posts", () => ({
 
 import { GET } from "@/app/api/posts/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { listPublishedPosts, listPublishedPostsByCategory, listPublishedPostsByTagSlug } from "@/server/queries/posts";
 import type { BlogPost } from "@/types/blog";
 
@@ -96,5 +101,25 @@ describe("GET /api/posts", () => {
       offset: 0,
       hasMore: true,
     });
+  });
+
+  it("captures the exception and returns 500 when listing posts throws", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 60,
+      remaining: 59,
+      resetAt: Date.now() + 60_000,
+    });
+    const dbError = new Error("database offline");
+    vi.mocked(listPublishedPosts).mockRejectedValue(dbError);
+
+    const response = await GET(new Request("http://localhost/api/posts"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Failed to load posts" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "posts" }),
+    );
   });
 });

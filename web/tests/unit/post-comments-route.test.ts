@@ -29,8 +29,13 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 import { POST } from "@/app/api/posts/[postId]/comments/route";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { canCommentOnPost, canReplyToComment, createCommentRecord, listCommentsForPost } from "@/server/dal/comments";
@@ -294,7 +299,8 @@ describe("POST /api/posts/[postId]/comments", () => {
       displayName: "Reader",
       avatarUrl: null,
     });
-    vi.mocked(createCommentRecord).mockRejectedValue(new Error("database offline"));
+    const dbError = new Error("database offline");
+    vi.mocked(createCommentRecord).mockRejectedValue(dbError);
 
     const response = await POST(
       new Request("http://localhost/api/posts/post-1/comments", {
@@ -307,6 +313,10 @@ describe("POST /api/posts/[postId]/comments", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Failed to create comment" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "post-comments", postId: "post-1" }),
+    );
   });
 
   it("returns success without replacing comments when listing fails unexpectedly after creation", async () => {

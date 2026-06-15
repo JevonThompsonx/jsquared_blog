@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { listPublishedPosts, listPublishedPostsByCategory, listPublishedPostsByTagSlug } from "@/server/queries/posts";
 
 // GET /api/posts
@@ -65,6 +66,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
   } catch (error) {
     console.error("[posts] Failed to list posts", error);
+    captureException(error, { route: "posts" });
     return NextResponse.json({ error: "Failed to load posts" }, { status: 500 });
   }
 }

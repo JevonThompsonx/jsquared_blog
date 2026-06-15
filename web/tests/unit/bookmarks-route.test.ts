@@ -13,6 +13,10 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   getRequestSupabaseUser: vi.fn(),
 }));
@@ -28,6 +32,7 @@ vi.mock("@/server/dal/bookmarks", () => ({
 import { GET } from "@/app/api/bookmarks/route";
 import { cdnImageUrl } from "@/lib/cloudinary/transform";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { listBookmarkedPosts } from "@/server/dal/bookmarks";
@@ -183,5 +188,9 @@ describe("GET /api/bookmarks", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Failed to load bookmarks" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ route: "bookmarks" }),
+    );
   });
 });

@@ -22,8 +22,13 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 import { POST } from "@/app/api/comments/[commentId]/like/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { commentExists, toggleCommentLikeRecord } from "@/server/dal/comments";
@@ -116,7 +121,8 @@ describe("POST /api/comments/[commentId]/like", () => {
       displayName: "Reader",
       avatarUrl: null,
     });
-    vi.mocked(toggleCommentLikeRecord).mockRejectedValue(new Error("toggle failed"));
+    const dbError = new Error("toggle failed");
+    vi.mocked(toggleCommentLikeRecord).mockRejectedValue(dbError);
 
     const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
       params: Promise.resolve({ commentId: "comment-1" }),
@@ -124,6 +130,10 @@ describe("POST /api/comments/[commentId]/like", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Failed to update comment like" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "comment-like", commentId: "comment-1" }),
+    );
   });
 
   it("toggles likes for visible comments", async () => {

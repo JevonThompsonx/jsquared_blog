@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { deleteCommentRecord } from "@/server/dal/comments";
@@ -43,6 +44,7 @@ export async function DELETE(
       supabaseUserId: supabaseUser.id,
       error,
     });
+    captureException(error, { route: "comment-delete", commentId, supabaseUserId: supabaseUser.id });
     return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 });
   }
 }

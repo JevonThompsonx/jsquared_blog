@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser, getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
 import { canCommentOnPost, canReplyToComment, createCommentRecord, listCommentsForPost } from "@/server/dal/comments";
@@ -36,6 +37,7 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
     return NextResponse.json({ comments });
   } catch (error) {
     console.error("[post-comments] Failed to load comments", { postId, sort: sortParse.data, error });
+    captureException(error, { route: "post-comments", postId, sort: sortParse.data });
     return NextResponse.json({ error: "Failed to load comments" }, { status: 500 });
   }
 }
@@ -98,6 +100,7 @@ export async function POST(request: Request, context: { params: Promise<{ postId
     }
   } catch (error) {
     console.error(`[post-comments] Failed to create comment for post ${postId}`, error);
+    captureException(error, { route: "post-comments", postId, action: "create" });
     return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
   }
 }

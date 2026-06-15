@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { incrementPostViewCount } from "@/server/dal/posts";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 
 const paramsSchema = z.object({
   postId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
@@ -50,6 +51,7 @@ export async function POST(_request: Request, context: { params: Promise<unknown
       postId,
       errorName: error instanceof Error ? error.name : "UnknownError",
     });
+    captureException(error, { route: "post-view", postId });
     return NextResponse.json({ error: "Failed to record post view" }, { status: 500 });
   }
 
