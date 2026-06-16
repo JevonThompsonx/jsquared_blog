@@ -173,17 +173,23 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Verification:** test + typecheck + lint
 
-### Phase 6 — `fix/branch-9-orphan-cleanup` ⏳
+### Phase 6 — `fix/branch-9-orphan-cleanup` ✅
 
 **Fixes:** A7
-**Files to change:**
-- `web/src/server/posts/delete.ts` — delete from `postLinks` and `seasons` before/within post delete transaction
+**Files changed:**
+- `web/src/server/posts/delete.ts` — added `postLinks` import; new step 7 inside transaction: `tx.delete(postLinks).where(inArray(postLinks.postId, toDelete))`. Step numbers below renumbered (7→8, 8→9, 9→10).
+- `web/tests/unit/posts-delete-cloudinary-cleanup.test.ts` — 2 new tests (single + batch)
 
-**Tests to add:**
-- Post delete removes related `postLinks`
-- Post delete removes related `seasons`
+**Tests added:**
+- Single-post delete calls `tx.delete(postLinks)` within the transaction
+- Batch delete also covers all post IDs via `inArray`
 
-**Verification:** test + typecheck + lint
+**Scope correction:** The audit (A7) mentioned `seasons` but `seasons.created_by_user_id` references `users.id`, not `posts.id`. No cleanup needed for seasons. Concern C15 documents this.
+
+**Verification:**
+- `pnpm run test` — **1076/1076 pass** (+2 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
 
 ### Phase 7 — `fix/homepage-footer-spacing` ⏳
 
@@ -232,7 +238,7 @@ After all 8 fix branches pass:
 | 3 | `fix/branch-7-search-perf` | ⏳ | — | — | — | — |
 | 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
 | 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
-| 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
+| 6 | `fix/branch-9-orphan-cleanup` | ✅ | `3d3eb89` | — (deferred to Phase 9) | +2 | Pushed. post_links now cleaned in delete transaction. |
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
 | 9 | Merge to main | ⏳ | — | — | — | — |
