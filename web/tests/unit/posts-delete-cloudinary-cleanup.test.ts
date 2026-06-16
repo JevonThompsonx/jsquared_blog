@@ -48,6 +48,7 @@ vi.mock("@/server/cloudinary/destroy-asset", () => ({
 }));
 
 import { deletePosts } from "@/server/posts/delete";
+import { postLinks } from "@/drizzle/schema";
 
 type SelectResult = unknown[];
 
@@ -216,5 +217,56 @@ describe("deletePosts cloudinary cleanup", () => {
     expect(result.deletedPostIds).toEqual(["post-1"]);
     expect(destroyAssetMock).toHaveBeenCalledTimes(2);
     expect(logCleanupErrorMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes post_links rows for the deleted post within the transaction (no orphan links)", async () => {
+    const existingPost = {
+      id: "post-1",
+      slug: "patagonia-notes",
+      featuredImageId: null,
+    };
+
+    mockSelect
+      .mockReturnValueOnce(selectChain([existingPost]))
+      .mockReturnValueOnce(selectChain([])) // previewGallery
+      .mockReturnValueOnce(selectChain([])); // comments (inside tx)
+
+    mockDelete.mockReturnValue(deleteChain());
+    mockUpdate.mockReturnValue(updateChain());
+    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
+      await callback(mockTx);
+    });
+
+    await deletePosts(["post-1"]);
+
+    // The postLinks table must be one of the tables deleted within the
+    // transaction. post_links.post_id is a NOT NULL FK to posts.id; if
+    // we don't clean it up here, we leave orphaned rows.
+    const postLinksDeleteCalls = mockDelete.mock.calls.filter((call) => call[0] === postLinks);
+    expect(postLinksDeleteCalls).toHaveLength(1);
+  });
+
+  it("deletes post_links for every post in a batch delete", async () => {
+    const existingPosts = [
+      { id: "post-1", slug: "one", featuredImageId: null },
+      { id: "post-2", slug: "two", featuredImageId: null },
+    ];
+
+    mockSelect
+      .mockReturnValueOnce(selectChain(existingPosts))
+      .mockReturnValueOnce(selectChain([])) // previewGallery
+      .mockReturnValueOnce(selectChain([])); // comments (inside tx)
+
+    mockDelete.mockReturnValue(deleteChain());
+    mockUpdate.mockReturnValue(updateChain());
+    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
+      await callback(mockTx);
+    });
+
+    const result = await deletePosts(["post-1", "post-2"]);
+
+    expect(result.deletedPostIds).toEqual(["post-1", "post-2"]);
+    const postLinksDeleteCalls = mockDelete.mock.calls.filter((call) => call[0] === postLinks);
+    expect(postLinksDeleteCalls).toHaveLength(1);
   });
 });

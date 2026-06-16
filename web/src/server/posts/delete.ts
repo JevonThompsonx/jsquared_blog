@@ -8,6 +8,7 @@ import {
   comments,
   postBookmarks,
   postImages,
+  postLinks,
   postPreviewTokens,
   postRevisions,
   postTags,
@@ -119,7 +120,12 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
     // 6. Delete post revisions
     await tx.delete(postRevisions).where(inArray(postRevisions.postId, toDelete));
 
-    // 7. Delete gallery images and their media assets
+    // 7. Delete post links (external links like iovander/booking URLs).
+    //    post_links.post_id is a NOT NULL FK to posts.id; without this
+    //    cleanup, deleting a post leaves orphaned rows.
+    await tx.delete(postLinks).where(inArray(postLinks.postId, toDelete));
+
+    // 8. Delete gallery images and their media assets
     await tx.delete(postImages).where(inArray(postImages.postId, toDelete));
 
     const galleryAssetIds = previewGallery.map((r) => r.mediaAssetId);
@@ -127,7 +133,7 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
       await tx.delete(mediaAssets).where(inArray(mediaAssets.id, galleryAssetIds));
     }
 
-    // 8. Clear featured image FK, then delete featured media assets
+    // 9. Clear featured image FK, then delete featured media assets
     if (previewFeatured.length > 0) {
       for (const postId of toDelete) {
         await tx.update(posts).set({ featuredImageId: null }).where(eq(posts.id, postId));
@@ -135,7 +141,7 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
       await tx.delete(mediaAssets).where(inArray(mediaAssets.id, previewFeatured));
     }
 
-    // 9. Delete the posts themselves
+    // 10. Delete the posts themselves
     await tx.delete(posts).where(inArray(posts.id, toDelete));
   });
 
