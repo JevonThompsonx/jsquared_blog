@@ -134,4 +134,20 @@ describe("AdminTagsPage", () => {
 
     expect(markup).toContain("Cannot delete: 2 post(s) still use this tag");
   });
+
+  it("renders a load failure message when the DAL throws", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    vi.mocked(listAllTagsWithCounts).mockRejectedValue(new Error("database unavailable"));
+
+    const markup = renderToStaticMarkup(await AdminTagsPage({}));
+
+    expect(markup).toContain("Tag data is temporarily unavailable");
+    // The empty-state and list markers should NOT be present — failure
+    // takes precedence so the admin doesn't see a misleading "no tags" UI.
+    expect(markup).not.toContain("data-testid=\"admin-tags-empty\"");
+    expect(markup).not.toContain("data-testid=\"admin-tags-list\"");
+    // The create form is independent of the load — admin can still create
+    // a tag even when the list fails to load.
+    expect(markup).toContain("data-testid=\"admin-tags-create-form\"");
+  });
 });

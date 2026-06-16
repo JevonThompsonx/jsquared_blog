@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
-import { listAllTagsWithCounts } from "@/server/dal/admin-tags";
+import { listAllTagsWithCounts, type AdminTagRecord } from "@/server/dal/admin-tags";
 
 import { createTagAction, deleteTagAction, updateTagDescriptionAction } from "./actions";
 
@@ -43,7 +43,14 @@ export default async function AdminTagsPage({
   const params = (await searchParams) ?? {};
   const errorMessage = formatError(params);
 
-  const tagsList = await listAllTagsWithCounts();
+  let tagsList: AdminTagRecord[] = [];
+  let loadFailed = false;
+  try {
+    tagsList = await listAllTagsWithCounts();
+  } catch (error) {
+    console.error("[admin tags] Failed to load tags", error);
+    loadFailed = true;
+  }
 
   return (
     <main id="main-content" className="min-h-screen px-4 pb-12 pt-24 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
@@ -128,7 +135,11 @@ export default async function AdminTagsPage({
           </form>
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
-            {tagsList.length === 0 ? (
+            {loadFailed ? (
+              <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
+                Tag data is temporarily unavailable. Please try again later.
+              </p>
+            ) : tagsList.length === 0 ? (
               <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]" data-testid="admin-tags-empty">
                 No tags yet. Use the form on the left to create the first one — they will also appear here
                 automatically when added to posts.
