@@ -385,6 +385,63 @@ After main fix committed for Phase N:
 - `pnpm run lint` — must be clean
 - Existing Phase 1 and Phase 2 tests must still pass with new slug-based inputs
 
+## Phase 10 — `fix/open-concerns-batch` 🔵
+
+**Concerns addressed:** C6, C7, C12, C13, C15, C18, C20
+**Branch:** `fix/open-concerns-batch` (in worktree `jsquared_blog_concerns_batch`)
+**Base:** `main` @ `7905f8c`
+
+### Files to Change
+
+**C20 (race fix) — `web/src/server/dal/post-revisions.ts`**
+- `restorePostRevisionAtomically` — replace the read-then-insert pattern (lines 324-353) with a single atomic INSERT that computes the next `revisionNum` via a SQL subquery (same pattern as `createPostRevision`).
+- The `snapshot` SELECT is still needed (for `title`, `contentJson`, etc. that go into the "Before restore" revision). The change is only the `max(revisionNum)` SELECT.
+
+**C6, C7 (search perf) — `web/src/server/dal/posts.ts`**
+- Extract `escapeLikePattern(value)` helper that returns both the escaped string AND the `ESCAPE '\\'` clause (or a `sql` tag) so callers don't repeat the backslash literal.
+- Add `MAX_SEARCH_QUERY_LENGTH = 200` constant and throw `Error("search query exceeds maximum length")` if `query.length > MAX_SEARCH_QUERY_LENGTH`. The Zod validator in the route already caps at 200, so this is defense-in-depth.
+
+**C12, C13 (admin tags + categories)**
+- `web/src/app/admin/tags/page.tsx` — add `data-testid="admin-tags-load-failed"` to the `loadFailed` branch (line 138-141). Replace `console.error(...)` with `captureException(error, { area: "admin-tags" })`. Update the existing test to use the positive assertion.
+- `web/src/app/admin/categories/page.tsx` — same changes for consistency: `data-testid="admin-categories-load-failed"`, replace `console.error` with `captureException(error, { area: "admin-categories" })`.
+
+**C15 (audit correction) — `web/src/server/posts/delete.ts`**
+- Add a code comment near step 7 (line 123-126) explaining: "Note: the original audit (A7) mentioned `seasons` cleanup, but `seasons.created_by_user_id` references `users.id`, not `posts.id`. Only `post_links` has an FK to `posts.id` that requires cleanup. This comment documents the audit inaccuracy for future maintainers."
+
+**C18 (footer design) — `web/src/components/layout/site-footer.tsx`**
+- Add a comment on the `mt-16` class (line 56) explaining the design decision: "The `mt-16` change (was `mt-20`) is global and applied to every page. The homepage 'Next up' section adds its own `pb-8`. Sparse pages (e.g. simple legal pages) may feel slightly closer to the footer. The original audit (A9) targeted the homepage gap; the footer change was an additional tightening. This is an accepted design trade-off. To make it content-aware would require per-page layout changes (out of scope)."
+
+### Tests to Add
+
+| File | Test | Concern |
+|------|------|---------|
+| `web/tests/unit/post-revisions-dal-race.test.ts` | `restorePostRevisionAtomically` uses single atomic INSERT (no separate `db.select` for `max(revisionNum)`); the subquery is in the INSERT | C20 |
+| Same file | Inserted revision record has `revisionNum` from RETURNING | C20 |
+| `web/tests/unit/posts-dal-search.test.ts` | `searchPublishedPostRecords` throws when query exceeds max length | C7 |
+| Same file | LIKE pattern is built via `escapeLikePattern` helper (not duplicated inline) | C6 |
+| `web/tests/unit/admin-tags-page.test.tsx` | Load failure path renders `data-testid="admin-tags-load-failed"` (positive assertion) | C12 |
+| Same file | Load failure calls `captureException`, not `console.error` | C13 |
+| `web/tests/unit/admin-categories-page.test.tsx` (if exists) | Same C12/C13 checks for categories page | C12/C13 |
+| (new test for categories) | C12/C13 mirrored to categories | C12/C13 |
+
+### Verification
+
+- `pnpm run test` — all pass (expect 1108 + ~6 new tests)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+- Manual trace: 2 concurrent `restorePostRevisionAtomically` calls on same `postId` produce different `revisionNum` values (the atomic subquery prevents duplicates)
+
+### Concerns Gate (post-implementation)
+
+- C6: covered (helper exists, used in 5 LIKE clauses)
+- C7: covered (max-length throws at DAL boundary)
+- C12: covered (positive testid)
+- C13: covered (Sentry captureException in both admin pages)
+- C15: covered (audit correction in code comment)
+- C18: covered (design rationale in code comment + REVIEW-PLAN close)
+- C20: covered (atomic INSERT in restore function)
+- New concerns? Run concerns checklist before declaring done.
+
 **Skipped for now:**
 - C5 (title shows slug) — would need slug-to-name lookup, scope creep for a concern-fix branch
 
