@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { getCategoryFeedHref, SITE_URL } from "@/lib/utils";
+import { getCategoryNameBySlug } from "@/server/dal/categories";
 import { buildRssXml, createRssResponse } from "@/server/feeds/rss";
 import { listPublishedPostsByCategory } from "@/server/queries/posts";
 
@@ -33,12 +34,13 @@ export async function GET(_request: Request, context: { params: Promise<unknown>
     return new Response("Invalid category", { status: 400 });
   }
 
+  const displayName = (await getCategoryNameBySlug(category)) ?? category;
   const posts = await listPublishedPostsByCategory(category, 100, 0);
 
   return createRssResponse(
     buildRssXml({
-      title: `${category} - J²Adventures`,
-      description: `Latest J²Adventures posts filed under ${category}.`,
+      title: `${displayName} - J²Adventures`,
+      description: `Latest J²Adventures posts filed under ${displayName}.`,
       siteUrl: `${SITE_URL}/category/${encodeURIComponent(category)}`,
       selfUrl: `${SITE_URL}${getCategoryFeedHref(category)}`,
       posts,

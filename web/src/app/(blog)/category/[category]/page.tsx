@@ -9,6 +9,7 @@ import { z } from "zod";
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getCategoryFeedHref, SITE_URL } from "@/lib/utils";
+import { getCategoryNameBySlug } from "@/server/dal/categories";
 import { countPublishedPostsByCategory } from "@/server/dal/posts";
 import { listPublishedPostsByCategory } from "@/server/queries/posts";
 
@@ -45,9 +46,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     return {};
   }
 
+  const displayName = (await getCategoryNameBySlug(label)) ?? label;
+
   return {
-    title: `${label} – J²Adventures`,
-    description: `Explore all ${label} adventures on J²Adventures.`,
+    title: `${displayName} – J²Adventures`,
+    description: `Explore all ${displayName} adventures on J²Adventures.`,
     alternates: {
       types: {
         "application/rss+xml": `${SITE_URL}${getCategoryFeedHref(label)}`,
@@ -145,6 +148,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
+  const displayName = (await getCategoryNameBySlug(label)) ?? label;
+
   const slug = getCategorySlug(label);
   const [initialPosts, postCount] = await Promise.all([
     listPublishedPostsByCategory(label, 20, 0),
@@ -168,7 +173,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-secondary)]">Category</p>
               <h1 className="mt-1 text-balance text-3xl font-bold leading-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
-                {label}
+                {displayName}
               </h1>
 
               <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
@@ -192,7 +197,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       <FilteredFeed
         apiParams={{ category: label }}
         emptyDescription="No adventures have been posted in this category yet. Check back soon."
-        emptyTitle={`No ${label} adventures yet.`}
+        emptyTitle={`No ${displayName} adventures yet.`}
         initialPosts={initialPosts}
       />
     </main>
