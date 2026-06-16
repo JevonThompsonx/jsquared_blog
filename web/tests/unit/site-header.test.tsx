@@ -5,7 +5,9 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const usePathnameMock = vi.fn(() => "/");
-const useRouterMock = vi.fn(() => ({ push: vi.fn(), replace: vi.fn() }));
+const routerPushMock = vi.fn();
+const routerReplaceMock = vi.fn();
+const useRouterMock = vi.fn(() => ({ push: routerPushMock, replace: routerReplaceMock }));
 const useSearchParamsMock = vi.fn(() => new URLSearchParams());
 const getSessionMock = vi.fn();
 const onAuthStateChangeMock = vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } }));
@@ -65,6 +67,8 @@ describe("SiteHeader", () => {
     root = createRoot(container);
     usePathnameMock.mockReturnValue("/");
     useSearchParamsMock.mockReturnValue(new URLSearchParams());
+    routerPushMock.mockReset();
+    routerReplaceMock.mockReset();
     getSessionMock.mockReset();
     getSessionMock.mockResolvedValue({ data: { session: null } });
     onAuthStateChangeMock.mockClear();
@@ -150,5 +154,159 @@ describe("SiteHeader", () => {
     expect(tagsLink?.textContent).toContain("Tags");
     expect(categoriesLink).not.toBeNull();
     expect(categoriesLink?.textContent).toContain("Categories");
+  });
+
+  it("renders the search form with /search action, q param name, and Cmd+K placeholder", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+
+    await renderHeader();
+
+    const form = container.querySelector('form[action="/search"]');
+    expect(form).not.toBeNull();
+    const input = form?.querySelector('input[name="q"]');
+    expect(input).not.toBeNull();
+    expect(input?.getAttribute("placeholder")).toBe("Search stories… (⌘K)");
+  });
+
+  it("navigates to /search?q=... when the search form is submitted", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+    usePathnameMock.mockReturnValue("/");
+
+    await renderHeader();
+
+    const form = container.querySelector('form[action="/search"]') as HTMLFormElement | null;
+    const input = form?.querySelector('input[name="q"]') as HTMLInputElement | null;
+    expect(form).not.toBeNull();
+    expect(input).not.toBeNull();
+
+    await act(async () => {
+      input!.value = "Zion";
+      form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(routerPushMock).toHaveBeenCalledWith("/search?q=Zion");
+    expect(routerReplaceMock).not.toHaveBeenCalled();
+  });
+
+  it("navigates to /search?q=... when the form is submitted from a non-home page", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+    usePathnameMock.mockReturnValue("/tags");
+
+    await renderHeader();
+
+    const form = container.querySelector('form[action="/search"]') as HTMLFormElement | null;
+    const input = form?.querySelector('input[name="q"]') as HTMLInputElement | null;
+    expect(form).not.toBeNull();
+    expect(input).not.toBeNull();
+
+    await act(async () => {
+      input!.value = "Hiking";
+      form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(routerPushMock).toHaveBeenCalledWith("/search?q=Hiking");
+  });
+
+  it("focuses the search input when Cmd+K (macOS) is pressed", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+
+    await renderHeader();
+
+    const input = container.querySelector('input[name="q"]') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+
+    const shortcutEvent = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      key: "k",
+      metaKey: true,
+    });
+    const preventDefaultSpy = vi.spyOn(shortcutEvent, "preventDefault");
+
+    await act(async () => {
+      window.dispatchEvent(shortcutEvent);
+    });
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("focuses the search input when Ctrl+K (Windows/Linux) is pressed", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+
+    await renderHeader();
+
+    const input = container.querySelector('input[name="q"]') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+
+    const shortcutEvent = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      key: "k",
+      ctrlKey: true,
+    });
+    const preventDefaultSpy = vi.spyOn(shortcutEvent, "preventDefault");
+
+    await act(async () => {
+      window.dispatchEvent(shortcutEvent);
+    });
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("does not focus the search input or prevent default for unrelated keyboard shortcuts", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+
+    await renderHeader();
+
+    const input = container.querySelector('input[name="q"]') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+    input?.blur();
+    expect(document.activeElement).not.toBe(input);
+
+    const shortcutEvent = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      key: "k",
+    });
+    const preventDefaultSpy = vi.spyOn(shortcutEvent, "preventDefault");
+
+    await act(async () => {
+      window.dispatchEvent(shortcutEvent);
+    });
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+    expect(document.activeElement).not.toBe(input);
+  });
+
+  it("removes the keydown listener on unmount", async () => {
+    sessionContextValueMock.mockReturnValue(undefined);
+
+    await renderHeader();
+
+    const input = container.querySelector('input[name="q"]') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+
+    const shortcutEvent = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      key: "k",
+      metaKey: true,
+    });
+    const preventDefaultSpy = vi.spyOn(shortcutEvent, "preventDefault");
+
+    await act(async () => {
+      window.dispatchEvent(shortcutEvent);
+    });
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+    expect(document.activeElement).not.toBe(input);
+
+    container.remove();
   });
 });

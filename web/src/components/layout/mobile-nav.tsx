@@ -83,7 +83,7 @@ export function MobileNav({
 
             {/* Search Section */}
             <div className="mb-6">
-              <form action="/" className="relative" onSubmit={(e) => {
+              <form action="/search" className="relative" onSubmit={(e) => {
                 onSearchSubmit(e);
                 setIsOpen(false);
               }}>
@@ -92,9 +92,9 @@ export function MobileNav({
                   className="search-input w-full rounded-2xl border py-3 pl-4 pr-12 text-base shadow-sm focus:ring-2 focus:ring-[var(--primary)]"
                   defaultValue={currentSearch}
                   key={`mobile-search:${pathname}:${currentSearch}`}
-                  name="search"
+                  name="q"
                   onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Search stories…"
+                  placeholder="Search stories… (⌘K)"
                   type="search"
                 />
                 <button
