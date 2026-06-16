@@ -6,6 +6,61 @@
 
 ---
 
+## [0.4.6] — 2026-06-15
+
+### Branches: `fix/branch-4-taxonomy-queries`, `fix/branch-2-backtop-a11y`, `fix/branch-7-search-perf`, `fix/branch-10-print-scope`, `fix/branch-5-tags-admin-error`, `fix/branch-9-orphan-cleanup`, `fix/homepage-footer-spacing`, `fix/branch-6-revision-race`, `fix/concerns-phase1-phase2`
+
+Review-bash round 2. Eight independent fix branches covering 7 audit issues (A1, A2, A3, A4, A5, A6, A7, A8, A9) and 5 concern fixes (C1, C2, C5, C12, C13, C15, C16, C17, C18, C19, C20, C21, C22). Each branch was developed and verified in its own worktree using TDD, with a concerns gate pass before the next phase. All branches squashed into main via local merges.
+
+#### Branch: `fix/branch-4-taxonomy-queries` (Phase 1)
+
+- **Category DAL queries by slug (A1)** — `listPublishedPostRecordsByCategory` and `countPublishedPostsByCategory` in `web/src/server/dal/posts.ts` now match on `categories.slug` instead of `categories.name`. The taxonomy page now returns the right posts.
+- **Tag count filters by published status (A2)** — `listAllTagsForBrowse` in `web/src/server/dal/taxonomy-browse.ts` uses `COUNT(CASE WHEN posts.status = 'published' THEN posts.id END)` so the tag counts on the browse page no longer include drafts or scheduled posts.
+- **Category page title uses display name (C5)** — New `getCategoryNameBySlug(slug)` in `web/src/server/dal/categories.ts` looks up the display name. The category page, feed XML, and empty-state title all use the display name with a slug fallback for legacy links.
+- **Concerns addressed in `fix/concerns-phase1-phase2`** — Wrapper `listPublishedPostsByCategory` param renamed `category` → `categorySlug` (C1). Test inputs use slugs not URL-encoded names (C2).
+
+#### Branch: `fix/branch-2-backtop-a11y` (Phase 2)
+
+- **BackToTop keyboard focus (A3)** — `web/src/components/ui/back-to-top.tsx` now sets `aria-hidden={!visible}` and `tabIndex={visible ? 0 : -1}` so the button is not keyboard-focusable when invisible. 3 new tests cover the hidden / visible / scroll-back-to-top states.
+
+#### Branch: `fix/branch-7-search-perf` (Phase 3)
+
+- **Search pushed to DB (A4)** — New `searchPublishedPostRecords(query, limit, offset)` DAL function in `web/src/server/dal/posts.ts` uses a single `selectDistinct` query with `LEFT JOIN`s to categories, mediaAssets, postTags, and tags. Applies case-insensitive `LIKE` across 5 columns (title, excerpt, contentPlainText, categories.name, tags.name). `ESCAPE '\\'` plus `escapeLikeWildcards()` so user-supplied `%` and `_` are literal text. The old O(n) JS filter in `listPublishedPostsUncached` is gone. 8 new tests in `posts-dal-search.test.ts`.
+
+#### Branch: `fix/branch-10-print-scope` (Phase 4)
+
+- **Print button-hide scoped to chrome (A5)** — `web/src/app/globals.css` replaces the global `button:not([data-print-show])` rule with scoped `header button / nav button / footer button` rules. Article-body buttons (post gallery image-zoom, TOC) are now visible in print so images print correctly. 6 new tests in `globals-print-styles.test.ts`.
+
+#### Branch: `fix/branch-5-tags-admin-error` (Phase 5)
+
+- **Tags admin handles DAL errors (A6)** — `web/src/app/admin/tags/page.tsx` wraps `listAllTagsWithCounts()` in try/catch. On failure: `console.error` is logged and a "Tag data is temporarily unavailable" message is rendered in place of the list. Matches the existing categories page pattern. 1 new test.
+
+#### Branch: `fix/branch-9-orphan-cleanup` (Phase 6)
+
+- **post_links cleanup on delete (A7)** — `web/src/server/posts/delete.ts` now deletes `post_links` rows in the same transaction as the post delete. `post_links.post_id` is a NOT NULL FK; without this cleanup, deleted posts left orphaned rows. Audit incorrectly listed `seasons` (which has no FK to posts); concern C15 documents the audit inaccuracy. 2 new tests.
+
+#### Branch: `fix/homepage-footer-spacing` (Phase 7)
+
+- **Homepage "Next up" → footer gap (A9)** — `pt-8` → `pt-8 pb-8` on the "Next up" section container, and `mt-20` → `mt-16` on the site footer. Net ~48px reduction in the visual gap. 2 new tests (one on each file).
+
+#### Branch: `fix/branch-6-revision-race` (Phase 8)
+
+- **Revision race fix (A8)** — `createPostRevision()` in `web/src/server/dal/post-revisions.ts` replaced the read-then-insert pattern with a single atomic `INSERT` that uses a SQL subquery to compute the next `revision_num`: `(SELECT COALESCE(MAX(revision_num), 0) + 1 FROM post_revisions WHERE post_id = ?)`. The SELECT and INSERT execute as one statement, so two concurrent calls cannot interleave the read and write. Uses `.returning()` to get the actual `revision_num` back. 4 new tests in `post-revisions-dal-race.test.ts`. (C20: `restorePostRevisionAtomically()` has the same pattern; flagged for follow-up.)
+
+#### Concerns Gate
+
+A concerns gate was run after each phase's main fix. Concerns raised:
+
+- **C1-C5, C12-C22** — Documented in `docs/REVIEW-PLAN.md`. Most closed (no action required). 7 open concerns (C6, C7, C12, C13, C15, C18, C20) flagged for future follow-up branches.
+
+#### Verification on main
+
+- `pnpm run test` — **1108/1108 pass** (+34 vs pre-review baseline of 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+---
+
 ## [0.4.5] — 2026-06-15
 
 ### Branches: `feat/performance-and-reliability` (PR #50), `feat/site-search` (PR #51), `chore/cleanup-and-hardening` (PR #52), `feat/polish` (PR #53)

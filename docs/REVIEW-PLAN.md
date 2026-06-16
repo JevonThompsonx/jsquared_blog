@@ -264,12 +264,27 @@ A full audit of all 10 branches was also performed. Findings below.
 
 ---
 
-## Phase 9 — Final Merge ⏳
+## Phase 9 — Final Merge ✅
 
-After all 8 fix branches pass:
-1. Create one consolidated PR per fix branch (8 PRs) OR one mega-PR
-2. Merge all to main
-3. Final verification on main
+**Status:** Complete. All 8 fix branches + Phase C squashed into main via local merges.
+
+**Merge order:**
+1. `fix/branch-4-taxonomy-queries` (Phase 1) — A1, A2, C5
+2. `fix/concerns-phase1-phase2` (Phase C) — C1, C2
+3. `fix/branch-2-backtop-a11y` (Phase 2) — A3
+4. `fix/branch-7-search-perf` (Phase 3) — A4
+5. `fix/branch-10-print-scope` (Phase 4) — A5
+6. `fix/branch-5-tags-admin-error` (Phase 5) — A6
+7. `fix/branch-9-orphan-cleanup` (Phase 6) — A7
+8. `fix/homepage-footer-spacing` (Phase 7) — A9
+9. `fix/branch-6-revision-race` (Phase 8) — A8
+
+**Strategy decision:** Local merges instead of PRs. Each fix branch was independently developed and verified in its own worktree. The branches don't conflict in code (each touches different files), only in `docs/REVIEW-PLAN.md` (which has phase status updates). Conflicts resolved by combining all phase statuses into a unified table.
+
+**Final verification on main:**
+- `pnpm run test` — **1108/1108 pass** (+34 vs pre-review baseline of 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
 
 **TBD:** Decide PR strategy based on number of changes.
 
@@ -279,16 +294,16 @@ After all 8 fix branches pass:
 
 | Phase | Branch | Status | Commit | PR | Tests Added | Notes |
 |-------|--------|--------|--------|-----|-------------|-------|
-| 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` + `ac22c4b` | — (deferred to Phase 9) | +8 | Pushed. Fixes A1, A2, C5. |
-| 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | — (deferred to Phase 9) | +3 | Pushed. A11y fix. |
-| 3 | `fix/branch-7-search-perf` | ✅ | `7b42b98` | — (deferred to Phase 9) | +8 | Pushed. DB-level LIKE filter; O(n) → indexed. |
-| 4 | `fix/branch-10-print-scope` | ✅ | `ffadfaa` | — (deferred to Phase 9) | +6 | Pushed. Print button hide scoped to header/nav/footer. |
-| 5 | `fix/branch-5-tags-admin-error` | ✅ | `4c367aa` | — (deferred to Phase 9) | +1 | Pushed. Admin tags page handles DAL errors gracefully. |
-| 6 | `fix/branch-9-orphan-cleanup` | ✅ | `3d3eb89` | — (deferred to Phase 9) | +2 | Pushed. post_links now cleaned in delete transaction. |
-| 7 | `fix/homepage-footer-spacing` | ✅ | `4c71506` | — (deferred to Phase 9) | +2 | Pushed. ~48px visual gap reduction. |
-| 8 | `fix/branch-6-revision-race` | ✅ | `789a8af` | — (deferred to Phase 9) | +4 | Pushed. Atomic INSERT subquery; no race. |
-| 9 | Merge to main | ⏳ | — | — | — | — |
-| C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | — (deferred to Phase 9) | 0 | Pushed. Addresses C1, C2. C5 deferred. |
+| 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` + `ac22c4b` | | +8 | Pushed. Fixes A1, A2, C5. |
+| 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | | +3 | Pushed. A11y fix. |
+| 3 | `fix/branch-7-search-perf` | ✅ | `7b42b98` | | +8 | Pushed. DB-level LIKE filter; O(n) → indexed. |
+| 4 | `fix/branch-10-print-scope` | ✅ | `ffadfaa` | | +6 | Pushed. Print button hide scoped to header/nav/footer. |
+| 5 | `fix/branch-5-tags-admin-error` | ✅ | `4c367aa` | | +1 | Pushed. Admin tags page handles DAL errors gracefully. |
+| 6 | `fix/branch-9-orphan-cleanup` | ✅ | `3d3eb89` | | +2 | Pushed. post_links now cleaned in delete transaction. |
+| 7 | `fix/homepage-footer-spacing` | ✅ | `4c71506` | | +2 | Pushed. ~48px visual gap reduction. |
+| 8 | `fix/branch-6-revision-race` | ✅ | `789a8af` | | +4 | Pushed. Atomic INSERT subquery; no race. |
+| 9 | Merged to main | ✅ | `15f7262` | — | — | All 8 fix branches + Phase C squashed into main. |
+| C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | | 0 | Pushed. Addresses C1, C2. C5 fixed in Phase 1 (commit `ac22c4b`). |
 
 ---
 
