@@ -60,24 +60,26 @@ A full audit of all 10 branches was also performed. Findings below.
 
 8 fix branches, sequential phases. Each phase: create branch → fix → test → verify → commit → push.
 
-### Phase 1 — `fix/branch-4-taxonomy-queries` ⏳
+### Phase 1 — `fix/branch-4-taxonomy-queries` ✅
 
 **Fixes:** A1, A2
-**Files to change:**
-- `web/src/server/dal/posts.ts` — change `eq(categories.name, category)` → `eq(categories.slug, categorySlug)` on lines 253 and 265; rename parameter
-- `web/src/server/dal/taxonomy-browse.ts` — add join to `posts` table in `listAllTagsForBrowse`, filter by `posts.status = 'published'`
+**Commit:** `ad1a274`
+**Branch:** pushed to `origin/fix/branch-4-taxonomy-queries`
 
-**Tests to add:**
-- Category page returns posts when accessed by slug
-- Tag count excludes drafts
-- Tag count includes published posts
+**Files changed:**
+- `web/src/server/dal/posts.ts` — renamed `category` → `categorySlug` in `listPublishedPostRecordsByCategory` and `countPublishedPostsByCategory`; changed `eq(categories.name, category)` → `eq(categories.slug, categorySlug)` (2 lines)
+- `web/src/server/dal/taxonomy-browse.ts` — replaced `count(postTags.postId)` with `COUNT(CASE WHEN posts.status = 'published' THEN posts.id END)`; added `leftJoin(posts, eq(postTags.postId, posts.id))`; removed unused `count` import
+
+**Tests added (6 new):**
+- `posts-dal.test.ts` (new file, 5 tests) — list by slug, count by slug
+- `taxonomy-browse-dal.test.ts` (1 new test) — "only counts published posts in the post count (excludes drafts and scheduled)"
 
 **Verification:**
-- `pnpm run test` — all pass
+- `pnpm run test` — **1080/1080 pass** (was 1074, +6 tests)
 - `pnpm dlx tsc --noEmit` — clean
 - `pnpm run lint` — clean
-- Manual: visit `/categories/van-life` (should show posts)
-- Manual: visit `/tags` (total should match visible posts)
+- Logic check: page passes `label` (URL-decoded slug) to DAL → DAL now queries by `categories.slug` → match ✓
+- Logic check: `listAllTagsForBrowse` now joins `posts` table and conditionally counts published only → draft exclusion ✓
 
 ### Phase 2 — `fix/branch-2-backtop-a11y` ⏳
 
@@ -182,7 +184,7 @@ After all 8 fix branches pass:
 
 | Phase | Branch | Status | Commit | PR | Tests Added | Notes |
 |-------|--------|--------|--------|-----|-------------|-------|
-| 1 | `fix/branch-4-taxonomy-queries` | ⏳ | — | — | — | — |
+| 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` | — (deferred to Phase 9) | +6 | Pushed. Fixes user-reported bugs. |
 | 2 | `fix/branch-2-backtop-a11y` | ⏳ | — | — | — | — |
 | 3 | `fix/branch-7-search-perf` | ⏳ | — | — | — | — |
 | 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
