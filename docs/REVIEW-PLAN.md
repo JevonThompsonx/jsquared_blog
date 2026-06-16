@@ -81,17 +81,25 @@ A full audit of all 10 branches was also performed. Findings below.
 - Logic check: page passes `label` (URL-decoded slug) to DAL → DAL now queries by `categories.slug` → match ✓
 - Logic check: `listAllTagsForBrowse` now joins `posts` table and conditionally counts published only → draft exclusion ✓
 
-### Phase 2 — `fix/branch-2-backtop-a11y` ⏳
+### Phase 2 — `fix/branch-2-backtop-a11y` ✅
 
 **Fixes:** A3
-**Files to change:**
-- `web/src/components/ui/back-to-top.tsx` — add `aria-hidden={!visible}` and `tabIndex={visible ? 0 : -1}`
+**Commit:** `e9c20e0`
+**Branch:** pushed to `origin/fix/branch-2-backtop-a11y`
 
-**Tests to add:**
-- Button is not focusable when `!visible`
-- Button is focusable when `visible`
+**Files changed:**
+- `web/src/components/ui/back-to-top.tsx:35` — added `aria-hidden={!visible}`
+- `web/src/components/ui/back-to-top.tsx:43` — added `tabIndex={visible ? 0 : -1}`
 
-**Verification:** test + typecheck + lint
+**Tests added (3):**
+- Hidden from a11y tree and tab order when invisible (scrollY < 500)
+- Exposed to a11y and focusable when visible (scrollY > 500)
+- Returns to hidden / not focusable when scrolled back above threshold
+
+**Verification:**
+- `pnpm run test` — **1077/1077 pass** (was 1074, +3 on this worktree)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
 
 ### Phase 3 — `fix/branch-7-search-perf` ⏳
 
@@ -185,7 +193,7 @@ After all 8 fix branches pass:
 | Phase | Branch | Status | Commit | PR | Tests Added | Notes |
 |-------|--------|--------|--------|-----|-------------|-------|
 | 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` | — (deferred to Phase 9) | +6 | Pushed. Fixes user-reported bugs. |
-| 2 | `fix/branch-2-backtop-a11y` | ⏳ | — | — | — | — |
+| 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | — (deferred to Phase 9) | +3 | Pushed. A11y fix. |
 | 3 | `fix/branch-7-search-perf` | ⏳ | — | — | — | — |
 | 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
 | 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
