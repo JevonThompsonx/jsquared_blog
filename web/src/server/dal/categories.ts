@@ -128,6 +128,21 @@ export async function getCategoryBySlug(slug: string): Promise<AdminCategoryReco
   };
 }
 
+export async function getCategoryNameBySlug(slug: string): Promise<string | null> {
+  const db = getDb();
+
+  const row = await db
+    .select({ name: categories.name })
+    .from(categories)
+    .where(eq(categories.slug, slug))
+    .limit(1);
+
+  const first = row[0];
+  if (!first) return null;
+  ensureRecord(first, "getCategoryNameBySlug: row is not a record");
+  return (first.name as string | null | undefined) ?? null;
+}
+
 export async function getCategoryById(id: string): Promise<AdminCategoryRecord | null> {
   const db = getDb();
 

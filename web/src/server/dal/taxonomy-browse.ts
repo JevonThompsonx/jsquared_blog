@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, count, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { categories, postTags, posts, tags } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
@@ -43,6 +43,8 @@ function ascCaseInsensitive(column: Parameters<typeof asc>[0]) {
 
 export async function listAllTagsForBrowse(): Promise<TagWithCount[]> {
   const db = getDb();
+  const publishedPostCount = sql<number>`COUNT(CASE WHEN ${posts.status} = 'published' THEN ${posts.id} END)`;
+
   const rows = await db
     .select({
       id: tags.id,
@@ -51,19 +53,20 @@ export async function listAllTagsForBrowse(): Promise<TagWithCount[]> {
       description: tags.description,
       createdAt: tags.createdAt,
       updatedAt: tags.updatedAt,
-      postCount: count(postTags.postId),
+      postCount: publishedPostCount,
     })
     .from(tags)
     .leftJoin(postTags, eq(postTags.tagId, tags.id))
+    .leftJoin(posts, eq(postTags.postId, posts.id))
     .groupBy(tags.id)
-    .orderBy(desc(count(postTags.postId)), ascCaseInsensitive(tags.name));
+    .orderBy(desc(publishedPostCount), ascCaseInsensitive(tags.name));
 
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
     slug: row.slug,
     description: row.description,
-    postCount: Number(row.postCount),
+    postCount: Number(row.postCount ?? 0),
     createdAt: toDate(row.createdAt),
     updatedAt: toDate(row.updatedAt),
   }));
