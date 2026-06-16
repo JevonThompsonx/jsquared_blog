@@ -32,6 +32,7 @@ export function BackToTop() {
 
   return (
     <button
+      aria-hidden={!visible}
       aria-label="Back to top"
       className={`fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-primary)] shadow-lg transition-all duration-200 hover:border-[var(--primary)] hover:text-[var(--primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] ${
         visible
@@ -39,6 +40,7 @@ export function BackToTop() {
           : "pointer-events-none translate-y-2 opacity-0"
       }`}
       onClick={handleClick}
+      tabIndex={visible ? 0 : -1}
       type="button"
     >
       <svg

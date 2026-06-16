@@ -126,4 +126,45 @@ describe("BackToTop", () => {
     });
     expect(scrollSpy).toHaveBeenCalledWith({ top: 0, behavior: "auto" });
   });
+
+  describe("accessibility (a11y)", () => {
+    it("is hidden from assistive technology and not focusable when invisible (scrollY < 500)", () => {
+      act(() => {
+        root.render(<BackToTop />);
+      });
+      setScrollY(0);
+      const button = getButton();
+      expect(button).toBeTruthy();
+      expect(button?.getAttribute("aria-hidden")).toBe("true");
+      expect(button?.getAttribute("tabindex")).toBe("-1");
+      expect(button?.tabIndex).toBe(-1);
+    });
+
+    it("is exposed to assistive technology and focusable when visible (scrollY > 500)", () => {
+      act(() => {
+        root.render(<BackToTop />);
+      });
+      setScrollY(800);
+      const button = getButton();
+      expect(button).toBeTruthy();
+      expect(button?.getAttribute("aria-hidden")).toBe("false");
+      expect(button?.getAttribute("tabindex")).toBe("0");
+      expect(button?.tabIndex).toBe(0);
+    });
+
+    it("returns to hidden / not focusable when scrolled back above the threshold", () => {
+      act(() => {
+        root.render(<BackToTop />);
+      });
+      setScrollY(800);
+      expect(getButton()?.getAttribute("aria-hidden")).toBe("false");
+      expect(getButton()?.getAttribute("tabindex")).toBe("0");
+
+      setScrollY(100);
+      const button = getButton();
+      expect(button?.getAttribute("aria-hidden")).toBe("true");
+      expect(button?.getAttribute("tabindex")).toBe("-1");
+      expect(button?.tabIndex).toBe(-1);
+    });
+  });
 });
