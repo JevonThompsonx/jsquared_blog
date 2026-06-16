@@ -280,6 +280,9 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C3 | 2 | `aria-hidden` + `tabIndex={-1}` belt-and-suspenders — no fix needed | — | Closed (no action) | — |
 | C4 | 2 | No e2e test — unit tests sufficient for attribute-level assertions | — | Closed (no action) | — |
 | C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Fixed** | Phase 1 (commit `ac22c4b`) |
+| C15 | 6 | The audit (A7) incorrectly states that `seasons` needs cleanup when posts are deleted. `seasons.created_by_user_id` references `users.id`, not `posts.id`. The review plan description should be corrected. Only `post_links` actually needs cleanup. | LOW | Open | `fix/concerns-phase6` (docs-only) |
+| C16 | 6 | The new test uses reference identity (`call[0] === postLinks`) to detect the delete call. If a future change wraps the delete in a helper function (e.g. `deleteChildRows(tx, table, postIds)`), the reference identity would still hold because `table` is the same Drizzle reference. Robust. | — | Closed (no action) | — |
+| C17 | 6 | `deletePosts` doesn't guard against a missing `post_links` table (pre-migration DB). Other child-table deletes also lack this guard, so consistent with existing pattern. If pre-migration support is needed, all deletes would need the same `try` wrapper. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 
