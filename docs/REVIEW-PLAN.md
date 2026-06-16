@@ -184,17 +184,24 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Behavior change:** Post-gallery image-zoom buttons (and other article-body buttons) are now visible in print, so the wrapped `<NextImage>` content prints. The previous blanket hide rule was suppressing them along with chrome buttons.
 
-### Phase 5 — `fix/branch-5-tags-admin-error` ⏳
+### Phase 5 — `fix/branch-5-tags-admin-error` ✅
 
 **Fixes:** A6
-**Files to change:**
-- `web/src/app/admin/tags/page.tsx` — add try/catch with `loadFailed` state (same pattern as categories page)
+**Files changed:**
+- `web/src/app/admin/tags/page.tsx` — wrapped `listAllTagsWithCounts()` in try/catch; added `loadFailed` flag; renders "Tag data is temporarily unavailable" message in place of list/empty-state; uses exported `AdminTagRecord` type
+- `web/tests/unit/admin-tags-page.test.tsx` — 1 new test for the load failure path
 
-**Tests to add:**
-- Tags page renders successfully
-- Tags page shows error state on DB failure
+**Tests added:**
+- DAL throws → "Tag data is temporarily unavailable" rendered
+- DAL throws → empty-state and list testids NOT present (no misleading UI)
+- DAL throws → create form STILL present (admin can keep working)
 
-**Verification:** test + typecheck + lint
+**Verification:**
+- `pnpm run test` — **1075/1075 pass** (+1 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Pattern alignment:** Matches `admin/categories/page.tsx` exactly. `console.error("[admin tags] Failed to load tags", error)` follows the same `[admin <area>] Failed to load <resource>` convention.
 
 ### Phase 6 — `fix/branch-9-orphan-cleanup` ⏳
 
@@ -254,7 +261,7 @@ After all 8 fix branches pass:
 | 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | — (deferred to Phase 9) | +3 | Pushed. A11y fix. |
 | 3 | `fix/branch-7-search-perf` | ✅ | `7b42b98` | — (deferred to Phase 9) | +8 | Pushed. DB-level LIKE filter; O(n) → indexed. |
 | 4 | `fix/branch-10-print-scope` | ✅ | `ffadfaa` | — (deferred to Phase 9) | +6 | Pushed. Print button hide scoped to header/nav/footer. |
-| 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
+| 5 | `fix/branch-5-tags-admin-error` | ✅ | `4c367aa` | — (deferred to Phase 9) | +1 | Pushed. Admin tags page handles DAL errors gracefully. |
 | 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
@@ -300,6 +307,9 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C6 | 3 | `sql\`...ESCAPE '\\\\'\`` syntax with backslash escaping in JS template literal is tricky to read; consider extracting a helper | LOW | Open | `fix/concerns-phase3` |
 | C7 | 3 | Search query has no length validation at the DAL boundary; relies on Zod in the route/page — defense-in-depth violation | LOW | Open | `fix/concerns-phase3` |
 | C8 | 3 | DAL function is wrapped by `unstable_cache` in the query layer; cache key includes args so different searches are cached separately — behavior preserved, but worth documenting | — | Closed (no action) | — |
+| C12 | 5 | `loadFailed` branch has no `data-testid` — the new test uses negative assertions (`admin-tags-empty` and `admin-tags-list` NOT present) to detect the error state. A future change that adds a testid back to the error branch would break the negative assertion. A positive testid is safer. | LOW | Open | `fix/concerns-phase5` |
+| C13 | 5 | `console.error` is used for the error path instead of `captureException` from `@/lib/sentry`. Sentry is configured (`web/src/lib/sentry.ts`) but neither categories nor tags page uses it for load errors. Pre-existing inconsistency, not introduced by this fix. | LOW | Open | `fix/concerns-phase5` |
+| C14 | 5 | The error message is generic ("temporarily unavailable"). A more actionable message would tell the admin what to try (refresh, check status page). Matches categories page's message; not diverging from the existing pattern. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 
