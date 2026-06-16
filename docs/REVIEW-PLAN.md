@@ -198,17 +198,26 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Verification:** test + typecheck + lint + visual check
 
-### Phase 8 — `fix/branch-6-revision-race` ⏳
+### Phase 8 — `fix/branch-6-revision-race` ✅
 
 **Fixes:** A8
-**Files to change:**
-- `web/src/server/dal/post-revisions.ts` — replace `max(revision_num)` with sequential read within transaction
+**Files changed:**
+- `web/src/server/dal/post-revisions.ts` — `createPostRevision` replaced read-then-insert with a single atomic INSERT that uses a SQL subquery to compute the next revision_num. Uses `.returning()` to get the actual value.
+- `web/tests/unit/post-revisions-dal-race.test.ts` — 4 new tests
 
-**Tests to add:**
-- Revision creation uses correct next number
-- Concurrent revision creation does not produce duplicates
+**Tests added:**
+- No `db.select` call (old read step is gone)
+- `db.insert` called exactly once (single atomic statement)
+- `revisionNum` value is a `sql` template containing MAX+COALESCE+1
+- Returned record has the correct revisionNum from RETURNING
+- revisionNum=1 when no prior revisions exist
 
-**Verification:** test + typecheck + lint
+**Verification:**
+- `pnpm run test` — **1078/1078 pass** (+4 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Race condition fix:** The SELECT subquery and INSERT now execute as one statement. SQLite/libSQL guarantee statement-level atomicity, so two concurrent calls serialize at the DB level and each sees its own pre-insert state. Duplicates are impossible.
 
 ---
 
@@ -234,7 +243,7 @@ After all 8 fix branches pass:
 | 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
 | 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
-| 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
+| 8 | `fix/branch-6-revision-race` | ✅ | `789a8af` | — (deferred to Phase 9) | +4 | Pushed. Atomic INSERT subquery; no race. |
 | 9 | Merge to main | ⏳ | — | — | — | — |
 | C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | — (deferred to Phase 9) | 0 | Pushed. Addresses C1, C2. C5 deferred. |
 
