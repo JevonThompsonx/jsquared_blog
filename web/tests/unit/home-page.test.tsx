@@ -105,4 +105,15 @@ describe("HomePage", () => {
     expect(markup).toContain('data-search=""');
     expect(markup).toContain("Feed posts: 1");
   });
+
+  it("adds bottom padding to the 'Next up' section so the footer gap is consistent", async () => {
+    vi.mocked(listPublishedPosts).mockResolvedValue([homePost]);
+
+    const markup = renderToStaticMarkup(await HomePage({}));
+
+    // The "Next up" section container must have bottom padding (pb-8) to
+    // prevent the footer from feeling visually detached. Either `pb-8` or
+    // `py-8` satisfies the requirement.
+    expect(markup).toMatch(/<section[^>]*class="[^"]*\b(pb-8|py-8)\b[^"]*"/);
+  });
 });

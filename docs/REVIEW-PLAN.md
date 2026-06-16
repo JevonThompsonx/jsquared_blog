@@ -221,18 +221,25 @@ A full audit of all 10 branches was also performed. Findings below.
 - `tsc --noEmit` — clean
 - `pnpm run lint` — clean
 
-### Phase 7 — `fix/homepage-footer-spacing` ⏳
+### Phase 7 — `fix/homepage-footer-spacing` ✅
 
 **Fixes:** A9
-**Files to change:**
-- `web/src/app/(blog)/page.tsx:136` — add `pb-8` to the "Next up" section
-- `web/src/components/layout/site-footer.tsx:56` — reduce `mt-20` to `mt-16`
+**Files changed:**
+- `web/src/app/(blog)/page.tsx:136` — `pt-8` → `pt-8 pb-8` (adds 32px bottom padding to "Next up" section)
+- `web/src/components/layout/site-footer.tsx:56` — `mt-20` → `mt-16` (reduces footer top margin by 16px)
+- `web/tests/unit/home-page.test.tsx` — 1 new test
+- `web/tests/unit/site-footer.test.tsx` — 1 new test
 
-**Tests to add:**
-- Homepage layout renders with correct spacing (visual/snapshot)
-- Responsive: works on mobile through desktop
+**Tests added:**
+- "Next up" `<section>` has `pb-8` or `py-8` in its class
+- Site footer has `mt-16` and NOT `mt-20`
 
-**Verification:** test + typecheck + lint + visual check
+**Verification:**
+- `pnpm run test` — **1076/1076 pass** (+2 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Net effect:** ~48px reduction in the homepage→footer visual gap.
 
 ### Phase 8 — `fix/branch-6-revision-race` ⏳
 
@@ -269,7 +276,7 @@ After all 8 fix branches pass:
 | 4 | `fix/branch-10-print-scope` | ✅ | `ffadfaa` | — (deferred to Phase 9) | +6 | Pushed. Print button hide scoped to header/nav/footer. |
 | 5 | `fix/branch-5-tags-admin-error` | ✅ | `4c367aa` | — (deferred to Phase 9) | +1 | Pushed. Admin tags page handles DAL errors gracefully. |
 | 6 | `fix/branch-9-orphan-cleanup` | ✅ | `3d3eb89` | — (deferred to Phase 9) | +2 | Pushed. post_links now cleaned in delete transaction. |
-| 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
+| 7 | `fix/homepage-footer-spacing` | ✅ | `4c71506` | — (deferred to Phase 9) | +2 | Pushed. ~48px visual gap reduction. |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
 | 9 | Merge to main | ⏳ | — | — | — | — |
 | C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | — (deferred to Phase 9) | 0 | Pushed. Addresses C1, C2. C5 deferred. |
@@ -319,6 +326,8 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C15 | 6 | The audit (A7) incorrectly states that `seasons` needs cleanup when posts are deleted. `seasons.created_by_user_id` references `users.id`, not `posts.id`. The review plan description should be corrected. Only `post_links` actually needs cleanup. | LOW | Open | `fix/concerns-phase6` (docs-only) |
 | C16 | 6 | The new test uses reference identity (`call[0] === postLinks`) to detect the delete call. If a future change wraps the delete in a helper function (e.g. `deleteChildRows(tx, table, postIds)`), the reference identity would still hold because `table` is the same Drizzle reference. Robust. | — | Closed (no action) | — |
 | C17 | 6 | `deletePosts` doesn't guard against a missing `post_links` table (pre-migration DB). Other child-table deletes also lack this guard, so consistent with existing pattern. If pre-migration support is needed, all deletes would need the same `try` wrapper. | — | Closed (no action) | — |
+| C18 | 7 | The `mt-16` footer change is global — applies on every page, not just the homepage. Pages with little content above the footer (e.g. simple legal pages) might now feel like the footer is too close. | LOW | Open | `fix/concerns-phase7` |
+| C19 | 7 | The test checks for `pb-8` OR `py-8` in the class. If a future refactor uses an arbitrary value or CSS custom property, the regex would fail. Acceptable — explicit Tailwind class names are the convention. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 

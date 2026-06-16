@@ -53,7 +53,7 @@ export function SiteFooter() {
   return (
     <footer
       aria-label="Site footer"
-      className="site-footer relative mt-20 border-t border-[var(--border)] bg-[var(--card-bg)]/60 backdrop-blur-sm"
+      className="site-footer relative mt-16 border-t border-[var(--border)] bg-[var(--card-bg)]/60 backdrop-blur-sm"
     >
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">

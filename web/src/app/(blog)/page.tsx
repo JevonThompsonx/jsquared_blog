@@ -133,7 +133,7 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
         </div>
         <HomeFeed key="feed:home" initialPosts={posts} initialSearch="" seasonOverrides={seasonOverrides} />
 
-        <section className="container mx-auto px-4 pt-8 sm:px-6 lg:px-8">
+        <section className="container mx-auto px-4 pt-8 pb-8 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-8 shadow-[var(--shadow)] backdrop-blur-sm sm:p-10">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Next up</p>
             <div className="mt-4 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

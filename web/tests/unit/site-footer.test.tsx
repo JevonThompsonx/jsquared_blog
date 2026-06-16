@@ -100,4 +100,13 @@ describe("SiteFooter", () => {
     const accessibilityLink = container.querySelector('a[href="/accessibility"]');
     expect(accessibilityLink?.textContent?.toLowerCase()).toContain("accessibility");
   });
+
+  it("uses mt-16 (not mt-20) to tighten the gap between page content and footer", () => {
+    render();
+    const footer = container.querySelector("footer");
+    const className = footer?.getAttribute("class") ?? "";
+    // Reduced from mt-20 to mt-16 to fix the ~229px visual gap on the homepage.
+    expect(className).toMatch(/\bmt-16\b/);
+    expect(className).not.toMatch(/\bmt-20\b/);
+  });
 });
