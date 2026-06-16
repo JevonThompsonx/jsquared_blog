@@ -281,6 +281,9 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C3 | 2 | `aria-hidden` + `tabIndex={-1}` belt-and-suspenders — no fix needed | — | Closed (no action) | — |
 | C4 | 2 | No e2e test — unit tests sufficient for attribute-level assertions | — | Closed (no action) | — |
 | C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Fixed** | Phase 1 (commit `ac22c4b`) |
+| C12 | 5 | `loadFailed` branch has no `data-testid` — the new test uses negative assertions (`admin-tags-empty` and `admin-tags-list` NOT present) to detect the error state. A future change that adds a testid back to the error branch would break the negative assertion. A positive testid is safer. | LOW | Open | `fix/concerns-phase5` |
+| C13 | 5 | `console.error` is used for the error path instead of `captureException` from `@/lib/sentry`. Sentry is configured (`web/src/lib/sentry.ts`) but neither categories nor tags page uses it for load errors. Pre-existing inconsistency, not introduced by this fix. | LOW | Open | `fix/concerns-phase5` |
+| C14 | 5 | The error message is generic ("temporarily unavailable"). A more actionable message would tell the admin what to try (refresh, check status page). Matches categories page's message; not diverging from the existing pattern. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 
