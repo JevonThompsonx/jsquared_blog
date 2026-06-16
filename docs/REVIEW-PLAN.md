@@ -283,6 +283,9 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C3 | 2 | `aria-hidden` + `tabIndex={-1}` belt-and-suspenders — no fix needed | — | Closed (no action) | — |
 | C4 | 2 | No e2e test — unit tests sufficient for attribute-level assertions | — | Closed (no action) | — |
 | C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Fixed** | Phase 1 (commit `ac22c4b`) |
+| C20 | 8 | `restorePostRevisionAtomically()` has the same read-then-insert pattern inside a transaction. Concurrent restore calls across separate connections could still race. Should be fixed with the same atomic INSERT pattern. | LOW | Open | `fix/concerns-phase8` |
+| C21 | 8 | The fix uses `sql<number>` to type the subquery result. The COALESCE fallback `0` is the same behavior as the old code. | — | Closed (no action) | — |
+| C22 | 8 | The fix doesn't add a unique index on `(post_id, revision_num)`. Defense-in-depth would suggest a unique index to catch any future regression. Adding requires a migration, out of scope. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 
