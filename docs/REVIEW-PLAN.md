@@ -149,17 +149,27 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Verification:** test + typecheck + lint
 
-### Phase 4 — `fix/branch-10-print-scope` ⏳
+### Phase 4 — `fix/branch-10-print-scope` ✅
 
 **Fixes:** A5
-**Files to change:**
-- `web/src/app/globals.css` — scope `button:not([data-print-show])` to header/nav/footer only
+**Files changed:**
+- `web/src/app/globals.css` — removed global `button:not([data-print-show])` rule; added scoped `header button:not([data-print-show])`, `nav button:not([data-print-show])`, `footer button:not([data-print-show])` (single rule, three selectors)
+- `web/tests/unit/globals-print-styles.test.ts` — 6 new tests; updated 1 existing test to no longer expect the global rule
 
-**Tests to add:**
-- Print media query hides nav buttons
-- Print media query does not hide article buttons
+**Tests added:**
+- `header button` is in the print block
+- `nav button` is in the print block
+- `footer button` is in the print block
+- No selector in the print block is a bare `button:not([data-print-show])` (would indicate a global hide)
+- `[data-print-show]` opt-in is preserved
+- No selector targets `article button` or `.prose-content button` for hiding
 
-**Verification:** test + typecheck + lint
+**Verification:**
+- `pnpm run test` — **1080/1080 pass** (+6 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Behavior change:** Post-gallery image-zoom buttons (and other article-body buttons) are now visible in print, so the wrapped `<NextImage>` content prints. The previous blanket hide rule was suppressing them along with chrome buttons.
 
 ### Phase 5 — `fix/branch-5-tags-admin-error` ⏳
 
@@ -230,7 +240,7 @@ After all 8 fix branches pass:
 | 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` + `ac22c4b` | — (deferred to Phase 9) | +8 | Pushed. Fixes A1, A2, C5. |
 | 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | — (deferred to Phase 9) | +3 | Pushed. A11y fix. |
 | 3 | `fix/branch-7-search-perf` | ⏳ | — | — | — | — |
-| 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
+| 4 | `fix/branch-10-print-scope` | ✅ | `ffadfaa` | — (deferred to Phase 9) | +6 | Pushed. Print button hide scoped to header/nav/footer. |
 | 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
 | 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
