@@ -6,6 +6,50 @@
 
 ---
 
+## [0.4.5] — 2026-06-15
+
+### Branches: `feat/performance-and-reliability` (PR #50), `feat/site-search` (PR #51), `chore/cleanup-and-hardening` (PR #52), `feat/polish` (PR #53)
+
+#### Branch: `feat/performance-and-reliability` (PR #50)
+
+- **Public post query caching** — `listPublishedPosts()` in `web/src/server/queries/posts.ts` is now wrapped with Next.js `unstable_cache()` (30s TTL, tag `['posts']`). The cache invalidates via `revalidateTag('posts', 'max')` on bulk publish/unpublish, create/update post, and delete post actions. Note: Next.js 16's `revalidateTag` requires a second `profile` argument; `"max"` is used throughout.
+- **Wishlist images → `next/image`** — The raw `<img>` (with eslint-disable) on `web/src/app/(blog)/wishlist/page.tsx` is now a `<Image>` from `next/image` with `width=1200 height=192 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"`. The eslint-disable comment was removed.
+- **Sentry in 500 catch blocks** — `captureException(error, { route, ...context })` from `@/lib/sentry` is now wired into 7 public 500 paths: posts list, bookmarks, post-view, post-comments (GET+POST), post-bookmark (GET+POST), comment-delete, comment-like. Error context is forwarded to Sentry.
+- **Related posts: date + reading time** — Each related post card now renders the `PostDate` component and a reading-time string, matching the `HomePostCard` style.
+- **Rate limit fails hard in production** — `web/src/lib/rate-limit.ts` now `throw new Error(...)` instead of `console.warn` when `isDeployedEnvironment` is true and Upstash env vars are missing. Dev still warns so the dev experience is preserved.
+
+#### Branch: `feat/site-search` (PR #51)
+
+- **`/search` page** — New route at `web/src/app/(blog)/search/page.tsx`. Reads the `q` query param (Zod-validated, trimmed, max 200 chars), calls `listPublishedPosts(20, 0, q)` for the first page, and renders the existing `FilteredFeed` for pagination via `/api/posts?search=...`. Pre-fills the `SearchInput` and shows a "No results for `q`" empty state (with suggestions) when no posts match.
+- **Search page loading skeleton** — `web/src/app/(blog)/search/loading.tsx` mirrors the page layout with an animated hero placeholder and 8 `PostCardSkeleton` cards.
+- **Header search routes to `/search`** — `site-header.tsx` and `mobile-nav.tsx` form actions are now `/search`, the input name is `q`, and `navigateToSearch` builds `/search?q=…` URLs. The pathname guard now keys off `/search` so the live debounce is consistent on the new page.
+- **Cmd+K / Ctrl+K shortcut** — `site-header.tsx` registers a `window` keydown listener that prevents default and focuses the desktop search input when `metaKey` (macOS) or `ctrlKey` (Windows/Linux) is held with `K`. The shortcut works from any page. The placeholder was updated to `"Search stories… (⌘K)"` on both desktop and mobile. The listener is removed on unmount.
+
+#### Branch: `chore/cleanup-and-hardening` (PR #52)
+
+- **Song preview endpoint uses Zod** — `POST /api/admin/song-preview` now validates the request body with `z.object({ url: z.string().url().max(2048) })` via `safeParse`. Invalid payloads return **400** with a `details` array of Zod issues; bad JSON also returns 400. Valid Spotify and other HTTPS URLs continue to return 200 with the same `{ song, source, artworkUrl? }` payload.
+- **Retired route planner is rate-limited** — `POST /api/route-plans` runs a per-IP rate limit (10 req/min) before the 410 reply, so the endpoint is throttled like every other public route. The 410 response and the nodejs runtime are preserved.
+- **Cloudinary orphans cleaned up on post delete** — `web/src/server/posts/delete.ts` now collects every `mediaAssets` row referenced by the deleted posts' gallery and featured image before the transaction commits, then issues a best-effort `uploader.destroy` for each Cloudinary-hosted asset after the transaction succeeds. Supabase-hosted assets are skipped. Failures are logged via `captureException` and `console.error` but do not undo the post deletion, so partial Cloudinary outages can't strand rows.
+- **Proxy request logging** — `web/src/proxy.ts` now logs `[proxy] <METHOD> <PATH> <STATUS> <DURATIONms>` to `console.info` in production only. The 403 short-circuit (cross-site admin mutations) and the 200 fall-through both go through the same logger. Env is read at call time so tests can flip it per-case.
+- **Cron health observability** — `GET /api/cron/publish-scheduled` now emits a Sentry breadcrumb tagged `cron` after every run with `{ scanned, published, errors, nowIso }`. `errors` is the count of revalidation / wishlist-deactivation failures observed during the run. `web/src/lib/sentry.ts` gained an `addBreadcrumb(message, data?, category?)` helper alongside the existing `captureException`.
+- **New `web/src/server/cloudinary/destroy-asset.ts`** — `destroyCloudinaryAsset({ publicId, resourceType })` (HMAC-signed `POST /image/destroy` against the Cloudinary REST API) and `logCloudinaryCleanupError` (Sentry capture + console.error) keep the route handler thin and let tests mock the destroy call without stubbing global `fetch`.
+
+#### Branch: `feat/polish` (PR #53)
+
+- **Print styles** — Extended the `@media print` block in `globals.css` to explicitly hide the comments section, share buttons, copy-link button, bookmark button, newsletter signup form, skip link, back-to-top, and post map (in addition to the existing header/nav/footer/reading-progress-bar/table-of-contents/related-posts-section). Author card and post meta now have explicit `page-break-inside: avoid` so they survive across page breaks.
+- **Reading progress a11y** — `<ReadingProgressBar />` now renders a visually hidden `role="status"` `aria-live="polite"` region that announces "Reading progress: 25%/50%/75%" at each milestone and "Reading complete. 100% scrolled." at 100%. Announcement is derived directly from `progress` so React keeps the live region stable between same-milestone scrolls and the screen reader does not re-announce.
+- **Social media section on /about** — New "Follow along on the trail" section lists Instagram, YouTube, and TikTok with placeholder URLs marked `TODO`. Each link is a labelled icon button inside `<nav aria-label="Social media links">`, opens in a new tab with `rel="noopener noreferrer"`, and ships with descriptive `aria-label` text.
+- **PWA manifest completeness** — `app/manifest.ts` now sets `lang: "en"`, declares `categories: ["travel", "blog", "lifestyle"]`, and includes a `screenshots` array with desktop and mobile placeholder entries (file paths marked `TODO` until the captures land in `/public/screenshots/`). The SVG icon now carries an explicit `purpose: "any"`.
+- **Accessibility statement page** — New `/accessibility` route (`app/(blog)/accessibility/page.tsx`) with WCAG 2.2 AA commitment statement, eight documented accessibility features (skip link, landmarks, keyboard nav, ARIA, contrast, live regions, reduced motion, print), a known-limitations list, and an `accessibility@jsquaredadventures.com` contact mailto. Linked from the site footer.
+- **Footer accessibility link** — `site-footer.tsx` now exposes "Accessibility" alongside Home / Map / About / Wishlist in the Explore column.
+
+#### Tests
+
+- **+66 tests** across 12 new test files and 8 extended files. Total test count: **1008 → 1074**.
+- New unit tests cover: post-query cache invalidation, related-posts date+reading-time, wishlist `<Image>` rendering, `/search` page (4 cases), site-header Cmd+K shortcut (11 cases), admin song preview Zod (4 cases), `/api/route-plans` rate limiting, post delete Cloudinary cleanup (5 cases), proxy request logging (3 cases), cron health breadcrumb, print styles block structure, reading progress a11y live region (11 cases), about-page social links, PWA manifest, accessibility page, and footer accessibility link.
+
+---
+
 ## [0.4.4] — 2026-06-15
 
 ### Branches: `feat/taxonomy-browse` (PR #48), `feat/admin-taxonomy-crud` (PR #49), `feat/revision-completeness` (PR #47), `fix/footer-polish` (PR #46), `docs/knowledge-base` (PR #45)

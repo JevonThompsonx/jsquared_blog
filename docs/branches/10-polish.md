@@ -1,6 +1,6 @@
 # Branch 10: `feat/polish`
 
-**Status:** 🟢 In Progress
+**Status:** ✅ Merged (PR #53, 2026-06-15)
 **Estimated effort:** 4-5 hours
 **Depends on:** Nothing
 

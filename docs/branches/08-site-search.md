@@ -1,6 +1,6 @@
 # Branch 8: `feat/site-search`
 
-**Status:** 🟢 In Progress
+**Status:** ✅ Merged (PR #51, 2026-06-15)
 **Estimated effort:** 4-6 hours
 **Depends on:** Nothing
 

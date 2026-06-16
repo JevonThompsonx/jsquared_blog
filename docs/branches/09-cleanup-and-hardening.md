@@ -1,6 +1,6 @@
 # Branch 9: `chore/cleanup-and-hardening`
 
-**Status:** 🟢 In Progress
+**Status:** ✅ Merged (PR #52, 2026-06-15)
 **Estimated effort:** 3-4 hours
 **Depends on:** Nothing
 
