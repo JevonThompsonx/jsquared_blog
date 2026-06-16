@@ -161,17 +161,24 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Verification:** test + typecheck + lint
 
-### Phase 5 — `fix/branch-5-tags-admin-error` ⏳
+### Phase 5 — `fix/branch-5-tags-admin-error` ✅
 
 **Fixes:** A6
-**Files to change:**
-- `web/src/app/admin/tags/page.tsx` — add try/catch with `loadFailed` state (same pattern as categories page)
+**Files changed:**
+- `web/src/app/admin/tags/page.tsx` — wrapped `listAllTagsWithCounts()` in try/catch; added `loadFailed` flag; renders "Tag data is temporarily unavailable" message in place of list/empty-state; uses exported `AdminTagRecord` type
+- `web/tests/unit/admin-tags-page.test.tsx` — 1 new test for the load failure path
 
-**Tests to add:**
-- Tags page renders successfully
-- Tags page shows error state on DB failure
+**Tests added:**
+- DAL throws → "Tag data is temporarily unavailable" rendered
+- DAL throws → empty-state and list testids NOT present (no misleading UI)
+- DAL throws → create form STILL present (admin can keep working)
 
-**Verification:** test + typecheck + lint
+**Verification:**
+- `pnpm run test` — **1075/1075 pass** (+1 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Pattern alignment:** Matches `admin/categories/page.tsx` exactly. `console.error("[admin tags] Failed to load tags", error)` follows the same `[admin <area>] Failed to load <resource>` convention.
 
 ### Phase 6 — `fix/branch-9-orphan-cleanup` ⏳
 
@@ -231,7 +238,7 @@ After all 8 fix branches pass:
 | 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | — (deferred to Phase 9) | +3 | Pushed. A11y fix. |
 | 3 | `fix/branch-7-search-perf` | ⏳ | — | — | — | — |
 | 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
-| 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
+| 5 | `fix/branch-5-tags-admin-error` | ✅ | `4c367aa` | — (deferred to Phase 9) | +1 | Pushed. Admin tags page handles DAL errors gracefully. |
 | 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
