@@ -56,7 +56,7 @@ describe("POST /api/admin/song-preview", () => {
     expect(response).toBe(throttled);
   });
 
-  it("rejects invalid song preview requests", async () => {
+  it("rejects invalid song preview requests with field-level Zod errors", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: true,
@@ -65,10 +65,54 @@ describe("POST /api/admin/song-preview", () => {
       resetAt: Date.now() + 60_000,
     });
 
-    const response = await POST(createRequest("javascript:alert(1)"));
+    const response = await POST(createRequest("not-a-valid-url"));
 
-    expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({ error: "Invalid song preview request" });
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toMatchObject({ error: "Invalid song preview request" });
+    expect(Array.isArray(body.details)).toBe(true);
+    expect(body.details[0]).toMatchObject({ path: ["url"] });
+  });
+
+  it("rejects URLs longer than 2048 characters", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 10,
+      remaining: 9,
+      resetAt: Date.now() + 60_000,
+    });
+
+    const longUrl = `https://open.spotify.com/track/${"a".repeat(2100)}`;
+    const response = await POST(createRequest(longUrl));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toMatchObject({ error: "Invalid song preview request" });
+    expect(Array.isArray(body.details)).toBe(true);
+  });
+
+  it("rejects payloads missing the url field", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 10,
+      remaining: 9,
+      resetAt: Date.now() + 60_000,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/song-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toMatchObject({ error: "Invalid song preview request" });
+    expect(Array.isArray(body.details)).toBe(true);
   });
 
   it("rejects invalid JSON payloads", async () => {
@@ -90,7 +134,7 @@ describe("POST /api/admin/song-preview", () => {
       }),
     );
 
-    expect(response.status).toBe(422);
+    expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid song preview request" });
   });
 

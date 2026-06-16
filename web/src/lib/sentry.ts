@@ -14,4 +14,25 @@ export function captureException(err: unknown, context?: Record<string, unknown>
   });
 }
 
+/**
+ * Record a breadcrumb in the current Sentry scope. Use this to attach
+ * structured operational data (cron run metrics, queue depth, etc.) so
+ * the next error captured in the same scope has the surrounding context.
+ *
+ * Safe to call in any context (server, client, edge). No-ops when the
+ * SDK is disabled.
+ */
+export function addBreadcrumb(
+  message: string,
+  data?: Record<string, unknown>,
+  category?: string,
+): void {
+  Sentry.addBreadcrumb({
+    message,
+    category: category ?? "app",
+    level: "info",
+    data,
+  });
+}
+
 
