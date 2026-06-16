@@ -201,6 +201,7 @@ After all 8 fix branches pass:
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
 | 9 | Merge to main | ⏳ | — | — | — | — |
+| C | `fix/concerns-phase1-phase2` | ⏳ | — | — | — | Addresses C1, C2. Merges after Phase 1 + 2. |
 
 ---
 
@@ -222,3 +223,75 @@ Agents work in isolated worktrees to avoid conflicts. Verification is run after 
 - **Test count expected:** 1074 → ~1100 (approximately 3-4 new tests per fix)
 - **Merge order:** Independent, can be merged in any order
 - **Rollback:** Each fix branch can be reverted independently
+
+---
+
+## Concerns Verification Gate
+
+After each phase's main fix is committed, a concerns pass is run before moving to the next phase. This catches inconsistencies, naming mismatches, and test accuracy issues before they compound.
+
+### Concerns Discovered
+
+| # | Phase | Concern | Severity | Status | Fix Branch |
+|---|-------|---------|----------|--------|------------|
+| C1 | 1 | Wrapper `listPublishedPostsByCategory` in `queries/posts.ts:212` still uses `category` param name; inner function now uses `categorySlug` — naming mismatch | LOW | Open | `fix/concerns-phase1-phase2` |
+| C2 | 1 | Tests `category-page.test.tsx:73` and `category-feed-route.test.ts:49` pass URL-encoded name (`"Van%20Life"`) instead of slug (`"van-life"`) — doesn't match real-world browse-page behavior | LOW | Open | `fix/concerns-phase1-phase2` |
+| C3 | 2 | `aria-hidden` + `tabIndex={-1}` belt-and-suspenders — no fix needed | — | Closed (no action) | — |
+| C4 | 2 | No e2e test — unit tests sufficient for attribute-level assertions | — | Closed (no action) | — |
+| C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Not fixing** (scope creep) | Future work |
+
+### Concerns Gate Process
+
+```
+After main fix committed for Phase N:
+1. Run pnpm run test (must pass)
+2. Run tsc --noEmit (must be clean)
+3. Run pnpm run lint (must be clean)
+4. Walk concerns checklist above
+5. Mark new concerns (if any) with severity + branch
+6. Only then proceed to Phase N+1
+```
+
+### Concern-Fix Branch
+
+`fix/concerns-phase1-phase2` — addresses C1, C2 from Phase 1.
+
+**Files to change:**
+- `web/src/server/queries/posts.ts:212` — rename `category` → `categorySlug` (C1)
+- `web/tests/unit/category-page.test.tsx:62-82` — update URL params from `"Van%20Life"` → `"van-life"`; update assertions to match (C2)
+- `web/tests/unit/category-feed-route.test.ts:48-58` — same updates (C2)
+
+**Merge order:** After Phase 1 and Phase 2 merge to main.
+
+**Verification (concern-fix branch):**
+- `pnpm run test` — must pass
+- `tsc --noEmit` — must be clean
+- `pnpm run lint` — must be clean
+- Existing Phase 1 and Phase 2 tests must still pass with new slug-based inputs
+
+**Skipped for now:**
+- C5 (title shows slug) — would need slug-to-name lookup, scope creep for a concern-fix branch
+
+---
+
+## Phase N Concerns Template
+
+For each phase going forward, add a new "Concerns" subsection:
+
+```markdown
+### Phase N — [name] ⏳
+[main fix details]
+
+**Concerns discovered:**
+- CN1: [description] — [severity]
+- CN2: [description] — [severity]
+
+**Concerns Gate (post-fix):**
+- [ ] All existing tests pass
+- [ ] Typecheck clean
+- [ ] Lint clean
+- [ ] CN1 addressed
+- [ ] CN2 addressed
+- [ ] No new concerns discovered
+- [ ] Or: new concerns logged with branch assignment
+```
