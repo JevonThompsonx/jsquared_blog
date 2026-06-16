@@ -185,18 +185,25 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Verification:** test + typecheck + lint
 
-### Phase 7 — `fix/homepage-footer-spacing` ⏳
+### Phase 7 — `fix/homepage-footer-spacing` ✅
 
 **Fixes:** A9
-**Files to change:**
-- `web/src/app/(blog)/page.tsx:136` — add `pb-8` to the "Next up" section
-- `web/src/components/layout/site-footer.tsx:56` — reduce `mt-20` to `mt-16`
+**Files changed:**
+- `web/src/app/(blog)/page.tsx:136` — `pt-8` → `pt-8 pb-8` (adds 32px bottom padding to "Next up" section)
+- `web/src/components/layout/site-footer.tsx:56` — `mt-20` → `mt-16` (reduces footer top margin by 16px)
+- `web/tests/unit/home-page.test.tsx` — 1 new test
+- `web/tests/unit/site-footer.test.tsx` — 1 new test
 
-**Tests to add:**
-- Homepage layout renders with correct spacing (visual/snapshot)
-- Responsive: works on mobile through desktop
+**Tests added:**
+- "Next up" `<section>` has `pb-8` or `py-8` in its class
+- Site footer has `mt-16` and NOT `mt-20`
 
-**Verification:** test + typecheck + lint + visual check
+**Verification:**
+- `pnpm run test` — **1076/1076 pass** (+2 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Net effect:** ~48px reduction in the homepage→footer visual gap.
 
 ### Phase 8 — `fix/branch-6-revision-race` ⏳
 
@@ -233,7 +240,7 @@ After all 8 fix branches pass:
 | 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
 | 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
 | 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
-| 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
+| 7 | `fix/homepage-footer-spacing` | ✅ | `4c71506` | — (deferred to Phase 9) | +2 | Pushed. ~48px visual gap reduction. |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
 | 9 | Merge to main | ⏳ | — | — | — | — |
 | C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | — (deferred to Phase 9) | 0 | Pushed. Addresses C1, C2. C5 deferred. |
