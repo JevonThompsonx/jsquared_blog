@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq, max, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 import { postRevisions, posts } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
@@ -321,19 +321,18 @@ export async function restorePostRevisionAtomically(input: {
       return null;
     }
 
-    const maxResult = await tx
-      .select({ maxNum: max(postRevisions.revisionNum) })
-      .from(postRevisions)
-      .where(eq(postRevisions.postId, input.postId));
-
-    const nextRevisionNum = (maxResult[0]?.maxNum ?? 0) + 1;
     const newRevisionId = crypto.randomUUID();
     const now = new Date();
 
+    // Race-safe: compute the next revisionNum atomically via a SQL subquery
+    // inside the INSERT. Two concurrent restore calls (from separate
+    // connections that serialize on the row lock) cannot interleave the
+    // read and write. The COALESCE handles the empty-revisions case so the
+    // first revision is num=1.
     await tx.insert(postRevisions).values({
       id: newRevisionId,
       postId: input.postId,
-      revisionNum: nextRevisionNum,
+      revisionNum: sql<number>`(SELECT COALESCE(MAX(${postRevisions.revisionNum}), 0) + 1 FROM ${postRevisions} WHERE ${postRevisions.postId} = ${input.postId})`,
       title: snapshot.title,
       contentJson: snapshot.contentJson,
       excerpt: snapshot.excerpt,

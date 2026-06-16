@@ -21,6 +21,14 @@ vi.mock("@/lib/auth/session", () => ({
   requireAdminSession: vi.fn(),
 }));
 
+const { mockCaptureException } = vi.hoisted(() => ({
+  mockCaptureException: vi.fn(),
+}));
+
+vi.mock("@/lib/sentry", () => ({
+  captureException: mockCaptureException,
+}));
+
 vi.mock("@/server/dal/categories", () => ({
   listAllCategoriesWithCounts: vi.fn(),
 }));
@@ -33,6 +41,7 @@ vi.mock("@/app/admin/categories/actions", () => ({
 
 import AdminCategoriesPage from "@/app/admin/categories/page";
 import { requireAdminSession } from "@/lib/auth/session";
+import { captureException } from "@/lib/sentry";
 import { listAllCategoriesWithCounts } from "@/server/dal/categories";
 
 describe("AdminCategoriesPage", () => {
@@ -158,5 +167,17 @@ describe("AdminCategoriesPage", () => {
     const markup = renderToStaticMarkup(await AdminCategoriesPage({}));
 
     expect(markup).toContain("Category data is temporarily unavailable");
+    // C12: positive data-testid on the load-failed branch.
+    expect(markup).toContain("data-testid=\"admin-categories-load-failed\"");
+  });
+
+  it("captures the load failure in Sentry (C13: not just console.error)", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    const error = new Error("database unavailable");
+    vi.mocked(listAllCategoriesWithCounts).mockRejectedValue(error);
+
+    await AdminCategoriesPage({});
+
+    expect(captureException).toHaveBeenCalledWith(error, { area: "admin-categories" });
   });
 });

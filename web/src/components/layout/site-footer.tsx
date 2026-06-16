@@ -51,6 +51,14 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
+    // Design note (C18): the `mt-16` (was `mt-20`) is a global footer
+    // margin applied to every page. The homepage "Next up" section adds
+    // its own `pb-8` for the content-specific gap. Sparse pages (e.g.
+    // simple legal pages) may feel slightly closer to the footer. The
+    // previous audit (A9) targeted the homepage gap; the footer
+    // tightening was an additional design choice. Making this
+    // content-aware would require per-page layout changes (out of
+    // scope). This is an accepted design trade-off.
     <footer
       aria-label="Site footer"
       className="site-footer relative mt-16 border-t border-[var(--border)] bg-[var(--card-bg)]/60 backdrop-blur-sm"

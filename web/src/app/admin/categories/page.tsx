@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
+import { captureException } from "@/lib/sentry";
 import { listAllCategoriesWithCounts, type AdminCategoryRecord } from "@/server/dal/categories";
 
 import { createCategoryAction, deleteCategoryAction, updateCategoryAction } from "./actions";
@@ -56,6 +57,10 @@ export default async function AdminCategoriesPage({
   try {
     categoriesList = await listAllCategoriesWithCounts();
   } catch (error) {
+    // C13: capture in Sentry so on-call gets paged; keep the local
+    // console.error for dev-time visibility (mirrors the pattern used
+    // elsewhere in the admin app).
+    captureException(error, { area: "admin-categories" });
     console.error("[admin categories] Failed to load categories", error);
     loadFailed = true;
   }
@@ -149,7 +154,10 @@ export default async function AdminCategoriesPage({
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
             {loadFailed ? (
-              <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
+              <p
+                className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]"
+                data-testid="admin-categories-load-failed"
+              >
                 Category data is temporarily unavailable. Please try again later.
               </p>
             ) : categoriesList.length === 0 ? (
