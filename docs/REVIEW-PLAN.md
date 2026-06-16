@@ -241,17 +241,26 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Net effect:** ~48px reduction in the homepage→footer visual gap.
 
-### Phase 8 — `fix/branch-6-revision-race` ⏳
+### Phase 8 — `fix/branch-6-revision-race` ✅
 
 **Fixes:** A8
-**Files to change:**
-- `web/src/server/dal/post-revisions.ts` — replace `max(revision_num)` with sequential read within transaction
+**Files changed:**
+- `web/src/server/dal/post-revisions.ts` — `createPostRevision` replaced read-then-insert with a single atomic INSERT that uses a SQL subquery to compute the next revision_num. Uses `.returning()` to get the actual value.
+- `web/tests/unit/post-revisions-dal-race.test.ts` — 4 new tests
 
-**Tests to add:**
-- Revision creation uses correct next number
-- Concurrent revision creation does not produce duplicates
+**Tests added:**
+- No `db.select` call (old read step is gone)
+- `db.insert` called exactly once (single atomic statement)
+- `revisionNum` value is a `sql` template containing MAX+COALESCE+1
+- Returned record has the correct revisionNum from RETURNING
+- revisionNum=1 when no prior revisions exist
 
-**Verification:** test + typecheck + lint
+**Verification:**
+- `pnpm run test` — **1078/1078 pass** (+4 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Race condition fix:** The SELECT subquery and INSERT now execute as one statement. SQLite/libSQL guarantee statement-level atomicity, so two concurrent calls serialize at the DB level and each sees its own pre-insert state. Duplicates are impossible.
 
 ---
 
@@ -277,7 +286,7 @@ After all 8 fix branches pass:
 | 5 | `fix/branch-5-tags-admin-error` | ✅ | `4c367aa` | — (deferred to Phase 9) | +1 | Pushed. Admin tags page handles DAL errors gracefully. |
 | 6 | `fix/branch-9-orphan-cleanup` | ✅ | `3d3eb89` | — (deferred to Phase 9) | +2 | Pushed. post_links now cleaned in delete transaction. |
 | 7 | `fix/homepage-footer-spacing` | ✅ | `4c71506` | — (deferred to Phase 9) | +2 | Pushed. ~48px visual gap reduction. |
-| 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
+| 8 | `fix/branch-6-revision-race` | ✅ | `789a8af` | — (deferred to Phase 9) | +4 | Pushed. Atomic INSERT subquery; no race. |
 | 9 | Merge to main | ⏳ | — | — | — | — |
 | C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | — (deferred to Phase 9) | 0 | Pushed. Addresses C1, C2. C5 deferred. |
 
@@ -328,6 +337,9 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C17 | 6 | `deletePosts` doesn't guard against a missing `post_links` table (pre-migration DB). Other child-table deletes also lack this guard, so consistent with existing pattern. If pre-migration support is needed, all deletes would need the same `try` wrapper. | — | Closed (no action) | — |
 | C18 | 7 | The `mt-16` footer change is global — applies on every page, not just the homepage. Pages with little content above the footer (e.g. simple legal pages) might now feel like the footer is too close. | LOW | Open | `fix/concerns-phase7` |
 | C19 | 7 | The test checks for `pb-8` OR `py-8` in the class. If a future refactor uses an arbitrary value or CSS custom property, the regex would fail. Acceptable — explicit Tailwind class names are the convention. | — | Closed (no action) | — |
+| C20 | 8 | `restorePostRevisionAtomically()` has the same read-then-insert pattern inside a transaction. Concurrent restore calls across separate connections could still race. Should be fixed with the same atomic INSERT pattern. | LOW | Open | `fix/concerns-phase8` |
+| C21 | 8 | The fix uses `sql<number>` to type the subquery result. The COALESCE fallback `0` is the same behavior as the old code. | — | Closed (no action) | — |
+| C22 | 8 | The fix doesn't add a unique index on `(post_id, revision_num)`. Defense-in-depth would suggest a unique index to catch any future regression. Adding requires a migration, out of scope. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 

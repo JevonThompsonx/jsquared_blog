@@ -162,7 +162,12 @@ export async function getPostRevisionById(postId: string, revisionId: string): P
 
 /**
  * Creates a revision snapshot for a post.
- * Computes the next revisionNum by reading MAX(revision_num) for the post.
+ *
+ * Race-safe: the next revisionNum is computed by a SQL subquery inside the
+ * INSERT, not by a read-then-insert pattern. The SELECT and INSERT execute
+ * as a single statement, so two concurrent calls cannot produce duplicate
+ * revision_num values for the same post.
+ *
  * The caller is responsible for passing the current post state before applying updates.
  */
 export async function createPostRevision(input: {
@@ -184,38 +189,38 @@ export async function createPostRevision(input: {
   label?: string;
 }): Promise<PostRevisionRecord> {
   const db = getDb();
-
-  // Read current max revision_num for this post (null if no revisions yet → becomes 0+1=1)
-  const maxResult = await db
-    .select({ maxNum: max(postRevisions.revisionNum) })
-    .from(postRevisions)
-    .where(eq(postRevisions.postId, input.postId));
-
-  const nextRevisionNum = (maxResult[0]?.maxNum ?? 0) + 1;
   const id = crypto.randomUUID();
   const now = new Date();
 
-  await db.insert(postRevisions).values({
-    id,
-    postId: input.postId,
-    revisionNum: nextRevisionNum,
-    title: input.title,
-    contentJson: input.contentJson,
-    excerpt: input.excerpt,
-    layoutType: input.layoutType ?? null,
-    categoryId: input.categoryId ?? null,
-    featuredImageId: input.featuredImageId ?? null,
-    locationName: input.locationName ?? null,
-    locationLat: input.locationLat ?? null,
-    locationLng: input.locationLng ?? null,
-    locationZoom: input.locationZoom ?? null,
-    songTitle: input.songTitle ?? null,
-    songArtist: input.songArtist ?? null,
-    songUrl: input.songUrl ?? null,
-    savedByUserId: input.savedByUserId,
-    savedAt: now,
-    label: input.label ?? null,
-  });
+  // Single atomic INSERT: the subquery computes MAX+1 atomically with the
+  // INSERT, so two concurrent calls cannot interleave the read and write.
+  // If no prior revisions exist, COALESCE returns 0 and the new revision is 1.
+  const inserted = await db
+    .insert(postRevisions)
+    .values({
+      id,
+      postId: input.postId,
+      revisionNum: sql<number>`(SELECT COALESCE(MAX(${postRevisions.revisionNum}), 0) + 1 FROM ${postRevisions} WHERE ${postRevisions.postId} = ${input.postId})`,
+      title: input.title,
+      contentJson: input.contentJson,
+      excerpt: input.excerpt,
+      layoutType: input.layoutType ?? null,
+      categoryId: input.categoryId ?? null,
+      featuredImageId: input.featuredImageId ?? null,
+      locationName: input.locationName ?? null,
+      locationLat: input.locationLat ?? null,
+      locationLng: input.locationLng ?? null,
+      locationZoom: input.locationZoom ?? null,
+      songTitle: input.songTitle ?? null,
+      songArtist: input.songArtist ?? null,
+      songUrl: input.songUrl ?? null,
+      savedByUserId: input.savedByUserId,
+      savedAt: now,
+      label: input.label ?? null,
+    })
+    .returning({ revisionNum: postRevisions.revisionNum });
+
+  const nextRevisionNum = inserted[0]?.revisionNum ?? 1;
 
   return {
     id,
