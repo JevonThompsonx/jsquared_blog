@@ -62,24 +62,34 @@ A full audit of all 10 branches was also performed. Findings below.
 
 ### Phase 1 — `fix/branch-4-taxonomy-queries` ✅
 
-**Fixes:** A1, A2
-**Commit:** `ad1a274`
+**Fixes:** A1, A2, **C5** (added after concerns review)
+**Commits:** `ad1a274` (initial), `ac22c4b` (C5 — display name lookup)
 **Branch:** pushed to `origin/fix/branch-4-taxonomy-queries`
 
-**Files changed:**
+**Files changed (commit `ad1a274`):**
 - `web/src/server/dal/posts.ts` — renamed `category` → `categorySlug` in `listPublishedPostRecordsByCategory` and `countPublishedPostsByCategory`; changed `eq(categories.name, category)` → `eq(categories.slug, categorySlug)` (2 lines)
 - `web/src/server/dal/taxonomy-browse.ts` — replaced `count(postTags.postId)` with `COUNT(CASE WHEN posts.status = 'published' THEN posts.id END)`; added `leftJoin(posts, eq(postTags.postId, posts.id))`; removed unused `count` import
 
-**Tests added (6 new):**
+**Files changed (commit `ac22c4b` — C5):**
+- `web/src/server/dal/categories.ts` — added `getCategoryNameBySlug(slug)` for slug→name lookup
+- `web/src/app/(blog)/category/[category]/page.tsx` — use display name in title/heading/empty-title; fall back to slug if not in DB
+- `web/src/app/(blog)/category/[category]/feed.xml/route.ts` — use display name in feed title/description
+- `web/tests/unit/category-page.test.tsx` — mock `getCategoryNameBySlug`; assert display name; add fallback test
+- `web/tests/unit/category-feed-route.test.ts` — same updates + fallback test
+
+**Tests added (8 total):**
 - `posts-dal.test.ts` (new file, 5 tests) — list by slug, count by slug
-- `taxonomy-browse-dal.test.ts` (1 new test) — "only counts published posts in the post count (excludes drafts and scheduled)"
+- `taxonomy-browse-dal.test.ts` (1 new test) — "only counts published posts"
+- `category-page.test.tsx` (1 new test) — fallback when category not in DB
+- `category-feed-route.test.ts` (1 new test) — fallback when category not in DB
 
 **Verification:**
-- `pnpm run test` — **1080/1080 pass** (was 1074, +6 tests)
+- `pnpm run test` — **1082/1082 pass** (was 1074, +8 tests)
 - `pnpm dlx tsc --noEmit` — clean
 - `pnpm run lint` — clean
-- Logic check: page passes `label` (URL-decoded slug) to DAL → DAL now queries by `categories.slug` → match ✓
-- Logic check: `listAllTagsForBrowse` now joins `posts` table and conditionally counts published only → draft exclusion ✓
+- Logic check: page passes `label` (URL-decoded slug) to DAL → DAL queries by `categories.slug` → match ✓
+- Logic check: `listAllTagsForBrowse` joins `posts` table and conditionally counts published only → draft exclusion ✓
+- Logic check: page looks up display name via `getCategoryNameBySlug`; uses name for title; falls back to slug if not in DB ✓
 
 ### Phase 2 — `fix/branch-2-backtop-a11y` ✅
 
@@ -217,7 +227,7 @@ After all 8 fix branches pass:
 
 | Phase | Branch | Status | Commit | PR | Tests Added | Notes |
 |-------|--------|--------|--------|-----|-------------|-------|
-| 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` | — (deferred to Phase 9) | +6 | Pushed. Fixes user-reported bugs. |
+| 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` + `ac22c4b` | — (deferred to Phase 9) | +8 | Pushed. Fixes A1, A2, C5. |
 | 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | — (deferred to Phase 9) | +3 | Pushed. A11y fix. |
 | 3 | `fix/branch-7-search-perf` | ⏳ | — | — | — | — |
 | 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
@@ -263,7 +273,7 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C2 | 1 | Tests `category-page.test.tsx:73` and `category-feed-route.test.ts:49` pass URL-encoded name (`"Van%20Life"`) instead of slug (`"van-life"`) — doesn't match real-world browse-page behavior | LOW | Open | `fix/concerns-phase1-phase2` |
 | C3 | 2 | `aria-hidden` + `tabIndex={-1}` belt-and-suspenders — no fix needed | — | Closed (no action) | — |
 | C4 | 2 | No e2e test — unit tests sufficient for attribute-level assertions | — | Closed (no action) | — |
-| C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Not fixing** (scope creep) | Future work |
+| C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Fixed** | Phase 1 (commit `ac22c4b`) |
 
 ### Concerns Gate Process
 
