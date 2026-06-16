@@ -9,6 +9,58 @@ export const metadata: Metadata = {
   description: "Two people, a van named Blu, and a serious travel bug. Meet the J\u2019s behind J²Adventures.",
 };
 
+type SocialLink = {
+  label: string;
+  handle: string;
+  href: string;
+};
+
+// TODO: replace placeholder URLs with the real J²Adventures social profiles.
+const socialLinks: SocialLink[] = [
+  {
+    label: "Instagram",
+    handle: "@jsquaredadventures",
+    href: "https://instagram.com/jsquaredadventures",
+  },
+  {
+    label: "YouTube",
+    handle: "J²Adventures",
+    href: "https://youtube.com/@jsquaredadventures",
+  },
+  {
+    label: "TikTok",
+    handle: "@jsquaredadventures",
+    href: "https://tiktok.com/@jsquaredadventures",
+  },
+];
+
+function SocialIcon({ label }: { label: string }) {
+  if (label === "Instagram") {
+    return (
+      <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="5" ry="5" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="4" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (label === "YouTube") {
+    return (
+      <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+        <rect x="2.5" y="5.5" width="19" height="13" rx="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M10.5 9.5v5l4-2.5-4-2.5Z" fill="currentColor" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  // TikTok
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M14 4v9.5a3.5 3.5 0 1 1-3.5-3.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 4c.5 2.5 2.5 4 5 4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function PhotoPlaceholder({ label, className = "" }: { label: string; className?: string }) {
   return (
     <div aria-hidden="true" className={`flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)] border border-[var(--border)] text-[var(--text-secondary)] ${className}`}>
@@ -173,6 +225,35 @@ export default function AboutPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Social links */}
+        <section className="mt-10">
+          <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-lg sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Find us</p>
+            <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Follow along on the trail</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
+              Short clips, photo dumps, and the occasional behind-the-scenes vlog live on our socials. Pick your platform.
+            </p>
+            <nav aria-label="Social media links" className="mt-6 flex flex-wrap gap-3">
+              {socialLinks.map((link) => (
+                <a
+                  aria-label={`${link.label} (opens in a new tab)`}
+                  className="group inline-flex items-center gap-3 rounded-full border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm font-bold text-[var(--text-primary)] shadow-sm transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--card-bg)]"
+                  href={link.href}
+                  key={link.label}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <SocialIcon label={link.label} />
+                  <span className="flex flex-col leading-tight">
+                    <span>{link.label}</span>
+                    <span className="text-[0.7rem] font-medium uppercase tracking-[0.14em] text-[var(--text-secondary)]">{link.handle}</span>
+                  </span>
+                </a>
+              ))}
+            </nav>
           </div>
         </section>
 

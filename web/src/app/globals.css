@@ -1308,6 +1308,25 @@ a {
   [aria-label="Table of contents"],
   [aria-label="Image viewer"],
   .related-posts-section,
+  /* Comments thread + form */
+  .comments-section,
+  section[data-comments],
+  /* Share buttons + copy-link + bookmark */
+  .share-buttons,
+  [aria-label="Share this story"],
+  .copy-link-button,
+  .bookmark-button,
+  /* Newsletter signup form (footer + standalone) */
+  .newsletter-signup-form,
+  .newsletter-form,
+  [data-newsletter],
+  /* Skip link (only relevant on screen) */
+  .skip-link,
+  /* Floating back-to-top */
+  .back-to-top,
+  /* Map and other non-print embeds */
+  .post-map,
+  /* Allow opt-in for individual elements via [data-print-hide] */
   [data-print-hide],
   button:not([data-print-show]) {
     display: none !important;
@@ -1364,6 +1383,13 @@ a {
     content: " (" attr(href) ")";
     font-size: 0.8em;
     color: #555;
+  }
+
+  /* Make sure post meta (author, date) is visible */
+  .post-meta,
+  .author-card {
+    color: #111 !important;
+    page-break-inside: avoid;
   }
 
   /* Page setup */

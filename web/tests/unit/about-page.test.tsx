@@ -40,4 +40,33 @@ describe("AboutPage", () => {
     expect(markup).toContain('alt="Travel"');
     expect(markup).toContain('sizes=');
   });
+
+  it("renders a social-links section with at least Instagram and YouTube", () => {
+    const markup = renderToStaticMarkup(AboutPage());
+    expect(markup).toMatch(/Find us/i);
+    expect(markup).toContain("Instagram");
+    expect(markup).toContain("YouTube");
+  });
+
+  it("renders social links with accessible labels and external link attributes", () => {
+    const markup = renderToStaticMarkup(AboutPage());
+
+    // Instagram — anchored in heading
+    expect(markup).toMatch(/aria-label="[^"]*Instagram[^"]*"/i);
+    // YouTube — anchored in heading
+    expect(markup).toMatch(/aria-label="[^"]*YouTube[^"]*"/i);
+
+    // External links open in new tab with safe rel
+    const externalMatches = markup.match(/target="_blank"/g) ?? [];
+    expect(externalMatches.length).toBeGreaterThanOrEqual(2);
+    expect(markup).toContain('rel="noopener noreferrer"');
+  });
+
+  it("groups social links under a labelled landmark", () => {
+    const markup = renderToStaticMarkup(AboutPage());
+
+    // Social block uses nav with aria-label
+    const socialNavMatch = markup.match(/<nav[^>]*aria-label="[^"]*[sS]ocial[^"]*"[^>]*>/);
+    expect(socialNavMatch).toBeTruthy();
+  });
 });
