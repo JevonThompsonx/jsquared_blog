@@ -101,6 +101,31 @@ A full audit of all 10 branches was also performed. Findings below.
 - `tsc --noEmit` — clean
 - `pnpm run lint` — clean
 
+**Concerns Gate:**
+- C1 discovered: wrapper param `category` vs inner `categorySlug` mismatch → concern-fix branch
+- C2 discovered: test inputs use URL-encoded name instead of slug → concern-fix branch
+- C3 closed: `aria-hidden` + `tabIndex` belt-and-suspenders — correct approach
+- C4 closed: no e2e needed — unit sufficient for attribute-level assertions
+
+### Phase C — `fix/concerns-phase1-phase2` ✅
+
+**Concerns fixed:** C1, C2
+**Commit:** `c3509b7`
+**Branch:** pushed to `origin/fix/concerns-phase1-phase2`
+
+**Files changed:**
+- `web/src/server/queries/posts.ts:212` — renamed `category` → `categorySlug` (C1)
+- `web/tests/unit/category-page.test.tsx:62-82` — URL params `Van%20Life` → `van-life`; assertions updated (C2)
+- `web/tests/unit/category-feed-route.test.ts:48-58` — same updates (C2)
+
+**Verification:**
+- `pnpm run test` — **1074/1074 pass** (no count change — renames only)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+- Both updated test files: 7/7 pass
+
+**C5 deferred:** Category page title shows slug, not display name — would need slug-to-name lookup, out of scope. Noted for future work.
+
 ### Phase 3 — `fix/branch-7-search-perf` ⏳
 
 **Fixes:** A4
@@ -201,7 +226,7 @@ After all 8 fix branches pass:
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
 | 9 | Merge to main | ⏳ | — | — | — | — |
-| C | `fix/concerns-phase1-phase2` | ⏳ | — | — | — | Addresses C1, C2. Merges after Phase 1 + 2. |
+| C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | — (deferred to Phase 9) | 0 | Pushed. Addresses C1, C2. C5 deferred. |
 
 ---
 
