@@ -209,8 +209,8 @@ export const listPublishedPosts = unstable_cache(
   { revalidate: 30, tags: ["posts"] },
 );
 
-export async function listPublishedPostsByCategory(category: string, limit = 12, offset = 0): Promise<BlogPost[]> {
-  return withTags(await listPublishedPostRecordsByCategory(category, limit, offset));
+export async function listPublishedPostsByCategory(categorySlug: string, limit = 12, offset = 0): Promise<BlogPost[]> {
+  return withTags(await listPublishedPostRecordsByCategory(categorySlug, limit, offset));
 }
 
 export async function listPublishedPostsByTagSlug(tagSlug: string, limit = 12, offset = 0): Promise<BlogPost[]> {
