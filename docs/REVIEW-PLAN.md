@@ -136,18 +136,31 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **C5 deferred:** Category page title shows slug, not display name — would need slug-to-name lookup, out of scope. Noted for future work.
 
-### Phase 3 — `fix/branch-7-search-perf` ⏳
+### Phase 3 — `fix/branch-7-search-perf` ✅
 
 **Fixes:** A4
-**Files to change:**
-- `web/src/server/queries/posts.ts` — replace JS filtering with Drizzle `like` query; remove `listAllPublishedPostRecords()` call from search path
+**Files changed:**
+- `web/src/server/dal/posts.ts` — new `searchPublishedPostRecords(query, limit, offset)` with LEFT JOINs to categories, mediaAssets, postTags, tags; case-insensitive LIKE across 5 columns; wildcard escaping
+- `web/src/server/queries/posts.ts` — search path now calls DAL directly; `filterPublishedPosts()` removed (dead code)
+- `web/tests/unit/posts-dal-search.test.ts` — 8 new tests
 
-**Tests to add:**
-- Search returns filtered results
-- Empty query returns all published posts
-- Search is case-insensitive
+**Tests added:**
+- Empty query falls through to `listPublishedPostRecords`
+- Whitespace-only query handled identically
+- Search path uses `selectDistinct` (not `select`) for dedup
+- Joins 4 tables (categories, mediaAssets, postTags, tags)
+- WHERE contains AND of status filter + OR of 5 search conditions
+- Search conditions are `sql` tagged templates
+- Query is lowercased before LIKE
+- LIKE wildcards (`%`, `_`) in user input are escaped to literal text
+- Returns rows from DB
 
-**Verification:** test + typecheck + lint
+**Verification:**
+- `pnpm run test` — **1082/1082 pass** (+8 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+**Performance note:** For a corpus <1000 posts, single LIKE with 4 LEFT JOINs is fast. FTS5 index is a future optimization; not needed at current scale.
 
 ### Phase 4 — `fix/branch-10-print-scope` ⏳
 
@@ -229,7 +242,7 @@ After all 8 fix branches pass:
 |-------|--------|--------|--------|-----|-------------|-------|
 | 1 | `fix/branch-4-taxonomy-queries` | ✅ | `ad1a274` + `ac22c4b` | — (deferred to Phase 9) | +8 | Pushed. Fixes A1, A2, C5. |
 | 2 | `fix/branch-2-backtop-a11y` | ✅ | `e9c20e0` | — (deferred to Phase 9) | +3 | Pushed. A11y fix. |
-| 3 | `fix/branch-7-search-perf` | ⏳ | — | — | — | — |
+| 3 | `fix/branch-7-search-perf` | ✅ | `7b42b98` | — (deferred to Phase 9) | +8 | Pushed. DB-level LIKE filter; O(n) → indexed. |
 | 4 | `fix/branch-10-print-scope` | ⏳ | — | — | — | — |
 | 5 | `fix/branch-5-tags-admin-error` | ⏳ | — | — | — | — |
 | 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
@@ -274,6 +287,9 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C3 | 2 | `aria-hidden` + `tabIndex={-1}` belt-and-suspenders — no fix needed | — | Closed (no action) | — |
 | C4 | 2 | No e2e test — unit tests sufficient for attribute-level assertions | — | Closed (no action) | — |
 | C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Fixed** | Phase 1 (commit `ac22c4b`) |
+| C6 | 3 | `sql\`...ESCAPE '\\\\'\`` syntax with backslash escaping in JS template literal is tricky to read; consider extracting a helper | LOW | Open | `fix/concerns-phase3` |
+| C7 | 3 | Search query has no length validation at the DAL boundary; relies on Zod in the route/page — defense-in-depth violation | LOW | Open | `fix/concerns-phase3` |
+| C8 | 3 | DAL function is wrapped by `unstable_cache` in the query layer; cache key includes args so different searches are cached separately — behavior preserved, but worth documenting | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 
