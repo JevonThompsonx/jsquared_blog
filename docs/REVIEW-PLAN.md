@@ -203,17 +203,23 @@ A full audit of all 10 branches was also performed. Findings below.
 
 **Pattern alignment:** Matches `admin/categories/page.tsx` exactly. `console.error("[admin tags] Failed to load tags", error)` follows the same `[admin <area>] Failed to load <resource>` convention.
 
-### Phase 6 — `fix/branch-9-orphan-cleanup` ⏳
+### Phase 6 — `fix/branch-9-orphan-cleanup` ✅
 
 **Fixes:** A7
-**Files to change:**
-- `web/src/server/posts/delete.ts` — delete from `postLinks` and `seasons` before/within post delete transaction
+**Files changed:**
+- `web/src/server/posts/delete.ts` — added `postLinks` import; new step 7 inside transaction: `tx.delete(postLinks).where(inArray(postLinks.postId, toDelete))`. Step numbers below renumbered (7→8, 8→9, 9→10).
+- `web/tests/unit/posts-delete-cloudinary-cleanup.test.ts` — 2 new tests (single + batch)
 
-**Tests to add:**
-- Post delete removes related `postLinks`
-- Post delete removes related `seasons`
+**Tests added:**
+- Single-post delete calls `tx.delete(postLinks)` within the transaction
+- Batch delete also covers all post IDs via `inArray`
 
-**Verification:** test + typecheck + lint
+**Scope correction:** The audit (A7) mentioned `seasons` but `seasons.created_by_user_id` references `users.id`, not `posts.id`. No cleanup needed for seasons. Concern C15 documents this.
+
+**Verification:**
+- `pnpm run test` — **1076/1076 pass** (+2 vs main baseline 1074)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
 
 ### Phase 7 — `fix/homepage-footer-spacing` ⏳
 
@@ -262,7 +268,7 @@ After all 8 fix branches pass:
 | 3 | `fix/branch-7-search-perf` | ✅ | `7b42b98` | — (deferred to Phase 9) | +8 | Pushed. DB-level LIKE filter; O(n) → indexed. |
 | 4 | `fix/branch-10-print-scope` | ✅ | `ffadfaa` | — (deferred to Phase 9) | +6 | Pushed. Print button hide scoped to header/nav/footer. |
 | 5 | `fix/branch-5-tags-admin-error` | ✅ | `4c367aa` | — (deferred to Phase 9) | +1 | Pushed. Admin tags page handles DAL errors gracefully. |
-| 6 | `fix/branch-9-orphan-cleanup` | ⏳ | — | — | — | — |
+| 6 | `fix/branch-9-orphan-cleanup` | ✅ | `3d3eb89` | — (deferred to Phase 9) | +2 | Pushed. post_links now cleaned in delete transaction. |
 | 7 | `fix/homepage-footer-spacing` | ⏳ | — | — | — | — |
 | 8 | `fix/branch-6-revision-race` | ⏳ | — | — | — | — |
 | 9 | Merge to main | ⏳ | — | — | — | — |
@@ -310,6 +316,9 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C12 | 5 | `loadFailed` branch has no `data-testid` — the new test uses negative assertions (`admin-tags-empty` and `admin-tags-list` NOT present) to detect the error state. A future change that adds a testid back to the error branch would break the negative assertion. A positive testid is safer. | LOW | Open | `fix/concerns-phase5` |
 | C13 | 5 | `console.error` is used for the error path instead of `captureException` from `@/lib/sentry`. Sentry is configured (`web/src/lib/sentry.ts`) but neither categories nor tags page uses it for load errors. Pre-existing inconsistency, not introduced by this fix. | LOW | Open | `fix/concerns-phase5` |
 | C14 | 5 | The error message is generic ("temporarily unavailable"). A more actionable message would tell the admin what to try (refresh, check status page). Matches categories page's message; not diverging from the existing pattern. | — | Closed (no action) | — |
+| C15 | 6 | The audit (A7) incorrectly states that `seasons` needs cleanup when posts are deleted. `seasons.created_by_user_id` references `users.id`, not `posts.id`. The review plan description should be corrected. Only `post_links` actually needs cleanup. | LOW | Open | `fix/concerns-phase6` (docs-only) |
+| C16 | 6 | The new test uses reference identity (`call[0] === postLinks`) to detect the delete call. If a future change wraps the delete in a helper function (e.g. `deleteChildRows(tx, table, postIds)`), the reference identity would still hold because `table` is the same Drizzle reference. Robust. | — | Closed (no action) | — |
+| C17 | 6 | `deletePosts` doesn't guard against a missing `post_links` table (pre-migration DB). Other child-table deletes also lack this guard, so consistent with existing pattern. If pre-migration support is needed, all deletes would need the same `try` wrapper. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 
