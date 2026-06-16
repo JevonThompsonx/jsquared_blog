@@ -61,6 +61,34 @@ A concerns gate was run after each phase's main fix. Concerns raised:
 
 ---
 
+## [0.4.7] — 2026-06-15
+
+### Branch: `fix/open-concerns-batch` (Phase 10)
+
+Addresses all 7 open concerns from the round-2 review (C6, C7, C12, C13, C15, C18, C20). TDD-driven; +9 new tests.
+
+- **C20 — revision restore race** — `restorePostRevisionAtomically()` in `web/src/server/dal/post-revisions.ts` replaced its read-then-insert pattern (the `max(revisionNum)` SELECT followed by an INSERT) with a single atomic INSERT that computes the next `revisionNum` via a SQL subquery — same pattern as the `createPostRevision()` fix from Phase 8. Two concurrent restore calls (from separate connections) now serialize at the DB level and each sees its own pre-insert state, so duplicate `revision_num` values are impossible. The unused `max` import was removed. 3 new tests in `post-revisions-dal-race.test.ts` verify only one `select` call (the post snapshot), a single `insert`, and a `sql` template containing `MAX+COALESCE+1` in the revisionNum subquery.
+- **C6 — extracted `escapeLikePattern` helper** — `web/src/server/dal/posts.ts` exports the wildcard-escape helper (previously `escapeLikeWildcards`, internal-only). JSDoc now explains the backslash-first ordering requirement so future maintainers don't break the order. 3 new unit tests verify backslash escapes first, wildcards (`%`, `_`, `\`) are escaped to literal text, and plain text is returned unchanged.
+- **C7 — search query length validation at DAL boundary** — new `MAX_SEARCH_QUERY_LENGTH = 200` constant in `web/src/server/dal/posts.ts`. `searchPublishedPostRecords` throws `Error("search query exceeds maximum length of 200 characters (got N)")` when the query exceeds the cap. Defense-in-depth: the Zod validator in the search route already caps at 200, so the DAL also enforces for any future internal caller (cron job, migration, etc.). 1 new test.
+- **C12 — positive `data-testid` on load-failed branches** — `web/src/app/admin/tags/page.tsx` now renders `data-testid="admin-tags-load-failed"` on the load-failed paragraph; the same change was applied to `web/src/app/admin/categories/page.tsx` (`admin-categories-load-failed`) for consistency. The existing tags test was upgraded from a negative assertion to a positive one.
+- **C13 — Sentry `captureException` on admin load failures** — both `web/src/app/admin/tags/page.tsx` and `web/src/app/admin/categories/page.tsx` now call `captureException(error, { area: "admin-tags" })` (or `admin-categories`) on DAL load failure. The `console.error` was retained for dev-time visibility — mirrors the existing pattern elsewhere in the admin app. 2 new tests (one per page) verify Sentry is called with the error and area context.
+- **C15 — document the audit mistake about `seasons`** — added a code comment in `web/src/server/posts/delete.ts` near the `post_links` cleanup step explaining that the original audit (A7) incorrectly mentioned `seasons` cleanup. `seasons.created_by_user_id` references `users.id`, not `posts.id`; no seasons cleanup is needed. The comment documents the audit inaccuracy for future maintainers.
+- **C18 — document the global footer margin trade-off** — added a JSDoc on the `SiteFooter` component in `web/src/components/layout/site-footer.tsx` explaining that the `mt-16` change (was `mt-20`) is global and applied to every page, with the homepage "Next up" section adding its own `pb-8`. Sparse pages may feel slightly closer to the footer. Per-page layout changes are out of scope; this is an accepted design trade-off.
+
+#### Verification on main
+
+- `pnpm run test` — **1117/1117 pass** (+9 vs pre-Phase-10 baseline of 1108)
+- `tsc --noEmit` — clean
+- `pnpm run lint` — clean
+
+#### Concerns Gate
+
+- C6, C7, C12, C13, C15, C20 — **Fixed**
+- C18 — **Closed** (design trade-off accepted; documented in code)
+- 11 of the 22 originally catalogued concerns remain already-closed (no action); 7 are now Fixed; 1 Closed → all open concerns from round-2 review are resolved
+
+---
+
 ## [0.4.5] — 2026-06-15
 
 ### Branches: `feat/performance-and-reliability` (PR #50), `feat/site-search` (PR #51), `chore/cleanup-and-hardening` (PR #52), `feat/polish` (PR #53)
