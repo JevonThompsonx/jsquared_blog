@@ -281,6 +281,8 @@ After each phase's main fix is committed, a concerns pass is run before moving t
 | C3 | 2 | `aria-hidden` + `tabIndex={-1}` belt-and-suspenders — no fix needed | — | Closed (no action) | — |
 | C4 | 2 | No e2e test — unit tests sufficient for attribute-level assertions | — | Closed (no action) | — |
 | C5 | 1 | Category page title shows slug (e.g. "van-life – J²Adventures") instead of display name ("Van Life – J²Adventures") — page has no slug-to-name lookup | LOW | **Fixed** | Phase 1 (commit `ac22c4b`) |
+| C18 | 7 | The `mt-16` footer change is global — applies on every page, not just the homepage. Pages with little content above the footer (e.g. simple legal pages) might now feel like the footer is too close. | LOW | Open | `fix/concerns-phase7` |
+| C19 | 7 | The test checks for `pb-8` OR `py-8` in the class. If a future refactor uses an arbitrary value or CSS custom property, the regex would fail. Acceptable — explicit Tailwind class names are the convention. | — | Closed (no action) | — |
 
 ### Concerns Gate Process
 
