@@ -123,6 +123,13 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
     // 7. Delete post links (external links like iovander/booking URLs).
     //    post_links.post_id is a NOT NULL FK to posts.id; without this
     //    cleanup, deleting a post leaves orphaned rows.
+    //
+    //    Audit note (C15): the original audit that led to this step also
+    //    mentioned `seasons` cleanup, but `seasons.created_by_user_id`
+    //    references `users.id` — not `posts.id`. The `seasons` table has
+    //    no FK to posts, so no seasons cleanup is needed here. This comment
+    //    documents the audit inaccuracy so future maintainers don't
+    //    re-add a seasons cleanup step unnecessarily.
     await tx.delete(postLinks).where(inArray(postLinks.postId, toDelete));
 
     // 8. Delete gallery images and their media assets

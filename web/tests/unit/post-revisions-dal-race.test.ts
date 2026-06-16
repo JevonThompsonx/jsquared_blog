@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockSelect = vi.fn();
 const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
 const mockRun = vi.fn();
+const mockTransaction = vi.fn();
 
 const mockReturning = vi.fn();
 const mockValues = vi.fn();
@@ -15,6 +16,14 @@ const mockDb = {
   update: mockUpdate,
   delete: mockDelete,
   run: mockRun,
+  transaction: mockTransaction,
+};
+
+const mockTx = {
+  select: mockSelect,
+  insert: mockInsert,
+  update: mockUpdate,
+  delete: mockDelete,
 };
 
 vi.mock("server-only", () => ({}));
@@ -86,7 +95,7 @@ vi.mock("@/drizzle/schema", () => ({
   },
 }));
 
-import { createPostRevision } from "@/server/dal/post-revisions";
+import { createPostRevision, restorePostRevisionAtomically } from "@/server/dal/post-revisions";
 
 function makeInsertChain(returning: { revisionNum: number }) {
   const chain = {
@@ -177,5 +186,166 @@ describe("createPostRevision", () => {
     const result = await createPostRevision(baseInput);
 
     expect(result.revisionNum).toBe(1);
+  });
+});
+
+function makeSnapshotSelectChain(snapshot: Record<string, unknown>) {
+  const chain = { from: vi.fn(), where: vi.fn(), limit: vi.fn() };
+  chain.from.mockReturnValue(chain);
+  chain.where.mockReturnValue(chain);
+  chain.limit.mockResolvedValue([snapshot]);
+  return chain;
+}
+
+function makeRestoreInsertChain(returning: { revisionNum: number }) {
+  const chain = { values: vi.fn(), returning: vi.fn() };
+  chain.values.mockReturnValue(chain);
+  chain.returning.mockResolvedValue([returning]);
+  return chain;
+}
+
+function makeUpdateChain() {
+  const chain = { set: vi.fn(), where: vi.fn() };
+  chain.set.mockReturnValue(chain);
+  chain.where.mockResolvedValue(undefined);
+  return chain;
+}
+
+describe("restorePostRevisionAtomically (C20: race fix)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Transaction runs the callback with our shared mock tx so that
+    // `tx.select` / `tx.insert` / `tx.update` all hit the same mocks
+    // we set up per-test.
+    mockTransaction.mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) =>
+      cb(mockTx),
+    );
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const baseRevision = {
+    id: "rev-old",
+    postId: "post-1",
+    revisionNum: 2,
+    title: "Old title",
+    contentJson: "{}",
+    excerpt: null,
+    layoutType: "standard" as const,
+    categoryId: null,
+    featuredImageId: null,
+    locationName: null,
+    locationLat: null,
+    locationLng: null,
+    locationZoom: null,
+    songTitle: null,
+    songArtist: null,
+    songUrl: null,
+    savedByUserId: "user-1",
+    savedAt: new Date("2026-01-01T00:00:00Z"),
+    label: null,
+  };
+
+  const baseInput = {
+    postId: "post-1",
+    revision: baseRevision,
+    derivedContent: {
+      canonicalContentJson: "{}",
+      contentHtml: null,
+      contentPlainText: null,
+      excerpt: null,
+    },
+    savedByUserId: "user-1",
+  };
+
+  it("uses a single atomic INSERT for the new revision (no separate max read)", async () => {
+    mockSelect.mockReturnValue(makeSnapshotSelectChain({
+      title: "Current title",
+      slug: "current-slug",
+      contentJson: "{}",
+      excerpt: null,
+      layoutType: "standard",
+      categoryId: null,
+      featuredImageId: null,
+      locationName: null,
+      locationLat: null,
+      locationLng: null,
+      locationZoom: null,
+      songTitle: null,
+      songArtist: null,
+      songUrl: null,
+    }));
+    mockInsert.mockReturnValue(makeRestoreInsertChain({ revisionNum: 3 }));
+    mockUpdate.mockReturnValue(makeUpdateChain());
+
+    const result = await restorePostRevisionAtomically(baseInput);
+
+    // Only ONE select call: the post snapshot. The race-prone
+    // `max(revisionNum)` read is gone.
+    expect(mockSelect).toHaveBeenCalledOnce();
+    // The atomic INSERT.
+    expect(mockInsert).toHaveBeenCalledOnce();
+    // The post update.
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    expect(result).not.toBeNull();
+    expect(result?.slug).toBe("current-slug");
+  });
+
+  it("computes the new revision_num via a SQL subquery in the INSERT (atomic at SQL level)", async () => {
+    mockSelect.mockReturnValue(makeSnapshotSelectChain({
+      title: "Current title",
+      slug: "current-slug",
+      contentJson: "{}",
+      excerpt: null,
+      layoutType: "standard",
+      categoryId: null,
+      featuredImageId: null,
+      locationName: null,
+      locationLat: null,
+      locationLng: null,
+      locationZoom: null,
+      songTitle: null,
+      songArtist: null,
+      songUrl: null,
+    }));
+    const valuesMock = vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ revisionNum: 7 }]),
+    });
+    mockInsert.mockReturnValue({ values: valuesMock });
+    mockUpdate.mockReturnValue(makeUpdateChain());
+
+    const { sql: rawSql } = await import("drizzle-orm");
+    const sqlSpy = rawSql as unknown as ReturnType<typeof vi.fn>;
+
+    await restorePostRevisionAtomically(baseInput);
+
+    expect(sqlSpy).toHaveBeenCalled();
+    // At least one sql call must be a subquery computing MAX+1.
+    const sqlCalls = sqlSpy.mock.calls as Array<[TemplateStringsArray, ...unknown[]]>;
+    const hasSubquery = sqlCalls.some((call: [TemplateStringsArray, ...unknown[]]) => {
+      const strings = call[0];
+      if (!strings) return false;
+      const fullTemplate = strings.join("");
+      return fullTemplate.includes("MAX") && fullTemplate.includes("COALESCE") && fullTemplate.includes("+ 1");
+    });
+    expect(hasSubquery).toBe(true);
+  });
+
+  it("returns null when the post does not exist (snapshot is empty)", async () => {
+    // Snapshot returns no rows → function should return null without
+    // attempting to insert a revision or update the post.
+    const chain = { from: vi.fn(), where: vi.fn(), limit: vi.fn() };
+    chain.from.mockReturnValue(chain);
+    chain.where.mockReturnValue(chain);
+    chain.limit.mockResolvedValue([]);
+    mockSelect.mockReturnValue(chain);
+
+    const result = await restorePostRevisionAtomically(baseInput);
+
+    expect(result).toBeNull();
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

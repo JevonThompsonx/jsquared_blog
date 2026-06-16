@@ -64,6 +64,7 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 import { searchPublishedPostRecords } from "@/server/dal/posts";
+import { escapeLikePattern } from "@/server/dal/posts";
 
 vi.mock("@/server/dal/post-column-capabilities", () => ({
   getPostColumnCapabilities: vi.fn(async () => ({
@@ -221,5 +222,31 @@ describe("searchPublishedPostRecords", () => {
     const result = await searchPublishedPostRecords("Sierra", 2, 10);
 
     expect(result).toEqual(expected);
+  });
+
+  // C7: Defense-in-depth length validation at the DAL boundary.
+  it("throws when the search query exceeds the maximum length (defense-in-depth)", async () => {
+    const tooLong = "x".repeat(201);
+
+    await expect(searchPublishedPostRecords(tooLong, 10, 0)).rejects.toThrow(
+      /search query/i,
+    );
+  });
+});
+
+describe("escapeLikePattern (C6: extracted helper)", () => {
+  it("escapes the three SQL LIKE wildcards", () => {
+    expect(escapeLikePattern("100%_safe\\path")).toBe("100\\%\\_safe\\\\path");
+  });
+
+  it("returns the input unchanged when no wildcards are present", () => {
+    expect(escapeLikePattern("van life")).toBe("van life");
+  });
+
+  it("escapes backslashes BEFORE wildcards (so the escape character itself is literal)", () => {
+    // Backslash must be escaped first; otherwise the escaped wildcard
+    // sequence `\\%` would become `\\%` (backslash + escape) instead of
+    // `\\\\%` (escaped backslash + escaped percent).
+    expect(escapeLikePattern("\\")).toBe("\\\\");
   });
 });

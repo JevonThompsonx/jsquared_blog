@@ -118,7 +118,27 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
     .limit(limit);
 }
 
-function escapeLikeWildcards(value: string): string {
+/**
+ * Maximum allowed length for a search query at the DAL boundary.
+ *
+ * The Zod validator in the search route/page already caps at 200 chars, but
+ * the DAL enforces the limit too as defense-in-depth — any future internal
+ * caller (cron job, migration, etc.) gets the same guarantee.
+ */
+export const MAX_SEARCH_QUERY_LENGTH = 200;
+
+/**
+ * Escapes the three SQL LIKE special characters (backslash, percent, underscore)
+ * in a user-supplied value so they match literally.
+ *
+ * Backslash MUST be escaped first; otherwise the subsequent wildcard escapes
+ * would produce double-escaped backslashes. A single regex pass works because
+ * the regex engine processes characters left-to-right: a `\` at position N
+ * is replaced with `\\` before position N+1 is examined.
+ *
+ * Exported for unit testing the escape behavior in isolation.
+ */
+export function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
 
@@ -127,6 +147,12 @@ export async function searchPublishedPostRecords(
   limit: number,
   offset = 0,
 ): Promise<PublishedPostRecord[]> {
+  if (query.length > MAX_SEARCH_QUERY_LENGTH) {
+    throw new Error(
+      `search query exceeds maximum length of ${MAX_SEARCH_QUERY_LENGTH} characters (got ${query.length})`,
+    );
+  }
+
   const trimmed = query.trim();
 
   if (!trimmed) {
@@ -135,7 +161,7 @@ export async function searchPublishedPostRecords(
 
   const db = getDb();
   const capabilities = await getPostColumnCapabilities();
-  const pattern = `%${escapeLikeWildcards(trimmed.toLowerCase())}%`;
+  const pattern = `%${escapeLikePattern(trimmed.toLowerCase())}%`;
 
   const searchClause = or(
     sql`LOWER(${posts.title}) LIKE LOWER(${pattern}) ESCAPE '\\'`,

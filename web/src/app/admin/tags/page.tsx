@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { requireAdminSession } from "@/lib/auth/session";
+import { captureException } from "@/lib/sentry";
 import { listAllTagsWithCounts, type AdminTagRecord } from "@/server/dal/admin-tags";
 
 import { createTagAction, deleteTagAction, updateTagDescriptionAction } from "./actions";
@@ -48,6 +49,10 @@ export default async function AdminTagsPage({
   try {
     tagsList = await listAllTagsWithCounts();
   } catch (error) {
+    // C13: capture in Sentry so on-call gets paged; keep the local
+    // console.error for dev-time visibility (mirrors the pattern used
+    // elsewhere in the admin app).
+    captureException(error, { area: "admin-tags" });
     console.error("[admin tags] Failed to load tags", error);
     loadFailed = true;
   }
@@ -136,7 +141,10 @@ export default async function AdminTagsPage({
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
             {loadFailed ? (
-              <p className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
+              <p
+                className="px-6 py-10 text-center text-sm text-[var(--text-secondary)]"
+                data-testid="admin-tags-load-failed"
+              >
                 Tag data is temporarily unavailable. Please try again later.
               </p>
             ) : tagsList.length === 0 ? (

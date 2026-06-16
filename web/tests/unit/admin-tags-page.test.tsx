@@ -21,6 +21,14 @@ vi.mock("@/lib/auth/session", () => ({
   requireAdminSession: vi.fn(),
 }));
 
+const { mockCaptureException } = vi.hoisted(() => ({
+  mockCaptureException: vi.fn(),
+}));
+
+vi.mock("@/lib/sentry", () => ({
+  captureException: mockCaptureException,
+}));
+
 vi.mock("@/server/dal/admin-tags", () => ({
   listAllTagsWithCounts: vi.fn(),
 }));
@@ -33,6 +41,7 @@ vi.mock("@/app/admin/tags/actions", () => ({
 
 import AdminTagsPage from "@/app/admin/tags/page";
 import { requireAdminSession } from "@/lib/auth/session";
+import { captureException } from "@/lib/sentry";
 import { listAllTagsWithCounts } from "@/server/dal/admin-tags";
 
 describe("AdminTagsPage", () => {
@@ -142,6 +151,9 @@ describe("AdminTagsPage", () => {
     const markup = renderToStaticMarkup(await AdminTagsPage({}));
 
     expect(markup).toContain("Tag data is temporarily unavailable");
+    // C12: the load-failed branch has a positive data-testid (instead of
+    // relying on negative assertions against the empty/list testids).
+    expect(markup).toContain("data-testid=\"admin-tags-load-failed\"");
     // The empty-state and list markers should NOT be present — failure
     // takes precedence so the admin doesn't see a misleading "no tags" UI.
     expect(markup).not.toContain("data-testid=\"admin-tags-empty\"");
@@ -149,5 +161,15 @@ describe("AdminTagsPage", () => {
     // The create form is independent of the load — admin can still create
     // a tag even when the list fails to load.
     expect(markup).toContain("data-testid=\"admin-tags-create-form\"");
+  });
+
+  it("captures the load failure in Sentry (C13: not just console.error)", async () => {
+    vi.mocked(requireAdminSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never);
+    const error = new Error("database unavailable");
+    vi.mocked(listAllTagsWithCounts).mockRejectedValue(error);
+
+    await AdminTagsPage({});
+
+    expect(captureException).toHaveBeenCalledWith(error, { area: "admin-tags" });
   });
 });
