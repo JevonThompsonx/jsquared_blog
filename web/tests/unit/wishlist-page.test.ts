@@ -4,6 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+vi.mock("next/image", () => ({
+  default: ({ alt, src, width, height, sizes, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { src: string }) =>
+    createElement("img", { alt, src, width, height, sizes, ...props }),
+}));
+
 vi.mock("@/components/layout/site-header", () => ({
   SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header"),
 }));
@@ -201,6 +206,37 @@ describe("WishlistPage", () => {
 
     expect(markup).toContain('data-testid="place-image"');
     expect(markup).toContain("https://example.com/moraine.jpg");
+  });
+
+  it("renders the place image with next/image sizing attributes (width, height, sizes)", async () => {
+    mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
+    mockedGetAdminServerSession.mockResolvedValue(null);
+    mockedListPublicWishlistPlaces.mockResolvedValue([
+      {
+        id: "p1",
+        name: "Moraine Lake",
+        locationName: "Banff, AB",
+        locationLat: 51.3,
+        locationLng: -116.2,
+        locationZoom: 12,
+        sortOrder: 0,
+        visited: false,
+        externalUrl: null,
+        description: null,
+        visitedYear: null,
+        imageUrl: "https://example.com/moraine.jpg",
+        detailSlug: null,
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await WishlistPage());
+
+    const imageMatch = markup.match(/<img[^>]*data-testid="place-image"[^>]*>/);
+    expect(imageMatch).not.toBeNull();
+    const imageTag = imageMatch![0];
+    expect(imageTag).toMatch(/\bwidth="\d+"/);
+    expect(imageTag).toMatch(/\bheight="\d+"/);
+    expect(imageTag).toMatch(/\bsizes="[^"]+"/);
   });
 
   it("does not render a place image when imageUrl is null", async () => {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { cdnImageUrl } from "@/lib/cloudinary/transform";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { listBookmarkedPosts } from "@/server/dal/bookmarks";
@@ -30,6 +31,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       supabaseUserId: supabaseUser.id,
       errorName: error instanceof Error ? error.name : "UnknownError",
     });
+    captureException(error, { route: "bookmarks", supabaseUserId: supabaseUser.id });
     return NextResponse.json({ error: "Failed to load bookmarks" }, { status: 500 });
   }
 }

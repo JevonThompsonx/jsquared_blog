@@ -9,6 +9,10 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   getRequestSupabaseUser: vi.fn(),
 }));
@@ -24,6 +28,7 @@ vi.mock("@/server/dal/bookmarks", () => ({
 
 import { GET, POST } from "@/app/api/posts/[postId]/bookmark/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { isPostBookmarked, togglePostBookmark } from "@/server/dal/bookmarks";
@@ -125,7 +130,8 @@ describe("GET /api/posts/[postId]/bookmark", () => {
       displayName: "Reader",
       avatarUrl: null,
     });
-    vi.mocked(isPostBookmarked).mockRejectedValue(new Error("bookmark status lookup failed"));
+    const dbError = new Error("bookmark status lookup failed");
+    vi.mocked(isPostBookmarked).mockRejectedValue(dbError);
 
     const response = await GET(new Request("http://localhost/api/posts/post-1/bookmark"), {
       params: Promise.resolve({ postId: "post-1" }),
@@ -133,6 +139,10 @@ describe("GET /api/posts/[postId]/bookmark", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Internal error" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "post-bookmark", postId: "post-1" }),
+    );
   });
 });
 
@@ -280,7 +290,8 @@ describe("POST /api/posts/[postId]/bookmark", () => {
       displayName: "Reader",
       avatarUrl: null,
     });
-    vi.mocked(togglePostBookmark).mockRejectedValue(new Error("bookmark toggle failed"));
+    const dbError = new Error("bookmark toggle failed");
+    vi.mocked(togglePostBookmark).mockRejectedValue(dbError);
 
     const response = await POST(new Request("http://localhost/api/posts/post-1/bookmark", { method: "POST" }), {
       params: Promise.resolve({ postId: "post-1" }),
@@ -288,5 +299,9 @@ describe("POST /api/posts/[postId]/bookmark", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Internal error" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "post-bookmark", postId: "post-1" }),
+    );
   });
 });

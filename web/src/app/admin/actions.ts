@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -586,6 +586,7 @@ export async function createAdminPostAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidateTag("posts", "max");
   if (values.status === "published") {
     try {
       await deactivateLinkedWishlistPlaces([postId]);
@@ -748,6 +749,7 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath(`/posts/${slug}`);
+  revalidateTag("posts", "max");
   if (values.status === "published") {
     try {
       await deactivateLinkedWishlistPlaces([validPostId]);
@@ -786,7 +788,9 @@ export async function bulkPublishPosts(postIds: string[]): Promise<PostPublishRe
   const validPostIds = parseActionPostIds(postIds);
 
   try {
-    return await publishPosts(validPostIds);
+    const result = await publishPosts(validPostIds);
+    revalidateTag("posts", "max");
+    return result;
   } catch (error) {
     console.error("[admin-actions] Failed to publish posts", error);
     throw new Error("Failed to publish posts");
@@ -803,7 +807,9 @@ export async function bulkUnpublishPosts(postIds: string[]): Promise<PostPublish
   const validPostIds = parseActionPostIds(postIds);
 
   try {
-    return await unpublishPosts(validPostIds);
+    const result = await unpublishPosts(validPostIds);
+    revalidateTag("posts", "max");
+    return result;
   } catch (error) {
     console.error("[admin-actions] Failed to unpublish posts", error);
     throw new Error("Failed to unpublish posts");
@@ -921,7 +927,9 @@ export async function deletePostAction(postId: string): Promise<PostDeleteResult
   const validPostId = parseActionPostId(deletePostSchema, postId);
 
   try {
-    return await deletePosts([validPostId]);
+    const result = await deletePosts([validPostId]);
+    revalidateTag("posts", "max");
+    return result;
   } catch (error) {
     console.error(`[admin-actions] Failed to delete post ${validPostId}`, error);
     throw new Error("Failed to delete post");

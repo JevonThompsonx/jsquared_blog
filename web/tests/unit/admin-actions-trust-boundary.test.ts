@@ -7,6 +7,7 @@ const { cookiesMock, headersMock } = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({
@@ -46,7 +47,7 @@ vi.mock("@/server/posts/publish", () => ({
   unpublishPosts: vi.fn(),
 }));
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import type { AdminSession } from "@/lib/auth/session";
 import { requireAdminSession } from "@/lib/auth/session";
@@ -350,7 +351,7 @@ describe("admin action trust boundaries", () => {
     );
   });
 
-  it("publishes valid bulk requests", async () => {
+  it("publishes valid bulk requests and invalidates the posts cache tag", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(publishPosts).mockResolvedValue({
       operation: "publish",
@@ -376,6 +377,7 @@ describe("admin action trust boundaries", () => {
       unchangedPostIds: [],
     });
     expect(vi.mocked(publishPosts)).toHaveBeenCalledWith(["post-1", "post-2"]);
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith("posts", "max");
   });
 
   it("converts unexpected bulk publish failures into a stable safe error", async () => {
@@ -385,7 +387,7 @@ describe("admin action trust boundaries", () => {
     await expect(bulkPublishPosts(["post-1", "post-2"])).rejects.toThrow("Failed to publish posts");
   });
 
-  it("unpublishes valid bulk requests", async () => {
+  it("unpublishes valid bulk requests and invalidates the posts cache tag", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue(ADMIN_SESSION);
     vi.mocked(unpublishPosts).mockResolvedValue({
       operation: "unpublish",
@@ -411,6 +413,7 @@ describe("admin action trust boundaries", () => {
       unchangedPostIds: [],
     });
     expect(vi.mocked(unpublishPosts)).toHaveBeenCalledWith(["post-1"]);
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith("posts", "max");
   });
 
   it("converts unexpected bulk unpublish failures into a stable safe error", async () => {

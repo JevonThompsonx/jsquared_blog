@@ -19,8 +19,13 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 import { POST } from "@/app/api/posts/[postId]/view/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { incrementPostViewCount } from "@/server/dal/posts";
 
 type CookieEntry = { value: string };
@@ -131,7 +136,8 @@ describe("POST /api/posts/[postId]/view", () => {
 
     cookiesMock.mockResolvedValue(cookieStore);
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
-    vi.mocked(incrementPostViewCount).mockRejectedValue(new Error("database offline"));
+    const dbError = new Error("database offline");
+    vi.mocked(incrementPostViewCount).mockRejectedValue(dbError);
 
     const response = await POST(new Request("http://localhost/api/posts/post-1/view", { method: "POST" }), {
       params: Promise.resolve({ postId: "post-1" }),
@@ -143,6 +149,10 @@ describe("POST /api/posts/[postId]/view", () => {
       "j2-viewed-post-post-1",
       "1",
       expect.any(Object),
+    );
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "post-view", postId: "post-1" }),
     );
   });
 });

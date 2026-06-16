@@ -7,6 +7,10 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   getRequestSupabaseUser: vi.fn(),
 }));
@@ -29,6 +33,7 @@ vi.mock("@/server/services/comment-notifications", () => ({
 
 import { GET } from "@/app/api/posts/[postId]/comments/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { getPublicAppUserBySupabaseId } from "@/server/auth/public-users";
 import { canCommentOnPost, listCommentsForPost } from "@/server/dal/comments";
@@ -176,7 +181,8 @@ describe("GET /api/posts/[postId]/comments", () => {
     });
     vi.mocked(canCommentOnPost).mockResolvedValue(true);
     vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
-    vi.mocked(listCommentsForPost).mockRejectedValue(new Error("query failed"));
+    const dbError = new Error("query failed");
+    vi.mocked(listCommentsForPost).mockRejectedValue(dbError);
 
     const response = await GET(new Request("http://localhost/api/posts/post-1/comments?sort=likes"), {
       params: Promise.resolve({ postId: "post-1" }),
@@ -184,6 +190,10 @@ describe("GET /api/posts/[postId]/comments", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Failed to load comments" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "post-comments", postId: "post-1" }),
+    );
   });
 
   it("returns 500 when post visibility lookup fails unexpectedly", async () => {

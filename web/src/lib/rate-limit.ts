@@ -171,9 +171,9 @@ export async function checkRateLimit(
   }
 
   if (isDeployedEnvironment(process.env)) {
-    console.warn(
+    throw new Error(
       "[rate-limit] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN not set. " +
-        "Falling back to in-memory rate limiting — NOT consistent across Vercel instances.",
+        "In-memory rate limiting is NOT consistent across Vercel instances and cannot be used in deployed environments.",
     );
   }
 

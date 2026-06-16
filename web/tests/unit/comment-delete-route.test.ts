@@ -21,8 +21,13 @@ vi.mock("@/lib/rate-limit", () => ({
   tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 import { DELETE } from "@/app/api/comments/[commentId]/route";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { captureException } from "@/lib/sentry";
 import { getRequestSupabaseUser } from "@/lib/supabase/server";
 import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { deleteCommentRecord } from "@/server/dal/comments";
@@ -120,7 +125,8 @@ describe("DELETE /api/comments/[commentId]", () => {
       displayName: "Reader",
       avatarUrl: null,
     });
-    vi.mocked(deleteCommentRecord).mockRejectedValue(new Error("delete failed"));
+    const dbError = new Error("delete failed");
+    vi.mocked(deleteCommentRecord).mockRejectedValue(dbError);
 
     const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
       params: Promise.resolve({ commentId: "comment-1" }),
@@ -128,6 +134,10 @@ describe("DELETE /api/comments/[commentId]", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Failed to delete comment" });
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      dbError,
+      expect.objectContaining({ route: "comment-delete", commentId: "comment-1" }),
+    );
   });
 
   it("returns success when the caller deletes their own comment", async () => {
