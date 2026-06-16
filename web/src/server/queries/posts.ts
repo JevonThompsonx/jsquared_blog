@@ -19,6 +19,7 @@ import {
   listRecentPublishedPostRecords,
   listTagsByPostIds,
   listTagsForPost,
+  searchPublishedPostRecords,
   type PublishedPostRecord,
   type PublishedPostTagRecord,
 } from "@/server/dal/posts";
@@ -105,22 +106,6 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
   }));
 }
 
-function filterPublishedPosts(posts: BlogPost[], search?: string): BlogPost[] {
-  const normalizedSearch = search?.trim().toLowerCase();
-  if (!normalizedSearch) {
-    return posts;
-  }
-
-  return posts.filter((post) => {
-    const haystack = [post.title, post.category, post.excerpt, post.description, ...post.tags.map((tag) => tag.name)]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(normalizedSearch);
-  });
-}
-
 async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost | null> {
   const post = await getPublishedPostRecordBySlug(slug);
   if (!post) {
@@ -191,9 +176,7 @@ export async function listAllPublishedPosts(): Promise<BlogPost[]> {
 async function listPublishedPostsUncached(limit = 12, offset = 0, search?: string): Promise<BlogPost[]> {
   try {
     if (search?.trim()) {
-      const allRows = await listAllPublishedPostRecords();
-      const allPosts = await withTags(allRows);
-      return filterPublishedPosts(allPosts, search).slice(offset, offset + limit);
+      return withTags(await searchPublishedPostRecords(search, limit, offset));
     }
 
     return withTags(await listPublishedPostRecords(limit, offset));

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { categories, comments, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
@@ -113,6 +113,46 @@ export async function listPublishedPostRecords(limit: number, offset = 0): Promi
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
     .where(eq(posts.status, "published"))
+    .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
+    .offset(offset)
+    .limit(limit);
+}
+
+function escapeLikeWildcards(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+export async function searchPublishedPostRecords(
+  query: string,
+  limit: number,
+  offset = 0,
+): Promise<PublishedPostRecord[]> {
+  const trimmed = query.trim();
+
+  if (!trimmed) {
+    return listPublishedPostRecords(limit, offset);
+  }
+
+  const db = getDb();
+  const capabilities = await getPostColumnCapabilities();
+  const pattern = `%${escapeLikeWildcards(trimmed.toLowerCase())}%`;
+
+  const searchClause = or(
+    sql`LOWER(${posts.title}) LIKE LOWER(${pattern}) ESCAPE '\\'`,
+    sql`LOWER(COALESCE(${posts.excerpt}, '')) LIKE LOWER(${pattern}) ESCAPE '\\'`,
+    sql`LOWER(COALESCE(${posts.contentPlainText}, '')) LIKE LOWER(${pattern}) ESCAPE '\\'`,
+    sql`LOWER(${categories.name}) LIKE LOWER(${pattern}) ESCAPE '\\'`,
+    sql`LOWER(${tags.name}) LIKE LOWER(${pattern}) ESCAPE '\\'`,
+  );
+
+  return db
+    .selectDistinct(getPublishedPostSummarySelect(capabilities))
+    .from(posts)
+    .leftJoin(categories, eq(posts.categoryId, categories.id))
+    .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
+    .leftJoin(postTags, eq(postTags.postId, posts.id))
+    .leftJoin(tags, eq(postTags.tagId, tags.id))
+    .where(and(eq(posts.status, "published"), searchClause))
     .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
     .offset(offset)
     .limit(limit);
