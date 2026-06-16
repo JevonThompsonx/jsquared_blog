@@ -60,7 +60,9 @@ import { listAllCategoriesForBrowse, listAllTagsForBrowse } from "@/server/dal/t
 function buildSelectChain(terminal: unknown) {
   mockOrderBy.mockReturnValue(terminal);
   mockGroupBy.mockReturnValue({ orderBy: mockOrderBy });
-  mockLeftJoin.mockReturnValue({ groupBy: mockGroupBy });
+  // Each leftJoin returns a chainable that supports another leftJoin followed by
+  // groupBy — keeps the helper valid for queries with one or two leftJoins.
+  mockLeftJoin.mockReturnValue({ leftJoin: mockLeftJoin, groupBy: mockGroupBy });
   mockFrom.mockReturnValue({ leftJoin: mockLeftJoin });
   mockSelect.mockReturnValue({ from: mockFrom });
 }
@@ -134,16 +136,52 @@ describe("listAllTagsForBrowse", () => {
     expect(result).toEqual([]);
   });
 
-  it("queries with a LEFT JOIN against post_tags and a GROUP BY on the tag id", async () => {
+  it("queries with LEFT JOINs against post_tags and posts and a GROUP BY on the tag id", async () => {
     buildSelectChain([]);
 
     await listAllTagsForBrowse();
 
     expect(mockSelect).toHaveBeenCalledOnce();
     expect(mockFrom).toHaveBeenCalledOnce();
-    expect(mockLeftJoin).toHaveBeenCalledOnce();
+    expect(mockLeftJoin).toHaveBeenCalledTimes(2);
     expect(mockGroupBy).toHaveBeenCalledOnce();
     expect(mockOrderBy).toHaveBeenCalledOnce();
+  });
+
+  it("only counts published posts in the post count (excludes drafts and scheduled)", async () => {
+    const now = Date.now();
+    buildSelectChain([
+      {
+        id: "tag-1",
+        name: "Backpacking",
+        slug: "backpacking",
+        description: "Multi-day hiking stories.",
+        createdAt: now,
+        updatedAt: now,
+        postCount: 2,
+      },
+      {
+        id: "tag-2",
+        name: "Van Life",
+        slug: "van-life",
+        description: null,
+        createdAt: now,
+        updatedAt: now,
+        postCount: 0,
+      },
+    ]);
+
+    const result = await listAllTagsForBrowse();
+
+    expect(result[0]!.postCount).toBe(2);
+    expect(result[0]!.id).toBe("tag-1");
+    expect(result[1]!.postCount).toBe(0);
+
+    expect(mockLeftJoin).toHaveBeenCalledTimes(2);
+    const firstJoinTable = mockLeftJoin.mock.calls[0]?.[0] as { postId: string } | undefined;
+    const secondJoinTable = mockLeftJoin.mock.calls[1]?.[0] as { id: string } | undefined;
+    expect(firstJoinTable?.postId).toBe("post_id");
+    expect(secondJoinTable?.id).toBe("id");
   });
 });
 

@@ -239,7 +239,7 @@ export async function getTagBySlug(slug: string): Promise<TagRecord | null> {
 }
 
 export async function listPublishedPostRecordsByCategory(
-  category: string,
+  categorySlug: string,
   limit: number,
   offset = 0,
 ): Promise<PublishedPostRecord[]> {
@@ -250,19 +250,19 @@ export async function listPublishedPostRecordsByCategory(
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(mediaAssets, eq(posts.featuredImageId, mediaAssets.id))
-    .where(and(eq(posts.status, "published"), eq(categories.name, category)))
+    .where(and(eq(posts.status, "published"), eq(categories.slug, categorySlug)))
     .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
     .offset(offset)
     .limit(limit);
 }
 
-export async function countPublishedPostsByCategory(category: string): Promise<number> {
+export async function countPublishedPostsByCategory(categorySlug: string): Promise<number> {
   const db = getDb();
   const rows = await db
     .select({ n: count() })
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
-    .where(and(eq(posts.status, "published"), eq(categories.name, category)));
+    .where(and(eq(posts.status, "published"), eq(categories.slug, categorySlug)));
   return Number(rows[0]?.n ?? 0);
 }
 
