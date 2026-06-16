@@ -45,16 +45,16 @@ describe("GET /category/[category]/feed.xml", () => {
   it("trims and decodes valid category params before building the feed", async () => {
     vi.mocked(listPublishedPostsByCategory).mockResolvedValue([]);
 
-    const response = await GET(new Request("http://localhost/category/Van%20Life/feed.xml"), {
-      params: Promise.resolve({ category: "  Van%20Life  " }),
+    const response = await GET(new Request("http://localhost/category/van-life/feed.xml"), {
+      params: Promise.resolve({ category: "  van-life  " }),
     });
 
     expect(response.status).toBe(200);
-    expect(vi.mocked(listPublishedPostsByCategory)).toHaveBeenCalledWith("Van Life", 100, 0);
+    expect(vi.mocked(listPublishedPostsByCategory)).toHaveBeenCalledWith("van-life", 100, 0);
     expect(vi.mocked(buildRssXml)).toHaveBeenCalledWith(expect.objectContaining({
-      title: "Van Life - J²Adventures",
-      selfUrl: "https://jsquaredadventures.com/category/Van%20Life/feed.xml",
-      siteUrl: "https://jsquaredadventures.com/category/Van%20Life",
+      title: "van-life - J²Adventures",
+      selfUrl: "https://jsquaredadventures.com/category/van-life/feed.xml",
+      siteUrl: "https://jsquaredadventures.com/category/van-life",
     }));
   });
 });

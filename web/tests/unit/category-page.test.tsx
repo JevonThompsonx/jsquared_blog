@@ -59,27 +59,27 @@ describe("CategoryPage", () => {
   });
 
   it("keeps the route dynamic and builds encoded category metadata", async () => {
-    const metadata = await generateMetadata({ params: Promise.resolve({ category: "Van%20Life" }) });
+    const metadata = await generateMetadata({ params: Promise.resolve({ category: "van-life" }) });
 
     expect(dynamic).toBe("force-dynamic");
-    expect(metadata.title).toBe("Van Life – J²Adventures");
-    expect(metadata.alternates?.types?.["application/rss+xml"]).toBe("https://jsquaredadventures.com/category/Van%20Life/feed.xml");
+    expect(metadata.title).toBe("van-life – J²Adventures");
+    expect(metadata.alternates?.types?.["application/rss+xml"]).toBe("https://jsquaredadventures.com/category/van-life/feed.xml");
   });
 
   it("renders the category shell with the filtered feed contract", async () => {
     vi.mocked(listPublishedPostsByCategory).mockResolvedValue([categoryPost]);
     vi.mocked(countPublishedPostsByCategory).mockResolvedValue(1);
 
-    const markup = renderToStaticMarkup(await CategoryPage({ params: Promise.resolve({ category: "Van%20Life" }) }));
+    const markup = renderToStaticMarkup(await CategoryPage({ params: Promise.resolve({ category: "van-life" }) }));
 
-    expect(listPublishedPostsByCategory).toHaveBeenCalledWith("Van Life", 20, 0);
-    expect(countPublishedPostsByCategory).toHaveBeenCalledWith("Van Life");
+    expect(listPublishedPostsByCategory).toHaveBeenCalledWith("van-life", 20, 0);
+    expect(countPublishedPostsByCategory).toHaveBeenCalledWith("van-life");
     expect(markup).toContain('data-testid="site-header"');
-    expect(markup).toContain("Van Life");
+    expect(markup).toContain("van-life");
     expect(markup).toContain("1 adventure");
     expect(markup).toContain('href="/"');
     expect(markup).toContain('data-testid="filtered-feed"');
-    expect(markup).toContain('data-category="Van Life"');
+    expect(markup).toContain('data-category="van-life"');
     expect(markup).toContain("Feed posts: 1");
   });
 
