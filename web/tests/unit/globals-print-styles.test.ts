@@ -76,6 +76,50 @@ describe("globals.css print styles", () => {
     expect(printBlock).toContain("header");
     expect(printBlock).toContain("nav");
     expect(printBlock).toContain("footer");
-    expect(printBlock).toContain("button:not([data-print-show])");
+  });
+
+  it.each([
+    ["header button"],
+    ["nav button"],
+    ["footer button"],
+  ])("hides %s in print (scoped, not global)", (selector) => {
+    expect(printBlock).toContain(selector);
+  });
+
+  it("does not hide article-content buttons via a global selector", () => {
+    // The previous blanket rule `button:not([data-print-show])` would hide
+    // every button on the page, including image-zoom buttons in the post
+    // gallery. The fix scopes button-hiding to header/nav/footer only.
+    // Extract selector lists (text before each `{`) and check that no list
+    // starts with the bare `button` selector (it should always be prefixed
+    // by a parent like `header`, `nav`, or `footer`).
+    const selectorLists = printBlock
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("}")
+      .map((chunk) => chunk.split("{")[0]?.trim() ?? "")
+      .filter((list) => list.length > 0);
+
+    for (const selectorList of selectorLists) {
+      const selectors = selectorList.split(",").map((s) => s.trim());
+      for (const selector of selectors) {
+        expect(selector, `selector "${selector}" hides article-content buttons globally`).not.toMatch(
+          /^button\s*:\s*not\(\[data-print-show\]\)$/,
+        );
+      }
+    }
+  });
+
+  it("preserves [data-print-show] as an opt-in for showing a button in chrome areas", () => {
+    // The data-print-show attribute remains a valid escape hatch: any button
+    // marked with it in header/nav/footer should be shown. (CSS allows the
+    // attribute to override the scoped hide rule via specificity.)
+    expect(printBlock).toMatch(/\[data-print-show\]/);
+  });
+
+  it("does not target article-content elements for hiding", () => {
+    // No rule should match `article button`, `.prose-content button`, or
+    // any post-body selector with `display: none`.
+    expect(printBlock).not.toMatch(/article\s+button\s*\{[^}]*display\s*:\s*none/);
+    expect(printBlock).not.toMatch(/\.prose-content\s+button\s*\{[^}]*display\s*:\s*none/);
   });
 });

@@ -1300,7 +1300,10 @@ a {
 
 /* ─── Print styles ────────────────────────────────────────────────── */
 @media print {
-  /* Hide navigation, interactive chrome, and non-content sections */
+  /* Hide navigation, interactive chrome, and non-content sections.
+     Buttons are scoped to header/nav/footer only — the previous blanket
+     rule (hiding every button on the page) was also hiding image-zoom
+     buttons and other interactive elements inside article body. */
   header,
   nav,
   footer,
@@ -1327,8 +1330,18 @@ a {
   /* Map and other non-print embeds */
   .post-map,
   /* Allow opt-in for individual elements via [data-print-hide] */
-  [data-print-hide],
-  button:not([data-print-show]) {
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* Hide interactive buttons in chrome (header, nav, footer) only.
+     [data-print-show] is the escape hatch for showing a specific
+     button in a chrome area. Article-body buttons (e.g. the post
+     gallery's image-zoom buttons) are left visible so the image
+     content prints. */
+  header button:not([data-print-show]),
+  nav button:not([data-print-show]),
+  footer button:not([data-print-show]) {
     display: none !important;
   }
 
