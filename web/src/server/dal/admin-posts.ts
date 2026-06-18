@@ -3,7 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { categories, mediaAssets, postImages, postTags, posts, series, tags } from "@/drizzle/schema";
+import { categories, comments, mediaAssets, postBookmarks, postImages, postTags, posts, series, tags } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
 import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 import { hasPostViewCountColumn } from "@/server/dal/posts";
@@ -36,6 +36,8 @@ export type AdminPostRecord = {
   publishedAt: Date | null;
   scheduledPublishTime: Date | null;
   viewCount: number;
+  commentCount: number;
+  bookmarkCount: number;
 };
 
 export type AdminEditablePostRecord = AdminPostRecord & {
@@ -174,6 +176,8 @@ export async function listAdminPostRecords(rawFilters?: Partial<AdminPostListFil
         publishedAt: posts.publishedAt,
         scheduledPublishTime: posts.scheduledPublishTime,
         viewCount: getAdminViewCountSelection(hasViewCount),
+        commentCount: sql<number>`(select count(*) from ${comments} where ${comments.postId} = ${posts.id})`,
+        bookmarkCount: sql<number>`(select count(*) from ${postBookmarks} where ${postBookmarks.postId} = ${posts.id})`,
       })
       .from(posts)
       .leftJoin(categories, eq(posts.categoryId, categories.id))
