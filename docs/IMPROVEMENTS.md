@@ -34,12 +34,12 @@ Many items in this backlog have been organized into the 10-branch implementation
 - **Action:** Test against `@typescript/native-preview`; switch once stable.
 - **Effort:** Medium (need to validate all build tooling)
 
-### M4. Add a separate `lint:fix` script
+### [x] M4. Add a separate `lint:fix` script
 - **Why:** Currently only `pnpm run lint` exists. Some projects benefit from a `lint:fix` script that runs `eslint --fix`.
 - **Action:** Add `web/package.json` script and document in SETUP.md.
 - **Effort:** Trivial
 
-### M5. Add a `test:watch` script
+### [x] M5. Add a `test:watch` script
 - **Why:** Currently `vitest` runs once. Devs iterating on tests benefit from watch mode.
 - **Action:** Add `vitest` (no `run`) as `test:watch` in `web/package.json`.
 - **Effort:** Trivial
@@ -53,12 +53,12 @@ Many items in this backlog have been organized into the 10-branch implementation
 
 ## Security
 
-### S1. Add `web/.env.test.local` to repo as `web/.env.test.example`
+### [x] S1. Add `web/.env.test.local` to repo as `web/.env.test.example`
 - **Why:** Test env file is generated ad-hoc. A checked-in example would let new contributors run tests without reading README.
 - **Action:** Add example file with dummy values matching what the Zod schema accepts.
 - **Effort:** Low
 
-### S2. Add Sentry release tagging in CI
+### [x] S2. Add Sentry release tagging in CI
 - **Why:** Sentry source maps are uploaded during build, but releases aren't tagged with git SHAs, so stack traces can't be linked to commits.
 - **Action:** Set `SENTRY_RELEASE=${{ github.sha }}` in build env. Use `Sentry-Auth` header or CLI `--release` flag.
 - **Effort:** Low
@@ -68,7 +68,7 @@ Many items in this backlog have been organized into the 10-branch implementation
 - **Action:** Add a unit test that asserts production-mode missing Upstash throws at module load.
 - **Effort:** Low
 
-### S4. Audit admin auth — GitHub ID allowlist ergonomics
+### [x] S4. Audit admin auth — GitHub ID allowlist ergonomics
 - **Why:** `AUTH_ADMIN_GITHUB_IDS` is a comma-separated string. Easy to typo. Consider a Zod-validated array schema (with splitting transform) so invalid IDs fail at boot.
 - **Action:** Add Zod transform; surface clear error if a non-numeric ID is present.
 - **Effort:** Low
@@ -227,12 +227,12 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
 - **Action:** Add CHANGELOG, follow Keep a Changelog format.
 - **Effort:** Low (one-time), Medium (ongoing)
 
-### D2. Document `testImages/` and `test-api.sh`
+### [x] D2. Document `testImages/` and `test-api.sh`
 - **Why:** Both are committed but undocumented.
 - **Action:** Mention them in README. If `test-api.sh` is obsolete, archive it.
 - **Effort:** Trivial
 
-### D3. Add a `docs/STYLEGUIDE.md`
+### [x] D3. Add a `docs/STYLEGUIDE.md`
 - **Why:** Lots of design decisions are scattered. A single design source of truth would help.
 - **Action:** Extract design tokens (colors, spacing) and component patterns into one doc.
 - **Effort:** Medium
@@ -269,7 +269,7 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
 - **Action:** Configure Vercel to comment with preview URL on PRs.
 - **Effort:** Trivial (Vercel dashboard config)
 
-### O5. Dependabot auto-merge
+### [x] O5. Dependabot auto-merge
 - **Why:** Dependabot minor/patch PRs are noisy once you have CI green. Auto-merge once CI passes.
 - **Action:** Add `gh pr merge --auto` bot or configure Dependabot `auto-merge` option in `.github/dependabot.yml`.
 - **Effort:** Low
