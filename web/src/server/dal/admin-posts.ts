@@ -261,6 +261,8 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
       songTitle: caps.songTitle ? posts.songTitle : sql<null>`null`,
       songArtist: caps.songArtist ? posts.songArtist : sql<null>`null`,
       songUrl: caps.songUrl ? posts.songUrl : sql<null>`null`,
+      commentCount: sql<number>`(select count(*) from ${comments} where ${comments.postId} = ${posts.id})`,
+      bookmarkCount: sql<number>`(select count(*) from ${postBookmarks} where ${postBookmarks.postId} = ${posts.id})`,
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -325,6 +327,8 @@ export async function getAdminEditablePostById(postId: string): Promise<AdminEdi
     tags: postTagRows,
     galleryImages: galleryRows,
     links: linkRows.map((l) => ({ id: l.id, label: l.label, url: l.url, sortOrder: l.sortOrder })),
+    commentCount: post.commentCount,
+    bookmarkCount: post.bookmarkCount,
   };
 }
 

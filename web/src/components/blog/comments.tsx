@@ -565,7 +565,7 @@ export function Comments({ postId }: { postId: string }) {
                   onReply={setReplyingTo}
                   onReplyContentChange={setReplyContent}
                   onSubmitReply={(parentId) => void handleSubmitReply(parentId)}
-                  repliedTo={reply.repliedTo}
+                  repliedTo={thread.authorDisplayName}
                   replyContent={replyContent}
                   replyingTo={replyingTo}
                   submittingReply={submittingReply}
