@@ -1,7 +1,9 @@
+import withBundleAnalyzer from "@next/bundle-analyzer";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
+const bundleAnalyzer = withBundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
 
 // 6.S.1: CSP is now set dynamically per-request by proxy.ts (with a per-request nonce).
 // next.config.ts only sets the remaining non-CSP security headers.
@@ -115,7 +117,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+export default bundleAnalyzer(withSentryConfig(nextConfig, {
   org: "jsquared-vf",
   project: "jsquaredblog",
 
@@ -140,4 +142,4 @@ export default withSentryConfig(nextConfig, {
     // Automatically instrument supported server functions in webpack builds.
     autoInstrumentServerFunctions: true,
   },
-});
+}));
