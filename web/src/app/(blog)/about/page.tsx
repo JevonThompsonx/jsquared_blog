@@ -15,7 +15,8 @@ type SocialLink = {
   href: string;
 };
 
-// TODO: replace placeholder URLs with the real J²Adventures social profiles.
+// Social profile links — update these with the real J²Adventures profiles
+// when the accounts are created or verified.
 const socialLinks: SocialLink[] = [
   {
     label: "Instagram",
