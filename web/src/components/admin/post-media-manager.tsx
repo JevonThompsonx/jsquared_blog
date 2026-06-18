@@ -418,6 +418,41 @@ export function PostMediaManager({
                       value={entry.altText}
                     />
                   </label>
+                  <div>
+                    <p className="text-sm text-[var(--text-secondary)] mb-2">
+                      Focal point: {entry.focalX}%, {entry.focalY}%
+                    </p>
+                    <div
+                      className="relative h-40 w-full cursor-crosshair overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card-bg)]"
+                      data-testid="focal-point-preview"
+                      onClick={(event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        const x = Math.round(((event.clientX - rect.left) / rect.width) * 100);
+                        const y = Math.round(((event.clientY - rect.top) / rect.height) * 100);
+                        updateGalleryEntry(index, {
+                          focalX: Math.max(0, Math.min(100, x)),
+                          focalY: Math.max(0, Math.min(100, y)),
+                        });
+                      }}
+                    >
+                      <img
+                        alt={entry.altText || `Gallery image ${index + 1}`}
+                        className="h-full w-full object-cover"
+                        src={entry.imageUrl}
+                        style={{ objectPosition: objectPositionFromFocalPoint(entry.focalX, entry.focalY) }}
+                      />
+                      {/* Focal point crosshair indicator */}
+                      <div
+                        className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
+                        data-testid="focal-point-marker"
+                        style={{
+                          left: `${entry.focalX}%`,
+                          top: `${entry.focalY}%`,
+                          backgroundColor: "var(--primary)",
+                        }}
+                      />
+                    </div>
+                  </div>
                   <div className="grid gap-3 lg:grid-cols-2">
                     <label className="block text-sm text-[var(--text-secondary)]">
                       Focal X: {entry.focalX}%
