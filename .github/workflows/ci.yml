@@ -26,6 +26,7 @@ env:
   NEXT_PUBLIC_SUPABASE_ANON_KEY: test-key
   NEXT_PUBLIC_SITE_URL: http://localhost:3000
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  SENTRY_RELEASE: ${{ github.sha }}
 
 jobs:
   lint:
