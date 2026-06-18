@@ -133,6 +133,11 @@ This is project-specific (not global opencode config) and is the canonical refer
 - Client components → API routes
 - Server Actions → `"use server"` + Zod validation at trust boundary
 
+### Scope Constraints (DO NOT propose)
+
+- **No social media integrations or features.** Do not suggest adding social media share buttons, follow widgets, social login, social feed embeds, social metadata optimization, or any feature whose primary purpose is driving social media engagement. The blog is a content platform, not a social media funnel. If a task touches social media in any way, confirm with the user before proceeding.
+- **No dark patterns or growth hacks.** No forced signups, no email gates, no "viral" mechanics.
+
 ### Failure Triggers (STOP immediately)
 1. New info contradicts plan → re-plan
 2. Verification fails → diagnose root cause, fix, re-run ALL
