@@ -617,6 +617,8 @@ export function AdminDashboard({
                             </span>
                           ) : null}
                           <span>{post.viewCount} views</span>
+                          <span>{post.commentCount} comments</span>
+                          <span>{post.bookmarkCount} bookmarks</span>
                           </div>
                         </div>
                         <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end pt-3 xl:pt-0">
