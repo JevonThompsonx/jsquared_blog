@@ -69,7 +69,7 @@ export function SignupForm() {
   if (done) {
     return (
       <div className="w-full max-w-sm">
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-8 shadow-xl text-center">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl text-center sm:p-8">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] text-xl">
             ✓
           </div>
@@ -90,7 +90,7 @@ export function SignupForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-8 shadow-xl">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl sm:p-8">
         <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Create an account</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
           Join the conversation — sign up with your email.

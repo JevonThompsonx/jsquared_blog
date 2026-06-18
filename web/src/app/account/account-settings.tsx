@@ -502,10 +502,10 @@ export function AccountSettings() {
 
   return (
     <div>
-      <h1 className="mb-8 text-3xl font-bold text-[var(--text-primary)]">Account Settings</h1>
+      <h1 className="mb-8 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Account Settings</h1>
 
       {/* Profile */}
-      <section className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-sm">
+      <section className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-sm sm:p-6">
         <h2 className="mb-6 text-xl font-semibold text-[var(--text-primary)]">Profile</h2>
 
         {/* Avatar preview */}
@@ -522,7 +522,7 @@ export function AccountSettings() {
           <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="displayName">
             Display name
           </label>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <input
               className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               id="displayName"
@@ -591,7 +591,7 @@ export function AccountSettings() {
             <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]" htmlFor="avatarUrl">
               Or paste an image URL
             </label>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <input
                 className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 id="avatarUrl"
