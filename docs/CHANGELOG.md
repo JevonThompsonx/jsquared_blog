@@ -6,6 +6,97 @@
 
 ---
 
+## [0.5.0] — 2026-06-18
+
+### Branches: `chore/trivial-dev-scripts`, `chore/env-and-style-docs`, `chore/sentry-release-ci`, `chore/github-id-zod-validation`, `chore/dependabot-automerge`, `chore/e2e-in-ci`, `feat/map-wishlist-overlay`, `feat/image-focal-point-ui`, `feat/comment-threading-cap`, `feat/admin-metrics-and-preview`, `feat/responsive-account-auth`, `feat/bundle-analysis`, `feat/about-page-and-pwa`, `docs/backlog-update`
+
+Backlog sprint: 14 branches covering 20 backlog items (M4, M5, D2, S1, D3, S2, S4, O5, O2, F6, F7, F4, F11, R3, R4, P2, D1, D4, F2) plus inline TODOs. Each branch developed and verified independently with tests, typecheck, and lint gates.
+
+#### Branch: `chore/trivial-dev-scripts` (Batch 1)
+
+- **Added** `lint:fix` script (`eslint . --fix`) to `web/package.json`
+- **Added** `test:watch` script (`vitest`) to `web/package.json`
+- **Removed** legacy `test-api.sh` smoke test (superseded by Playwright E2E)
+- **Updated** README.md project structure to remove test-api.sh reference
+
+#### Branch: `chore/env-and-style-docs` (Batch 2)
+
+- **Added** `web/.env.test.example` with dummy values for unit tests
+- **Added** `.env.test.example` to `.gitignore` exception list
+- **Updated** README.md to reference example file instead of inline code block
+- **Added** `docs/STYLEGUIDE.md` with design tokens, component patterns, and conventions
+
+#### Branch: `chore/sentry-release-ci` (Batch 3)
+
+- **Added** `SENTRY_RELEASE: ${{ github.sha }}` env var to CI workflow for Sentry release tagging
+
+#### Branch: `chore/github-id-zod-validation` (Batch 4)
+
+- **Changed** `AUTH_ADMIN_GITHUB_IDS` validation from `z.string().optional()` to a Zod transform that splits comma-separated IDs, validates numeric-only, and throws clear errors for non-numeric IDs
+- **Added** 3 unit tests for the validation transform
+
+#### Branch: `chore/dependabot-automerge` (Batch 5)
+
+- **Added** `.github/workflows/dependabot-automerge.yml` to auto-merge minor/patch Dependabot PRs after CI passes
+
+#### Branch: `chore/e2e-in-ci` (Batch 6)
+
+- **Added** E2E test job to CI workflow (4th parallel job)
+- Playwright installs Chromium and runs `pnpm run test:e2e`
+
+#### Branch: `feat/map-wishlist-overlay` (Batch 7)
+
+- **Added** `?show=wishlist` query param to `/map` page
+- **Added** wishlist places overlay on map with different pin color (#c27a3a)
+- **Added** toggle button to switch between "Posts only" and "Posts + Wishlist"
+- **Updated** map page tests for new searchParams prop
+
+#### Branch: `feat/image-focal-point-ui` (Batch 8)
+
+- **Added** clickable image preview for focal point setting in admin media manager
+- Click on image calculates relative x/y (0-100 range)
+- Crosshair indicator shows current focal point position
+- Range sliders kept as fallback for precise adjustment
+
+#### Branch: `feat/comment-threading-cap` (Batch 9)
+
+- **Changed** comment visual nesting to cap at depth 3
+- Replies beyond depth 3 are flattened to depth 3 level
+- **Added** "replied to @author" label for flattened deep replies
+- Data model unchanged (unlimited nesting preserved)
+
+#### Branch: `feat/admin-metrics-and-preview` (Batch 10)
+
+- **Added** `commentCount` and `bookmarkCount` to `AdminPostRecord` type
+- **Added** subqueries to fetch comment and bookmark counts in admin post list
+- **Added** view, comment, and bookmark count display per post in admin dashboard
+
+#### Branch: `feat/responsive-account-auth` (Batch 11)
+
+- **Changed** account settings heading from `text-3xl` to `text-2xl` on mobile
+- **Changed** account settings card padding from `p-6` to `p-4` on mobile
+- **Changed** account settings form rows to stack vertically on mobile
+- **Changed** login form card padding from `p-8` to `p-6` on mobile
+- **Changed** signup form card padding from `p-8` to `p-6` on mobile
+
+#### Branch: `feat/bundle-analysis` (Batch 12)
+
+- **Added** `@next/bundle-analyzer` as dev dependency
+- **Added** bundle analyzer wrapper to `next.config.ts` (enabled via `ANALYZE=true`)
+- **Added** `build:analyze` script to `web/package.json`
+
+#### Branch: `feat/about-page-and-pwa` (Batch 13)
+
+- **Updated** about page social links comment from TODO to descriptive note
+- **Added** `web/public/README.md` with PWA icon and screenshot instructions
+
+#### Branch: `docs/backlog-update` (Batch 14)
+
+- **Verified** and marked D1 (CHANGELOG.md exists), D4 (responsive plan cross-reference), F2 (RSS feeds exist) as done
+- **Updated** IMPROVEMENTS.md last updated date to 2026-06-18
+
+---
+
 ## [0.4.6] — 2026-06-15
 
 ### Branches: `fix/branch-4-taxonomy-queries`, `fix/branch-2-backtop-a11y`, `fix/branch-7-search-perf`, `fix/branch-10-print-scope`, `fix/branch-5-tags-admin-error`, `fix/branch-9-orphan-cleanup`, `fix/homepage-footer-spacing`, `fix/branch-6-revision-race`, `fix/concerns-phase1-phase2`
