@@ -1,7 +1,7 @@
 # Improvement & Feature Backlog
 
 **Created:** 2026-06-15
-**Last updated:** 2026-06-15
+**Last updated:** 2026-06-18
 **Status:** Project is at a stable place; this is the prioritized backlog of future work.
 
 > **⚠️ This document is the high-level backlog. For active branch tracking, see [`docs/ROADMAP.md`](ROADMAP.md) and [`docs/branches/`](branches/).**
@@ -116,7 +116,7 @@ Many items in this backlog have been organized into the 10-branch implementation
 - **Action:** Either: (a) SQLite FTS5 in Turso, (b) embed-based semantic search via OpenAI/Cohere + Upstash Vector. (a) is simpler.
 - **Effort:** Medium–High
 
-### F2. RSS feed per category / per tag
+### [x] F2. RSS feed per category / per tag
 - **Why:** Master feed exists at `/feed.xml`. Per-category RSS would help power-users follow only the trips they care about.
 - **Action:** Add `category/[category]/feed.xml` and `tag/[slug]/feed.xml` route handlers.
 - **Effort:** Low
@@ -222,7 +222,7 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
 
 ## Documentation
 
-### D1. Add a `docs/CHANGELOG.md`
+### [x] D1. Add a `docs/CHANGELOG.md`
 - **Why:** Releases aren't tracked. Useful for migration notes.
 - **Action:** Add CHANGELOG, follow Keep a Changelog format.
 - **Effort:** Low (one-time), Medium (ongoing)
@@ -237,7 +237,7 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
 - **Action:** Extract design tokens (colors, spacing) and component patterns into one doc.
 - **Effort:** Medium
 
-### D4. Document the responsive plan in this backlog
+### [x] D4. Document the responsive plan in this backlog
 - **Why:** `responsive-design-plan.md` duplicates the R1–R7 list above.
 - **Action:** Add a pointer at the top of `responsive-design-plan.md` to this section.
 - **Effort:** Trivial
