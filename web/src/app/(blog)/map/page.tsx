@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { WorldMap } from "@/components/blog/world-map";
 import { getPublicEnv } from "@/lib/env";
 import { listAllPublishedPosts } from "@/server/queries/posts";
+import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 import type { BlogPost } from "@/types/blog";
 
 export const metadata: Metadata = {
@@ -17,7 +18,9 @@ function hasMapCoordinates(post: { locationLat: number | null; locationLng: numb
   return post.locationLat !== null && post.locationLng !== null;
 }
 
-export default async function MapPage() {
+export default async function MapPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
+  const { show } = await searchParams;
+  const showWishlist = show === "wishlist";
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   let allPosts: BlogPost[] = [];
   let mapLoadFailed = false;
@@ -29,12 +32,24 @@ export default async function MapPage() {
     console.error("[map] Failed to load published posts");
   }
 
+  let wishlistPlaces: Awaited<ReturnType<typeof listPublicWishlistPlaces>> = [];
+  if (showWishlist) {
+    try {
+      wishlistPlaces = await listPublicWishlistPlaces();
+    } catch {
+      console.error("[map] Failed to load wishlist places");
+    }
+  }
+
   const mappedCount = allPosts.filter(hasMapCoordinates).length;
+  const wishlistCount = wishlistPlaces.filter((p) => p.locationLat !== null && p.locationLng !== null).length;
   const summary = mapLoadFailed
     ? "Story locations are temporarily unavailable."
-    : mappedCount > 0
-      ? `${mappedCount} ${mappedCount === 1 ? "story" : "stories"} pinned to the map.`
-      : "Stories will appear here as locations are added.";
+    : showWishlist
+      ? `${mappedCount} stories + ${wishlistCount} wishlist places on the map.`
+      : mappedCount > 0
+        ? `${mappedCount} ${mappedCount === 1 ? "story" : "stories"} pinned to the map.`
+        : "Stories will appear here as locations are added.";
 
   return (
     <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
@@ -51,7 +66,7 @@ export default async function MapPage() {
         {/* Map + category filter + post list */}
         {NEXT_PUBLIC_STADIA_MAPS_API_KEY && !mapLoadFailed ? (
           <div aria-label="Explore posts by location" role="region">
-            <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={allPosts} />
+            <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={allPosts} wishlistPlaces={showWishlist ? wishlistPlaces : []} />
           </div>
         ) : (
           <div className="flex h-64 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] text-sm text-[var(--text-secondary)]">

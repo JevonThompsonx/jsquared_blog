@@ -72,7 +72,7 @@ describe("MapPage", () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: undefined });
     mockedListAllPublishedPosts.mockResolvedValue([]);
 
-    const markup = renderToStaticMarkup(await MapPage());
+    const markup = renderToStaticMarkup(await MapPage({ searchParams: Promise.resolve({}) }));
 
     expect(markup).toContain('data-testid="site-header"');
     expect(markup).toContain("Stories will appear here as locations are added.");
@@ -85,7 +85,7 @@ describe("MapPage", () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
     mockedListAllPublishedPosts.mockResolvedValue([mappedPost, unmappedPost]);
 
-    const markup = renderToStaticMarkup(await MapPage());
+    const markup = renderToStaticMarkup(await MapPage({ searchParams: Promise.resolve({}) }));
 
     expect(markup).toContain("1 story pinned to the map.");
     expect(markup).toContain('data-testid="world-map"');
@@ -105,7 +105,7 @@ describe("MapPage", () => {
       },
     ]);
     
-    const markup = renderToStaticMarkup(await MapPage());
+    const markup = renderToStaticMarkup(await MapPage({ searchParams: Promise.resolve({}) }));
 
     expect(markup).toContain("Stories will appear here as locations are added.");
     expect(markup).toContain("Map unavailable");
@@ -115,7 +115,7 @@ describe("MapPage", () => {
     mockedGetPublicEnv.mockReturnValue({ NEXT_PUBLIC_STADIA_MAPS_API_KEY: "test-map-key" });
     mockedListAllPublishedPosts.mockRejectedValue(new Error("database unavailable"));
 
-    const markup = renderToStaticMarkup(await MapPage());
+    const markup = renderToStaticMarkup(await MapPage({ searchParams: Promise.resolve({}) }));
 
     expect(markup).toContain('data-testid="site-header"');
     expect(markup).toContain("Adventure Map");
