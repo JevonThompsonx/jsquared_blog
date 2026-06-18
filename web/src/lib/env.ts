@@ -46,7 +46,15 @@ const serverEnvSchema = z.object({
   AUTH_SECRET: z.string().min(32, "must be at least 32 characters (run: openssl rand -base64 32)"),
   AUTH_GITHUB_ID: z.string().min(1, "required"),
   AUTH_GITHUB_SECRET: z.string().min(1, "required"),
-  AUTH_ADMIN_GITHUB_IDS: z.string().optional(),
+  AUTH_ADMIN_GITHUB_IDS: z.string().optional().transform((val) => {
+    if (!val) return undefined;
+    const ids = val.split(",").map((s) => s.trim()).filter(Boolean);
+    const invalid = ids.filter((id) => !/^\d+$/.test(id));
+    if (invalid.length > 0) {
+      throw new Error(`AUTH_ADMIN_GITHUB_IDS contains non-numeric IDs: ${invalid.join(", ")}`);
+    }
+    return ids.join(",");
+  }),
   CLOUDINARY_CLOUD_NAME: z.string().min(1, "required"),
   CLOUDINARY_API_KEY: z.string().min(1, "required"),
   CLOUDINARY_API_SECRET: z.string().min(1, "required"),
