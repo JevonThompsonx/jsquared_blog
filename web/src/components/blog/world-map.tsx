@@ -36,6 +36,19 @@ type WorldMapProps = {
   posts: MapPost[];
   apiKey: string;
   showPostList?: boolean;
+  wishlistPlaces?: WishlistPlace[];
+};
+
+type WishlistPlace = {
+  id: string;
+  name: string;
+  locationName: string | null;
+  locationLat: number;
+  locationLng: number;
+  description: string | null;
+  imageUrl: string | null;
+  externalUrl: string | null;
+  visited: boolean;
 };
 
 type MappablePost = MapPost & { locationLat: number; locationLng: number };
@@ -72,19 +85,21 @@ const CLUSTER_SMALL = "#5a8a69";
 const CLUSTER_MEDIUM = "#3d6b52";
 const CLUSTER_LARGE = "#2d5240";
 const PIN_COLOR = "#4a7c59";
+const WISHLIST_PIN_COLOR = "#c27a3a";
 
 // Type guard: confirms a map source is a GeoJSONSource with cluster methods
 function isGeoJSONSource(source: unknown): source is GeoJSONSource {
   return typeof source === "object" && source !== null && "getClusterExpansionZoom" in source;
 }
 
-export function WorldMap({ posts, apiKey, showPostList = true }: WorldMapProps) {
+export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = [] }: WorldMapProps) {
   const mapRef = useRef<MapRef>(null);
   const mapStyle = `https://tiles.stadiamaps.com/styles/outdoors.json?api_key=${apiKey}`;
 
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activePin, setActivePin] = useState<ActivePin | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [showWishlistLayer, setShowWishlistLayer] = useState(false);
 
   // Posts that have coordinates
   const allMappable = useMemo(
@@ -112,6 +127,36 @@ export function WorldMap({ posts, apiKey, showPostList = true }: WorldMapProps) 
         ? allMappable
         : allMappable.filter((p) => p.category === activeCategory),
     [allMappable, activeCategory],
+  );
+
+  // Wishlist places with coordinates
+  const mappableWishlist = useMemo(
+    () => wishlistPlaces.filter((p) => p.locationLat !== null && p.locationLng !== null),
+    [wishlistPlaces],
+  );
+
+  // Wishlist GeoJSON
+  const wishlistGeojson = useMemo(
+    () => ({
+      type: "FeatureCollection" as const,
+      features: mappableWishlist.map((p) => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [p.locationLng, p.locationLat],
+        },
+        properties: {
+          id: p.id,
+          title: p.name,
+          locationName: p.locationName,
+          description: p.description,
+          imageUrl: p.imageUrl,
+          externalUrl: p.externalUrl,
+          visited: p.visited,
+        },
+      })),
+    }),
+    [mappableWishlist],
   );
 
   // GeoJSON FeatureCollection fed to the MapLibre clustering source
@@ -198,6 +243,25 @@ export function WorldMap({ posts, apiKey, showPostList = true }: WorldMapProps) 
 
   return (
     <div className="world-map-container">
+      {/* Wishlist toggle — only shown when wishlist places exist */}
+      {mappableWishlist.length > 0 ? (
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+              showWishlistLayer
+                ? "bg-[#c27a3a] text-white"
+                : "border border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)]"
+            }`}
+            onClick={() => {
+              setShowWishlistLayer(!showWishlistLayer);
+              setActivePin(null);
+            }}
+          >
+            {showWishlistLayer ? "Posts only" : `Posts + Wishlist (${mappableWishlist.length})`}
+          </button>
+        </div>
+      ) : null}
+
       {/* Category filter pills — only shown when 2+ categories exist */}
       {categories.length > 1 ? (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -313,6 +377,26 @@ export function WorldMap({ posts, apiKey, showPostList = true }: WorldMapProps) 
               }}
             />
           </Source>
+
+          {/* Wishlist layer — separate source with different pin color */}
+          {showWishlistLayer && mappableWishlist.length > 0 ? (
+            <Source
+              id="wishlist"
+              type="geojson"
+              data={wishlistGeojson}
+            >
+              <Layer
+                id="wishlist-points"
+                type="circle"
+                paint={{
+                  "circle-color": WISHLIST_PIN_COLOR,
+                  "circle-radius": 7,
+                  "circle-stroke-color": "#ffffff",
+                  "circle-stroke-width": 2,
+                }}
+              />
+            </Source>
+          ) : null}
 
           {activePin ? (
             <Popup
