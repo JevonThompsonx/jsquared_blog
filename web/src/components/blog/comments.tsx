@@ -51,7 +51,9 @@ const commentsResponseSchema = z.object({
   comments: z.array(postCommentSchema).optional(),
 });
 
-type CommentThread = PostComment & { replies: PostComment[] };
+type CommentThread = PostComment & { replies: PostComment[]; depth?: number; repliedTo?: string };
+
+const MAX_VISUAL_DEPTH = 3;
 
 function buildThreads(flat: PostComment[], sortBy: CommentSortOption): CommentThread[] {
   const visibleFlat = flat.filter((c) => c.visibility === "visible" || c.visibility === "hidden");
@@ -66,8 +68,8 @@ function buildThreads(flat: PostComment[], sortBy: CommentSortOption): CommentTh
   }
 
   // Sort replies oldest-first always — create sorted copies in place
-  for (const [parentId, replies] of replyMap) {
-    replyMap.set(parentId, [...replies].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
+  for (const [, replies] of replyMap) {
+    replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }
 
   // Sort top-level by the selected option
@@ -83,7 +85,37 @@ function buildThreads(flat: PostComment[], sortBy: CommentSortOption): CommentTh
     sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  return sorted.map((c) => ({ ...c, replies: replyMap.get(c.id) ?? [] }));
+  // Build depth-capped threads: replies beyond MAX_VISUAL_DEPTH are flattened to depth 3
+  function buildThread(comment: PostComment, depth: number, repliedToAuthor: string | null): CommentThread {
+    const directReplies = replyMap.get(comment.id) ?? [];
+    const childThreads: CommentThread[] = [];
+    const overflowReplies: PostComment[] = [];
+
+    for (const reply of directReplies) {
+      if (depth >= MAX_VISUAL_DEPTH) {
+        // At max depth — flatten: this reply and all its descendants appear at this level
+        overflowReplies.push(reply);
+      } else {
+        childThreads.push(buildThread(reply, depth + 1, comment.authorDisplayName));
+      }
+    }
+
+    // Overflow replies get a "replied to" label and are flattened
+    const flattenedOverflow: CommentThread[] = overflowReplies.map((r) => ({
+      ...r,
+      replies: [],
+      depth: MAX_VISUAL_DEPTH,
+      repliedTo: repliedToAuthor ?? comment.authorDisplayName,
+    }));
+
+    return {
+      ...comment,
+      depth,
+      replies: [...childThreads, ...flattenedOverflow],
+    };
+  }
+
+  return sorted.map((c) => buildThread(c, 0, null));
 }
 
 function CommentCard({
@@ -98,6 +130,7 @@ function CommentCard({
   onReplyContentChange,
   onSubmitReply,
   submittingReply,
+  repliedTo,
 }: {
   comment: PostComment;
   isReply: boolean;
@@ -110,6 +143,7 @@ function CommentCard({
   onReplyContentChange: (val: string) => void;
   onSubmitReply: (parentId: string) => void;
   submittingReply: boolean;
+  repliedTo?: string;
 }) {
   const isOpen = replyingTo === comment.id;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -132,6 +166,11 @@ function CommentCard({
             <Link className="font-semibold text-[var(--text-primary)] hover:text-[var(--accent)] hover:underline" href={getAuthorHref(comment.authorId)}>
               {comment.authorDisplayName}
             </Link>
+            {repliedTo ? (
+              <span className="text-[var(--text-secondary)]">
+                replied to <span className="font-medium text-[var(--text-primary)]">{repliedTo}</span>
+              </span>
+            ) : null}
             <span className="text-[var(--text-secondary)]">{formatCommentDate(comment.createdAt)}</span>
             {isHidden && (
               <span className="rounded-full bg-[var(--color-warning-soft-bg)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning-text)] border border-[var(--color-warning-soft-border)]">
@@ -526,6 +565,7 @@ export function Comments({ postId }: { postId: string }) {
                   onReply={setReplyingTo}
                   onReplyContentChange={setReplyContent}
                   onSubmitReply={(parentId) => void handleSubmitReply(parentId)}
+                  repliedTo={reply.repliedTo}
                   replyContent={replyContent}
                   replyingTo={replyingTo}
                   submittingReply={submittingReply}
