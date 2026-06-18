@@ -34,8 +34,7 @@ jsquared_blog/
 ├── web/             # Active Next.js application
 ├── docs/            # Plans, handoffs, deployment, workflow notes
 ├── testImages/      # Test image fixtures
-├── .sentryclirc     # Sentry CLI org/project config
-└── test-api.sh      # Quick smoke test script
+└── .sentryclirc     # Sentry CLI org/project config
 ```
 
 ---
@@ -233,10 +232,10 @@ pnpm run e2e:capture-public-state
 pnpm run seed:e2e
 
 # Content helpers
-pnpm run seed:wishlist                    # Seed example wishlist destinations
-pnpm run ./scripts/seed-series-categories.ts
-pnpm run ./scripts/seed-rich-content.ts
-pnpm run ./scripts/seed-locations.ts
+pnpm run seed:wishlist                                # Seed example wishlist destinations
+pnpm exec tsx ./scripts/seed-series-categories.ts     # Seed series/categories
+pnpm exec tsx ./scripts/seed-rich-content.ts          # Seed sample rich content
+pnpm exec tsx ./scripts/seed-locations.ts             # Seed location metadata
 ```
 
 ---
@@ -277,6 +276,8 @@ pnpm run ./scripts/seed-rich-content.ts
 - `comment_likes` - Comment likes (one per user)
 - `post_bookmarks` - Saved posts per public user
 - `categories`, `tags`, `post_tags` - Taxonomy
+- `wishlist_places` - Travel wishlist entries with location data
+- `sessions` - (managed by Auth.js/Turso adapter)
 
 ---
 
