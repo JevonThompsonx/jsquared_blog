@@ -1,6 +1,6 @@
 # J2 Adventures Architecture
 
-**Last Updated:** 2026-05-25
+**Last Updated:** 2026-06-18
 
 ## System Architecture Overview
 
@@ -265,16 +265,22 @@ wishlist_places --1:1--> posts (linkedPostId)
 | `/route-planner` | RSC | Route planner with wishlist stops |
 | `/category/[category]` | RSC | Category feed |
 | `/tag/[slug]` | RSC | Tag feed |
+| `/tags` | RSC | All tags browse page |
+| `/categories` | RSC | All categories browse page |
 | `/series/[slug]` | RSC | Series detail |
 | `/bookmarks` | RSC | Signed-in user's saved posts |
 | `/account` | RSC | Account settings page |
 | `/settings` | RSC | Theme/settings page |
 | `/login` | RSC | Public auth login |
 | `/signup` | RSC | Public auth signup |
+| `/search` | RSC | Search results page |
+| `/about` | RSC | About page |
+| `/accessibility` | RSC | Accessibility statement |
 | `/admin` | RSC | Admin dashboard |
 | `/admin/posts/` | RSC | Admin post editor/list |
 | `/admin/wishlist/` | RSC | Admin wishlist editor |
 | `/admin/tags/` | RSC | Admin tag management |
+| `/admin/categories/` | RSC | Admin category management |
 | `/admin/seasons/` | RSC | Admin season management |
 | `/sitemap.xml` | RSC | Dynamic sitemap |
 | `/feed.xml` | RSC | RSS feed |
@@ -528,15 +534,23 @@ test-api.sh                   # Quick smoke test script
 web/                          # Next.js application
   src/
     app/                      # Next.js App Router pages + API routes
-      (blog)/                 # Public blog pages (posts, map, wishlist, etc.)
+      (blog)/                 # Public blog pages (posts, map, wishlist, search, about, accessibility, etc.)
       (public-auth)/          # Supabase auth pages (login, signup)
       account/                # Public account settings
-      admin/                  # Admin dashboard and editors
+      admin/                  # Admin dashboard and editors (posts, categories, tags, seasons, wishlist)
       api/                    # API routes (public, admin, cron)
       settings/               # Theme/settings page
     components/               # React components
+      admin/                  # Admin editor, dashboard, widgets
+      auth/                   # AdminAuthButton
+      blog/                   # Post rendering, feed, comments, map
+      layout/                 # SiteHeader, MobileNav, SiteFooter, BackToTop
+      providers/              # AppProviders, Theme, Navigation
+      theme/                  # ThemeProvider
+      ui/                     # ThemeSelect, FeedbackPanel, SearchInput
+      pwa-registry.tsx        # PWA manifest registration
     drizzle/
-      schema.ts               # All 19 Drizzle table definitions
+      schema.ts               # All 18 Drizzle table definitions
     lib/                      # Client libraries and utilities
       auth/                   # Admin auth (Auth.js config, session helpers)
       cloudinary/             # Image upload, transform, EXIF parsing
@@ -549,18 +563,22 @@ web/                          # Next.js application
       geocode.ts              # Nominatim geocoding
     server/                   # Server-only business logic
       auth/                   # Admin/public user DB operations
-      dal/                    # Data access layer (posts, comments, etc.)
-      forms/                  # Form validation logic
-      posts/                  # Post operations (clone, publish, preview, etc.)
+      dal/                    # Data access layer (posts, comments, categories, tags, etc.)
+      forms/                  # Form validation logic (Zod schemas)
+      posts/                  # Post operations (clone, delete, publish, preview, etc.)
       queries/                # Read queries (posts, wishlist, dashboard)
       services/               # External service integrations (email, newsletter)
       supabase/               # Supabase keepalive
       feeds/                  # RSS feed generation
+      cloudinary/             # Cloudinary asset destruction (post delete cleanup)
     proxy.ts                  # CSRF + CSP + Next.js middleware config (matcher + export)
     instrumentation.ts        # Sentry initialization
-  drizzle/                    # Drizzle Kit migration files
+  drizzle/                    # Drizzle Kit migration files (24 SQL + meta/)
   scripts/                    # Build, migration, seed, E2E helper scripts
-  tests/                      # Unit (Vitest) + E2E (Playwright) tests
+  tests/                      # Unit (Vitest, 164 test files) + E2E (Playwright, 21 spec files)
+    unit/                     # Vitest unit tests
+    e2e/                      # Playwright E2E tests
+      helpers/                # E2E auth state helpers
   next.config.ts              # Next.js config + static security headers
   vitest.config.ts            # Vitest configuration
   playwright.config.ts        # Playwright configuration
@@ -571,7 +589,14 @@ docs/
   CODING.md                   # Codemap and contributor reference
   SETUP.md                    # Setup and configuration guide
   VERCEL-CLI-REFERENCE.md     # Vercel CLI commands reference
+  DISASTER-RECOVERY.md        # Post deletion recovery via Turso PITR
   KNOWLEDGE_BASE.md           # Living reference of project-specific gotchas (SQLite/Drizzle/Turso/React/Next.js). Agents add to this when they discover new patterns.
+  IMPROVEMENTS.md             # Prioritized feature/backlog tracker
+  ROADMAP.md                  # Active branch tracking (10 branches, all merged)
+  CHANGELOG.md                # Version history
+  REVIEW-PLAN.md              # Bug bash review tracking (complete)
+  responsive-design-plan.md   # Responsive design phase plan
+  branches/                   # Per-branch implementation checklists (all complete)
 ```
 
 ---
@@ -580,20 +605,20 @@ docs/
 
 | Package | Version Range | Purpose |
 |---------|--------------|---------|
-| next | ^16.2.3 | Framework |
-| @libsql/client | ^0.17.2 | Turso/libSQL database client |
-| drizzle-orm | ^0.45.2 | ORM / query builder |
-| next-auth | ^4.24.13 | Admin auth (GitHub OAuth) |
-| @supabase/supabase-js | ^2.102.1 | Public auth client |
+| next | 16.2.9 | Framework |
+| @libsql/client | 0.17.3 | Turso/libSQL database client |
+| drizzle-orm | 0.45.2 | ORM / query builder |
+| next-auth | 4.24.14 | Admin auth (GitHub OAuth) |
+| @supabase/supabase-js | 2.108.1 | Public auth client |
 | @upstash/ratelimit | ^2.0.8 | Distributed rate limiting |
 | @upstash/redis | ^1.37.0 | Redis client for rate limiting |
-| @sentry/nextjs | ^10.47.0 | Error tracking |
-| @tiptap/* | ^3.22.3 | Rich text editor |
-| maplibre-gl | ^5.22.0 | Map rendering |
+| @sentry/nextjs | 10.57.0 | Error tracking |
+| @tiptap/* | 3.26.1 | Rich text editor |
+| maplibre-gl | 5.24.0 | Map rendering |
 | react-map-gl | ^8.1.0 | React map component |
 | sanitize-html | 2.17.5 (exact) | HTML content sanitization — pinned to avoid XSS vuln in 2.17.3 |
-| zod | ^4.3.6 | Schema validation |
-| tailwindcss | ^4.2.2 | CSS framework |
+| zod | 4.4.3 | Schema validation |
+| tailwindcss | 4.3.1 | CSS framework |
 
 ---
 
@@ -602,5 +627,9 @@ docs/
 - [SETUP.md](./SETUP.md) - Environment setup and configuration
 - [CODING.md](./CODING.md) - Codemap and contributor reference
 - [VERCEL-CLI-REFERENCE.md](./VERCEL-CLI-REFERENCE.md) - Vercel CLI commands
+- [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) - Post deletion recovery via Turso PITR
 - [KNOWLEDGE_BASE.md](./KNOWLEDGE_BASE.md) - Living reference of project-specific gotchas and workarounds (SQLite, Drizzle, Turso, React 19, Next.js). Agents add to this when they discover new patterns.
+- [IMPROVEMENTS.md](./IMPROVEMENTS.md) - Prioritized feature/backlog tracker
+- [ROADMAP.md](./ROADMAP.md) - Active branch tracking (10 branches, all merged)
+- [CHANGELOG.md](./CHANGELOG.md) - Version history
 - [README.md](../README.md) - Project overview and quick start

@@ -303,7 +303,7 @@ A full audit of all 10 branches was also performed. Findings below.
 | 7 | `fix/homepage-footer-spacing` | ✅ | `4c71506` | | +2 | Pushed. ~48px visual gap reduction. |
 | 8 | `fix/branch-6-revision-race` | ✅ | `789a8af` | | +4 | Pushed. Atomic INSERT subquery; no race. |
 | 9 | Merged to main | ✅ | `15f7262` | — | — | All 8 fix branches + Phase C squashed into main. |
-| 10 | `fix/open-concerns-batch` | 🟢 | (pending) | | +9 | Addresses C6, C7, C12, C13, C15, C18, C20. C20 is the real race fix. |
+| 10 | `fix/open-concerns-batch` | ✅ | `143158f` | | +9 | Merged. C6, C7, C12, C13, C15, C18, C20 fixed. |
 | C | `fix/concerns-phase1-phase2` | ✅ | `c3509b7` | | 0 | Pushed. Addresses C1, C2. C5 fixed in Phase 1 (commit `ac22c4b`). |
 
 ---
@@ -386,11 +386,12 @@ After main fix committed for Phase N:
 - `pnpm run lint` — must be clean
 - Existing Phase 1 and Phase 2 tests must still pass with new slug-based inputs
 
-## Phase 10 — `fix/open-concerns-batch` 🔵
+## Phase 10 — `fix/open-concerns-batch` ✅
 
 **Concerns addressed:** C6, C7, C12, C13, C15, C18, C20
-**Branch:** `fix/open-concerns-batch` (in worktree `jsquared_blog_concerns_batch`)
+**Branch:** `fix/open-concerns-batch` (merged to main)
 **Base:** `main` @ `7905f8c`
+**Commit:** `143158f` (merge), `db241e6` (changelog)
 
 ### Files to Change
 

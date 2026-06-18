@@ -131,10 +131,10 @@ Vitest auto-loads `web/.env.test.local` via the env-loader. No real credentials 
 The full schema is defined in `web/src/drizzle/schema.ts` with 18 tables. Auth.js manages a `sessions` table via its Turso adapter. Key types:
 
 ```typescript
-// Tables: users, auth_accounts, profiles, posts, post_revisions,
-// post_preview_tokens, post_images, post_tags, post_bookmarks,
-// post_links, media_assets, categories, tags, series, comments,
-// comment_likes, wishlist_places, seasons, post_links
+// Tables: users, profiles, posts, post_revisions, post_preview_tokens,
+// post_images, post_tags, post_bookmarks, post_links, media_assets,
+// categories, tags, series, comments, comment_likes,
+// auth_accounts, wishlist_places, seasons
 ```
 
 ---
@@ -243,7 +243,7 @@ Seeds example wishlist destinations.
 
 ```bash
 cd web
-pnpm run ./scripts/seed-series-categories.ts
+pnpm exec tsx ./scripts/seed-series-categories.ts
 ```
 
 Creates default series and categories for content organization.
@@ -252,7 +252,7 @@ Creates default series and categories for content organization.
 
 ```bash
 cd web
-pnpm run ./scripts/seed-rich-content.ts
+pnpm exec tsx ./scripts/seed-rich-content.ts
 ```
 
 Seeds a post with sample rich content (images, formatting, etc.).
@@ -261,7 +261,7 @@ Seeds a post with sample rich content (images, formatting, etc.).
 
 ```bash
 cd web
-pnpm run ./scripts/seed-locations.ts
+pnpm exec tsx ./scripts/seed-locations.ts
 ```
 
 Seeds location metadata for geotagged content.
@@ -403,10 +403,10 @@ pnpm run e2e:capture-admin-state      # Capture admin auth state for E2E
 pnpm run e2e:capture-public-state     # Capture public auth state for E2E
 
 # Seeding
-pnpm run seed:wishlist                         # Seed wishlist places
-pnpm run ./scripts/seed-series-categories.ts   # Seed series/categories
-pnpm run ./scripts/seed-rich-content.ts        # Seed sample rich content
-pnpm run ./scripts/seed-locations.ts           # Seed location metadata
+pnpm run seed:wishlist                                    # Seed wishlist places
+pnpm exec tsx ./scripts/seed-series-categories.ts         # Seed series/categories
+pnpm exec tsx ./scripts/seed-rich-content.ts              # Seed sample rich content
+pnpm exec tsx ./scripts/seed-locations.ts                 # Seed location metadata
 
 # Building
 pnpm run build                        # Production build with Sentry

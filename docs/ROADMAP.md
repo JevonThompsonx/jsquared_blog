@@ -45,13 +45,9 @@
 
 All 10 branches from the original roadmap are merged, plus the 2 patches (footer polish, knowledge base) and the Phase 2 docs (knowledge base). The project now has the full feature set described in the original assessment: SEO, footer/nav, schema hardening, taxonomy browse, admin taxonomy CRUD, revision completeness, performance/reliability, site search, cleanup/hardening, and polish.
 
-- **Phase 1 (branches 1, 2, 3, 7, 8, 9, 10)** — All merged. Branches 1, 2, 3, 7, 8, 9, 10 in ✅ state.
-- **Phase 2 (branches 4, 5, 6)** — All three merged after Branch 3 unblocked them. Knowledge base and footer polish also shipped as part of the parallel rollout.
-
-## Updated: 2026-06-15 — Phases 1 and 2 complete
-
-- **Phase 1 (branches 1, 2, 3, 7, 8, 9, 10)** — Branches 1, 2, 3 merged. Branches 7, 8, 9, 10 remain 🔵 Ready.
-- **Phase 2 (branches 4, 5, 6)** — All three merged after Branch 3 unblocked them. Knowledge base (Branch docs/knowledge-base) and footer polish (Branch fix/footer-polish) also shipped as part of the parallel rollout.
+- **Phase 1 (branches 1, 2, 3, 7, 8, 9, 10)** — All merged.
+- **Phase 2 (branches 4, 5, 6)** — All three merged after Branch 3 unblocked them.
+- **Bug bash (review-Phase 1.1)** — 9 fix branches merged. All 22 concerns resolved.
 
 ---
 
