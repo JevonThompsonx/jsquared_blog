@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "tsx ./scripts/build.ts",
+    "build:analyze": "ANALYZE=true pnpm run build",
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -50,6 +51,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
+    "@next/bundle-analyzer": "^16.2.9",
     "@playwright/test": "1.60.0",
     "@tailwindcss/postcss": "4.3.1",
     "@types/jsdom": "28.0.1",
