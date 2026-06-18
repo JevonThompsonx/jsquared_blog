@@ -87,7 +87,7 @@ Many items in this backlog have been organized into the 10-branch implementation
 - **Action:** Audit `next/image` usage; ensure `width`/`height` are set or `fill` with sized parent.
 - **Effort:** Medium
 
-### P2. Bundle size analysis
+### [x] P2. Bundle size analysis
 - **Why:** No current bundle analysis. Risk of accidental heavy imports (e.g., `maplibre-gl` is ~700KB).
 - **Action:** Add `@next/bundle-analyzer` and a `build:analyze` script.
 - **Effort:** Low
@@ -126,7 +126,7 @@ Many items in this backlog have been organized into the 10-branch implementation
 - **Action:** Add an admin route that calls Resend's `GET /segments/{id}` and shows count + last sync.
 - **Effort:** Low
 
-### F4. Comments — threading depth cap
+### [x] F4. Comments — threading depth cap
 - **Why:** Comment replies are unboundedly nested. Long threads can become unwieldy on mobile.
 - **Action:** Cap visual nesting at depth 3 and flatten deeper replies ("/u/someone replied to /u/someoneelse").
 - **Effort:** Low
@@ -136,17 +136,17 @@ Many items in this backlog have been organized into the 10-branch implementation
 - **Action:** Admin "Add to wishlist from iOverlander URL" — fetch the page, parse place name, prefill the form.
 - **Effort:** Medium
 
-### F6. Map — public read-only toggle
+### [x] F6. Map — public read-only toggle
 - **Why:** Public `/map` only shows geotagged posts. Wishlist places also have location data. A toggle to overlay wishlist on the map would be useful for "where I want to go vs where I've been".
 - **Action:** Add `?show=wishlist` query param to the map page; pass through to the data layer.
 - **Effort:** Low
 
-### F7. Image focal point — drag-to-set UI
+### [x] F7. Image focal point — drag-to-set UI
 - **Why:** Focal point is stored numerically (x, y 0–1). Admin can currently only set it via a number input.
 - **Action:** Replace the number inputs with a clickable image preview that stores the click point.
 - **Effort:** Medium
 
-### F8. Scheduled post — admin preview before publish
+### [x] F8. Scheduled post — admin preview before publish
 - **Why:** Admins can schedule a post but can't see what it will look like until it actually publishes (or via a manually generated preview link).
 - **Action:** Generate a one-off preview link from the schedule form.
 - **Effort:** Low
@@ -161,7 +161,7 @@ Many items in this backlog have been organized into the 10-branch implementation
 - **Action:** Add a push service worker + Supabase edge function. Requires user consent UI.
 - **Effort:** High
 
-### F11. Admin dashboard — engagement metrics
+### [x] F11. Admin dashboard — engagement metrics
 - **Why:** Admin dashboard lists posts but doesn't show views / likes / comments per post.
 - **Action:** Add a "metrics" column with view count and engagement.
 - **Effort:** Low
@@ -190,13 +190,13 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
 - Add `sm:px-6` consistent padding where missing
 - **Effort:** Low
 
-### R3. Account settings
+### [x] R3. Account settings
 - Zero responsive breakpoints in 741 lines
 - `flex gap-3` rows (name/email/URL + button) overflow at <360px
 - Account `layout.tsx` `pt-28` wastes space on short mobile
 - **Effort:** Low
 
-### R4. Auth forms
+### [x] R4. Auth forms
 - Operationally mobile-safe, but zero breakpoints
 - Card `p-8` is generous on <360px
 - **Effort:** Low
@@ -278,28 +278,25 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
 
 ## Prioritization Recommendation
 
+**Completed in v0.5.0:** M4, M5, D2, S1, S2, S4, D3, D4, O2, O5, F2, F4, F6, F7, F8, F11, P2, R3, R4
+
 **Next sprint (1–2 weeks):**
-- M4, M5 (trivially useful dev scripts)
-- R3, R4 (mobile breakage in account/auth)
-- D2, D4 (doc cleanup)
-- O5 (Dependabot auto-merge — will reduce noise)
+- S5 (CSP report-uri)
+- F12 (comment bulk moderation)
+- O3 (bundle size budget in CI)
 
 **Next month:**
-- F2, F4, F8, F11, F12 (low-effort, high-value features)
-- P2, P5 (perf hygiene)
-- S1, S2 (security polish)
+- F1 (full-text search — the biggest UX win)
+- F3, F5 (newsletter UI, iOverlander import)
+- P1, P3, P4, P5 (perf deep-dive)
 
 **Next quarter:**
-- F1 (full-text search — the biggest UX win)
-- F3, F6, F7 (map / wishlist / focal point polish)
-- R1, R2, R7 (admin responsive)
+- F9, F10 (collections, push)
+- R1, R2, R5, R6, R7 (admin responsive + QA)
+- M1, M2, M3, M6 (tooling upgrades)
 
 **Backlog / nice-to-have:**
-- F9, F10 (collections, push)
-- P1, P3, P4 (perf deep-dive)
-- M1, M2, M3, M6 (tooling upgrades)
-- D1, D3 (doc expansions)
-- O1, O2, O3, O4 (ops)
+- O4 (deploy previews)
 
 ---
 

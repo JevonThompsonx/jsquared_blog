@@ -67,7 +67,7 @@ src/app/
 |-----|-------|---------|
 | `components/admin/` | 12 | Admin editor, dashboard, widgets |
 | `components/auth/` | 1 | AdminAuthButton |
-| `components/blog/` | 24 | Post rendering, feed, comments, map, search |
+| `components/blog/` | 25 | Post rendering, feed, comments, map, search |
 | `components/layout/` | 3 | SiteHeader, MobileNav, SiteFooter, BackToTop |
 | `components/providers/` | 3 | AppProviders, Theme, Navigation |
 | `components/theme/` | 1 | ThemeProvider |

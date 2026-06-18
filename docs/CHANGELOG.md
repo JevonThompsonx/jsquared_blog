@@ -8,9 +8,16 @@
 
 ## [0.5.0] — 2026-06-18
 
-### Branches: `chore/trivial-dev-scripts`, `chore/env-and-style-docs`, `chore/sentry-release-ci`, `chore/github-id-zod-validation`, `chore/dependabot-automerge`, `chore/e2e-in-ci`, `feat/map-wishlist-overlay`, `feat/image-focal-point-ui`, `feat/comment-threading-cap`, `feat/admin-metrics-and-preview`, `feat/responsive-account-auth`, `feat/bundle-analysis`, `feat/about-page-and-pwa`, `docs/backlog-update`
+### Branches: `chore/trivial-dev-scripts`, `chore/env-and-style-docs`, `chore/sentry-release-ci`, `chore/github-id-zod-validation`, `chore/dependabot-automerge`, `chore/e2e-in-ci`, `feat/map-wishlist-overlay`, `feat/image-focal-point-ui`, `feat/comment-threading-cap`, `feat/admin-metrics-and-preview`, `feat/responsive-account-auth`, `feat/bundle-analysis`, `feat/about-page-and-pwa`, `docs/backlog-update`, `docs/final-changelog`
 
-Backlog sprint: 14 branches covering 20 backlog items (M4, M5, D2, S1, D3, S2, S4, O5, O2, F6, F7, F4, F11, R3, R4, P2, D1, D4, F2) plus inline TODOs. Each branch developed and verified independently with tests, typecheck, and lint gates.
+Backlog sprint: 15 branches covering 20+ backlog items plus inline TODOs. Each branch developed and verified independently with tests, typecheck, and lint gates.
+
+#### Additional fixes (post-batch)
+
+- **Fixed** type errors from loop agent batches — `comments.tsx` `repliedTo` prop now uses `thread.authorDisplayName`; `admin-posts.ts` `getAdminEditablePostById` now includes `commentCount` and `bookmarkCount` subqueries
+- **Removed** social links section from about page (Instagram, YouTube, TikTok)
+- **Fixed** dependabot automerge workflow — replaced nonexistent `dependabot/automerge@v4` action with `gh pr merge --auto --squash` via GitHub CLI
+- **Added** scope constraint to AGENTS.md: no social media integrations or features
 
 #### Branch: `chore/trivial-dev-scripts` (Batch 1)
 
@@ -168,7 +175,7 @@ Addresses all 7 open concerns from the round-2 review (C6, C7, C12, C13, C15, C1
 
 #### Verification on main
 
-- `pnpm run test` — **1117/1117 pass** (+9 vs pre-Phase-10 baseline of 1108)
+- `pnpm run test` — **1120/1120 pass** (+12 vs pre-0.5.0 baseline of 1108)
 - `tsc --noEmit` — clean
 - `pnpm run lint` — clean
 

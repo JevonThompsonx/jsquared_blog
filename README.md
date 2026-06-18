@@ -205,10 +205,13 @@ cd web
 
 pnpm run dev
 pnpm run lint
+pnpm run lint:fix
 pnpm exec tsc --noEmit
 pnpm run test
+pnpm run test:watch
 pnpm run test:e2e
 pnpm run build
+pnpm run build:analyze
 
 # Drizzle / Turso
 pnpm run db:generate
@@ -246,8 +249,8 @@ Optional local content helpers:
 
 ```bash
 cd web
-pnpm run ./scripts/seed-series-categories.ts
-pnpm run ./scripts/seed-rich-content.ts
+pnpm exec tsx ./scripts/seed-series-categories.ts
+pnpm exec tsx ./scripts/seed-rich-content.ts
 ```
 
 ### Core Tables (18 Drizzle + 1 adapter-managed)
@@ -367,6 +370,9 @@ GET  /feed.xml
 | [docs/IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) | Prioritized backlog of tech debt, features, security, and perf work |
 | [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) | Post deletion recovery via Turso PITR |
 | [docs/VERCEL-CLI-REFERENCE.md](./docs/VERCEL-CLI-REFERENCE.md) | Vercel CLI operational reference |
+| [docs/STYLEGUIDE.md](./docs/STYLEGUIDE.md) | Design tokens, component patterns, and conventions |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | Active branch tracking and implementation status |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md) | Version history and completed work log |
 
 ---
 
