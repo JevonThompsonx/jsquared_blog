@@ -47,7 +47,7 @@ export function LoginForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-8 shadow-xl">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-xl sm:p-8">
         <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Sign in</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
           Welcome back — sign in to join the conversation.
