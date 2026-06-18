@@ -254,7 +254,7 @@ The full plan lives in `docs/responsive-design-plan.md`. Phases are roughly:
   3. Populated `/data/git/.ssh/authorized_keys` in the forgejo container
 - **Date resolved:** 2026-06-15
 
-### O2. Add E2E tests to CI
+### [x] O2. Add E2E tests to CI
 - **Why:** E2E suite exists but isn't run on PR. Risk of regressions in user-facing flows.
 - **Action:** Add a 4th CI job that installs Playwright browsers and runs `pnpm run test:e2e` against a built app.
 - **Effort:** Medium
