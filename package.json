@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@sentry/cli": "2.58.5",
-    "vercel": "^50.42.0"
+    "vercel": "^54.18.1"
   },
   "engines": {
     "node": ">=22.13"
