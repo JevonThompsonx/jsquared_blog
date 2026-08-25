@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { unstableCacheMock, revalidateTagMock, listPublishedPostRecordsMock, listAllPublishedPostRecordsMock, listTagsByPostIdsMock, listCommentCountsByPostIdsMock } = vi.hoisted(() => ({
+const {
+  unstableCacheMock,
+  revalidateTagMock,
+  listPublishedPostRecordsMock,
+  listAllPublishedPostRecordsMock,
+  listTagsByPostIdsMock,
+  listCommentCountsByPostIdsMock,
+} = vi.hoisted(() => ({
   unstableCacheMock: vi.fn((fn: (...args: unknown[]) => unknown) => fn),
   revalidateTagMock: vi.fn(),
   listPublishedPostRecordsMock: vi.fn(),
@@ -30,7 +37,9 @@ vi.mock("@/lib/post-song-metadata", () => ({
 }));
 
 vi.mock("@/lib/related-posts", () => ({
-  rankRelatedPosts: vi.fn((_post: unknown, candidates: unknown[]) => candidates),
+  rankRelatedPosts: vi.fn(
+    (_post: unknown, candidates: unknown[]) => candidates,
+  ),
 }));
 
 vi.mock("@/server/dal/posts", () => ({
@@ -86,18 +95,23 @@ describe("listPublishedPosts caching", () => {
     vi.clearAllMocks();
   });
 
-  it("wraps listPublishedPosts with unstable_cache tagged 'posts' and a 30-60s TTL", async () => {
+  it("wraps listPublishedPosts with unstable_cache tagged 'posts' and a 1h TTL backstop", async () => {
     listPublishedPostRecordsMock.mockResolvedValue([sampleRecord]);
 
     await listPublishedPosts(12, 0);
 
-    expect(unstableCacheMock).toHaveBeenCalledTimes(1);
-    const call = unstableCacheMock.mock.calls[0] as unknown as [
+    const feedCall = (unstableCacheMock.mock.calls as unknown[]).find(
+      (call) => {
+        const keyParts = (call as unknown[])[1] as string[] | undefined;
+        return Array.isArray(keyParts) && keyParts[0] === "listPublishedPosts";
+      },
+    );
+    expect(feedCall).toBeDefined();
+    const [, keyParts, options] = feedCall as unknown as [
       (...args: unknown[]) => unknown,
       string[] | undefined,
       { revalidate?: number; tags?: string[] } | undefined,
     ];
-    const [, keyParts, options] = call;
     expect(keyParts).toEqual(["listPublishedPosts"]);
     expect(options).toEqual(
       expect.objectContaining({
@@ -107,8 +121,10 @@ describe("listPublishedPosts caching", () => {
     );
     const ttl = options?.revalidate;
     expect(typeof ttl).toBe("number");
-    expect(ttl).toBeGreaterThanOrEqual(30);
-    expect(ttl).toBeLessThanOrEqual(60);
+    // SPD-5/EFF-1: tag-based revalidateTag("posts") is the primary invalidation path,
+    // so the time-based backstop is a long window (1h) rather than the old 30-60s.
+    expect(ttl).toBeGreaterThanOrEqual(3600);
+    expect(ttl).toBeLessThanOrEqual(7200);
   });
 
   it("returns posts through the cache wrapper", async () => {

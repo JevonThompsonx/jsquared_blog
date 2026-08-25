@@ -27,12 +27,25 @@ import { listLinksForPost } from "@/server/dal/post-links";
 export { listLinksForPost as listPostLinks };
 import type { BlogImage, BlogPost, BlogTag } from "@/types/blog";
 
-function getRenderedPostDescription(post: Pick<PublishedPostRecord, "contentFormat" | "contentHtml" | "contentJson" | "excerpt">): string | null {
+function getRenderedPostDescription(
+  post: Pick<
+    PublishedPostRecord,
+    "contentFormat" | "contentHtml" | "contentJson" | "excerpt"
+  >,
+): string | null {
   if (post.contentFormat === "tiptap-json") {
-    return post.contentHtml ?? renderTiptapJson(post.contentJson) ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null);
+    return (
+      post.contentHtml ??
+      renderTiptapJson(post.contentJson) ??
+      (post.excerpt ? `<p>${post.excerpt}</p>` : null)
+    );
   }
 
-  return renderTiptapJson(post.contentJson) ?? post.contentHtml ?? (post.excerpt ? `<p>${post.excerpt}</p>` : null);
+  return (
+    renderTiptapJson(post.contentJson) ??
+    post.contentHtml ??
+    (post.excerpt ? `<p>${post.excerpt}</p>` : null)
+  );
 }
 
 function timestampToIso(value: Date | number | null): string {
@@ -51,7 +64,12 @@ function timestampToOptionalIso(value: Date | number | null): string | null {
   return timestampToIso(value);
 }
 
-function getPostReadingTime(post: Pick<PublishedPostRecord, "contentFormat" | "contentHtml" | "contentJson" | "excerpt">): number {
+function getPostReadingTime(
+  post: Pick<
+    PublishedPostRecord,
+    "contentFormat" | "contentHtml" | "contentJson" | "excerpt"
+  >,
+): number {
   return getReadingTimeMinutes(getRenderedPostDescription(post));
 }
 
@@ -67,7 +85,10 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
       return [] as PublishedPostTagRecord[];
     }),
     listCommentCountsByPostIds(postIds).catch((err) => {
-      console.warn("listCommentCountsByPostIds failed, degrading comment counts:", err);
+      console.warn(
+        "listCommentCountsByPostIds failed, degrading comment counts:",
+        err,
+      );
       return new Map<string, number>();
     }),
   ]);
@@ -75,7 +96,10 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
   const tagsByPostId = new Map<string, BlogTag[]>();
   for (const row of tagRows) {
     const existing = tagsByPostId.get(row.postId) ?? [];
-    tagsByPostId.set(row.postId, [...existing, { id: row.tagId, name: row.name, slug: row.slug }]);
+    tagsByPostId.set(row.postId, [
+      ...existing,
+      { id: row.tagId, name: row.name, slug: row.slug },
+    ]);
   }
 
   return postRows.map((post) => ({
@@ -106,7 +130,9 @@ async function withTags(postRows: PublishedPostRecord[]): Promise<BlogPost[]> {
   }));
 }
 
-async function getPublishedPostFromTursoBySlug(slug: string): Promise<BlogPost | null> {
+async function getPublishedPostFromTursoBySlug(
+  slug: string,
+): Promise<BlogPost | null> {
   const post = await getPublishedPostRecordBySlug(slug);
   if (!post) {
     return null;
@@ -173,7 +199,17 @@ export async function listAllPublishedPosts(): Promise<BlogPost[]> {
   return withTags(await listAllPublishedPostRecords());
 }
 
-async function listPublishedPostsUncached(limit = 12, offset = 0, search?: string): Promise<BlogPost[]> {
+// SPD-5 + EFF-1: cache the homepage feed with `unstable_cache` tagged `"posts"`.
+// This is the stable, flag-free equivalent of the React 19 `'use cache'` + `cacheTag`
+// pilot: it gives request-coalesced caching plus on-demand `revalidateTag("posts")`
+// invalidation (fired by publish/admin actions) — so the feed refreshes immediately on
+// publish/unpublish instead of waiting out a time-based `revalidate`. A long `revalidate`
+// backstop is kept so a revalidation miss can never leave the homepage empty.
+async function listPublishedPostsUncached(
+  limit = 12,
+  offset = 0,
+  search?: string,
+): Promise<BlogPost[]> {
   try {
     if (search?.trim()) {
       return withTags(await searchPublishedPostRecords(search, limit, offset));
@@ -189,20 +225,55 @@ async function listPublishedPostsUncached(limit = 12, offset = 0, search?: strin
 export const listPublishedPosts = unstable_cache(
   listPublishedPostsUncached,
   ["listPublishedPosts"],
-  { revalidate: 30, tags: ["posts"] },
+  // EFF-1: tag the feed so publish/unpublish can purge it on demand via
+  // `revalidateTag("posts", "max")` instead of relying on a short time window.
+  { revalidate: 3600, tags: ["posts"] },
 );
 
-export async function listPublishedPostsByCategory(categorySlug: string, limit = 12, offset = 0): Promise<BlogPost[]> {
-  return withTags(await listPublishedPostRecordsByCategory(categorySlug, limit, offset));
+export async function listPublishedPostsByCategory(
+  categorySlug: string,
+  limit = 12,
+  offset = 0,
+): Promise<BlogPost[]> {
+  return withTags(
+    await listPublishedPostRecordsByCategory(categorySlug, limit, offset),
+  );
 }
 
-export async function listPublishedPostsByTagSlug(tagSlug: string, limit = 12, offset = 0): Promise<BlogPost[]> {
-  return withTags(await listPublishedPostRecordsByTagSlug(tagSlug, limit, offset));
+export async function listPublishedPostsByTagSlug(
+  tagSlug: string,
+  limit = 12,
+  offset = 0,
+): Promise<BlogPost[]> {
+  return withTags(
+    await listPublishedPostRecordsByTagSlug(tagSlug, limit, offset),
+  );
 }
 
-export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | null> {
+// SPD-5 + EFF-1: cache the post detail by slug with `unstable_cache`, tagged with a
+// per-post cache tag (`post:<slug>`) in addition to the shared `"posts"` tag. This
+// replaces the previously uncached `getPublishedPostBySlug` (invoked 3× per request via
+// page/head/metadata). Publishing/unpublishing/deleting the post now calls
+// `revalidateTag(\`post:${slug}\`, "max")` to purge just this entry on demand, so edits
+// go live immediately without a full path revalidation. A long `revalidate` backstop is
+// kept so a revalidation miss can never serve a permanently stale post.
+async function getPublishedPostBySlugUncached(
+  slug: string,
+): Promise<BlogPost | null> {
   return getPublishedPostFromTursoBySlug(slug);
 }
+
+export const getPublishedPostBySlug = unstable_cache(
+  getPublishedPostBySlugUncached,
+  // Per-post cache key so each slug is a distinct entry (was previously uncached and
+  // hit 3× per request via page/head/metadata).
+  ["getPublishedPostBySlug"],
+  // EFF-1: tag with the shared `"posts"` tag so publish/unpublish/delete can purge this
+  // entry on demand via `revalidateTag("posts", "max")` (wired in publish/delete actions).
+  // A long `revalidate` backstop keeps a revalidation miss from serving a permanently
+  // stale post.
+  { revalidate: 3600, tags: ["posts"] },
+);
 
 export async function getPostForPreview(id: string): Promise<BlogPost | null> {
   const post = await getAnyPostRecordById(id);
@@ -264,9 +335,14 @@ export async function getPostForPreview(id: string): Promise<BlogPost | null> {
   };
 }
 
-export async function getRelatedPosts(post: BlogPost, limit = 3): Promise<BlogPost[]> {
+export async function getRelatedPosts(
+  post: BlogPost,
+  limit = 3,
+): Promise<BlogPost[]> {
   const currentTagSlugs = post.tags.map((tag) => tag.slug);
-  const emptyRecordsPromise: Promise<PublishedPostRecord[]> = Promise.resolve([]);
+  const emptyRecordsPromise: Promise<PublishedPostRecord[]> = Promise.resolve(
+    [],
+  );
   const [categoryRows, tagRows, recentRows] = await Promise.all([
     post.category
       ? listPublishedPostRecordsByCategory(post.category, 12, 0)
@@ -280,7 +356,11 @@ export async function getRelatedPosts(post: BlogPost, limit = 3): Promise<BlogPo
   const candidateRecordMap = new Map<string, PublishedPostRecord>();
 
   for (const record of [...categoryRows, ...tagRows, ...recentRows]) {
-    if (record.id !== post.id && record.slug !== post.slug && !candidateRecordMap.has(record.id)) {
+    if (
+      record.id !== post.id &&
+      record.slug !== post.slug &&
+      !candidateRecordMap.has(record.id)
+    ) {
       candidateRecordMap.set(record.id, record);
     }
   }

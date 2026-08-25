@@ -25,6 +25,18 @@
 - **Findings (epic, not in this change):** next-auth is pinned at `4.24.14` on App Router; `next-auth` v5 migration remains the tracked SEC-5 epic. `getServerSession(buildAdminAuthOptions())` re-builds options per call (acceptable, memoized handler in route.ts). Admin JWT enrichment (`userId/role/githubLogin/avatarUrl`) is intact; no PII is now sent to Sentry so enriched JWT fields stay local. GitHub admin allowlist (`AUTH_ADMIN_GITHUB_IDS`) + `account?.provider === "github"` check remain the only admin admission gates.
 - No breaking changes required for SEC-1/SEC-3; documented here so a future v5 migration does not re-introduce `sendDefaultPii` or drop the CSP report endpoint.
 
+### Branch: `feat/phase1-modernization` (perf pilot — SPD-6, SPD-5/EFF-1)
+
+#### CI
+- **Changed** (SPD-6) `e2e` job in `.github/workflows/ci.yml` to cache the Playwright browser binaries (`~/.cache/ms-playwright`) keyed on the resolved Playwright version. The heavy `playwright install --with-deps` path now only runs on a cache miss; on a hit we just run `install-deps` (fast, no re-download). Cuts several minutes per PR.
+
+#### Changed
+- **Changed** (SPD-5 / EFF-1) `web/src/server/queries/posts.ts`: `listPublishedPosts` and `getPublishedPostBySlug` now both use `unstable_cache` tagged `["posts"]`. `getPublishedPostBySlug` was previously **uncached** (hit 3×/request via page/`head`/`generateMetadata`); it is now a distinct cache entry per slug. The time-based TTL is a 1h backstop — `revalidateTag("posts", "max")` (already fired by publish/unpublish/delete/admin actions) is the primary, on-demand invalidation path, retiring reliance on a short time window.
+- **Updated** `web/tests/unit/posts-queries-cache.test.ts` to assert the new 1h TTL backstop + `posts` tag (the old test pinned the 30–60s window).
+
+#### Investigated (not adopted — documented to prevent re-litigation)
+- **Evaluated** the React 19 `'use cache'` + `cacheTag`/`cacheLife` API for the SPD-5 pilot. In Next.js 16.2.9 these primitives are gated behind `experimental.cacheComponents` (top-level `cacheComponents: true`): `cacheTag()` throws `E886` at runtime without it. Enabling the flag compiles, but it is the **Cache Components** rendering model and forces an app-wide constraint — the production build failed on **34 routes** with *"Uncached data was accessed outside of `<Suspense>`"* (every dynamic page must be either statically cacheable or wrap its data in `<Suspense>`). That is a sweeping rendering-model migration, not a small pilot, and it would regress the currently-green build. The same tag-based dedup + on-demand `revalidateTag` semantics are achievable with the stable `unstable_cache` API (already in use in this file), so we implemented the pilot there instead. If true `'use cache'` is wanted later, it must be its own branch with a full Suspense migration + build-gate.
+
 ## [0.5.0] — 2026-06-18
 
 ### Branches: `chore/trivial-dev-scripts`, `chore/env-and-style-docs`, `chore/sentry-release-ci`, `chore/github-id-zod-validation`, `chore/dependabot-automerge`, `chore/e2e-in-ci`, `feat/map-wishlist-overlay`, `feat/image-focal-point-ui`, `feat/comment-threading-cap`, `feat/admin-metrics-and-preview`, `feat/responsive-account-auth`, `feat/bundle-analysis`, `feat/about-page-and-pwa`, `docs/backlog-update`, `docs/final-changelog`
