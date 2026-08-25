@@ -6,6 +6,25 @@
 
 ---
 
+## [Unreleased] — 2026-08-24
+
+### Branch: `feat/phase1-modernization` (P0 security wave — SEC-1/SEC-3 + test baseline)
+
+#### Security
+- **Changed** `sendDefaultPii: true` → `false` in all three live Sentry entry points (`web/sentry.server.config.ts`, `web/sentry.edge.config.ts`, `web/src/instrumentation-client.ts`). Previously shipped client IP + request headers (incl. cookies/authorization) to Sentry. Stack traces and route names still ship; identity is attached explicitly/minimally via `Sentry.setUser` where a session exists.
+- **Added** `/api/csp-report` endpoint (log-only CSP violation collector, rate-limited, non-fatal) and wired it via the `Reporting-Endpoints` header + `report-to` CSP directive. CSP violations are now observable; no enforcement change yet (review real reports before tightening).
+
+#### Added
+- **Added** `web/tests/unit/sentry-pii-regression.test.ts` — static guard asserting every live Sentry entry point keeps `sendDefaultPii: false`, so SEC-1 cannot silently regress.
+
+#### Removed
+- **Removed** 3 orphaned `/about` social-link tests (`web/tests/unit/about-page.test.tsx`). The social section was intentionally removed in `87723ba` to comply with AGENTS.md Scope Constraints (no social-media features); the tests were never updated. Unit suite is now intentionally green (1121/1121).
+
+#### Review: Auth compatibility (`SEC-5` scope, no code change)
+- Auth surface is **compatible** with the SEC-1/CSP changes: Sentry init and CSP `proxy.ts` do not touch the NextAuth v4 admin flow (`/api/auth/[...nextauth]`) or the Supabase public bearer flow. CSRF protection in `proxy.ts` still gates admin state-changing routes via same-origin + `sec-fetch-site` checks; adding the `Reporting-Endpoints`/`report-to` headers does not weaken it.
+- **Findings (epic, not in this change):** next-auth is pinned at `4.24.14` on App Router; `next-auth` v5 migration remains the tracked SEC-5 epic. `getServerSession(buildAdminAuthOptions())` re-builds options per call (acceptable, memoized handler in route.ts). Admin JWT enrichment (`userId/role/githubLogin/avatarUrl`) is intact; no PII is now sent to Sentry so enriched JWT fields stay local. GitHub admin allowlist (`AUTH_ADMIN_GITHUB_IDS`) + `account?.provider === "github"` check remain the only admin admission gates.
+- No breaking changes required for SEC-1/SEC-3; documented here so a future v5 migration does not re-introduce `sendDefaultPii` or drop the CSP report endpoint.
+
 ## [0.5.0] — 2026-06-18
 
 ### Branches: `chore/trivial-dev-scripts`, `chore/env-and-style-docs`, `chore/sentry-release-ci`, `chore/github-id-zod-validation`, `chore/dependabot-automerge`, `chore/e2e-in-ci`, `feat/map-wishlist-overlay`, `feat/image-focal-point-ui`, `feat/comment-threading-cap`, `feat/admin-metrics-and-preview`, `feat/responsive-account-auth`, `feat/bundle-analysis`, `feat/about-page-and-pwa`, `docs/backlog-update`, `docs/final-changelog`
