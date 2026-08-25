@@ -18,8 +18,11 @@ Sentry.init({
 
   tracesSampler,
 
-  // Capture user context (IP, request headers) in error reports
-  sendDefaultPii: true,
+  // SEC-1: do NOT send default PII (client IP / request headers / cookies) to
+  // Sentry. Stack traces + route names still ship; scrubbing request metadata
+  // keeps us out of GDPR/SOC-2 scope for request data. Identity, where needed,
+  // is attached explicitly + minimally via Sentry.setUser from a session context.
+  sendDefaultPii: false,
 
   // Attach local variable values to stack frames for richer server-side traces
   includeLocalVariables: true,
