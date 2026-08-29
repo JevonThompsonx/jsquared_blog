@@ -6,7 +6,9 @@ const isCI = Boolean(process.env.CI);
 function getLocalWebServerConfig() {
   try {
     const parsedUrl = new URL(baseURL);
-    const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname);
+    const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(
+      parsedUrl.hostname,
+    );
 
     if (!isLocalHost) {
       return undefined;
@@ -15,7 +17,10 @@ function getLocalWebServerConfig() {
     const port = parsedUrl.port || "3000";
 
     return {
-      command: `pnpm run dev -- --port ${port}`,
+      // Pass `--port` as a flag to `next dev`, NOT as a positional arg after a
+      // `--` separator. `next dev -- <port>` treats `<port>` as a project
+      // directory and fails with "Invalid project directory provided".
+      command: `pnpm run dev --port ${port}`,
       url: baseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
