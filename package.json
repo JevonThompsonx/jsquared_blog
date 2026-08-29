@@ -25,9 +25,9 @@
   "devDependencies": {
     "@sentry/cli": "2.58.5",
     "husky": "^9.1.7",
-    "lint-staged": "^17.3.0",
+    "lint-staged": "^17.4.1",
     "prettier": "^3.9.6",
-    "vercel": "^50.42.0"
+    "vercel": "^50.44.0"
   },
   "engines": {
     "node": ">=22.13"
