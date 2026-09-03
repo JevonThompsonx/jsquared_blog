@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 const unauthenticatedAdminPaths = ["/admin/tags", "/admin/wishlist"] as const;
 

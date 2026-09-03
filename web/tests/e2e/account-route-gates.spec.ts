@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("account route gates", () => {
   test("/account redirects logged-out users to sign-in with a return path", async ({ browser }) => {

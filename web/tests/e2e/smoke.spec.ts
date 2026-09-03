@@ -11,6 +11,9 @@ import {
   openAdminCommentsPage,
   selectThemeOption,
 } from "./helpers/admin";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 type AxePage = ConstructorParameters<typeof AxeBuilder>[0]["page"];
 

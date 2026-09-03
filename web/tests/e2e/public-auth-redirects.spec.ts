@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("public auth redirect links", () => {
   test("login keeps a safe redirect target on the create-account link", async ({ page }) => {

@@ -19,7 +19,9 @@
     "e2e:capture-admin-state": "node --import tsx/esm ./scripts/capture-admin-storage-state.ts",
     "e2e:capture-public-state": "tsx ./scripts/capture-public-storage-state.ts",
     "seed:e2e": "tsx ./scripts/seed-e2e-fixtures.ts",
-    "seed:wishlist": "tsx ./scripts/seed-wishlist.ts"
+    "seed:wishlist": "tsx ./scripts/seed-wishlist.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@libsql/client": "0.17.4",

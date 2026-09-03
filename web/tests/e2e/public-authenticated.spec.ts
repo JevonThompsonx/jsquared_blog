@@ -12,6 +12,9 @@ import {
   publicTest,
 } from "./helpers/public";
 import { createIsolatedPublicRequestHeaders } from "./helpers/public-request-headers";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 const canRunAuthenticatedFlows = canRunAuthenticatedPublicFlows({
   hasPublicStorageState,

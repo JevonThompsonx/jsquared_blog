@@ -20,7 +20,9 @@
     "lint:web": "pnpm --filter web run lint",
     "test:web": "pnpm --filter web run test",
     "prepare": "husky",
-    "lint-staged": "pnpm --filter web exec lint-staged"
+    "lint-staged": "pnpm --filter web exec lint-staged",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@sentry/cli": "2.58.5",

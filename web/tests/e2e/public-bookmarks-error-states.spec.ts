@@ -6,6 +6,9 @@ import {
   hasPublicStorageState,
   publicTest,
 } from "./helpers/public";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 const canRunAuthenticatedFlows = hasPublicStorageState && Boolean(configuredPublicEmail);
 

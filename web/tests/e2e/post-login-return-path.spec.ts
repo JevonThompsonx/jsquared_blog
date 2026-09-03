@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 import { loadEnvironmentFiles } from "@/lib/env-loader";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 loadEnvironmentFiles();
 

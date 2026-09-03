@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("post bookmark route gate", () => {
   test("logged-out readers are sent to sign in to save a post and keep the post return path", async ({ browser, request }) => {
