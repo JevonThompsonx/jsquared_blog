@@ -58,7 +58,7 @@
     "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/jsdom": "28.0.3",
-    "@types/node": "25.9.3",
+    "@types/node": "26.4.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@types/sanitize-html": "^2.16.1",
