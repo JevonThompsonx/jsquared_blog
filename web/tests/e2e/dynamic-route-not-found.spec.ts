@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 const whitespaceOnlyRoutes = [
   "/posts/%20%20",

@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 function isHomepageFeedPageTwo(url: string): boolean {
   const parsedUrl = new URL(url);

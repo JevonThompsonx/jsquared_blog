@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("public auth callback route", () => {
   test("missing verification state lands in the bounded callback failure shell", async ({ browser }) => {

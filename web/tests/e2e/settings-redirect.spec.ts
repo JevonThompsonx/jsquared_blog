@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("legacy settings route", () => {
   test("/settings server-redirects into the account route", async ({ page, request }) => {

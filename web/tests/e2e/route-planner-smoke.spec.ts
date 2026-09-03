@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 const allowedOrigin = new URL(process.env.E2E_BASE_URL ?? "http://localhost:3000").origin;
 

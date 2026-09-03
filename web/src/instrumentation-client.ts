@@ -3,8 +3,10 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // Capture user context (IP, request headers) in error reports
-  sendDefaultPii: true,
+  // SEC-1: do NOT send default PII (client IP / request headers) to Sentry.
+  // Session Replay (below) is masked separately; this flag off avoids leaking
+  // raw headers / cookies in addition to whatever the replay captures.
+  sendDefaultPii: false,
 
   // 100% in dev so every trace shows up; 10% in production to stay within quota
   tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,

@@ -47,7 +47,7 @@ The historical record of what worked at a point in time is more valuable than a 
 - [SQLite / Drizzle ORM](#sqlite--drizzle-orm) — 8 entries
 - [Turso / Database Connectivity](#turso--database-connectivity) — 2 entries
 - [React 19 Testing](#react-19-testing) — 4 entries
-- [Next.js 16 App Router](#nextjs-16-app-router) — 2 entries
+- [Next.js 16 App Router](#nextjs-16-app-router) — 3 entries
 - [Vitest Configuration](#vitest-configuration) — 2 entries
 - [Tooling](#tooling) — 3 entries
 - [Security / CSP](#security--csp) — 5 entries
@@ -507,6 +507,28 @@ Or use `dynamic = "force-static"` + `generateStaticParams` if you want to opt in
 **Verified:** Branch 1 added `export const dynamic = "force-dynamic"` to pages that depend on searchParams. Tests like `home-page.test.tsx` verify the value is set.
 
 ---
+
+### [Next.js] `'use cache'` + `cacheTag`/`cacheLife` require `cacheComponents` (and that breaks the build)
+
+**Discovered in:** Branch `feat/phase1-modernization` (SPD-5 / EFF-1 perf pilot), 2026-08-24
+**Last verified:** 2026-08-24
+
+**Problem:** Wanted to pilot React 19 `'use cache'` with `cacheTag`/`cacheLife` on the homepage feed + post detail (audit item EFF-1/SPD-5) to get request-coalesced, cache-tag-aware invalidation.
+
+**Gotcha:** In Next.js 16.2.9, `cacheTag()` / `cacheLife()` (exported from `next/cache`) throw `E886` ("only available with the `cacheComponents` config") at runtime unless `process.env.__NEXT_USE_CACHE` is set — which only happens when the top-level `cacheComponents: true` flag is enabled in `next.config.ts`. So `'use cache'` cannot be used as a "small pilot" without flipping that flag.
+
+Enabling `cacheComponents: true` **compiles**, but it is the **Cache Components** rendering model and forces an app-wide constraint:
+1. Every `export const dynamic = "force-dynamic"` and `export const runtime = "nodejs"` segment config becomes a build error ("not compatible with `nextConfig.cacheComponents`. Please remove it"). In this repo that was **17 route files**.
+2. Far worse: the production build then fails on **34 routes** with *"Uncached data was accessed outside of `<Suspense>`"* — under Cache Components, every dynamic page must be either statically cacheable or wrap its data access in `<Suspense>`. Fixing that is a full Suspense migration across the app, not a pilot.
+
+**Solution:** Achieve the same tag-based dedup + on-demand `revalidateTag` semantics with the **stable `unstable_cache` API** (already used in `web/src/server/queries/posts.ts`). `unstable_cache(cb, keyParts, { revalidate, tags })` supports `tags: string[]` and interoperates with `revalidateTag(tag, "max")` with **no** `cacheComponents` flag and no Suspense migration. This is the correct path here:
+- `listPublishedPosts` → `unstable_cache(..., { revalidate: 3600, tags: ["posts"] })`
+- `getPublishedPostBySlug` → `unstable_cache(..., { revalidate: 3600, tags: ["posts"] })` (was previously uncached; now a per-slug cache entry via keyParts)
+- Publish/unpublish/delete/admin actions already call `revalidateTag("posts", "max")` → purges both.
+
+Note: `unstable_cache`'s `tags` must be a **static** `string[]` (no per-call dynamic tags — that's the one thing `'use cache'`+`cacheTag` adds). Per-post *precise* invalidation via `cacheTag(\`post:${slug}\`)` is therefore not available without `cacheComponents`; the shared `"posts"` tag + per-slug keyParts is the stable equivalent.
+
+**Verified:** With `cacheComponents` removed and `unstable_cache` tags in place, `pnpm run typecheck`, `pnpm run lint`, `pnpm run build`, and `pnpm run test` (1121/1121) all pass. The `cacheComponents: true` attempt was reverted after confirming the 34-route build failure via `next build --debug-prerender`.
 
 ## Vitest Configuration
 

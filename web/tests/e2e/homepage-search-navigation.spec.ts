@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("homepage search navigation", () => {
   test("submitting the header search from the homepage navigates to the matching search route", async ({ page }) => {

@@ -5,7 +5,8 @@ Sentry.init({
 
   tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
 
-  sendDefaultPii: true,
+  // SEC-1: do NOT send default PII (client IP / request headers) to Sentry.
+  sendDefaultPii: false,
   enableLogs: true,
 
   // Disable client reports (SDK telemetry about dropped events)

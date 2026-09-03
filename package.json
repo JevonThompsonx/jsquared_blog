@@ -18,11 +18,18 @@
     "dev:web": "pnpm --filter web run dev",
     "build:web": "pnpm --filter web run build",
     "lint:web": "pnpm --filter web run lint",
-    "test:web": "pnpm --filter web run test"
+    "test:web": "pnpm --filter web run test",
+    "prepare": "husky",
+    "lint-staged": "pnpm --filter web exec lint-staged",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@sentry/cli": "2.58.5",
-    "vercel": "^50.42.0"
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "vercel": "^50.44.0"
   },
   "engines": {
     "node": ">=22.13"

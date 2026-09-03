@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("newsletter signup form", () => {
   test("homepage newsletter form submits the expected payload and shows success feedback", async ({ page }) => {

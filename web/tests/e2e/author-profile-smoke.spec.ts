@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("public author profile smoke", () => {
   test("published story author links to the matching public profile", async ({ page }) => {

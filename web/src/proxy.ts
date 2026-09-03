@@ -117,7 +117,7 @@ export function proxy(request: NextRequest): NextResponse {
     // style-src: nonce covers <style> from next/font + Next.js CSS injection
     // style-src-attr 'unsafe-inline' covers 63+ React style={} patterns (low risk, no code exec)
     // unsafe-inline only in dev (same conditional pattern as script-src)
-    isProduction ? `style-src 'self' 'nonce-${nonce}'` : "style-src 'self' 'unsafe-inline'",
+    isProduction ? "style-src 'self' 'nonce-${nonce}'" : "style-src 'self' 'unsafe-inline'",
     isProduction ? "style-src-attr 'unsafe-inline'" : null,
     `img-src ${imgSrc}`,
     "font-src 'self' data: https://fonts.stadiamaps.com",
@@ -130,6 +130,10 @@ export function proxy(request: NextRequest): NextResponse {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    // SEC-3: report CSP violations to our first-party endpoint so the policy is
+    // observable. Report-only on the directive (we still log, not enforce) until
+    // we've reviewed real-world violations and can tighten safely.
+    "report-to csp-endpoint",
     isProduction ? "upgrade-insecure-requests" : "",
   ]
     .filter(Boolean)
@@ -144,6 +148,10 @@ export function proxy(request: NextRequest): NextResponse {
   });
 
   response.headers.set("Content-Security-Policy", csp);
+
+  // SEC-3: declare the reporting endpoint group referenced by `report-to` above.
+  // The Reporting-Endpoints header is what binds the name "csp-endpoint" to a URL.
+  response.headers.set("Reporting-Endpoints", "csp-endpoint=\"/api/csp-report\"");
 
   if (isAdminPath(pathname) || isAdminApiPath(pathname)) {
     response.headers.set("Cache-Control", "no-store, max-age=0");

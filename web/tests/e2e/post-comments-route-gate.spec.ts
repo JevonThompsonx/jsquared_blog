@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 import { configuredPublicPostSlug } from "./helpers/public";
+import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
+
+skipIfDummyDbEnv();
 
 test.describe("logged-out post comments gate", () => {
   test("published post comments prompt sign-in with a return path", async ({ browser }) => {

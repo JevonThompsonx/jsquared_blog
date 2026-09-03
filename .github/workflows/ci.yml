@@ -68,6 +68,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web run test
 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web run build
+
   e2e:
     name: E2E tests
     runs-on: ubuntu-latest
@@ -79,5 +92,24 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web exec playwright install --with-deps chromium
+      # SPD-6: cache Playwright browser binaries so we stop downloading them
+      # on every run. The version is part of the cache key so the cache busts
+      # automatically when the pinned playwright version changes.
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm --filter web exec playwright --version)" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+      # Heavy download + OS deps only when the browser cache missed.
+      - name: Install Playwright browsers (no cache)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      # Cache hit: binaries already present, just ensure OS-level deps exist.
+      - name: Install Playwright OS dependencies (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter web exec playwright install-deps chromium
       - run: pnpm --filter web run test:e2e
