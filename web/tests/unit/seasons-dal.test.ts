@@ -30,7 +30,11 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col, val) => ({ col, val })),
 }));
 
-import { listAllSeasons, upsertSeason, deleteSeasonByKey } from "@/server/dal/seasons";
+import {
+  listAllSeasons,
+  upsertSeason,
+  deleteSeasonByKey,
+} from "@/server/dal/seasons";
 
 describe("listAllSeasons", () => {
   beforeEach(() => {
@@ -61,12 +65,19 @@ describe("listAllSeasons", () => {
   });
 
   it("returns empty array when DB throws (graceful degradation)", async () => {
-    mockSelect.mockReturnValue({
-      from: vi.fn().mockRejectedValue(new Error("no such table: seasons")),
-    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      mockSelect.mockReturnValue({
+        from: vi.fn().mockRejectedValue(new Error("no such table: seasons")),
+      });
 
-    const result = await listAllSeasons();
-    expect(result).toEqual([]);
+      const result = await listAllSeasons();
+      expect(result).toEqual([]);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("converts numeric timestamps to Date objects", async () => {

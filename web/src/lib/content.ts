@@ -18,13 +18,15 @@ type TiptapNode = {
   content?: TiptapNode[];
 };
 
-const tiptapNodeSchema: z.ZodType<TiptapNode> = z.lazy(() => z.object({
-  type: z.string().optional(),
-  text: z.string().optional(),
-  attrs: z.record(z.string(), z.unknown()).optional(),
-  marks: z.array(tiptapMarkSchema).optional(),
-  content: z.array(tiptapNodeSchema).optional(),
-}));
+const tiptapNodeSchema: z.ZodType<TiptapNode> = z.lazy(() =>
+  z.object({
+    type: z.string().optional(),
+    text: z.string().optional(),
+    attrs: z.record(z.string(), z.unknown()).optional(),
+    marks: z.array(tiptapMarkSchema).optional(),
+    content: z.array(tiptapNodeSchema).optional(),
+  }),
+);
 
 export const tiptapDocumentSchema = z.object({
   type: z.literal("doc"),
@@ -119,6 +121,26 @@ function sanitizeImageSrc(value: unknown): string | null {
   return null;
 }
 
+function sanitizeImageDimension(value: unknown): string | null {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= 10000
+  ) {
+    return String(Math.round(value));
+  }
+
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    const parsed = Number.parseInt(value.trim(), 10);
+    if (parsed > 0 && parsed <= 10000) {
+      return String(parsed);
+    }
+  }
+
+  return null;
+}
+
 const RICH_TEXT_ALLOWED_TAGS = [
   "a",
   "blockquote",
@@ -150,14 +172,16 @@ const richTextSanitizerOptions: sanitizeHtml.IOptions = {
   allowedTags: [...RICH_TEXT_ALLOWED_TAGS],
   allowedAttributes: {
     a: ["href", "target", "rel"],
-    img: ["src", "alt", "title", "loading"],
+    img: ["src", "alt", "title", "loading", "width", "height", "decoding"],
   },
   allowedSchemes: ["http", "https", "mailto"],
   allowedSchemesAppliedToAttributes: ["href", "src"],
   allowProtocolRelative: false,
   disallowedTagsMode: "discard",
   enforceHtmlBoundary: true,
-  nonBooleanAttributes: sanitizeHtml.defaults.nonBooleanAttributes.filter((attribute: string) => attribute !== "loading"),
+  nonBooleanAttributes: sanitizeHtml.defaults.nonBooleanAttributes.filter(
+    (attribute: string) => attribute !== "loading",
+  ),
   parseStyleAttributes: false,
   transformTags: {
     a: (_tagName: string, attributes: Attributes) => {
@@ -182,7 +206,10 @@ const richTextSanitizerOptions: sanitizeHtml.IOptions = {
       }
 
       const alt = typeof attributes.alt === "string" ? attributes.alt : "";
-      const title = typeof attributes.title === "string" ? attributes.title : undefined;
+      const title =
+        typeof attributes.title === "string" ? attributes.title : undefined;
+      const width = sanitizeImageDimension(attributes.width);
+      const height = sanitizeImageDimension(attributes.height);
 
       return {
         tagName: "img",
@@ -190,7 +217,10 @@ const richTextSanitizerOptions: sanitizeHtml.IOptions = {
           src,
           alt,
           ...(title ? { title } : {}),
+          ...(width ? { width } : {}),
+          ...(height ? { height } : {}),
           loading: "lazy",
+          decoding: "async",
         },
       };
     },
@@ -251,7 +281,10 @@ function renderTiptapNode(node: TiptapNode): string {
       return applyMarks(escapeHtml(node.text ?? ""), node.marks);
     case "heading": {
       const rawLevel = node.attrs?.level;
-      const level = typeof rawLevel === "number" && rawLevel >= 1 && rawLevel <= 6 ? rawLevel : 2;
+      const level =
+        typeof rawLevel === "number" && rawLevel >= 1 && rawLevel <= 6
+          ? rawLevel
+          : 2;
       return `<h${level}>${renderChildren(node.content)}</h${level}>`;
     }
     case "bulletList":
@@ -280,10 +313,16 @@ function renderTiptapNode(node: TiptapNode): string {
         return "";
       }
 
-      const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
-      const title = typeof node.attrs?.title === "string" ? node.attrs.title.trim() : "";
+      const alt =
+        typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
+      const title =
+        typeof node.attrs?.title === "string" ? node.attrs.title.trim() : "";
       const titleAttribute = title ? ` title="${escapeHtml(title)}"` : "";
-      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${titleAttribute} loading="lazy" />`;
+      const width = sanitizeImageDimension(node.attrs?.width);
+      const height = sanitizeImageDimension(node.attrs?.height);
+      const widthAttribute = width ? ` width="${width}"` : "";
+      const heightAttribute = height ? ` height="${height}"` : "";
+      return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${titleAttribute}${widthAttribute}${heightAttribute} loading="lazy" decoding="async" />`;
     }
     default:
       return renderChildren(node.content);
@@ -297,7 +336,9 @@ function createEmptyTiptapDocument(): TiptapDocument {
   };
 }
 
-export function parseCanonicalTiptapDocument(contentJson: string | null | undefined): TiptapDocument | null {
+export function parseCanonicalTiptapDocument(
+  contentJson: string | null | undefined,
+): TiptapDocument | null {
   if (!contentJson) {
     return null;
   }
@@ -315,13 +356,17 @@ function isLegacyHtmlContent(contentJson: string | null | undefined): boolean {
   }
 
   try {
-    return legacyHtmlContentSchema.safeParse(safeJsonParse(contentJson)).success;
+    return legacyHtmlContentSchema.safeParse(safeJsonParse(contentJson))
+      .success;
   } catch {
     return false;
   }
 }
 
-export function deriveExcerptFromContent(contentJson: string, maxLength = 280): string | null {
+export function deriveExcerptFromContent(
+  contentJson: string,
+  maxLength = 280,
+): string | null {
   const renderedHtml = renderTiptapJson(contentJson);
   const plainText = htmlToPlainText(renderedHtml);
   if (!plainText) {
@@ -331,12 +376,17 @@ export function deriveExcerptFromContent(contentJson: string, maxLength = 280): 
   return plainText.slice(0, maxLength) || null;
 }
 
-function collectImageAltWarnings(node: TiptapNode, path: number[], warnings: TiptapImageAltWarning[]): void {
+function collectImageAltWarnings(
+  node: TiptapNode,
+  path: number[],
+  warnings: TiptapImageAltWarning[],
+): void {
   if (node.type === "image") {
     const rawAlt = node.attrs?.alt;
     const alt = typeof rawAlt === "string" ? rawAlt.trim() : "";
     const rawSrc = node.attrs?.src;
-    const imageSrc = typeof rawSrc === "string" && rawSrc.trim() ? rawSrc.trim() : null;
+    const imageSrc =
+      typeof rawSrc === "string" && rawSrc.trim() ? rawSrc.trim() : null;
 
     if (!alt) {
       warnings.push({
@@ -353,8 +403,13 @@ function collectImageAltWarnings(node: TiptapNode, path: number[], warnings: Tip
   });
 }
 
-export function getTiptapImageAltWarnings(content: string | TiptapDocument): TiptapImageAltWarning[] {
-  const document = typeof content === "string" ? parseCanonicalTiptapDocument(content) : content;
+export function getTiptapImageAltWarnings(
+  content: string | TiptapDocument,
+): TiptapImageAltWarning[] {
+  const document =
+    typeof content === "string"
+      ? parseCanonicalTiptapDocument(content)
+      : content;
   if (!document) {
     return [];
   }
@@ -366,7 +421,9 @@ export function getTiptapImageAltWarnings(content: string | TiptapDocument): Tip
   return warnings;
 }
 
-export function renderTiptapJson(contentJson: string | null | undefined): string | null {
+export function renderTiptapJson(
+  contentJson: string | null | undefined,
+): string | null {
   if (!contentJson) {
     return null;
   }
@@ -420,8 +477,14 @@ export function getWordCount(html: string | null | undefined): number {
   return plainText.split(/\s+/).filter(Boolean).length;
 }
 
-export function getReadingTimeMinutes(html: string | null | undefined, wordsPerMinute = 220): number {
-  const safeWordsPerMinute = Number.isFinite(wordsPerMinute) && wordsPerMinute > 0 ? wordsPerMinute : 220;
+export function getReadingTimeMinutes(
+  html: string | null | undefined,
+  wordsPerMinute = 220,
+): number {
+  const safeWordsPerMinute =
+    Number.isFinite(wordsPerMinute) && wordsPerMinute > 0
+      ? wordsPerMinute
+      : 220;
   const wordCount = getWordCount(html);
 
   if (wordCount === 0) {
@@ -442,7 +505,10 @@ function slugifyHeading(text: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function processHeadings(html: string): { html: string; headings: TocHeading[] } {
+export function processHeadings(html: string): {
+  html: string;
+  headings: TocHeading[];
+} {
   const headings: TocHeading[] = [];
   const seen = new Map<string, number>();
 

@@ -61,10 +61,21 @@ describe("sitemap", () => {
       { id: "cat-1", name: "Travel", slug: "travel" },
     ]);
     vi.mocked(listAllTagsWithCounts).mockResolvedValue([
-      { id: "tag-1", name: "hiking", slug: "hiking", description: null, postCount: 3 },
+      {
+        id: "tag-1",
+        name: "hiking",
+        slug: "hiking",
+        description: null,
+        postCount: 3,
+      },
     ]);
     vi.mocked(listAllSeries).mockResolvedValue([
-      { id: "series-1", title: "Pacific Crest Trail", slug: "pct", description: null },
+      {
+        id: "series-1",
+        title: "Pacific Crest Trail",
+        slug: "pct",
+        description: null,
+      },
     ]);
 
     const entries = await sitemap();
@@ -76,14 +87,21 @@ describe("sitemap", () => {
   });
 
   it("falls back to base + static entries when database is unavailable", async () => {
-    vi.mocked(listPublishedPosts).mockRejectedValue(new Error("db down"));
-    vi.mocked(listAdminCategories).mockResolvedValue([]);
-    vi.mocked(listAllTagsWithCounts).mockResolvedValue([]);
-    vi.mocked(listAllSeries).mockResolvedValue([]);
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      vi.mocked(listPublishedPosts).mockRejectedValue(new Error("db down"));
+      vi.mocked(listAdminCategories).mockResolvedValue([]);
+      vi.mocked(listAllTagsWithCounts).mockResolvedValue([]);
+      vi.mocked(listAllSeries).mockResolvedValue([]);
 
-    const entries = await sitemap();
+      const entries = await sitemap();
 
-    expect(entries.length).toBeGreaterThanOrEqual(4);
-    expect(entries[0].url).toContain("jsquaredadventures.com");
+      expect(entries.length).toBeGreaterThanOrEqual(4);
+      expect(entries[0].url).toContain("jsquaredadventures.com");
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

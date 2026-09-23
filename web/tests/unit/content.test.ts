@@ -27,13 +27,17 @@ describe("htmlToPlainText", () => {
   });
 
   it("strips nested tags", () => {
-    expect(htmlToPlainText("<p><strong>Bold</strong> and <em>italic</em></p>")).toBe("Bold and italic");
+    expect(
+      htmlToPlainText("<p><strong>Bold</strong> and <em>italic</em></p>"),
+    ).toBe("Bold and italic");
   });
 });
 
 describe("reading helpers", () => {
   it("counts words from sanitized html", () => {
-    expect(getWordCount("<p>Hello <strong>road trip</strong> crew</p>")).toBe(4);
+    expect(getWordCount("<p>Hello <strong>road trip</strong> crew</p>")).toBe(
+      4,
+    );
   });
 
   it("returns zero minutes for empty content", () => {
@@ -107,7 +111,10 @@ describe("renderTiptapJson", () => {
   });
 
   it("renders a legacy-html payload via sanitization", () => {
-    const json = JSON.stringify({ type: "legacy-html", html: "<p>Old content</p>" });
+    const json = JSON.stringify({
+      type: "legacy-html",
+      html: "<p>Old content</p>",
+    });
     const result = renderTiptapJson(json);
     expect(result).toContain("Old content");
   });
@@ -165,7 +172,7 @@ describe("renderTiptapJson", () => {
       content: [
         {
           type: "thoughtsBlock",
-          attrs: { summary: '<img src=x onerror=alert(1)>' },
+          attrs: { summary: "<img src=x onerror=alert(1)>" },
           content: [
             {
               type: "paragraph",
@@ -178,7 +185,9 @@ describe("renderTiptapJson", () => {
 
     const result = renderTiptapJson(json);
 
-    expect(result).toContain("<summary>&lt;img src=x onerror=alert(1)&gt;</summary>");
+    expect(result).toContain(
+      "<summary>&lt;img src=x onerror=alert(1)&gt;</summary>",
+    );
     expect(result).not.toContain("<img src=x onerror=alert(1)>");
   });
 });
@@ -202,7 +211,9 @@ describe("sanitizeRichTextHtml", () => {
       '<p>Trail <span style="color:red"><a href="https://example.com" onclick="alert(1)">guide</a></span><svg><script>alert(1)</script></svg></p>',
     );
 
-    expect(sanitized).toBe('<p>Trail <a href="https://example.com" target="_blank" rel="noreferrer">guide</a></p>');
+    expect(sanitized).toBe(
+      '<p>Trail <a href="https://example.com" target="_blank" rel="noreferrer">guide</a></p>',
+    );
   });
 
   it("normalizes legacy html links to the safe allowlist", () => {
@@ -223,7 +234,102 @@ describe("sanitizeRichTextHtml", () => {
       '<details open onclick="alert(1)" class="x"><summary data-evil="1">Thoughts</summary><p>Safe copy</p><script>alert(1)</script></details>',
     );
 
-    expect(sanitized).toBe("<details><summary>Thoughts</summary><p>Safe copy</p></details>");
+    expect(sanitized).toBe(
+      "<details><summary>Thoughts</summary><p>Safe copy</p></details>",
+    );
+  });
+
+  it("preserves valid width/height and emits decoding=async for CLS", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<img src="https://example.com/road.jpg" alt="Road" width="800" height="600" />',
+    );
+
+    expect(sanitized).toContain('width="800"');
+    expect(sanitized).toContain('height="600"');
+    expect(sanitized).toContain('loading="lazy"');
+    expect(sanitized).toContain('decoding="async"');
+  });
+
+  it("drops invalid width/height but still emits decoding=async", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<img src="https://example.com/road.jpg" alt="Road" width="evil" height="-5" />',
+    );
+
+    expect(sanitized).toContain('loading="lazy"');
+    expect(sanitized).toContain('decoding="async"');
+    expect(sanitized).not.toContain("width=");
+    expect(sanitized).not.toContain("height=");
+  });
+});
+
+describe("image CLS attributes (tiptap)", () => {
+  it("emits width/height/decoding on tiptap image nodes when dimensions exist", () => {
+    const json = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: {
+            src: "https://example.com/trail.jpg",
+            alt: "Trail",
+            width: 800,
+            height: 600,
+          },
+        },
+      ],
+    });
+    const result = renderTiptapJson(json);
+
+    expect(result).toContain('width="800"');
+    expect(result).toContain('height="600"');
+    expect(result).toContain('loading="lazy"');
+    expect(result).toContain('decoding="async"');
+  });
+
+  it("emits decoding=async even without dimensions", () => {
+    const json = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: { src: "https://example.com/trail.jpg", alt: "Trail" },
+        },
+      ],
+    });
+    const result = renderTiptapJson(json);
+
+    expect(result).toContain('loading="lazy"');
+    expect(result).toContain('decoding="async"');
+  });
+
+  it("strips huge numeric dimensions above the 10000 cap", () => {
+    const json = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: {
+            src: "https://example.com/trail.jpg",
+            alt: "Trail",
+            width: 99999999,
+            height: 500,
+          },
+        },
+      ],
+    });
+    const result = renderTiptapJson(json);
+
+    expect(result).not.toContain('width="99999999"');
+    expect(result).toContain('height="500"');
+  });
+
+  it("strips huge string dimensions above the 10000 cap", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<img src="https://example.com/road.jpg" alt="Road" width="99999999" height="600" />',
+    );
+
+    expect(sanitized).not.toContain('width="99999999"');
+    expect(sanitized).toContain('height="600"');
   });
 });
 
@@ -232,7 +338,11 @@ describe("processHeadings", () => {
     const { html, headings } = processHeadings("<h2>My Section</h2>");
     expect(html).toContain('id="my-section"');
     expect(headings).toHaveLength(1);
-    expect(headings[0]).toMatchObject({ id: "my-section", text: "My Section", level: 2 });
+    expect(headings[0]).toMatchObject({
+      id: "my-section",
+      text: "My Section",
+      level: 2,
+    });
   });
 
   it("adds id attributes to h3 and h4 headings", () => {
