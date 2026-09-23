@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import nextDynamic from "next/dynamic";
 
 import { SiteHeader } from "@/components/layout/site-header";
+import { WorldMapClient } from "@/components/blog/world-map-client";
 import { getPublicEnv } from "@/lib/env";
 import { listAllPublishedPosts } from "@/server/queries/posts";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
@@ -14,18 +14,8 @@ export const metadata: Metadata = {
   description: "Every J²Adventures story, pinned to the place it happened.",
 };
 
-// MapLibre (~700KB) is code-split off the public route's initial JS.
-const WorldMap = nextDynamic(
-  () => import("@/components/blog/world-map").then((mod) => mod.WorldMap),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-[560px] items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] text-sm text-[var(--text-secondary)]">
-        Loading map…
-      </div>
-    ),
-  },
-);
+// MapLibre (~700KB) is code-split via the client wrapper below
+// (next/dynamic ssr:false lives in the Client Component).
 
 function hasMapCoordinates(post: {
   locationLat: number | null;
@@ -99,7 +89,7 @@ export default async function MapPage({
         {/* Map + category filter + post list */}
         {NEXT_PUBLIC_STADIA_MAPS_API_KEY && !mapLoadFailed ? (
           <div aria-label="Explore posts by location" role="region">
-            <WorldMap
+            <WorldMapClient
               apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY}
               posts={allPosts}
               wishlistPlaces={showWishlist ? wishlistPlaces : []}

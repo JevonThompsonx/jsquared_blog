@@ -24,17 +24,21 @@ vi.mock("@/components/blog/world-map", () => ({
     ),
 }));
 
-// next/dynamic(ssr:false) renders the loading fallback on the server, so bypass
-// the async boundary in unit tests and render the mocked WorldMap directly.
-vi.mock("next/dynamic", () => ({
-  default:
-    () =>
-    ({ apiKey, posts }: { apiKey: string; posts: Array<{ id: string }> }) =>
-      createElement(
-        "div",
-        { "data-testid": "world-map", "data-api-key": apiKey },
-        `Map markers: ${posts.length}`,
-      ),
+// The page statically imports the client wrapper (which owns the
+// next/dynamic ssr:false boundary), so mock the wrapper directly.
+vi.mock("@/components/blog/world-map-client", () => ({
+  WorldMapClient: ({
+    apiKey,
+    posts,
+  }: {
+    apiKey: string;
+    posts: Array<{ id: string }>;
+  }) =>
+    createElement(
+      "div",
+      { "data-testid": "world-map", "data-api-key": apiKey },
+      `Map markers: ${posts.length}`,
+    ),
 }));
 
 vi.mock("@/lib/env", () => ({
