@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 
 import { SiteHeader } from "@/components/layout/site-header";
-import { WorldMap } from "@/components/blog/world-map";
+import { WorldMapClient } from "@/components/blog/world-map-client";
 import { getPublicEnv } from "@/lib/env";
 import { listAllPublishedPosts } from "@/server/queries/posts";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
@@ -14,11 +14,21 @@ export const metadata: Metadata = {
   description: "Every J²Adventures story, pinned to the place it happened.",
 };
 
-function hasMapCoordinates(post: { locationLat: number | null; locationLng: number | null }) {
+// MapLibre (~700KB) is code-split via the client wrapper below
+// (next/dynamic ssr:false lives in the Client Component).
+
+function hasMapCoordinates(post: {
+  locationLat: number | null;
+  locationLng: number | null;
+}) {
   return post.locationLat !== null && post.locationLng !== null;
 }
 
-export default async function MapPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
   const { show } = await searchParams;
   const showWishlist = show === "wishlist";
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
@@ -42,7 +52,9 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
   }
 
   const mappedCount = allPosts.filter(hasMapCoordinates).length;
-  const wishlistCount = wishlistPlaces.filter((p) => p.locationLat !== null && p.locationLng !== null).length;
+  const wishlistCount = wishlistPlaces.filter(
+    (p) => p.locationLat !== null && p.locationLng !== null,
+  ).length;
   const summary = mapLoadFailed
     ? "Story locations are temporarily unavailable."
     : showWishlist
@@ -52,26 +64,43 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
         : "Stories will appear here as locations are added.";
 
   return (
-    <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen pb-16 pt-20 sm:pt-24"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
       <div className="container mx-auto mt-4 max-w-5xl px-4 sm:mt-6 sm:px-6 lg:px-8">
         {/* Page header */}
         <div className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Explore</p>
-          <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">Adventure Map</h1>
-          <p className="mt-2 text-base leading-relaxed text-[var(--text-secondary)]">{summary}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+            Explore
+          </p>
+          <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
+            Adventure Map
+          </h1>
+          <p className="mt-2 text-base leading-relaxed text-[var(--text-secondary)]">
+            {summary}
+          </p>
         </div>
 
         {/* Map + category filter + post list */}
         {NEXT_PUBLIC_STADIA_MAPS_API_KEY && !mapLoadFailed ? (
           <div aria-label="Explore posts by location" role="region">
-            <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={allPosts} wishlistPlaces={showWishlist ? wishlistPlaces : []} />
+            <WorldMapClient
+              apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY}
+              posts={allPosts}
+              wishlistPlaces={showWishlist ? wishlistPlaces : []}
+            />
           </div>
         ) : (
           <div className="flex h-64 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] text-sm text-[var(--text-secondary)]">
             {mapLoadFailed ? (
-              <span>Map unavailable. Story locations are temporarily unavailable.</span>
+              <span>
+                Map unavailable. Story locations are temporarily unavailable.
+              </span>
             ) : (
               <>
                 Map unavailable — add{" "}

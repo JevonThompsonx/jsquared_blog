@@ -74,6 +74,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web run test
 
+  security:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Informative-only: 28 high + 1 critical pre-existing transitive vulns
+      # (maplibre-gl GHSA-jrc7, undici, vite, brace-expansion, js-yaml, nanoid,
+      # postcss, smol-toml). Follow-up: update maplibre-gl/undici/vite to clear.
+      - run: pnpm audit --audit-level=high
+        continue-on-error: true
+      # Equivalent to `gitleaks detect --no-git` via the official action.
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
     name: Build
     runs-on: ubuntu-latest

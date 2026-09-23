@@ -29,7 +29,11 @@ function allowsFetchSite(fetchSite: string | null): boolean {
     return false;
   }
 
-  return fetchSite === "same-origin" || fetchSite === "same-site" || fetchSite === "none";
+  return (
+    fetchSite === "same-origin" ||
+    fetchSite === "same-site" ||
+    fetchSite === "none"
+  );
 }
 
 function forbiddenResponse(pathname: string): NextResponse {
@@ -48,10 +52,15 @@ export function proxy(request: NextRequest): NextResponse {
   const start = Date.now();
   const pathname = request.nextUrl.pathname;
 
-  if (isStateChangingMethod(request.method) && (isAdminPath(pathname) || isAdminApiPath(pathname))) {
+  if (
+    isStateChangingMethod(request.method) &&
+    (isAdminPath(pathname) || isAdminApiPath(pathname))
+  ) {
     const originHeader = request.headers.get("origin");
     const fetchSiteHeader = request.headers.get("sec-fetch-site");
-    const hasAllowedOrigin = originHeader !== null && isSameOrigin(originHeader, request.nextUrl.origin);
+    const hasAllowedOrigin =
+      originHeader !== null &&
+      isSameOrigin(originHeader, request.nextUrl.origin);
 
     if (!hasAllowedOrigin || !allowsFetchSite(fetchSiteHeader)) {
       const forbidden = forbiddenResponse(pathname);
@@ -64,12 +73,14 @@ export function proxy(request: NextRequest): NextResponse {
 
   // In development, allow localhost origins (covers direct access, Tailscale, etc.)
   // and ws:// for Turbopack HMR WebSocket connections.
-  const devSources = isProduction ? [] : [
-    "http://localhost:*",
-    "ws://localhost:*",
-    `http://${request.nextUrl.hostname}:*`,
-    `ws://${request.nextUrl.hostname}:*`,
-  ];
+  const devSources = isProduction
+    ? []
+    : [
+        "http://localhost:*",
+        "ws://localhost:*",
+        `http://${request.nextUrl.hostname}:*`,
+        `ws://${request.nextUrl.hostname}:*`,
+      ];
 
   const imgSrc = [
     "'self'",
@@ -117,7 +128,9 @@ export function proxy(request: NextRequest): NextResponse {
     // style-src: nonce covers <style> from next/font + Next.js CSS injection
     // style-src-attr 'unsafe-inline' covers 63+ React style={} patterns (low risk, no code exec)
     // unsafe-inline only in dev (same conditional pattern as script-src)
-    isProduction ? "style-src 'self' 'nonce-${nonce}'" : "style-src 'self' 'unsafe-inline'",
+    isProduction
+      ? "style-src 'self' 'nonce-${nonce}'"
+      : "style-src 'self' 'unsafe-inline'",
     isProduction ? "style-src-attr 'unsafe-inline'" : null,
     `img-src ${imgSrc}`,
     "font-src 'self' data: https://fonts.stadiamaps.com",
@@ -133,7 +146,10 @@ export function proxy(request: NextRequest): NextResponse {
     // SEC-3: report CSP violations to our first-party endpoint so the policy is
     // observable. Report-only on the directive (we still log, not enforce) until
     // we've reviewed real-world violations and can tighten safely.
+    // Keep report-to (Reporting API) and report-uri (legacy, broader browser
+    // support) in sync — both point at /api/csp-report.
     "report-to csp-endpoint",
+    "report-uri /api/csp-report",
     isProduction ? "upgrade-insecure-requests" : "",
   ]
     .filter(Boolean)
@@ -151,7 +167,7 @@ export function proxy(request: NextRequest): NextResponse {
 
   // SEC-3: declare the reporting endpoint group referenced by `report-to` above.
   // The Reporting-Endpoints header is what binds the name "csp-endpoint" to a URL.
-  response.headers.set("Reporting-Endpoints", "csp-endpoint=\"/api/csp-report\"");
+  response.headers.set("Reporting-Endpoints", 'csp-endpoint="/api/csp-report"');
 
   if (isAdminPath(pathname) || isAdminApiPath(pathname)) {
     response.headers.set("Cache-Control", "no-store, max-age=0");
@@ -164,18 +180,26 @@ export function proxy(request: NextRequest): NextResponse {
   return response;
 }
 
-function logRequest(method: string, pathname: string, status: number, startedAt: number): void {
+function logRequest(
+  method: string,
+  pathname: string,
+  status: number,
+  startedAt: number,
+): void {
   if (process.env.NODE_ENV !== "production") {
     return;
   }
-  console.info(`[proxy] ${method} ${pathname} ${status} ${Date.now() - startedAt}ms`);
+  console.info(
+    `[proxy] ${method} ${pathname} ${status} ${Date.now() - startedAt}ms`,
+  );
 }
 
 // Apply to all routes except static assets and Next.js internals
 export const config = {
   matcher: [
     {
-      source: "/((?!_err|_stats|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)).*)",
+      source:
+        "/((?!_err|_stats|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
