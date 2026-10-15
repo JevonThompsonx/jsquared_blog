@@ -29,7 +29,7 @@ Expand what post revisions capture and what restore can recover. Currently revis
 
 **Files:**
 - `web/src/drizzle/schema.ts`
-- `web/src/drizzle/migrations/` (new migration)
+- `web/drizzle/` (new migration)
 
 ---
 

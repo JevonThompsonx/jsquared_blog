@@ -3,7 +3,7 @@
 > **For any agent opening this repo:** This is the master tracking document for the feature improvement plan. Start here. The current state, what's done, what's next, and how to pick up work are all in this file.
 
 **Last updated:** 2026-06-15
-**Project state:** Stable baseline established. CI passing (3/3 jobs green). Ready for feature work.
+**Project state:** Stable baseline established; all 10 roadmap branches + 2 patches + 1 docs branch merged. CI (`.github/workflows/ci.yml`) currently runs 6 jobs — Lint, Typecheck, Unit tests, Security audit, Build, E2E. The "3/3 jobs green" figure below is a historical note from the original 2026-06-15 baseline; re-check the Actions tab for current status.
 
 ---
 

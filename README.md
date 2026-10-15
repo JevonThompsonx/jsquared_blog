@@ -31,10 +31,23 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 
 ```
 jsquared_blog/
-├── web/             # Active Next.js application
-├── docs/            # Plans, handoffs, deployment, workflow notes
-├── testImages/      # Test image fixtures
-└── .sentryclirc     # Sentry CLI org/project config
+├── package.json          # Root workspace manifest — scripts delegate to `web`
+├── pnpm-workspace.yaml   # Workspace globs + security-driven dependency overrides
+├── pnpm-lock.yaml        # pnpm lockfile (source of truth for installs)
+├── tsconfig.json         # Base compiler options (web/tsconfig.json extends the setup)
+├── vercel.json           # Root Vercel cron schedules
+├── web/                  # Active Next.js application — Vercel deploy root
+├── docs/                 # Plans, handoffs, deployment, workflow notes (see docs/INDEX.md)
+├── testImages/           # Test image fixtures
+├── MODERNIZATION_TODO.md # Open modernization items from the 2026-09-03 audit pass
+├── AGENTS.md             # Agent operating instructions for this repo
+├── README.md             # This file
+├── LICENSE               # MIT
+├── .github/workflows/    # CI (lint, typecheck, test, security, build, e2e)
+├── .husky/               # Git hooks (pre-commit → lint-staged)
+├── .claude/              # Harness-local plans and evals (not product docs)
+├── .sentryclirc          # Sentry CLI org/project config — tracked, contains no token
+└── .tool-versions        # asdf/mise version pins
 ```
 
 ---
@@ -200,13 +213,15 @@ pnpm run e2e:capture-public-state
 
 ## Development Commands
 
+Run these from `web/` (the Vercel deploy root). The root `package.json` mirrors a subset — `dev`, `build`, `lint`, `test` delegate through `pnpm --filter web run …` — so `pnpm run test:e2e` and the `db:*` / `seed:*` scripts only exist at the `web/` level.
+
 ```bash
 cd web
 
 pnpm run dev
 pnpm run lint
 pnpm run lint:fix
-pnpm exec tsc --noEmit
+pnpm run typecheck                       # same as `pnpm exec tsc --noEmit`
 pnpm run test
 pnpm run test:watch
 pnpm run test:e2e
@@ -236,7 +251,9 @@ pnpm exec tsx ./scripts/seed-locations.ts             # Seed location metadata
 
 ### Disaster Recovery
 
-See [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) for recovering accidentally deleted posts via Turso point-in-time branching.
+`docs/DISASTER-RECOVERY.md` is listed in `.gitignore` as an internal document, so it is not committed and will be missing from a fresh clone. It describes recovering accidentally deleted posts via Turso point-in-time branching.
+
+Until that file exists locally, the only repo-local recovery surface is the migration set in `web/drizzle/` (24 SQL files) plus `pnpm run db:migrate`. Row-level restore depends on a Turso backup/branch procedure that is not documented in this repo.
 
 ### New Project Setup
 Apply Drizzle migrations against Turso from `web/`:
@@ -277,6 +294,11 @@ pnpm exec tsx ./scripts/seed-rich-content.ts
 
 The live app deploys from `web/` to Vercel. Use `web/.env.example`, `web/src/lib/env.ts`, and `web/next.config.ts` as the current source of truth for runtime, build, and observability variables.
 
+Two Vercel config files exist and do different jobs:
+
+- `web/vercel.json` — framework (`nextjs`), `buildCommand: pnpm run build`, `outputDirectory: .next`, `installCommand: pnpm install`, plus both cron schedules.
+- `vercel.json` (repo root) — cron schedules only (`/api/cron/publish-scheduled` daily at 00:00, `/api/cron/keep-supabase-awake` daily at 06:00).
+
 For repo-specific Vercel CLI usage, troubleshooting, and manual deploy/inspection commands, see `docs/VERCEL-CLI-REFERENCE.md`.
 
 ---
@@ -287,11 +309,16 @@ For repo-specific Vercel CLI usage, troubleshooting, and manual deploy/inspectio
 GET  /                            # Homepage / feed
 GET  /posts/[slug]                # Published post detail
 GET  /preview/[id]?token=...      # Admin or token preview
-GET  /map                         # World map of posts
-GET  /wishlist                    # Public travel wishlist
-GET  /admin/wishlist              # Admin wishlist editor
-GET  /admin/tags                  # Admin tag management
-GET  /admin/seasons               # Admin season management
+GET  /tags                         # Tag browse index
+GET  /categories                   # Category browse index
+GET  /map                          # World map of posts
+GET  /wishlist                     # Public travel wishlist
+GET  /wishlist/[slug]              # Public wishlist item detail
+GET  /route-planner                # Travel route planner (needs Geoapify)
+GET  /admin/wishlist               # Admin wishlist editor
+GET  /admin/tags                   # Admin tag management
+GET  /admin/categories             # Admin category management
+GET  /admin/seasons                # Admin season management
 GET  /category/[category]         # Category feed
 GET  /tag/[slug]                  # Tag feed
 GET  /series/[slug]               # Series detail
@@ -312,6 +339,8 @@ GET  /api/account/profile
 PATCH /api/account/profile
 POST /api/account/avatar
 POST /api/newsletter
+POST /api/route-plans              # Route planner (needs Geoapify)
+POST /api/csp-report               # Log-only CSP violation collector
 
 GET  /api/admin/posts
 POST /api/admin/posts/clone
@@ -341,17 +370,19 @@ GET  /feed.xml
 
 | Check | Tool | Command |
 |-------|------|---------|
-| Type-check | TypeScript | `cd web && pnpm exec tsc --noEmit` |
+| Type-check | TypeScript | `cd web && pnpm run typecheck` (or `pnpm exec tsc --noEmit`) |
 | Lint | ESLint | `cd web && pnpm run lint` |
 | Unit tests | Vitest | `cd web && pnpm run test` |
 | E2E smoke | Playwright | `cd web && pnpm run test:e2e` |
 | Admin auth capture | Playwright | `cd web && pnpm run e2e:capture-admin-state` |
 | Public auth capture | Playwright | `cd web && pnpm run e2e:capture-public-state` |
-| CI | Vercel | Auto-deploys on push to `main` |
+| Format | Prettier | `pnpm run format` / `pnpm run format:check` (root or `web`) |
+| CI | GitHub Actions | `.github/workflows/ci.yml` — 6 jobs: Lint, Typecheck, Unit tests, Security audit, Build, E2E |
+| Deploy | Vercel | Auto-deploys from `web/`; cron schedules in `web/vercel.json` + root `vercel.json` |
 
 **Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.
 
-**Content sanitization** uses an allowlist-based `sanitize-html` pipeline before rendering prose. `sanitize-html` is pinned to exact `2.17.5` to avoid the XSS vulnerability in `2.17.3`. Comment content is additionally stripped of HTML tags via Zod `.transform(stripHtmlTags)` before storage.
+**Content sanitization** uses an allowlist-based `sanitize-html` pipeline before rendering prose. `sanitize-html` is pinned to exact `2.17.7` to avoid the XSS vulnerability in `2.17.3`. Comment content is additionally stripped of HTML tags via Zod `.transform(stripHtmlTags)` before storage.
 
 **Security headers** ship from `web/src/proxy.ts` (dynamic CSP/nonces) and `web/next.config.ts` (remaining static headers).
 
@@ -361,18 +392,25 @@ GET  /feed.xml
 
 ## Documentation
 
+Start at [`docs/INDEX.md`](./docs/INDEX.md) — it has one line for every document in `docs/`.
+
 | Document | Purpose |
 |----------|---------|
+| [docs/INDEX.md](./docs/INDEX.md) | Index of every doc in `docs/` (start here) |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, auth flow, data model, API routes, deployment |
 | [docs/CODING.md](./docs/CODING.md) | Codemap: file patterns, conventions, component organization |
 | [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
 | [docs/KNOWLEDGE_BASE.md](./docs/KNOWLEDGE_BASE.md) | Living reference of project-specific gotchas (SQLite, Drizzle, Turso, React 19, Next.js). Agents add to this when they discover new patterns. |
 | [docs/IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) | Prioritized backlog of tech debt, features, security, and perf work |
-| [docs/DISASTER-RECOVERY.md](./docs/DISASTER-RECOVERY.md) | Post deletion recovery via Turso PITR |
+| [docs/MODERNIZATION-AUDIT.md](./docs/MODERNIZATION-AUDIT.md) | Security / efficiency / speed / QoL audit — snapshot dated 2026-08-24, re-verify versions against `web/package.json` |
 | [docs/VERCEL-CLI-REFERENCE.md](./docs/VERCEL-CLI-REFERENCE.md) | Vercel CLI operational reference |
 | [docs/STYLEGUIDE.md](./docs/STYLEGUIDE.md) | Design tokens, component patterns, and conventions |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Active branch tracking and implementation status |
 | [docs/CHANGELOG.md](./docs/CHANGELOG.md) | Version history and completed work log |
+| [docs/branches/](./docs/branches/) | Per-branch implementation checklists (all merged) |
+| [docs/runbooks/](./docs/runbooks/) | Manual operational smoke tests |
+| `docs/DISASTER-RECOVERY.md` | Post deletion recovery via Turso PITR — **internal, gitignored, not in a fresh clone** |
+| [AGENTS.md](./AGENTS.md) | Agent operating instructions (workflow, patterns, constraints) |
 
 ---
 

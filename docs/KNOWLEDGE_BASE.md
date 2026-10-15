@@ -646,9 +646,11 @@ git ls-files | head -50  # look for anything that looks generated
 cat .gitignore            # look for missing patterns
 ```
 
-Current `.gitignore` covers: `bun.lock`, `yarn.lock`, `.yarnrc.yml`, `.opencode/`, `.env*.local`, `.sentryclirc`.
+Current `.gitignore` covers: `bun.lock`, `yarn.lock`, `.yarnrc.yml`, `.opencode/`, `.env*.local`, `.vercel/`, and the internal docs `docs/DISASTER-RECOVERY.md` + `docs/AGENTS.md`.
 
-**Verified:** The `web/lint-output.txt` artifact was found and removed during the bun→pnpm migration. No new artifacts have been committed since.
+> **Correction (2026-10-15):** an earlier version of this entry listed `.sentryclirc` as gitignored. It is **not** — `git check-ignore .sentryclirc` returns nothing and `git ls-files .sentryclirc` shows it as tracked. It holds only `org` and `project` (no token), so no secret is exposed today, but if a token is ever added to it the value would be committed. Add `.sentryclirc` to `.gitignore` (or move to env) before storing credentials there.
+
+**Verified:** The `web/lint-output.txt` artifact was found and removed during the bun→pnpm migration. No new artifacts have been committed since. `.sentryclirc` tracking status checked 2026-10-15.
 
 ---
 

@@ -155,7 +155,7 @@ Fix data integrity issues: missing foreign key constraints, missing indexes on f
 
 **Files:**
 - `web/src/drizzle/schema.ts`
-- `web/src/drizzle/migrations/` (new migration)
+- `web/drizzle/` (new migration)
 
 **Test:**
 - [ ] Try to insert wishlist place with invalid `linkedPostId` → should fail
@@ -172,7 +172,7 @@ Fix data integrity issues: missing foreign key constraints, missing indexes on f
 
 **Files:**
 - `web/src/drizzle/schema.ts`
-- `web/src/drizzle/migrations/` (new migration)
+- `web/drizzle/` (new migration)
 
 **Test:**
 - [ ] Try to insert wishlist place with invalid `parentId` → should fail
@@ -189,7 +189,7 @@ Fix data integrity issues: missing foreign key constraints, missing indexes on f
 
 **Files:**
 - `web/src/drizzle/schema.ts`
-- `web/src/drizzle/migrations/` (new migration)
+- `web/drizzle/` (new migration)
 - `web/src/server/dal/series.ts`
 
 **Test:**
@@ -210,7 +210,7 @@ Fix data integrity issues: missing foreign key constraints, missing indexes on f
 
 **Files:**
 - `web/src/drizzle/schema.ts`
-- `web/src/drizzle/migrations/` (new migration)
+- `web/drizzle/` (new migration)
 - `web/src/server/dal/categories.ts` (new)
 - `web/src/app/admin/actions.ts` or wherever category writes happen
 
@@ -230,7 +230,7 @@ Fix data integrity issues: missing foreign key constraints, missing indexes on f
 
 **Files:**
 - `web/src/drizzle/schema.ts`
-- `web/src/drizzle/migrations/` (new migration)
+- `web/drizzle/` (new migration)
 - `web/src/server/dal/admin-tags.ts`
 
 **Test:**
@@ -250,7 +250,7 @@ Fix data integrity issues: missing foreign key constraints, missing indexes on f
 
 **Files:**
 - `web/src/drizzle/schema.ts`
-- `web/src/drizzle/migrations/` (new migration)
+- `web/drizzle/` (new migration)
 
 **Test:**
 - [ ] Verify index exists: `.schema post_tags` shows `tag_id_idx`
