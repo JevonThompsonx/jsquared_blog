@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 15
     if: github.actor == 'dependabot[bot]'
     steps:
-      - uses: dependabot/fetch-metadata@v2
+      - uses: dependabot/fetch-metadata@v3
         id: metadata
       # Gate on CI success (ci.yml jobs: Lint, TypeScript, Unit tests, Build, E2E tests, Security audit).
       # gh pr merge --auto alone respects required checks, but this explicit wait
