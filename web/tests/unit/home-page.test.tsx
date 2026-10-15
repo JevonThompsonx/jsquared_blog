@@ -1,38 +1,85 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src }: { alt: string; src: string }) => createElement("img", { alt, src }),
+  default: ({ alt, src }: { alt: string; src: string }) =>
+    createElement("img", { alt, src }),
 }));
 
 vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header shell"),
+  SiteHeader: () =>
+    createElement("div", { "data-testid": "site-header" }, "Header shell"),
 }));
 
 vi.mock("@/components/blog/home-feed", () => ({
-  HomeFeed: ({ initialPosts, initialSearch }: { initialPosts: Array<{ id: string }>; initialSearch?: string }) =>
-    createElement("div", { "data-testid": "home-feed", "data-search": initialSearch ?? "" }, `Feed posts: ${initialPosts.length}`),
+  HomeFeed: ({
+    initialPosts,
+    initialSearch,
+    seasonOverrides,
+  }: {
+    initialPosts: Array<{ id: string }>;
+    initialSearch?: string;
+    seasonOverrides?: Record<string, string>;
+  }) =>
+    createElement(
+      "div",
+      {
+        "data-testid": "home-feed",
+        "data-search": initialSearch ?? "",
+        "data-overrides": JSON.stringify(seasonOverrides ?? {}),
+      },
+      `Feed posts: ${initialPosts.length}`,
+    ),
 }));
 
 vi.mock("@/components/blog/newsletter-signup-form", () => ({
-  NewsletterSignupForm: ({ source }: { source: string }) => createElement("div", { "data-testid": "newsletter-signup", "data-source": source }, "Newsletter shell"),
+  NewsletterSignupForm: ({ source }: { source: string }) =>
+    createElement(
+      "div",
+      { "data-testid": "newsletter-signup", "data-source": source },
+      "Newsletter shell",
+    ),
 }));
 
 vi.mock("@/components/blog/search-input", () => ({
-  SearchInput: ({ initialValue, showSuggestions }: { initialValue?: string; showSuggestions?: boolean }) =>
-    createElement("div", { "data-testid": "search-input", "data-value": initialValue ?? "", "data-suggestions": String(Boolean(showSuggestions)) }, "Search input shell"),
+  SearchInput: ({
+    initialValue,
+    showSuggestions,
+  }: {
+    initialValue?: string;
+    showSuggestions?: boolean;
+  }) =>
+    createElement(
+      "div",
+      {
+        "data-testid": "search-input",
+        "data-value": initialValue ?? "",
+        "data-suggestions": String(Boolean(showSuggestions)),
+      },
+      "Search input shell",
+    ),
 }));
 
 vi.mock("@/components/blog/scroll-to-stories", () => ({
-  ScrollToStories: () => createElement("button", { "data-testid": "scroll-to-stories" }, "Scroll to stories"),
+  ScrollToStories: () =>
+    createElement(
+      "button",
+      { "data-testid": "scroll-to-stories" },
+      "Scroll to stories",
+    ),
 }));
 
 vi.mock("@/server/queries/posts", () => ({
   listPublishedPosts: vi.fn(),
 }));
 
+vi.mock("@/server/dal/seasons", () => ({
+  listAllSeasons: vi.fn(),
+}));
+
 import HomePage, { dynamic } from "@/app/(blog)/page";
+import { listAllSeasons } from "@/server/dal/seasons";
 import { listPublishedPosts } from "@/server/queries/posts";
 
 const homePost = {
@@ -57,6 +104,10 @@ const homePost = {
 };
 
 describe("HomePage", () => {
+  beforeEach(() => {
+    vi.mocked(listAllSeasons).mockResolvedValue([]);
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -82,7 +133,9 @@ describe("HomePage", () => {
   it("renders the search-results branch when a query is present", async () => {
     vi.mocked(listPublishedPosts).mockResolvedValue([]);
 
-    const markup = renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve({ search: "Oregon" }) }));
+    const markup = renderToStaticMarkup(
+      await HomePage({ searchParams: Promise.resolve({ search: "Oregon" }) }),
+    );
 
     expect(listPublishedPosts).toHaveBeenCalledWith(20, 0, "Oregon");
     expect(markup).toContain("No results for “Oregon”");
@@ -96,7 +149,9 @@ describe("HomePage", () => {
   it("treats whitespace-only search params like the default homepage", async () => {
     vi.mocked(listPublishedPosts).mockResolvedValue([homePost]);
 
-    const markup = renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve({ search: "   " }) }));
+    const markup = renderToStaticMarkup(
+      await HomePage({ searchParams: Promise.resolve({ search: "   " }) }),
+    );
 
     expect(listPublishedPosts).toHaveBeenCalledWith(20, 0, "");
     expect(markup).toContain("J²Adventures");
@@ -115,5 +170,25 @@ describe("HomePage", () => {
     // prevent the footer from feeling visually detached. Either `pb-8` or
     // `py-8` satisfies the requirement.
     expect(markup).toMatch(/<section[^>]*class="[^"]*\b(pb-8|py-8)\b[^"]*"/);
+  });
+
+  it("passes season display-name overrides through to the feed", async () => {
+    vi.mocked(listPublishedPosts).mockResolvedValue([homePost]);
+    vi.mocked(listAllSeasons).mockResolvedValue([
+      {
+        id: "s1",
+        seasonKey: "2026-2",
+        displayName: "The Colorado Trip",
+        createdByUserId: "u1",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    ]);
+
+    const markup = renderToStaticMarkup(await HomePage({}));
+
+    expect(listAllSeasons).toHaveBeenCalled();
+    expect(markup).toContain("Feed posts: 1");
+    expect(markup).toContain("The Colorado Trip");
   });
 });

@@ -1,11 +1,20 @@
 **Project**: J² Adventures blog
 **Stack**: Next.js 16 App Router, TypeScript strict, Turso/libSQL + Drizzle ORM, Supabase Auth, Auth.js/GitHub OAuth, Cloudinary, Upstash Redis, Sentry, TailwindCSS 4
 **Package manager**: pnpm (primary), bun (dev-only for `bunx` one-off commands)
-**Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run lint`, `pnpm run test`, `pnpm run test:e2e`, `pnpm dlx tsc --noEmit`
+**Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run lint`, `pnpm run test`, `pnpm run typecheck`, `pnpm run db:migrate`, `pnpm run test:e2e` — **all run from `web/`**. The root `package.json` only defines `dev`, `build`, `lint`, `test` (+ `dev:web`/`build:web`/`lint:web`/`test:web`), which delegate via `pnpm --filter web run …`. There is no root-level `test:e2e`, `db:*`, or `seed:*` script. Equivalents: `pnpm dlx tsc --noEmit` or `pnpm --filter web exec tsc --noEmit`.
 **Env**: Zod-validated via `web/src/lib/env.ts`; loads `.env.test.local` → `.env.local` → `.env` → `.dev.vars`
-**Tests**: `web/tests/unit/` (Vitest), `web/tests/e2e/` (Playwright)
+**Tests**: `web/tests/unit/` (Vitest, 164 files), `web/tests/e2e/` (Playwright, 20 spec files)
 **Security**: CSP with per-request nonces (`web/src/proxy.ts`), CSRF on admin routes, Zod at API boundaries, `sanitize-html` allowlist
-**Review companion**: `.opencode/review-prompt.md` — run AFTER implementation
+**Docs index**: [`docs/INDEX.md`](docs/INDEX.md) — one line per document in `docs/`
+
+### Workspace & deployment facts (verified 2026-10-15)
+
+- **pnpm workspace**: `pnpm-workspace.yaml` globs `web` only. One app package (`web`) plus the root manifest.
+- **Vercel deploy root is `web/`**: `web/vercel.json` sets `framework: nextjs`, `buildCommand: pnpm run build`, `outputDirectory: .next`, `installCommand: pnpm install`, and both cron routes. Root `vercel.json` carries the cron schedules only.
+- **Migrations**: `drizzle-kit generate` writes to `web/drizzle/` (24 SQL files), schema at `web/src/drizzle/schema.ts`. Drizzle Kit needs `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` in the environment before any `db:*` command runs.
+- **Gitignored internal docs**: `docs/DISASTER-RECOVERY.md`, `docs/AGENTS.md`, and the whole `.opencode/` directory are in `.gitignore`. They are machine-local, never committed, and links to them will dangle on a fresh clone.
+- **Root `package.json` legacy block**: the `"pnpm": { "overrides": { … } }` field is ignored by pnpm 11 (`pnpm` warns "The 'pnpm' field in package.json is no longer read"). Real overrides live in `pnpm-workspace.yaml` (`postcss`, `ws`, `uuid`, `tar`).
+- **Internal docs are not in this checkout**: `.opencode/review-prompt.md`, `.opencode/implementation-prompt.md` — `.opencode/` does not exist on this machine. Do not block on them; use the repo's own verification gates below.
 
 ### 🚨 START HERE: Feature Work Tracking
 
@@ -170,11 +179,11 @@ This is project-specific (not global opencode config) and is the canonical refer
 - [ ] Temp files cleaned
 - [ ] Documentation written
 - [ ] Lessons captured
-- [ ] `.opencode/review-prompt.md` run and clean
+- [ ] `.opencode/review-prompt.md` run and clean — **note: `.opencode/` is gitignored and absent on this machine; treat as unavailable and use `/code-review` instead**
 - [ ] Evidence for every item
 
 ### When Implementation Complete
-1. Run `.opencode/review-prompt.md` as verifier agent
+1. If `.opencode/review-prompt.md` exists locally, run it as a verifier agent. It is gitignored, so on a fresh clone skip this and use `/code-review`.
 2. Verifier audits, verifies, fixes
 3. Do NOT declare done until verifier approves
 
@@ -183,14 +192,14 @@ This is project-specific (not global opencode config) and is the canonical refer
 You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary agent. Primary was lazy until proven otherwise.
 
 **Stack**: Next.js 16 App Router, TypeScript strict, Turso/libSQL + Drizzle ORM, Supabase Auth, Auth.js/GitHub OAuth, Cloudinary, Upstash Redis, Sentry, TailwindCSS 4
-**Commands**: `pnpm run test`, `pnpm run test:e2e`, `pnpm run lint`, `pnpm dlx tsc --noEmit`, `pnpm run build`
+**Commands** (all from `web/`): `pnpm run test`, `pnpm run test:e2e`, `pnpm run lint`, `pnpm run typecheck`, `pnpm --filter web exec tsc --noEmit`, `pnpm run build`
 **Tests**: `web/tests/unit/` (Vitest), `web/tests/e2e/` (Playwright)
 **Env**: `web/src/lib/env.ts` — Zod schemas, never `process.env` directly
 **Schema**: `web/src/drizzle/schema.ts` | **DAL**: `web/src/server/dal/`
 **API**: Zod in handlers, `checkRateLimit()` for rate limiting
 **CSP**: `web/src/proxy.ts` — add origins to CSP arrays, not inline
 **Sanitization**: `sanitize-html` allowlist for user content
-**Review companion**: `.opencode/implementation-prompt.md`
+**Review companion**: `.opencode/implementation-prompt.md` (gitignored — machine-local, verify it exists before relying on it)
 
 ### Verification Phases
 

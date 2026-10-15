@@ -4,8 +4,8 @@
 
 ## Prerequisites
 
-- **pnpm** >= 8.x (primary package manager). Install: `npm install -g pnpm`
-- **Node.js** >= 22.13 (pnpm 11 requirement; see `.tool-versions` for the pinned version)
+- **pnpm** — pinned to `pnpm@11.1.1` by the `packageManager` field in the root `package.json`; CI (`.github/workflows/ci.yml`) also pins 11.1.1. Install: `npm install -g pnpm@11.1.1`
+- **Node.js** >= 22.13 (root `engines.node`); `.tool-versions` pins nodejs 24.0.0 and CI runs on Node 24
 - **bun** (optional, dev-only for `bunx` one-off runs)
 - **Git** for version control
 
@@ -371,10 +371,13 @@ This means `web/.env.local` overrides `.env`, and test env files take highest pr
 | `postcss` | `>=8.5.10` | Addresses a known postcss vulnerability in older 8.4.x versions |
 | `ws` | `>=8.20.1` | Addresses a `ws` vulnerability (CVE) in older 8.x versions |
 | `uuid` | `>=11.1.1` | Addresses a `uuid` vulnerability in older 10.x/8.x versions |
+| `tar` | `>=7.5.19` | GHSA-23hp-3jrh-7fpw / GHSA-83g3-92jg-28cx |
 
 These overrides are intentionally minimal and security-focused. They apply transitively to any package in the dependency tree that depends on these. Review and update them when bumping major dependencies.
 
 `allowBuilds` permits native build steps for these packages (required by Sentry CLI, esbuild, sharp, and unrs-resolver).
+
+> **Do not add overrides to the root `package.json`.** pnpm 11 ignores the legacy `"pnpm": { "overrides": … }` field there and prints `The "pnpm" field in package.json is no longer read by pnpm`. All overrides belong in `pnpm-workspace.yaml`.
 
 ---
 

@@ -9,10 +9,23 @@ permissions:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.actor == 'dependabot[bot]'
     steps:
       - uses: dependabot/fetch-metadata@v2
         id: metadata
+      # Gate on CI success (ci.yml jobs: Lint, TypeScript, Unit tests, Build, E2E tests, Security audit).
+      # gh pr merge --auto alone respects required checks, but this explicit wait
+      # blocks auto-merge until all CI checks succeed or fail fast otherwise.
+      # --required watches only required checks so this job cannot deadlock
+      # waiting on itself.
+      - name: Wait for CI checks to succeed
+        timeout-minutes: 15
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr checks "$PR_URL" --required --watch --fail-fast
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge for minor/patch updates
         if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         run: gh pr merge --auto --squash "$PR_URL"

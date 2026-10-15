@@ -575,7 +575,7 @@ web/                          # Next.js application
     instrumentation.ts        # Sentry initialization
   drizzle/                    # Drizzle Kit migration files (24 SQL + meta/)
   scripts/                    # Build, migration, seed, E2E helper scripts
-  tests/                      # Unit (Vitest, 164 test files) + E2E (Playwright, 21 spec files)
+  tests/                      # Unit (Vitest, 164 test files) + E2E (Playwright, 20 spec files)
     unit/                     # Vitest unit tests
     e2e/                      # Playwright E2E tests
       helpers/                # E2E auth state helpers
@@ -585,40 +585,46 @@ web/                          # Next.js application
   drizzle.config.ts           # Drizzle Kit configuration
 
 docs/
+  INDEX.md                   # Index of every doc in docs/ (start here)
   ARCHITECTURE.md             # This file
   CODING.md                   # Codemap and contributor reference
   SETUP.md                    # Setup and configuration guide
   VERCEL-CLI-REFERENCE.md     # Vercel CLI commands reference
-  DISASTER-RECOVERY.md        # Post deletion recovery via Turso PITR
+  DISASTER-RECOVERY.md        # Post deletion recovery via Turso PITR — gitignored internal doc, absent on fresh clones
   KNOWLEDGE_BASE.md           # Living reference of project-specific gotchas (SQLite/Drizzle/Turso/React/Next.js). Agents add to this when they discover new patterns.
   IMPROVEMENTS.md             # Prioritized feature/backlog tracker
+  MODERNIZATION-AUDIT.md      # Security/efficiency/speed/QoL audit snapshot (2026-08-24)
   ROADMAP.md                  # Active branch tracking (10 branches, all merged)
   CHANGELOG.md                # Version history
   REVIEW-PLAN.md              # Bug bash review tracking (complete)
   responsive-design-plan.md   # Responsive design phase plan
   branches/                   # Per-branch implementation checklists (all complete)
+  runbooks/                   # Manual operational smoke tests
 ```
 
 ---
 
 ## External Dependencies
 
+> Version figures below were recorded on **2026-06-18** and drift with every dependency bump. Treat `web/package.json` as the source of truth; the ranges listed here are the last verified snapshot.
+
 | Package | Version Range | Purpose |
 |---------|--------------|---------|
-| next | 16.2.9 | Framework |
-| @libsql/client | 0.17.3 | Turso/libSQL database client |
+| next | 16.3.4 | Framework |
+| @libsql/client | 0.18.0 | Turso/libSQL database client |
 | drizzle-orm | 0.45.2 | ORM / query builder |
-| next-auth | 4.24.14 | Admin auth (GitHub OAuth) |
-| @supabase/supabase-js | 2.108.1 | Public auth client |
+| next-auth | 4.24.15 | Admin auth (GitHub OAuth) |
+| @supabase/supabase-js | 2.114.0 | Public auth client |
 | @upstash/ratelimit | ^2.0.8 | Distributed rate limiting |
-| @upstash/redis | ^1.37.0 | Redis client for rate limiting |
-| @sentry/nextjs | 10.57.0 | Error tracking |
-| @tiptap/* | 3.26.1 | Rich text editor |
+| @upstash/redis | ^1.38.3 | Redis client for rate limiting |
+| @sentry/nextjs | 10.73.0 | Error tracking |
+| @tiptap/* | 3.31.0 | Rich text editor |
 | maplibre-gl | 5.24.0 | Map rendering |
-| react-map-gl | ^8.1.0 | React map component |
-| sanitize-html | 2.17.5 (exact) | HTML content sanitization — pinned to avoid XSS vuln in 2.17.3 |
-| zod | 4.4.3 | Schema validation |
-| tailwindcss | 4.3.1 | CSS framework |
+| react-map-gl | ^8.1.2 | React map component |
+| sanitize-html | 2.17.7 (exact) | HTML content sanitization — pinned exact to avoid the XSS vulnerability in 2.17.3 |
+| zod | 4.5.4 | Schema validation |
+| tailwindcss | 4.3.3 | CSS framework |
+| typescript | 6.0.3 | Type checking |
 
 ---
 
@@ -627,7 +633,8 @@ docs/
 - [SETUP.md](./SETUP.md) - Environment setup and configuration
 - [CODING.md](./CODING.md) - Codemap and contributor reference
 - [VERCEL-CLI-REFERENCE.md](./VERCEL-CLI-REFERENCE.md) - Vercel CLI commands
-- [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) - Post deletion recovery via Turso PITR
+- [INDEX.md](./INDEX.md) - Index of every doc in `docs/`
+- `DISASTER-RECOVERY.md` - Post deletion recovery via Turso PITR — **gitignored internal doc, not present on a fresh clone**
 - [KNOWLEDGE_BASE.md](./KNOWLEDGE_BASE.md) - Living reference of project-specific gotchas and workarounds (SQLite, Drizzle, Turso, React 19, Next.js). Agents add to this when they discover new patterns.
 - [IMPROVEMENTS.md](./IMPROVEMENTS.md) - Prioritized feature/backlog tracker
 - [ROADMAP.md](./ROADMAP.md) - Active branch tracking (10 branches, all merged)
