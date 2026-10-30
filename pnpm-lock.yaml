@@ -86,6 +86,9 @@ importers:
       emoji-picker-react:
         specifier: ^4.19.4
         version: 4.19.4(react@19.3.1)
+      jose:
+        specifier: ^6.2.14
+        version: 6.2.14
       maplibre-gl:
         specifier: 5.24.0
         version: 5.24.0
@@ -4583,6 +4586,9 @@ packages:
 
   jose@5.9.6:
     resolution: {integrity: sha512-AMlnetc9+CV9asI19zHmrgS/WYsWUwCn2R7RzlbJWD7F9eWYUTGyBmU9o6PxngtLGOiDGPRu+Uc4fhKzbpteZQ==}
+
+  jose@6.2.14:
+    resolution: {integrity: sha512-3JasLuki1NRLQvY4wCoC37KZk4qxoBx2k2aFqLxT84IezqW0bkJKnNtxnZj/Fu1xsQivoc/lytxaRHJoGLjJ1A==}
 
   js-base64@3.7.8:
     resolution: {integrity: sha512-hNngCeKxIUQiEUN3GPJOkz4wF/YvdUdbNL9hsBcMQTkKzboD7T/q3OYOuuPZLUE6dBxSGpwhk5mwuDud7JVAow==}
@@ -10668,6 +10674,8 @@ snapshots:
   jose@4.15.9: {}
 
   jose@5.9.6: {}
+
+  jose@6.2.14: {}
 
   js-base64@3.7.8: {}
 

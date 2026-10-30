@@ -134,6 +134,10 @@ const serverEnvSchema = z.object({
     blankStringToUndefined,
     z.string().trim().min(16).optional(),
   ),
+  // Cloudflare Access — gates /admin and /api/admin at the edge.
+  CF_ACCESS_TEAM_DOMAIN: optionalTrimmedString(),
+  CF_ACCESS_AUD: optionalTrimmedString(),
+  ADMIN_ALLOWED_EMAILS: optionalTrimmedString(),
 });
 
 // NEXT_PUBLIC_ vars are embedded at build time, so they can't be validated
