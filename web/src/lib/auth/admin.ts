@@ -1,10 +1,22 @@
 import "server-only";
 
 import type { NextAuthOptions } from "next-auth";
-import GitHubProvider from "next-auth/providers/github";
+import GitHubProviderModule from "next-auth/providers/github";
+
+// CJS/ESM interop: the provider can be the function itself or wrapped in one
+// or two `.default` layers depending on the bundler.
+const GitHubProvider: typeof GitHubProviderModule =
+  typeof GitHubProviderModule === "function"
+    ? GitHubProviderModule
+    : ((GitHubProviderModule as any)?.default?.default ??
+      (GitHubProviderModule as any)?.default ??
+      GitHubProviderModule);
 
 import { getServerEnv } from "@/lib/env";
-import { ensureGitHubAdminUser, getAdminAccountByGitHubId } from "@/server/auth/admin-users";
+import {
+  ensureGitHubAdminUser,
+  getAdminAccountByGitHubId,
+} from "@/server/auth/admin-users";
 
 function parseAllowlist(value: string | undefined): string[] {
   return (value ?? "")
@@ -28,7 +40,9 @@ function canAccessAdmin(identity: { id?: number | string | null }) {
 
 function hasGitHubProviderConfig() {
   const env = getServerEnv();
-  return Boolean(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET && env.AUTH_SECRET);
+  return Boolean(
+    env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET && env.AUTH_SECRET,
+  );
 }
 
 type AdminToken = {
@@ -108,7 +122,11 @@ export function buildAdminAuthOptions(): NextAuthOptions {
 
         const githubProfile = parseGitHubProfile(profile);
 
-        if (!githubProfile?.id || !githubProfile.login || !canAccessAdmin({ id: githubProfile.id })) {
+        if (
+          !githubProfile?.id ||
+          !githubProfile.login ||
+          !canAccessAdmin({ id: githubProfile.id })
+        ) {
           return false;
         }
 
@@ -127,7 +145,9 @@ export function buildAdminAuthOptions(): NextAuthOptions {
           const githubProfile = parseGitHubProfile(profile);
 
           if (githubProfile?.id) {
-            const adminAccount = await getAdminAccountByGitHubId(String(githubProfile.id));
+            const adminAccount = await getAdminAccountByGitHubId(
+              String(githubProfile.id),
+            );
             if (adminAccount) {
               return {
                 ...token,
@@ -147,10 +167,16 @@ export function buildAdminAuthOptions(): NextAuthOptions {
         const existingToken = token as typeof token & Partial<AdminToken>;
         return {
           ...token,
-          ...(existingToken.userId !== undefined && { userId: existingToken.userId }),
+          ...(existingToken.userId !== undefined && {
+            userId: existingToken.userId,
+          }),
           ...(existingToken.role !== undefined && { role: existingToken.role }),
-          ...(existingToken.githubLogin !== undefined && { githubLogin: existingToken.githubLogin }),
-          ...(existingToken.avatarUrl !== undefined && { avatarUrl: existingToken.avatarUrl }),
+          ...(existingToken.githubLogin !== undefined && {
+            githubLogin: existingToken.githubLogin,
+          }),
+          ...(existingToken.avatarUrl !== undefined && {
+            avatarUrl: existingToken.avatarUrl,
+          }),
         };
       },
       async session({ session, token }) {
