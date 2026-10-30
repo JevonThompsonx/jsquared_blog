@@ -159,6 +159,39 @@ Common symptoms:
 
 ---
 
+## 6b. Admin access (Cloudflare Access)
+
+`/admin` and `/api/admin` (apex **and** `www`) sit behind the Zero Trust
+application **Blog Admin**. Allowed identities:
+
+- `jnshaver@protonmail.com`
+- `jevonx@protonmail.com`
+- `blog@jsquaredadventures.com`
+
+Session 24 h. Team domain `https://jsquaredadventures.cloudflareaccess.com`,
+app AUD `e5a22e0584856f704d952060106a1f4be380a89b06f3814ee4f1a853ac160234`.
+
+The Worker verifies the signed `Cf-Access-Jwt-Assertion` (JWKS + issuer +
+audience) in `src/lib/auth/cloudflare-access.ts`, then maps the email to a local
+`users` row so authored content keeps a real foreign key. `requireAdminSession()`
+tries Access first and falls back to the GitHub session.
+
+**Never trust `Cf-Access-Authenticated-User-Email` on its own** — the Worker is
+also reachable on `*.workers.dev`, where a client can set that header itself.
+
+Add or remove an admin: Zero Trust → Access → Applications → **Blog Admin** →
+Policies → **Blog admins**. Rotating the app (new AUD) means updating
+`CF_ACCESS_AUD` in `.env` and redeploying.
+
+Verify gating without a browser:
+
+```bash
+curl -sI https://jsquaredadventures.com/admin | grep -i location
+# → https://jsquaredadventures.cloudflareaccess.com/cdn-cgi/access/login/...
+```
+
+---
+
 ## 7. Rolling back
 
 **A deploy:** Cloudflare keeps versions. In the dashboard: Worker
