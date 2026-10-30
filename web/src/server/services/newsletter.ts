@@ -10,6 +10,7 @@ import {
   updateResendContactByEmail,
 } from "@/lib/email/resend";
 import type { SubscribeToNewsletterValues } from "@/server/forms/newsletter";
+import { getEnvSource } from "@/lib/env";
 
 const NEWSLETTER_SEGMENT_ID_ENV_KEY = "RESEND_NEWSLETTER_SEGMENT_ID";
 
@@ -19,7 +20,7 @@ export type NewsletterSubscriptionResult =
   | { status: "skipped"; reason: "missing-config" };
 
 function getNewsletterSegmentId(): string | null {
-  const segmentId = process.env[NEWSLETTER_SEGMENT_ID_ENV_KEY]?.trim();
+  const segmentId = getEnvSource()[NEWSLETTER_SEGMENT_ID_ENV_KEY]?.trim();
   return segmentId ? segmentId : null;
 }
 
@@ -87,7 +88,9 @@ export async function sendNewsletterWelcomeEmail(input: {
   }
 }
 
-export async function subscribeToNewsletter(input: SubscribeToNewsletterValues): Promise<NewsletterSubscriptionResult> {
+export async function subscribeToNewsletter(
+  input: SubscribeToNewsletterValues,
+): Promise<NewsletterSubscriptionResult> {
   const segmentId = getNewsletterSegmentId();
   if (!segmentId || !getResendApiKey()) {
     return { status: "skipped", reason: "missing-config" };
@@ -105,7 +108,10 @@ export async function subscribeToNewsletter(input: SubscribeToNewsletterValues):
 
     await addResendContactToSegmentByEmail(input.email, segmentId);
 
-    sendNewsletterWelcomeEmail({ email: input.email, firstName: input.firstName });
+    sendNewsletterWelcomeEmail({
+      email: input.email,
+      firstName: input.firstName,
+    });
 
     return { status: "subscribed", source: "created" };
   }
@@ -123,14 +129,20 @@ export async function subscribeToNewsletter(input: SubscribeToNewsletterValues):
     await addResendContactToSegmentByEmail(input.email, segmentId);
   } catch {
     if (existingContact.unsubscribed) {
-      sendNewsletterWelcomeEmail({ email: input.email, firstName: input.firstName });
+      sendNewsletterWelcomeEmail({
+        email: input.email,
+        firstName: input.firstName,
+      });
       return { status: "subscribed", source: "updated" };
     }
     return { status: "already-subscribed" };
   }
 
   if (existingContact.unsubscribed) {
-    sendNewsletterWelcomeEmail({ email: input.email, firstName: input.firstName });
+    sendNewsletterWelcomeEmail({
+      email: input.email,
+      firstName: input.firstName,
+    });
   }
 
   return { status: "subscribed", source: "updated" };

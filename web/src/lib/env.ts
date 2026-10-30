@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { loadEnvironmentFiles } from "@/lib/env-loader";
-import { isDeployedEnvironment, shouldWarnAboutMissingCronSecret } from "@/lib/runtime-env";
+import {
+  isDeployedEnvironment,
+  shouldWarnAboutMissingCronSecret,
+} from "@/lib/runtime-env";
 
 export { isDeployedEnvironment } from "@/lib/runtime-env";
 
@@ -12,7 +15,45 @@ if (!process.env.NEXTAUTH_SECRET && process.env.AUTH_SECRET) {
 }
 
 if (!process.env.NEXTAUTH_URL) {
-  process.env.NEXTAUTH_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  process.env.NEXTAUTH_URL =
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+}
+
+/**
+ * Cloudflare Workers expose Worker *secrets* on the `env` object passed to
+ * `fetch`, but `process.env` is a frozen proxy populated with plain vars only.
+ * `worker-entry.ts` mirrors the full binding set onto `globalThis.__RUNTIME_ENV__`
+ * before the app loads; merge it over `process.env` here so every schema below
+ * sees secrets without changing anything on Node/Next.js.
+ */
+const runtimeEnvBridge = (
+  globalThis as unknown as { __RUNTIME_ENV__?: Record<string, string> }
+).__RUNTIME_ENV__;
+
+let resolvedEnv: NodeJS.ProcessEnv | null = null;
+
+export function getEnvSource(): NodeJS.ProcessEnv {
+  if (!runtimeEnvBridge) {
+    return process.env;
+  }
+
+  if (resolvedEnv) {
+    return resolvedEnv;
+  }
+
+  const merged: NodeJS.ProcessEnv = { ...process.env, ...runtimeEnvBridge };
+
+  if (!merged.NEXTAUTH_SECRET && merged.AUTH_SECRET) {
+    merged.NEXTAUTH_SECRET = merged.AUTH_SECRET;
+  }
+
+  if (!merged.NEXTAUTH_URL) {
+    merged.NEXTAUTH_URL =
+      merged.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  }
+
+  resolvedEnv = merged;
+  return merged;
 }
 
 function blankStringToUndefined(value: unknown): unknown {
@@ -25,11 +66,17 @@ function blankStringToUndefined(value: unknown): unknown {
 }
 
 function optionalTrimmedString() {
-  return z.preprocess(blankStringToUndefined, z.string().trim().min(1).optional());
+  return z.preprocess(
+    blankStringToUndefined,
+    z.string().trim().min(1).optional(),
+  );
 }
 
 function optionalTrimmedEmail() {
-  return z.preprocess(blankStringToUndefined, z.string().trim().email().optional());
+  return z.preprocess(
+    blankStringToUndefined,
+    z.string().trim().email().optional(),
+  );
 }
 
 // Required server-side vars — the app cannot function without these.
@@ -41,20 +88,32 @@ function optionalTrimmedEmail() {
 //     deployed environments must provide them because rate limiting cannot fall
 //     back to in-process memory safely
 const serverEnvSchema = z.object({
-  TURSO_DATABASE_URL: z.string().url("must be a valid libsql:// or https:// URL"),
+  TURSO_DATABASE_URL: z
+    .string()
+    .url("must be a valid libsql:// or https:// URL"),
   TURSO_AUTH_TOKEN: z.string().min(1, "required"),
-  AUTH_SECRET: z.string().min(32, "must be at least 32 characters (run: openssl rand -base64 32)"),
+  AUTH_SECRET: z
+    .string()
+    .min(32, "must be at least 32 characters (run: openssl rand -base64 32)"),
   AUTH_GITHUB_ID: z.string().min(1, "required"),
   AUTH_GITHUB_SECRET: z.string().min(1, "required"),
-  AUTH_ADMIN_GITHUB_IDS: z.string().optional().transform((val) => {
-    if (!val) return undefined;
-    const ids = val.split(",").map((s) => s.trim()).filter(Boolean);
-    const invalid = ids.filter((id) => !/^\d+$/.test(id));
-    if (invalid.length > 0) {
-      throw new Error(`AUTH_ADMIN_GITHUB_IDS contains non-numeric IDs: ${invalid.join(", ")}`);
-    }
-    return ids.join(",");
-  }),
+  AUTH_ADMIN_GITHUB_IDS: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const ids = val
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const invalid = ids.filter((id) => !/^\d+$/.test(id));
+      if (invalid.length > 0) {
+        throw new Error(
+          `AUTH_ADMIN_GITHUB_IDS contains non-numeric IDs: ${invalid.join(", ")}`,
+        );
+      }
+      return ids.join(",");
+    }),
   CLOUDINARY_CLOUD_NAME: z.string().min(1, "required"),
   CLOUDINARY_API_KEY: z.string().min(1, "required"),
   CLOUDINARY_API_SECRET: z.string().min(1, "required"),
@@ -65,22 +124,37 @@ const serverEnvSchema = z.object({
   COMMENT_NOTIFICATION_TO_EMAIL: optionalTrimmedString(),
   RESEND_NEWSLETTER_SEGMENT_ID: optionalTrimmedString(),
   // Rate limiter — optional in local dev/test only
-  UPSTASH_REDIS_REST_URL: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
+  UPSTASH_REDIS_REST_URL: z.preprocess(
+    blankStringToUndefined,
+    z.string().trim().url().optional(),
+  ),
   UPSTASH_REDIS_REST_TOKEN: optionalTrimmedString(),
   // Cron endpoint secret — optional in local dev only (enforced by the route handler)
-  CRON_SECRET: z.preprocess(blankStringToUndefined, z.string().trim().min(16).optional()),
+  CRON_SECRET: z.preprocess(
+    blankStringToUndefined,
+    z.string().trim().min(16).optional(),
+  ),
 });
 
 // NEXT_PUBLIC_ vars are embedded at build time, so they can't be validated
 // at runtime in the same way. Keep them optional here; missing values show up
 // as `undefined` in the client bundle if not set before `next build`.
 const publicEnvSchema = z.object({
-  NEXT_PUBLIC_SITE_URL: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
-  NEXT_PUBLIC_SUPABASE_URL: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
+  NEXT_PUBLIC_SITE_URL: z.preprocess(
+    blankStringToUndefined,
+    z.string().trim().url().optional(),
+  ),
+  NEXT_PUBLIC_SUPABASE_URL: z.preprocess(
+    blankStringToUndefined,
+    z.string().trim().url().optional(),
+  ),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalTrimmedString(),
   NEXT_PUBLIC_STADIA_MAPS_API_KEY: optionalTrimmedString(),
   // Sentry DSN is safe to expose publicly
-  NEXT_PUBLIC_SENTRY_DSN: z.preprocess(blankStringToUndefined, z.string().trim().url().optional()),
+  NEXT_PUBLIC_SENTRY_DSN: z.preprocess(
+    blankStringToUndefined,
+    z.string().trim().url().optional(),
+  ),
 });
 
 const databaseEnvSchema = serverEnvSchema.pick({
@@ -109,11 +183,18 @@ function hasNonEmptyValue(value: string | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-export function hasUpstashRedisCredentials(env: NodeJS.ProcessEnv = process.env): boolean {
-  return hasNonEmptyValue(env.UPSTASH_REDIS_REST_URL) && hasNonEmptyValue(env.UPSTASH_REDIS_REST_TOKEN);
+export function hasUpstashRedisCredentials(
+  env: NodeJS.ProcessEnv = getEnvSource(),
+): boolean {
+  return (
+    hasNonEmptyValue(env.UPSTASH_REDIS_REST_URL) &&
+    hasNonEmptyValue(env.UPSTASH_REDIS_REST_TOKEN)
+  );
 }
 
-function assertRateLimitConfiguration(env: NodeJS.ProcessEnv = process.env): void {
+function assertRateLimitConfiguration(
+  env: NodeJS.ProcessEnv = getEnvSource(),
+): void {
   if (isDeployedEnvironment(env) && !hasUpstashRedisCredentials(env)) {
     throw new Error(
       "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in deployed environments because rate limiting cannot fall back to in-process memory.",
@@ -127,7 +208,7 @@ function assertRateLimitConfiguration(env: NodeJS.ProcessEnv = process.env): voi
 const isNextBuild = process.env.NEXT_PHASE === "phase-production-build";
 
 if (!isNextBuild) {
-  const result = serverEnvSchema.safeParse(process.env);
+  const result = serverEnvSchema.safeParse(getEnvSource());
   if (!result.success) {
     const lines = result.error.issues.map(
       (issue) => `  ${String(issue.path[0])}: ${issue.message}`,
@@ -144,9 +225,9 @@ if (!isNextBuild) {
     );
   }
 
-  assertRateLimitConfiguration(process.env);
+  assertRateLimitConfiguration(getEnvSource());
 
-  if (shouldWarnAboutMissingCronSecret(process.env)) {
+  if (shouldWarnAboutMissingCronSecret(getEnvSource())) {
     console.warn(
       "[env] CRON_SECRET is not set. Cron endpoints such as /api/cron/publish-scheduled and /api/cron/keep-supabase-awake will return 500.",
     );
@@ -154,21 +235,21 @@ if (!isNextBuild) {
 }
 
 export function getServerEnv(): ServerEnv {
-  return serverEnvSchema.parse(process.env);
+  return serverEnvSchema.parse(getEnvSource());
 }
 
 export function getDatabaseEnv(): DatabaseEnv {
-  return databaseEnvSchema.parse(process.env);
+  return databaseEnvSchema.parse(getEnvSource());
 }
 
 export function getSupabaseServerEnv(): SupabaseServerEnv {
-  return supabaseServerEnvSchema.parse(process.env);
+  return supabaseServerEnvSchema.parse(getEnvSource());
 }
 
 export function getCloudinaryEnv(): CloudinaryEnv {
-  return cloudinaryEnvSchema.parse(process.env);
+  return cloudinaryEnvSchema.parse(getEnvSource());
 }
 
 export function getPublicEnv(): PublicEnv {
-  return publicEnvSchema.parse(process.env);
+  return publicEnvSchema.parse(getEnvSource());
 }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { getEnvSource } from "@/lib/env";
 
 const resendApiKeySchema = z.object({
   RESEND_API_KEY: z.string().min(1),
@@ -72,7 +73,10 @@ export class ResendApiError extends Error {
   }
 }
 
-function buildResendHeaders(apiKey: string, includeContentType = true): HeadersInit {
+function buildResendHeaders(
+  apiKey: string,
+  includeContentType = true,
+): HeadersInit {
   return includeContentType
     ? {
         Authorization: `Bearer ${apiKey}`,
@@ -88,7 +92,11 @@ async function parseResendError(response: Response): Promise<string> {
     const payload = await response.json();
     const parsed = resendErrorSchema.safeParse(payload);
     if (parsed.success) {
-      return parsed.data.message ?? parsed.data.error ?? `Resend request failed with status ${response.status}`;
+      return (
+        parsed.data.message ??
+        parsed.data.error ??
+        `Resend request failed with status ${response.status}`
+      );
     }
   } catch {
     // Ignore parse failures and fall back to status-based messaging.
@@ -97,7 +105,11 @@ async function parseResendError(response: Response): Promise<string> {
   return `Resend request failed with status ${response.status}`;
 }
 
-async function resendJsonRequest<T>(path: string, init: RequestInit, schema: z.ZodType<T>): Promise<T> {
+async function resendJsonRequest<T>(
+  path: string,
+  init: RequestInit,
+  schema: z.ZodType<T>,
+): Promise<T> {
   const apiKey = getResendApiKey();
   if (!apiKey) {
     throw new ResendApiError(503, "Resend API key is not configured");
@@ -115,7 +127,9 @@ async function resendJsonRequest<T>(path: string, init: RequestInit, schema: z.Z
   return schema.parse(await response.json());
 }
 
-function toResendContact(contact: z.infer<typeof resendContactSchema>): ResendContact {
+function toResendContact(
+  contact: z.infer<typeof resendContactSchema>,
+): ResendContact {
   return {
     id: contact.id,
     email: contact.email,
@@ -128,7 +142,7 @@ function toResendContact(contact: z.infer<typeof resendContactSchema>): ResendCo
 }
 
 export function getResendApiKey(): string | null {
-  const result = resendApiKeySchema.safeParse(process.env);
+  const result = resendApiKeySchema.safeParse(getEnvSource());
   if (!result.success) {
     return null;
   }
@@ -137,7 +151,7 @@ export function getResendApiKey(): string | null {
 }
 
 export function getResendConfig(): ResendConfig | null {
-  const result = resendConfigSchema.safeParse(process.env);
+  const result = resendConfigSchema.safeParse(getEnvSource());
   if (!result.success) {
     return null;
   }
@@ -148,16 +162,21 @@ export function getResendConfig(): ResendConfig | null {
   };
 }
 
-export async function getResendContactByEmail(email: string): Promise<ResendContact | null> {
+export async function getResendContactByEmail(
+  email: string,
+): Promise<ResendContact | null> {
   const apiKey = getResendApiKey();
   if (!apiKey) {
     return null;
   }
 
-  const response = await fetch(`https://api.resend.com/contacts/${encodeURIComponent(email)}`, {
-    method: "GET",
-    headers: buildResendHeaders(apiKey, false),
-  });
+  const response = await fetch(
+    `https://api.resend.com/contacts/${encodeURIComponent(email)}`,
+    {
+      method: "GET",
+      headers: buildResendHeaders(apiKey, false),
+    },
+  );
 
   if (response.status === 404) {
     return null;
@@ -170,7 +189,9 @@ export async function getResendContactByEmail(email: string): Promise<ResendCont
   return toResendContact(resendContactSchema.parse(await response.json()));
 }
 
-export async function createResendContact(input: CreateResendContactInput): Promise<{ id: string }> {
+export async function createResendContact(
+  input: CreateResendContactInput,
+): Promise<{ id: string }> {
   return resendJsonRequest(
     "/contacts",
     {
@@ -187,7 +208,9 @@ export async function createResendContact(input: CreateResendContactInput): Prom
   );
 }
 
-export async function updateResendContactByEmail(input: UpdateResendContactInput): Promise<{ id: string }> {
+export async function updateResendContactByEmail(
+  input: UpdateResendContactInput,
+): Promise<{ id: string }> {
   return resendJsonRequest(
     `/contacts/${encodeURIComponent(input.email)}`,
     {
@@ -203,7 +226,10 @@ export async function updateResendContactByEmail(input: UpdateResendContactInput
   );
 }
 
-export async function addResendContactToSegmentByEmail(email: string, segmentId: string): Promise<{ id: string }> {
+export async function addResendContactToSegmentByEmail(
+  email: string,
+  segmentId: string,
+): Promise<{ id: string }> {
   const apiKey = getResendApiKey();
   if (!apiKey) {
     throw new ResendApiError(503, "Resend API key is not configured");
@@ -219,7 +245,9 @@ export async function addResendContactToSegmentByEmail(email: string, segmentId:
   );
 }
 
-export async function sendResendEmail(message: ResendEmailMessage): Promise<"sent" | "skipped"> {
+export async function sendResendEmail(
+  message: ResendEmailMessage,
+): Promise<"sent" | "skipped"> {
   const config = getResendConfig();
   if (!config) {
     return "skipped";
@@ -238,7 +266,9 @@ export async function sendResendEmail(message: ResendEmailMessage): Promise<"sen
   });
 
   if (!response.ok) {
-    throw new Error(`Resend email request failed with status ${response.status}`);
+    throw new Error(
+      `Resend email request failed with status ${response.status}`,
+    );
   }
 
   return "sent";

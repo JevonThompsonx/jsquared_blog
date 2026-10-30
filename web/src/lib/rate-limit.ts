@@ -12,6 +12,7 @@ import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
 import { hasUpstashRedisCredentials, isDeployedEnvironment } from "@/lib/env";
+import { getEnvSource } from "@/lib/env";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -77,8 +78,8 @@ function getUpstashLimiter(limit: number, windowMs: number): Ratelimit {
 
   const limiter = new Ratelimit({
     redis: new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL ?? "",
-      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? "",
+      url: getEnvSource().UPSTASH_REDIS_REST_URL ?? "",
+      token: getEnvSource().UPSTASH_REDIS_REST_TOKEN ?? "",
     }),
     limiter: Ratelimit.slidingWindow(limit, `${Math.round(windowMs / 1000)} s`),
     prefix: "j2:rl",
@@ -118,7 +119,11 @@ function sweep(now: number): void {
   }
 }
 
-function checkInMemory(key: string, limit: number, windowMs: number): RateLimitResult {
+function checkInMemory(
+  key: string,
+  limit: number,
+  windowMs: number,
+): RateLimitResult {
   const now = Date.now();
 
   sweepCounter++;
@@ -131,7 +136,12 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
 
   if (!entry || entry.resetAt <= now) {
     store.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, limit, remaining: limit - 1, resetAt: now + windowMs };
+    return {
+      allowed: true,
+      limit,
+      remaining: limit - 1,
+      resetAt: now + windowMs,
+    };
   }
 
   if (entry.count >= limit) {
@@ -140,7 +150,12 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
 
   const newCount = entry.count + 1;
   store.set(key, { ...entry, count: newCount });
-  return { allowed: true, limit, remaining: limit - newCount, resetAt: entry.resetAt };
+  return {
+    allowed: true,
+    limit,
+    remaining: limit - newCount,
+    resetAt: entry.resetAt,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +163,7 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
 // ---------------------------------------------------------------------------
 
 function isUpstashConfigured(): boolean {
-  return hasUpstashRedisCredentials(process.env);
+  return hasUpstashRedisCredentials(getEnvSource());
 }
 
 /**
@@ -170,7 +185,7 @@ export async function checkRateLimit(
     return checkUpstash(key, limit, windowMs);
   }
 
-  if (isDeployedEnvironment(process.env)) {
+  if (isDeployedEnvironment(getEnvSource())) {
     throw new Error(
       "[rate-limit] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN not set. " +
         "In-memory rate limiting is NOT consistent across Vercel instances and cannot be used in deployed environments.",

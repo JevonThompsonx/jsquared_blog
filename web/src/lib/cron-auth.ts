@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { NextResponse } from "next/server";
+import { getEnvSource } from "@/lib/env";
 
 function secureEquals(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left);
@@ -19,7 +20,10 @@ function isLoopbackHost(hostname: string): boolean {
   return ["localhost", "127.0.0.1", "::1"].includes(normalizedHostname);
 }
 
-export function requireCronAuthorization(request: Request, env: NodeJS.ProcessEnv = process.env): NextResponse | null {
+export function requireCronAuthorization(
+  request: Request,
+  env: NodeJS.ProcessEnv = getEnvSource(),
+): NextResponse | null {
   const cronSecret = env.CRON_SECRET;
   const isLocalDevelopment = env.NODE_ENV === "development";
   const requestUrl = new URL(request.url);
