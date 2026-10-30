@@ -1,3 +1,15 @@
+
+
+> **Cloudflare hosting (2026-10-30).** The blog runs on Cloudflare Workers —
+> Worker `jsquared-blog`, apex + `www.jsquaredadventures.com`. Vercel is
+> suspended (HTTP 402 / `DEPLOYMENT_DISABLED`) and is not a fallback.
+> Deploy with `cd web && pnpm run deploy:cf` (never a bare vinext deploy — it
+> drops Worker secrets). Detail: [`CLOUDFLARE.md`](./CLOUDFLARE.md).
+>
+> **Pending:** confirm a real Cloudflare Access login at `/admin` for
+> `jnshaver@protonmail.com` / `jevonx@protonmail.com` / `blog@jsquaredadventures.com`;
+> then the GitHub OAuth fallback can be retired.
+
 **Project**: J² Adventures blog
 **Stack**: Next.js 16 App Router, TypeScript strict, Turso/libSQL + Drizzle ORM, Supabase Auth, Auth.js/GitHub OAuth, Cloudinary, Upstash Redis, Sentry, TailwindCSS 4
 **Package manager**: pnpm (primary), bun (dev-only for `bunx` one-off commands)
