@@ -100,3 +100,41 @@ pre-existing `.next/types` errors before and after the change (no new ones).
    compatibility report marks both partial).
 5. **The preview Worker** still builds with production URLs; it is a scratch
    environment, not a staging replica.
+
+---
+
+## Full Vercel inventory (2026-10-30)
+
+**The Vercel account is suspended.** Every deployment returns `HTTP 402
+Payment Required` with `x-vercel-error: DEPLOYMENT_DISABLED`, and the API
+returns an empty project list even with a team key (projects 404 by ID). So
+these apps were already offline — the migration is restoring service, not just
+changing hosts.
+
+| Project | Kind | Vercel URL | Status |
+|---|---|---|---|
+| jsquared_blog | Next.js + Turso | jsquaredadventures.com | **migrated**, live |
+| WebDevBlogsite | Next.js + Turso | web-dev-blogsite.vercel.app | **migrated**, live |
+| TODO.tsx | Next.js + Turso | todo-tsx-eight.vercel.app | **migrated**, live |
+| Carolina | static HTML | carolina-two.vercel.app | **migrated**, live |
+| React-Tic-Tac-Toe | Vite | react-tic-tac-toe-gamma-six.vercel.app | **migrated**, live |
+| LinkTree-Clone | Vite | link-tree-clone-mu.vercel.app | **migrated**, live |
+| unit_converter_PWA | Vite PWA | unit-converter-pwa.vercel.app | **migrated**, live |
+| Business_standard_template.ts | Vite | business-standard-template-ts.vercel.app | **migrated**, live |
+| unit_converter (frontend) | Vite | unit-converter-frontend.vercel.app | **frontend migrated** |
+| farmers-market | Next.js + Turso | first-mongoose-express-app.vercel.app | prepared, **blocked on 3 credentials** |
+| WebDevBlogArchive | Express + Docker | web-dev-blog-archive.vercel.app | **not migrated** (needs a container) |
+
+New Cloudflare URLs (all `*.servicesorsubscriptions-natural894.workers.dev`):
+`carolina`, `react-tic-tac-toe`, `linktree-clone`, `unit-converter-pwa`,
+`business-standard-template`, `unit-converter`, `todo-tsx`, `webdevblog`.
+
+Still open:
+
+- **farmers-market** needs `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`,
+  `UNSPLASH_ACCESS_KEY`; the app's env schema rejects startup without them.
+- **WebDevBlogArchive** is an Express server with a `Dockerfile` — it is a
+  container candidate for templetonbak, not a Worker.
+- **unit_converter backend** lives on Render (`unit-converter-backend.onrender.com`)
+  and did not respond (`timeout`) — unrelated to Vercel, but the deployed
+  frontend needs it.
