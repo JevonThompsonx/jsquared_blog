@@ -38,8 +38,11 @@ the team JWKS and the app AUD (`CF_ACCESS_AUD`), then maps the email to a `users
 row (`access-user-<sha256>`). A bare email header is never trusted, because the
 Worker is also reachable on its own hostname.
 
-GitHub OAuth still works as a fallback (`requireAdminSession` tries Access first).
-It can be removed once Access is confirmed for all admins.
+**Access is authoritative.** `requireAdminSession` uses the Access identity and
+does **not** fall back to GitHub when Access is configured — a request that
+reaches the Worker without a valid Access JWT (for example through the
+`*.workers.dev` hostname) is not an admin. GitHub OAuth only remains for local
+development, where `CF_ACCESS_*` is absent.
 
 ## Runtime configuration
 
@@ -54,11 +57,8 @@ Any new module reading configuration server-side must use `getEnvSource()`.
 
 ## Pending
 
-1. **Confirm a real Access login end-to-end** — the JWT path is deployed but has
-   only been verified structurally (`/admin` → 302 to the Access login). Sign in
-   as an allowed address and check that the dashboard loads and saves.
-2. After that works, **retire the GitHub OAuth fallback** (remove the provider and
-   `AUTH_GITHUB_*` from the runtime config, drop the login UI).
+1. Nothing blocking. Sign in at `/admin` with an allowlisted address; the
+   dashboard loads directly with no GitHub step.
 3. Optional: enable Cloudflare Images for `next/image` optimisation; Sentry source
    maps are partial under vinext.
 
