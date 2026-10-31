@@ -32,8 +32,12 @@ cd ~/Projects/jsquared_blog/web
 export CLOUDFLARE_ACCOUNT_ID=...      # or put it in web/.env
 export CLOUDFLARE_API_TOKEN=...       # Workers Scripts: Edit + Account Settings: Read
 
-pnpm run deploy:cf
+pnpm run deploy:cf                    # defaults to the production Worker
 ```
+
+The script targets `jsquared-blog` unless `CLOUDFLARE_WORKER_NAME` is set. It
+verifies that every secret actually persisted after upload and fails the run if
+any are missing.
 
 `deploy:cf` does four things, in this order:
 
@@ -173,8 +177,12 @@ app AUD `e5a22e0584856f704d952060106a1f4be380a89b06f3814ee4f1a853ac160234`.
 
 The Worker verifies the signed `Cf-Access-Jwt-Assertion` (JWKS + issuer +
 audience) in `src/lib/auth/cloudflare-access.ts`, then maps the email to a local
-`users` row so authored content keeps a real foreign key. `requireAdminSession()`
-tries Access first and falls back to the GitHub session.
+`users` row so authored content keeps a real foreign key.
+
+**Access is the only admin path in production.** When `CF_ACCESS_*` is set,
+`requireAdminSession()` returns null for any request without a valid Access JWT —
+there is no GitHub fallback, so the `*.workers.dev` hostname cannot be used to
+reach admin data. GitHub OAuth remains only for local development.
 
 **Never trust `Cf-Access-Authenticated-User-Email` on its own** — the Worker is
 also reachable on `*.workers.dev`, where a client can set that header itself.
