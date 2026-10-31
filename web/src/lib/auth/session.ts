@@ -5,7 +5,10 @@ import { getServerSession } from "next-auth";
 import { headers } from "next/headers";
 
 import { buildAdminAuthOptions } from "@/lib/auth/admin";
-import { getAccessIdentity } from "@/lib/auth/cloudflare-access";
+import {
+  getAccessIdentity,
+  isAccessConfigured,
+} from "@/lib/auth/cloudflare-access";
 import { ensureAccessAdminUser } from "@/server/auth/access-users";
 
 export type AdminSession = Session;
@@ -29,10 +32,14 @@ function buildAccessSession(user: {
 /**
  * Resolve the admin identity for this request.
  *
- * Cloudflare Access is the primary method: `/admin` and `/api/admin` are behind
- * an Access application, and a verified `Cf-Access-Jwt-Assertion` is enough to
- * treat the caller as an admin. GitHub OAuth remains as a fallback so the setup
- * keeps working for hosts that are not behind Access (e.g. the preview Worker).
+ * Cloudflare Access is authoritative whenever it is configured: `/admin` and
+ * `/api/admin` are behind the Access application, and a verified
+ * `Cf-Access-Jwt-Assertion` whose email is on the allowlist is enough to act as
+ * an admin. There is deliberately **no** GitHub fallback in that mode — a caller
+ * who reaches the Worker without a valid Access JWT (for example through the
+ * `*.workers.dev` hostname) is not an admin.
+ *
+ * GitHub OAuth is used only when Access is not configured (local development).
  */
 export async function getAdminServerSession(): Promise<AdminSession | null> {
   const requestHeaders = await headers();
@@ -41,6 +48,10 @@ export async function getAdminServerSession(): Promise<AdminSession | null> {
   if (access) {
     const user = await ensureAccessAdminUser(access.email);
     return buildAccessSession(user);
+  }
+
+  if (isAccessConfigured()) {
+    return null;
   }
 
   return getServerSession(buildAdminAuthOptions());
@@ -53,4 +64,9 @@ export async function requireAdminSession(): Promise<AdminSession | null> {
   }
 
   return session;
+}
+
+/** True when admin identity comes from Cloudflare Access rather than GitHub. */
+export function isAdminAuthViaAccess(): boolean {
+  return isAccessConfigured();
 }

@@ -54,9 +54,14 @@ export async function getAccessIdentity(
   const allowed = parseAllowedEmails(env.ADMIN_ALLOWED_EMAILS);
 
   if (!teamDomain || !audience || allowed.length === 0) {
+    console.warn(
+      `[access] not configured: team=${Boolean(teamDomain)} aud=${Boolean(audience)} allowed=${allowed.length}`,
+    );
     return null;
   }
 
+  // Anonymous visitors are the normal case (public pages ask for an admin
+  // session too), so a missing header is not logged.
   const token = headers.get("cf-access-jwt-assertion");
   if (!token) {
     return null;
@@ -73,11 +78,15 @@ export async function getAccessIdentity(
         ? payload.email.trim().toLowerCase()
         : "";
     if (!rawEmail || !allowed.includes(rawEmail)) {
+      console.warn(`[access] email not allowed: ${rawEmail || "(none)"}`);
       return null;
     }
 
     return { email: rawEmail };
-  } catch {
+  } catch (error) {
+    console.warn(
+      `[access] JWT verification failed: ${(error as Error).message}`,
+    );
     return null;
   }
 }

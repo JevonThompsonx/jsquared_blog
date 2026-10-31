@@ -7,8 +7,7 @@ const isProductionPreview =
   process.env.CLOUDFLARE_WORKER_NAME === "jsquared-blog" ||
   process.env.CLOUDFLARE_ENV === "production";
 
-const workerName =
-  process.env.CLOUDFLARE_WORKER_NAME ?? "jsquared-blog-preview";
+const workerName = process.env.CLOUDFLARE_WORKER_NAME ?? "jsquared-blog";
 
 const siteUrl =
   process.env.NEXTAUTH_URL ??

@@ -25,7 +25,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 
-const WORKER = process.env.CLOUDFLARE_WORKER_NAME ?? "jsquared-blog-preview";
+const WORKER = process.env.CLOUDFLARE_WORKER_NAME ?? "jsquared-blog";
 const REPO_ROOT = path.resolve(process.cwd(), "..");
 
 const CONFIG_KEYS = [
@@ -116,19 +116,7 @@ if (deploy.status !== 0) {
   process.exit(deploy.status ?? 1);
 }
 
-console.log(`[2/4] applying ${presentKeys.length} Worker secrets`);
-
-// `cf workers secrets bulk` accepts a payload but stores empty values in this
-// CLI version, so talk to the documented REST endpoint directly.
-const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
-const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-if (!ACCOUNT || !API_TOKEN) {
-  console.error("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are required.");
-  process.exit(1);
-}
-
-let secretsFailed = 0;
-for (const key of presentKeys) {
+async function putSecret(key) {
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/workers/scripts/${WORKER}/secrets`,
     {
@@ -145,17 +133,31 @@ for (const key of presentKeys) {
     },
   );
   if (!response.ok) {
-    secretsFailed += 1;
     console.error(`  ${key}: HTTP ${response.status}`);
+    return false;
   }
+  return true;
 }
-if (secretsFailed > 0) {
-  console.error(`${secretsFailed} secret(s) failed to upload.`);
+
+async function listSecretNames() {
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/workers/scripts/${WORKER}/secrets`,
+    { headers: { Authorization: `Bearer ${API_TOKEN}` } },
+  );
+  const body = await response.json();
+  return new Set((body.result ?? []).map((entry) => entry.name));
+}
+
+// `cf workers secrets bulk` accepts a payload but stores empty values in this
+// CLI version, so every secret is written through the documented REST endpoint.
+const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
+const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+if (!ACCOUNT || !API_TOKEN) {
+  console.error("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are required.");
   process.exit(1);
 }
-console.log(`  ${presentKeys.length} secrets applied`);
 
-console.log("[3/4] registering cron triggers");
+console.log("[2/4] registering cron triggers");
 // The schedules endpoint takes a bare JSON array, not {"schedules": [...]}.
 const schedules = [
   { cron: "0 0 * * *" }, // publish-scheduled
@@ -177,6 +179,34 @@ if (!schedRes.ok) {
   process.exit(1);
 }
 console.log(`  ${schedules.length} cron triggers registered`);
+
+console.log(`[3/4] applying ${presentKeys.length} Worker secrets`);
+// `cf workers secrets bulk` stores empty values in this CLI version, so talk to
+// the documented REST endpoint directly. Writes are applied one at a time and
+// the result is verified afterwards: rapid sequential writes can settle on a
+// version that predates the last few, which silently leaves secrets missing.
+for (const key of presentKeys) {
+  await putSecret(key);
+}
+
+let bound = await listSecretNames();
+let lost = presentKeys.filter((key) => !bound.has(key));
+if (lost.length > 0) {
+  console.warn(
+    `  ${lost.length} secret(s) did not persist; retrying: ${lost.join(", ")}`,
+  );
+  for (const key of lost) {
+    await putSecret(key);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  bound = await listSecretNames();
+  lost = presentKeys.filter((key) => !bound.has(key));
+  if (lost.length > 0) {
+    console.error(`  still missing after retry: ${lost.join(", ")}`);
+    process.exit(1);
+  }
+}
+console.log(`  verified ${presentKeys.length} secrets bound`);
 
 console.log("[4/4] verifying");
 const url =
