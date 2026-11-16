@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Unit test stubs a fake secret to exercise the rate limiter"
+paths = [
+  '''^web/tests/unit/rate-limit.test\.ts$''',
+]
