@@ -42,7 +42,7 @@
     "drizzle-orm": "0.45.4",
     "emoji-picker-react": "^4.19.4",
     "maplibre-gl": "6.6.0",
-    "next": "16.4.5",
+    "next": "16.4.6",
     "next-auth": "4.24.15",
     "react": "19.2.8",
     "react-dom": "19.2.8",
