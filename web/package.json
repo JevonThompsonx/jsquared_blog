@@ -47,7 +47,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-map-gl": "^8.1.2",
-    "sanitize-html": "2.18.1",
+    "sanitize-html": "2.18.2",
     "server-only": "^0.0.1",
     "tailwindcss": "4.3.5",
     "zod": "4.6.6"
