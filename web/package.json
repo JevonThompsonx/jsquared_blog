@@ -34,7 +34,7 @@
     "@tiptap/extension-link": "3.34.0",
     "@tiptap/extension-placeholder": "3.34.0",
     "@tiptap/react": "3.34.0",
-    "@tiptap/starter-kit": "3.31.0",
+    "@tiptap/starter-kit": "3.34.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.3",
     "browser-image-compression": "2.0.2",
