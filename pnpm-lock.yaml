@@ -67,10 +67,10 @@ importers:
         version: 3.34.0
       '@upstash/ratelimit':
         specifier: ^2.0.8
-        version: 2.2.1(@upstash/redis@1.38.3)
+        version: 2.2.1(@upstash/redis@1.41.0)
       '@upstash/redis':
         specifier: ^1.38.3
-        version: 1.38.3
+        version: 1.41.0
       browser-image-compression:
         specifier: 2.0.2
         version: 2.0.2
@@ -79,7 +79,7 @@ importers:
         version: 17.4.2
       drizzle-orm:
         specifier: 0.45.4
-        version: 0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)(@upstash/redis@1.38.3)
+        version: 0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)(@upstash/redis@1.41.0)
       emoji-picker-react:
         specifier: ^4.19.4
         version: 4.19.4(react@19.2.8)
@@ -2601,9 +2601,6 @@ packages:
     resolution: {integrity: sha512-SE2BU4h4+Ua/5SLKkrXZ8j1hYZt8xge3dGD3mnMeDls1CiOpau8Q8gipdVtbbzjIxBxRutJqCBoeXqSa1HH3lg==}
     peerDependencies:
       '@upstash/redis': ^1.38.2
-
-  '@upstash/redis@1.38.3':
-    resolution: {integrity: sha512-vtS0BonQHU6kDSWvHTISh+LOuLIEk+jeMXebv20CDJ/aHGOG085SGa8OpI+I+Ow8WgPFhqH23XG8kQ2LXXRnag==}
 
   '@upstash/redis@1.41.0':
     resolution: {integrity: sha512-TIu9C1B0ToXQLXt2M1LQuGZ6nkMjOZPIdJyU0GGWKZToa/MvJF8x2IRDOPMIAw2BLGXGhi1aZr5AnhlXu4YLXg==}
@@ -7835,14 +7832,10 @@ snapshots:
     dependencies:
       '@upstash/redis': 1.41.0
 
-  '@upstash/ratelimit@2.2.1(@upstash/redis@1.38.3)':
+  '@upstash/ratelimit@2.2.1(@upstash/redis@1.41.0)':
     dependencies:
       '@upstash/core-analytics': 0.0.10
-      '@upstash/redis': 1.38.3
-
-  '@upstash/redis@1.38.3':
-    dependencies:
-      uncrypto: 0.1.3
+      '@upstash/redis': 1.41.0
 
   '@upstash/redis@1.41.0':
     dependencies:
@@ -8729,11 +8722,11 @@ snapshots:
 
   dotenv@17.4.2: {}
 
-  drizzle-orm@0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)(@upstash/redis@1.38.3):
+  drizzle-orm@0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)(@upstash/redis@1.41.0):
     optionalDependencies:
       '@libsql/client': 0.18.0
       '@opentelemetry/api': 1.9.1
-      '@upstash/redis': 1.38.3
+      '@upstash/redis': 1.41.0
 
   dunder-proto@1.0.1:
     dependencies:
