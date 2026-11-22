@@ -38,7 +38,7 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.3",
     "browser-image-compression": "2.0.2",
-    "dotenv": "17.4.2",
+    "dotenv": "18.0.10",
     "drizzle-orm": "0.45.4",
     "emoji-picker-react": "^4.19.4",
     "maplibre-gl": "6.19.0",
