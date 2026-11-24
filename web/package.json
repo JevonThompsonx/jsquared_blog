@@ -28,7 +28,7 @@
     "@radix-ui/react-dialog": "1.3.1",
     "@radix-ui/react-select": "2.4.1",
     "@sentry/nextjs": "10.78.0",
-    "@supabase/supabase-js": "2.119.1",
+    "@supabase/supabase-js": "2.119.2",
     "@tiptap/core": "3.34.0",
     "@tiptap/extension-image": "3.34.0",
     "@tiptap/extension-link": "3.34.0",
