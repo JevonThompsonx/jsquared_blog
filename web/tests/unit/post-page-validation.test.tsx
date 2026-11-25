@@ -10,40 +10,56 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+  default: ({
+    alt,
+    src,
+    ...props
+  }: React.ImgHTMLAttributes<HTMLImageElement>) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} src={src} {...props} />
   ),
 }));
 
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a href={typeof href === "string" ? href : "#"} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={typeof href === "string" ? href : "#"} {...props}>
+      {children}
+    </a>
   ),
 }));
 
 vi.mock("@/components/blog/author-card", () => ({
-  AuthorCard: () => createElement("div", { "data-testid": "author-card" }, "Author"),
+  AuthorCard: () =>
+    createElement("div", { "data-testid": "author-card" }, "Author"),
 }));
 
 vi.mock("@/components/blog/bookmark-button", () => ({
-  BookmarkButton: () => createElement("button", { "data-testid": "bookmark-button" }, "Bookmark"),
+  BookmarkButton: () =>
+    createElement("button", { "data-testid": "bookmark-button" }, "Bookmark"),
 }));
 
 vi.mock("@/components/blog/comments", () => ({
-  Comments: () => createElement("div", { "data-testid": "comments" }, "Comments"),
+  Comments: () =>
+    createElement("div", { "data-testid": "comments" }, "Comments"),
 }));
 
 vi.mock("@/components/blog/copy-link-button", () => ({
-  CopyLinkButton: () => createElement("button", { "data-testid": "copy-link-button" }, "Copy"),
+  CopyLinkButton: () =>
+    createElement("button", { "data-testid": "copy-link-button" }, "Copy"),
 }));
 
 vi.mock("@/components/blog/share-buttons", () => ({
-  ShareButtons: () => createElement("div", { "data-testid": "share-buttons" }, "Share"),
+  ShareButtons: () =>
+    createElement("div", { "data-testid": "share-buttons" }, "Share"),
 }));
 
 vi.mock("@/components/blog/post-gallery", () => ({
-  PostGallery: () => createElement("div", { "data-testid": "post-gallery" }, "Gallery"),
+  PostGallery: () =>
+    createElement("div", { "data-testid": "post-gallery" }, "Gallery"),
 }));
 
 vi.mock("@/components/blog/post-map", () => ({
@@ -51,35 +67,43 @@ vi.mock("@/components/blog/post-map", () => ({
 }));
 
 vi.mock("@/components/blog/post-song-metadata", () => ({
-  PostSongMetadata: () => createElement("div", { "data-testid": "post-song-metadata" }, "Song"),
+  PostSongMetadata: () =>
+    createElement("div", { "data-testid": "post-song-metadata" }, "Song"),
 }));
 
 vi.mock("@/components/blog/prose-content", () => ({
-  ProseContent: ({ html }: { html: string }) => createElement("div", { "data-testid": "prose-content" }, html),
+  ProseContent: ({ html }: { html: string }) =>
+    createElement("div", { "data-testid": "prose-content" }, html),
 }));
 
 vi.mock("@/components/blog/reading-progress-bar", () => ({
-  ReadingProgressBar: () => createElement("div", { "data-testid": "reading-progress-bar" }, "Progress"),
+  ReadingProgressBar: () =>
+    createElement("div", { "data-testid": "reading-progress-bar" }, "Progress"),
 }));
 
 vi.mock("@/components/blog/post-view-tracker", () => ({
-  PostViewTracker: () => createElement("div", { "data-testid": "post-view-tracker" }, "Tracker"),
+  PostViewTracker: () =>
+    createElement("div", { "data-testid": "post-view-tracker" }, "Tracker"),
 }));
 
 vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header"),
+  SiteHeader: () =>
+    createElement("div", { "data-testid": "site-header" }, "Header"),
 }));
 
 vi.mock("@/components/blog/table-of-contents", () => ({
-  TableOfContents: () => createElement("div", { "data-testid": "table-of-contents" }, "TOC"),
+  TableOfContents: () =>
+    createElement("div", { "data-testid": "table-of-contents" }, "TOC"),
 }));
 
 vi.mock("@/components/blog/post-date", () => ({
-  PostDate: ({ dateString }: { dateString: string }) => createElement("time", { dateTime: dateString }, dateString),
+  PostDate: ({ dateString }: { dateString: string }) =>
+    createElement("time", { dateTime: dateString }, dateString),
 }));
 
 vi.mock("@/components/blog/series-nav", () => ({
-  SeriesNav: () => createElement("div", { "data-testid": "series-nav" }, "Series"),
+  SeriesNav: () =>
+    createElement("div", { "data-testid": "series-nav" }, "Series"),
 }));
 
 vi.mock("@/lib/content", () => ({
@@ -89,7 +113,11 @@ vi.mock("@/lib/content", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  getCanonicalPostUrl: vi.fn((post: { slug: string }) => `https://jsquaredadventures.com/posts/${post.slug}`),
+  SITE_URL: "https://jsquaredadventures.com",
+  getCanonicalPostUrl: vi.fn(
+    (post: { slug: string }) =>
+      `https://jsquaredadventures.com/posts/${post.slug}`,
+  ),
   getCategoryHref: vi.fn((category: string) => `/category/${category}`),
   getTagHref: vi.fn((slug: string) => `/tag/${slug}`),
   getPostHref: vi.fn((post: { slug: string }) => `/posts/${post.slug}`),
@@ -122,7 +150,10 @@ vi.mock("@/app/(blog)/posts/[slug]/head", () => ({
 
 import PostPage, { generateMetadata } from "@/app/(blog)/posts/[slug]/page";
 import { getAdminServerSession } from "@/lib/auth/session";
-import { getPublishedPostBySlug, getRelatedPosts } from "@/server/queries/posts";
+import {
+  getPublishedPostBySlug,
+  getRelatedPosts,
+} from "@/server/queries/posts";
 import { notFound } from "next/navigation";
 
 const publishedPost = {
@@ -159,7 +190,9 @@ describe("PostPage slug validation", () => {
   });
 
   it("fails closed on whitespace-only slugs before hitting post lookup or session reads", async () => {
-    await expect(PostPage({ params: Promise.resolve({ slug: "   " }) })).rejects.toThrow(notFoundError);
+    await expect(
+      PostPage({ params: Promise.resolve({ slug: "   " }) }),
+    ).rejects.toThrow(notFoundError);
 
     expect(getPublishedPostBySlug).not.toHaveBeenCalled();
     expect(getAdminServerSession).not.toHaveBeenCalled();
@@ -169,14 +202,18 @@ describe("PostPage slug validation", () => {
   it("trims valid slugs before querying metadata", async () => {
     vi.mocked(getPublishedPostBySlug).mockResolvedValue(publishedPost);
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "  desert-sunrise  " }) });
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "  desert-sunrise  " }),
+    });
 
     expect(getPublishedPostBySlug).toHaveBeenCalledWith("desert-sunrise");
     expect(metadata.title).toBe("Desert Sunrise");
   });
 
   it("returns null from JSON-LD head on whitespace-only slugs without hitting post lookup", async () => {
-    const { default: Head } = await vi.importActual<typeof import("@/app/(blog)/posts/[slug]/head")>("@/app/(blog)/posts/[slug]/head");
+    const { default: Head } = await vi.importActual<
+      typeof import("@/app/(blog)/posts/[slug]/head")
+    >("@/app/(blog)/posts/[slug]/head");
 
     const element = await Head({ params: Promise.resolve({ slug: "   " }) });
 
@@ -189,7 +226,9 @@ describe("PostPage slug validation", () => {
     vi.mocked(getAdminServerSession).mockResolvedValue(null);
     vi.mocked(getRelatedPosts).mockResolvedValue([]);
 
-    await expect(PostPage({ params: Promise.resolve({ slug: "  desert-sunrise  " }) })).rejects.toThrow(notFoundError);
+    await expect(
+      PostPage({ params: Promise.resolve({ slug: "  desert-sunrise  " }) }),
+    ).rejects.toThrow(notFoundError);
 
     expect(getPublishedPostBySlug).toHaveBeenCalledWith("desert-sunrise");
   });

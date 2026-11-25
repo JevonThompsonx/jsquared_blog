@@ -25,10 +25,29 @@ Sentry.init({
   sendDefaultPii: false,
 
   // Attach local variable values to stack frames for richer server-side traces
-  includeLocalVariables: true,
+  // PRIV-03: OFF — locals can contain comment bodies, emails, and form payloads.
+  includeLocalVariables: false,
 
   // Structured logs forwarded to Sentry's Logs product
   enableLogs: true,
+
+  // PRIV-03: strip request bodies/headers/cookies and console breadcrumbs before
+  // events leave the Worker. Errors still carry stack traces + route names.
+  beforeSend(event) {
+    if (event.request) {
+      delete event.request.data;
+      delete event.request.headers;
+      delete event.request.cookies;
+      delete event.request.query_string;
+    }
+    return event;
+  },
+  beforeBreadcrumb(breadcrumb) {
+    if (breadcrumb.category === "console") {
+      return null;
+    }
+    return breadcrumb;
+  },
 
   // Disable client reports (SDK telemetry about dropped events)
   sendClientReports: false,

@@ -1,8 +1,14 @@
-import { htmlToPlainText } from "@/lib/content";
+import { stripHtmlToPlainText } from "@/lib/html-text";
 import type { BlogPost } from "@/types/blog";
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jsquaredadventures.com";
-const SEASON_LABELS: readonly ["Winter", "Spring", "Summer", "Fall"] = ["Winter", "Spring", "Summer", "Fall"];
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://jsquaredadventures.com";
+const SEASON_LABELS: readonly ["Winter", "Spring", "Summer", "Fall"] = [
+  "Winter",
+  "Spring",
+  "Summer",
+  "Fall",
+];
 
 type SeasonIndex = 0 | 1 | 2 | 3;
 
@@ -21,7 +27,10 @@ function getUtcDateParts(dateString: string): { year: number; month: number } {
   };
 }
 
-function getSeasonParts(dateString: string): { year: number; seasonIndex: SeasonIndex } {
+function getSeasonParts(dateString: string): {
+  year: number;
+  seasonIndex: SeasonIndex;
+} {
   const { year, month } = getUtcDateParts(dateString);
 
   if (month === 11) {
@@ -53,7 +62,9 @@ export function slugify(value: string): string {
     .replace(/-+/g, "-");
 }
 
-export function toPostSlug(post: Pick<BlogPost, "id" | "title" | "slug">): string {
+export function toPostSlug(
+  post: Pick<BlogPost, "id" | "title" | "slug">,
+): string {
   if (post.slug) {
     return slugify(post.slug);
   }
@@ -61,20 +72,26 @@ export function toPostSlug(post: Pick<BlogPost, "id" | "title" | "slug">): strin
   return `${post.id}-${slugify(post.title)}`;
 }
 
-export function getPostHref(post: Pick<BlogPost, "id" | "title" | "slug">): `/posts/${string}` {
+export function getPostHref(
+  post: Pick<BlogPost, "id" | "title" | "slug">,
+): `/posts/${string}` {
   return `/posts/${toPostSlug(post)}`;
 }
 
-export function getCanonicalPostUrl(post: Pick<BlogPost, "id" | "title" | "slug">): string {
+export function getCanonicalPostUrl(
+  post: Pick<BlogPost, "id" | "title" | "slug">,
+): string {
   return `${SITE_URL}${getPostHref(post)}`;
 }
 
 export function getCategoryHref(category: string): `/category/${string}` {
-  return `/category/${encodeURIComponent(category)}`;
+  return `/category/${encodeURIComponent(slugify(category))}`;
 }
 
-export function getCategoryFeedHref(category: string): `/category/${string}/feed.xml` {
-  return `/category/${encodeURIComponent(category)}/feed.xml`;
+export function getCategoryFeedHref(
+  category: string,
+): `/category/${string}/feed.xml` {
+  return `/category/${encodeURIComponent(slugify(category))}/feed.xml`;
 }
 
 export function getTagHref(slug: string): `/tag/${string}` {
@@ -106,7 +123,8 @@ export function formatRelativeDate(value: string): string {
   const diffMs = new Date(value).getTime() - Date.now();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   const absDays = Math.abs(diffDays);
-  if (absDays < 1) return rtf.format(Math.round(diffMs / (1000 * 60 * 60)), "hour");
+  if (absDays < 1)
+    return rtf.format(Math.round(diffMs / (1000 * 60 * 60)), "hour");
   if (absDays < 7) return rtf.format(diffDays, "day");
   if (absDays < 30) return rtf.format(Math.round(diffDays / 7), "week");
   if (absDays < 365) return rtf.format(Math.round(diffDays / 30), "month");
@@ -163,4 +181,4 @@ export function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-export { htmlToPlainText };
+export { stripHtmlToPlainText as htmlToPlainText };

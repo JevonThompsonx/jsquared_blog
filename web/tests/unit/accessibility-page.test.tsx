@@ -3,14 +3,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header shell"),
+  SiteHeader: () =>
+    createElement("div", { "data-testid": "site-header" }, "Header shell"),
 }));
 
 import AccessibilityPage, { metadata } from "@/app/(blog)/accessibility/page";
 
 describe("AccessibilityPage", () => {
   it("exposes stable accessibility metadata", () => {
-    expect(metadata.title).toBe("Accessibility — J²Adventures");
+    expect(metadata.title).toBe("Accessibility");
   });
 
   it("renders the page header and accessibility commitment", () => {
@@ -34,7 +35,9 @@ describe("AccessibilityPage", () => {
     const markup = renderToStaticMarkup(AccessibilityPage());
     // Either a mailto: link or a contact form reference
     const hasMailto = /mailto:[^"\s]+/i.test(markup);
-    const hasContactSection = /contact|reach out|get in touch|report/i.test(markup);
+    const hasContactSection = /contact|reach out|get in touch|report/i.test(
+      markup,
+    );
     expect(hasMailto || hasContactSection).toBe(true);
   });
 

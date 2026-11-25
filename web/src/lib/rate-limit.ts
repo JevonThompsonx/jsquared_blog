@@ -7,11 +7,14 @@
  * available — note that the fallback is NOT consistent across Vercel instances.
  */
 
+import { createHash } from "node:crypto";
+
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
 import { hasUpstashRedisCredentials, isDeployedEnvironment } from "@/lib/env";
+import { getEnvSource } from "@/lib/env";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -29,18 +32,40 @@ export type RateLimitResult = {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the client IP from standard proxy headers injected by Vercel.
- * Falls back to "unknown" if no header is present (e.g. localhost).
+ * Returns a stable, pseudonymous client identifier for rate-limit keys.
+ *
+ * Trust order matters behind Cloudflare:
+ *   1. `cf-connecting-ip` — set by Cloudflare, not client-forgeable.
+ *   2. `x-real-ip` — set by trusted proxies.
+ *   3. `x-forwarded-for` — Cloudflare *appends* the real client IP, so the
+ *      **last** hop is the trustworthy one. Taking the first hop (the old
+ *      behaviour) let a client rotate the header and bypass every bucket.
+ *
+ * The value is SHA-256 hashed before use so raw IPs are not retained in Redis
+ * keys. Returns "unknown" when no trusted header is present (local dev/tests).
  */
 export function getClientIp(request: Request): string {
+  const cfIp = request.headers.get("cf-connecting-ip")?.trim();
+  if (cfIp) return hashClientIp(cfIp);
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) return hashClientIp(realIp);
+
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
+    const hops = forwarded
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter(Boolean);
+    const lastHop = hops[hops.length - 1];
+    if (lastHop) return hashClientIp(lastHop);
   }
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
+
   return "unknown";
+}
+
+function hashClientIp(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 32);
 }
 
 // ---------------------------------------------------------------------------
@@ -77,8 +102,8 @@ function getUpstashLimiter(limit: number, windowMs: number): Ratelimit {
 
   const limiter = new Ratelimit({
     redis: new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL ?? "",
-      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? "",
+      url: getEnvSource().UPSTASH_REDIS_REST_URL ?? "",
+      token: getEnvSource().UPSTASH_REDIS_REST_TOKEN ?? "",
     }),
     limiter: Ratelimit.slidingWindow(limit, `${Math.round(windowMs / 1000)} s`),
     prefix: "j2:rl",
@@ -118,7 +143,11 @@ function sweep(now: number): void {
   }
 }
 
-function checkInMemory(key: string, limit: number, windowMs: number): RateLimitResult {
+function checkInMemory(
+  key: string,
+  limit: number,
+  windowMs: number,
+): RateLimitResult {
   const now = Date.now();
 
   sweepCounter++;
@@ -131,7 +160,12 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
 
   if (!entry || entry.resetAt <= now) {
     store.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, limit, remaining: limit - 1, resetAt: now + windowMs };
+    return {
+      allowed: true,
+      limit,
+      remaining: limit - 1,
+      resetAt: now + windowMs,
+    };
   }
 
   if (entry.count >= limit) {
@@ -140,7 +174,12 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
 
   const newCount = entry.count + 1;
   store.set(key, { ...entry, count: newCount });
-  return { allowed: true, limit, remaining: limit - newCount, resetAt: entry.resetAt };
+  return {
+    allowed: true,
+    limit,
+    remaining: limit - newCount,
+    resetAt: entry.resetAt,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +187,7 @@ function checkInMemory(key: string, limit: number, windowMs: number): RateLimitR
 // ---------------------------------------------------------------------------
 
 function isUpstashConfigured(): boolean {
-  return hasUpstashRedisCredentials(process.env);
+  return hasUpstashRedisCredentials(getEnvSource());
 }
 
 /**
@@ -166,14 +205,20 @@ export async function checkRateLimit(
   limit: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
+  const env = getEnvSource();
+
+  if (env.RATE_LIMIT_DRIVER === "memory") {
+    return checkInMemory(key, limit, windowMs);
+  }
+
   if (isUpstashConfigured()) {
     return checkUpstash(key, limit, windowMs);
   }
 
-  if (isDeployedEnvironment(process.env)) {
+  if (isDeployedEnvironment(env)) {
     throw new Error(
       "[rate-limit] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN not set. " +
-        "In-memory rate limiting is NOT consistent across Vercel instances and cannot be used in deployed environments.",
+        "Set RATE_LIMIT_DRIVER=memory for a single local Node instance.",
     );
   }
 

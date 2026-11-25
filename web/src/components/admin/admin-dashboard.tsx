@@ -14,7 +14,11 @@ import {
   deletePostAction,
 } from "@/app/admin/actions";
 import { formatPublishedDate, getPostHref } from "@/lib/utils";
-import type { AdminPostRecord, AdminPostListResult, AdminCategoryRecord } from "@/server/dal/admin-posts";
+import type {
+  AdminPostRecord,
+  AdminPostListResult,
+  AdminCategoryRecord,
+} from "@/server/dal/admin-posts";
 import type { PostPublishResult } from "@/server/posts/publish";
 import { ThemeSelect } from "@/components/ui/theme-select";
 
@@ -29,12 +33,18 @@ function getStatusStyles(status: AdminPostRecord["status"]) {
   }
 }
 
-function getDashboardRoute(params: URLSearchParams): "/admin" | `/admin?${string}` {
+function getDashboardRoute(
+  params: URLSearchParams,
+): "/admin" | `/admin?${string}` {
   const query = params.toString();
   return query ? `/admin?${query}` : "/admin";
 }
 
-function getAdminEditorRoute(params: URLSearchParams, postId: string, flag?: "cloned"): "/admin" | `/admin?${string}` {
+function getAdminEditorRoute(
+  params: URLSearchParams,
+  postId: string,
+  flag?: "cloned",
+): "/admin" | `/admin?${string}` {
   const nextParams = new URLSearchParams(params.toString());
   nextParams.set("postId", postId);
 
@@ -47,7 +57,8 @@ function getAdminEditorRoute(params: URLSearchParams, postId: string, flag?: "cl
 }
 
 function formatBulkResultMessage(result: PostPublishResult): string {
-  const actionLabel = result.operation === "publish" ? "Published" : "Moved to draft";
+  const actionLabel =
+    result.operation === "publish" ? "Published" : "Moved to draft";
   const parts = [`${actionLabel} ${result.updatedCount} post(s).`];
 
   if (result.unchangedCount > 0) {
@@ -80,7 +91,13 @@ function parsePageJumpValue(value: string, totalPages: number): number | null {
 }
 
 function getVisiblePageNumbers(page: number, totalPages: number): number[] {
-  const pageNumbers = new Set<number>([1, totalPages, page - 1, page, page + 1]);
+  const pageNumbers = new Set<number>([
+    1,
+    totalPages,
+    page - 1,
+    page,
+    page + 1,
+  ]);
 
   return Array.from(pageNumbers)
     .filter((value) => value >= 1 && value <= totalPages)
@@ -94,18 +111,28 @@ export function AdminDashboard({
   categories,
 }: {
   session: AdminSession;
-  counts: { total: number; published: number; draft: number; scheduled: number };
+  counts: {
+    total: number;
+    published: number;
+    draft: number;
+    scheduled: number;
+  };
   postsResult: AdminPostListResult;
   categories: AdminCategoryRecord[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [isPending, startTransition] = useTransition();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(postsResult.filters.query);
   const [pageJumpInput, setPageJumpInput] = useState(String(postsResult.page));
-  const [deleteConfirm, setDeleteConfirm] = useState<{ ids: string[]; titles: string[] } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    ids: string[];
+    titles: string[];
+  } | null>(null);
 
   const posts = postsResult.posts;
   const { page, totalPages, totalCount } = postsResult;
@@ -113,8 +140,10 @@ export function AdminDashboard({
   const activeStatus = postsResult.filters.status ?? "all";
   const activeCategory = postsResult.filters.category ?? "all";
   const activeSort = postsResult.filters.sort;
-  const firstResultIndex = totalCount === 0 ? 0 : (page - 1) * postsResult.pageSize + 1;
-  const lastResultIndex = totalCount === 0 ? 0 : firstResultIndex + posts.length - 1;
+  const firstResultIndex =
+    totalCount === 0 ? 0 : (page - 1) * postsResult.pageSize + 1;
+  const lastResultIndex =
+    totalCount === 0 ? 0 : firstResultIndex + posts.length - 1;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sync controlled input with URL param changes
@@ -157,13 +186,22 @@ export function AdminDashboard({
     [posts, selectedPostIds],
   );
 
-  const allSelected = posts.length > 0 && posts.every((post) => selectedPostIds.has(post.id));
-  const isIndeterminate = !allSelected && posts.some((post) => selectedPostIds.has(post.id));
+  const allSelected =
+    posts.length > 0 && posts.every((post) => selectedPostIds.has(post.id));
+  const isIndeterminate =
+    !allSelected && posts.some((post) => selectedPostIds.has(post.id));
 
   const hasDrafts = selectedPosts.some((post) => post.status === "draft");
-  const hasPublished = selectedPosts.some((post) => post.status === "published");
-  const hasScheduled = selectedPosts.some((post) => post.status === "scheduled");
-  const visiblePageNumbers = useMemo(() => getVisiblePageNumbers(page, totalPages), [page, totalPages]);
+  const hasPublished = selectedPosts.some(
+    (post) => post.status === "published",
+  );
+  const hasScheduled = selectedPosts.some(
+    (post) => post.status === "scheduled",
+  );
+  const visiblePageNumbers = useMemo(
+    () => getVisiblePageNumbers(page, totalPages),
+    [page, totalPages],
+  );
 
   const togglePost = (id: string) => {
     const next = new Set(selectedPostIds);
@@ -184,7 +222,9 @@ export function AdminDashboard({
     }
   };
 
-  const updateFilters = (updates: Record<string, string | number | undefined>) => {
+  const updateFilters = (
+    updates: Record<string, string | number | undefined>,
+  ) => {
     const params = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
       if (value !== undefined && value !== "" && value !== "all") {
@@ -308,10 +348,13 @@ export function AdminDashboard({
     setDeleteConfirm(null);
     startTransition(async () => {
       try {
-        const result = idsToDelete.length === 1
-          ? await deletePostAction(idsToDelete[0])
-          : await bulkDeletePosts(idsToDelete);
-        setToastMessage(`Deleted ${result.deletedCount} post(s).${result.missingIds.length > 0 ? ` ${result.missingIds.length} not found.` : ""}`);
+        const result =
+          idsToDelete.length === 1
+            ? await deletePostAction(idsToDelete[0])
+            : await bulkDeletePosts(idsToDelete);
+        setToastMessage(
+          `Deleted ${result.deletedCount} post(s).${result.missingIds.length > 0 ? ` ${result.missingIds.length} not found.` : ""}`,
+        );
         setSelectedPostIds(new Set());
         setTimeout(() => {
           setToastMessage(null);
@@ -331,23 +374,38 @@ export function AdminDashboard({
     <div className="mt-10 space-y-8">
       {/* Delete confirmation dialog */}
       {deleteConfirm ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Confirm delete">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm delete"
+        >
           <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-[var(--foreground)]">
-              Delete {deleteConfirm.ids.length === 1 ? "post" : `${deleteConfirm.ids.length} posts`}?
+              Delete{" "}
+              {deleteConfirm.ids.length === 1
+                ? "post"
+                : `${deleteConfirm.ids.length} posts`}
+              ?
             </h3>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              This will permanently delete {deleteConfirm.ids.length === 1 ? "this post" : "these posts"} and all associated comments, images, bookmarks, and revisions. This cannot be undone.
+              This will permanently delete{" "}
+              {deleteConfirm.ids.length === 1 ? "this post" : "these posts"} and
+              all associated comments, images, bookmarks, and revisions. This
+              cannot be undone.
             </p>
             {deleteConfirm.titles.length <= 5 ? (
               <ul className="mt-3 space-y-1 text-sm text-[var(--muted)]">
                 {deleteConfirm.titles.map((title, i) => (
-                  <li key={deleteConfirm.ids[i]} className="truncate">&bull; {title}</li>
+                  <li key={deleteConfirm.ids[i]} className="truncate">
+                    &bull; {title}
+                  </li>
                 ))}
               </ul>
             ) : (
               <p className="mt-3 text-sm text-[var(--muted)]">
-                {deleteConfirm.titles.slice(0, 3).join(", ")} and {deleteConfirm.titles.length - 3} more
+                {deleteConfirm.titles.slice(0, 3).join(", ")} and{" "}
+                {deleteConfirm.titles.length - 3} more
               </p>
             )}
             <div className="mt-5 flex items-center justify-end gap-3">
@@ -372,14 +430,19 @@ export function AdminDashboard({
       ) : null}
 
       <section className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editorial workspace</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
+          Editorial workspace
+        </p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <h2 className="text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">
-              Welcome back, {session.user?.githubLogin ?? session.user?.email ?? "admin"}.
+              Welcome back,{" "}
+              {session.user?.name ?? session.user?.email ?? "admin"}.
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-              Start a new story, tighten a draft, or review the publishing queue. The dashboard should help you make progress quickly, not explain the migration to you.
+              Start a new story, tighten a draft, or review the publishing
+              queue. The dashboard should help you make progress quickly, not
+              explain the migration to you.
             </p>
           </div>
           <Link
@@ -417,7 +480,10 @@ export function AdminDashboard({
               onChange={(value) => updateFilters({ category: value })}
               options={[
                 { label: "All Categories", value: "all" },
-                ...categories.map((cat) => ({ label: cat.name, value: cat.slug })),
+                ...categories.map((cat) => ({
+                  label: cat.name,
+                  value: cat.slug,
+                })),
               ]}
               className="w-full lg:w-[150px] xl:w-[160px]"
             />
@@ -460,9 +526,16 @@ export function AdminDashboard({
           ["Drafts", counts.draft],
           ["Scheduled", counts.scheduled],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">{label}</p>
-            <p className="mt-3 text-3xl font-semibold text-[var(--foreground)]">{value}</p>
+          <div
+            key={label}
+            className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
+              {label}
+            </p>
+            <p className="mt-3 text-3xl font-semibold text-[var(--foreground)]">
+              {value}
+            </p>
           </div>
         ))}
       </section>
@@ -471,8 +544,12 @@ export function AdminDashboard({
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editorial queue</p>
-              <h3 className="mt-2 text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">Latest posts in Turso</h3>
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
+                Editorial queue
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">
+                Latest posts in Turso
+              </h3>
             </div>
             <span className="text-sm text-[var(--muted)]">
               {totalCount === 0
@@ -526,7 +603,9 @@ export function AdminDashboard({
             {posts.length === 0 ? (
               <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-8 text-center">
                 <p className="text-[var(--text-secondary)]">
-                  {activeQuery || activeStatus !== "all" || activeCategory !== "all"
+                  {activeQuery ||
+                  activeStatus !== "all" ||
+                  activeCategory !== "all"
                     ? "No posts match the current filters. Try widening the search or clearing a filter."
                     : "No posts have been created yet."}
                 </p>
@@ -548,18 +627,20 @@ export function AdminDashboard({
                     aria-label="Select all posts on this page"
                   />
                   <span className="text-sm font-semibold text-[var(--foreground)]">
-                    {allSelected ? "Deselect all on page" : "Select all on page"}
+                    {allSelected
+                      ? "Deselect all on page"
+                      : "Select all on page"}
                   </span>
                 </div>
 
-                  {posts.map((post: AdminPostRecord) => (
+                {posts.map((post: AdminPostRecord) => (
                   <article
-                      key={post.id}
-                      className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5 lg:p-6"
-                      data-post-id={post.id}
-                      data-post-status={post.status}
-                      data-testid="admin-post-row"
-                    >
+                    key={post.id}
+                    className="flex gap-4 rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5 lg:p-6"
+                    data-post-id={post.id}
+                    data-post-status={post.status}
+                    data-testid="admin-post-row"
+                  >
                     <div className="pt-1">
                       <input
                         type="checkbox"
@@ -576,7 +657,7 @@ export function AdminDashboard({
                           <div className="flex flex-wrap items-center gap-2">
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${getStatusStyles(
-                                post.status
+                                post.status,
                               )}`}
                             >
                               {post.status}
@@ -587,9 +668,12 @@ export function AdminDashboard({
                               </span>
                             ) : null}
                           </div>
-                           <h4 className="mt-3 text-lg font-semibold text-[var(--foreground)] sm:text-xl" data-testid="admin-post-title">
-                             {post.title}
-                           </h4>
+                          <h4
+                            className="mt-3 text-lg font-semibold text-[var(--foreground)] sm:text-xl"
+                            data-testid="admin-post-title"
+                          >
+                            {post.title}
+                          </h4>
                           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                             {post.excerpt ||
                               "This post is synced into Turso and ready for native admin tooling."}
@@ -604,72 +688,86 @@ export function AdminDashboard({
                       </div>
                       <div className="mt-4 grid gap-4 border-t border-[var(--border)] pt-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                         <div className="space-y-2 text-sm text-[var(--muted)]">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Publishing timeline</p>
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                            Publishing timeline
+                          </p>
                           <div className="flex flex-wrap gap-x-4 gap-y-2">
-                          {post.publishedAt ? (
-                            <span>
-                              Published {formatPublishedDate(post.publishedAt.toISOString())}
-                            </span>
-                          ) : null}
-                          {post.scheduledPublishTime ? (
-                            <span>
-                              Scheduled {formatPublishedDate(post.scheduledPublishTime.toISOString())}
-                            </span>
-                          ) : null}
-                          <span>{post.viewCount} views</span>
-                          <span>{post.commentCount} comments</span>
-                          <span>{post.bookmarkCount} bookmarks</span>
+                            {post.publishedAt ? (
+                              <span>
+                                Published{" "}
+                                {formatPublishedDate(
+                                  post.publishedAt.toISOString(),
+                                )}
+                              </span>
+                            ) : null}
+                            {post.scheduledPublishTime ? (
+                              <span>
+                                Scheduled{" "}
+                                {formatPublishedDate(
+                                  post.scheduledPublishTime.toISOString(),
+                                )}
+                              </span>
+                            ) : null}
+                            <span>{post.viewCount} views</span>
+                            <span>{post.commentCount} comments</span>
+                            <span>{post.bookmarkCount} bookmarks</span>
                           </div>
                         </div>
                         <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end pt-3 xl:pt-0">
-                            <button
-                               type="button"
-                               onClick={() => handleClone(post.id)}
-                              disabled={isPending}
-                              data-testid="admin-post-clone"
-                               className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
-                             >
-                              Clone
-                            </button>
+                          <button
+                            type="button"
+                            onClick={() => handleClone(post.id)}
+                            disabled={isPending}
+                            data-testid="admin-post-clone"
+                            className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                          >
+                            Clone
+                          </button>
+                          <Link
+                            className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                            href={getAdminEditorRoute(searchParams, post.id)}
+                          >
+                            Edit
+                          </Link>
+                          <Link
+                            className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                            href={`/admin/posts/${post.id}/comments`}
+                          >
+                            Moderate comments
+                          </Link>
+                          {post.status === "published" ? (
                             <Link
                               className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                              href={getAdminEditorRoute(searchParams, post.id)}
+                              href={getPostHref({
+                                id: post.id,
+                                title: post.title,
+                                slug: post.slug,
+                              })}
                             >
-                              Edit
-                            </Link>
-                            <Link
-                              className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                              href={`/admin/posts/${post.id}/comments`}
-                            >
-                              Moderate comments
-                           </Link>
-                           {post.status === "published" ? (
-                             <Link
-                                className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                                href={getPostHref({ id: post.id, title: post.title, slug: post.slug })}
-                              >
-                                View live
+                              View live
                             </Link>
                           ) : (
                             <button
                               type="button"
-                               onClick={() => handlePreview(post.id)}
-                               disabled={isPending}
-                               data-testid="admin-post-preview"
-                                className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
-                              >
-                                Preview
-                              </button>
-                          )}
-                            <button
-                              type="button"
-                              onClick={() => promptDeleteSingle(post.id, post.title)}
+                              onClick={() => handlePreview(post.id)}
                               disabled={isPending}
-                              data-testid="admin-post-delete"
-                              className="admin-delete-btn rounded-full border px-3 py-2 text-center font-semibold transition-colors disabled:opacity-50"
+                              data-testid="admin-post-preview"
+                              className="rounded-full border border-[var(--border)] px-3 py-2 text-center font-semibold text-[var(--accent)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
                             >
-                              Delete
+                              Preview
                             </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              promptDeleteSingle(post.id, post.title)
+                            }
+                            disabled={isPending}
+                            data-testid="admin-post-delete"
+                            className="admin-delete-btn rounded-full border px-3 py-2 text-center font-semibold transition-colors disabled:opacity-50"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -683,9 +781,16 @@ export function AdminDashboard({
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       {visiblePageNumbers.map((pageNumber, index) => (
-                        <div key={pageNumber} className="flex items-center gap-2">
-                          {index > 0 && visiblePageNumbers[index - 1] !== pageNumber - 1 ? (
-                            <span aria-hidden="true" className="text-[var(--muted)]">
+                        <div
+                          key={pageNumber}
+                          className="flex items-center gap-2"
+                        >
+                          {index > 0 &&
+                          visiblePageNumbers[index - 1] !== pageNumber - 1 ? (
+                            <span
+                              aria-hidden="true"
+                              className="text-[var(--muted)]"
+                            >
                               ...
                             </span>
                           ) : null}
@@ -698,7 +803,9 @@ export function AdminDashboard({
                                 ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--on-primary)]"
                                 : "border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--accent-soft)]"
                             } disabled:cursor-default disabled:opacity-100`}
-                            aria-current={pageNumber === page ? "page" : undefined}
+                            aria-current={
+                              pageNumber === page ? "page" : undefined
+                            }
                             aria-label={`Go to page ${pageNumber}`}
                           >
                             {pageNumber}
@@ -709,7 +816,10 @@ export function AdminDashboard({
                   </div>
                   <div className="flex flex-wrap items-center gap-2 2xl:justify-end">
                     <div className="flex items-center gap-2 rounded-full border border-[var(--border)] px-2 py-1">
-                      <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]" htmlFor="admin-page-jump">
+                      <label
+                        className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]"
+                        htmlFor="admin-page-jump"
+                      >
                         Jump
                       </label>
                       <input
@@ -719,7 +829,9 @@ export function AdminDashboard({
                         max={totalPages}
                         inputMode="numeric"
                         value={pageJumpInput}
-                        onChange={(event) => setPageJumpInput(event.target.value)}
+                        onChange={(event) =>
+                          setPageJumpInput(event.target.value)
+                        }
                         onKeyDown={(event) => {
                           if (event.key === "Enter") {
                             event.preventDefault();
@@ -745,7 +857,9 @@ export function AdminDashboard({
                           <button
                             key={size}
                             type="button"
-                            onClick={() => updateFilters({ pageSize: size, page: 1 })}
+                            onClick={() =>
+                              updateFilters({ pageSize: size, page: 1 })
+                            }
                             className={`rounded-full px-3 py-1.5 font-semibold transition-colors ${
                               isActiveSize
                                 ? "bg-[var(--primary)] text-[var(--on-primary)]"
@@ -784,18 +898,26 @@ export function AdminDashboard({
 
         <aside className="space-y-6">
           <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Operational notes</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
+              Operational notes
+            </p>
             <ul className="mt-4 space-y-3 text-sm leading-7 text-[var(--muted)]">
               <li>GitHub admin access is locked to your numeric allowlist.</li>
               <li>Cloudinary uploads now feed the native editor directly.</li>
-              <li>Turso remains the working source for the new Next.js surface.</li>
+              <li>
+                Turso remains the working source for the new Next.js surface.
+              </li>
             </ul>
           </div>
 
           <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-xl sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Editorial priorities</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
+              Editorial priorities
+            </p>
             <ul className="mt-4 space-y-3 text-sm leading-7 text-[var(--muted)]">
-              <li>Review newly created posts for category and layout quality.</li>
+              <li>
+                Review newly created posts for category and layout quality.
+              </li>
               <li>Use tags and featured imagery to strengthen discovery.</li>
               <li>Keep scheduled pieces clearly dated before publishing.</li>
             </ul>
@@ -811,7 +933,9 @@ export function AdminDashboard({
           <span className="text-sm font-medium">{toastMessage}</span>
           <button
             type="button"
-            onClick={() => { setToastMessage(null); }}
+            onClick={() => {
+              setToastMessage(null);
+            }}
             className="text-[var(--background)] opacity-70 transition-opacity hover:opacity-100"
             aria-label="Close"
           >

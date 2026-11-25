@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { loadPlaywrightEnv } from "./playwright-env";
+
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const isCI = Boolean(process.env.CI);
+const webServerEnv = loadPlaywrightEnv();
 
 function getLocalWebServerConfig() {
   try {
@@ -21,6 +24,7 @@ function getLocalWebServerConfig() {
       // `--` separator. `next dev -- <port>` treats `<port>` as a project
       // directory and fails with "Invalid project directory provided".
       command: `pnpm run dev --port ${port}`,
+      env: webServerEnv,
       url: baseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

@@ -3,14 +3,25 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { categories, mediaAssets, postImages, postTags, posts, tags } from "@/drizzle/schema";
+import {
+  categories,
+  mediaAssets,
+  postImages,
+  postTags,
+  posts,
+  tags,
+} from "@/drizzle/schema";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
+import { deleteLocalMediaIfUnreferenced } from "@/server/media/cleanup";
 import { normalizeSongMetadataFields } from "@/lib/post-song-metadata";
-import { createPostRevision, type PostRevisionLayoutType } from "@/server/dal/post-revisions";
+import {
+  createPostRevision,
+  type PostRevisionLayoutType,
+} from "@/server/dal/post-revisions";
 import { ensureSeriesId } from "@/server/dal/series";
 import { getPostColumnCapabilities } from "@/server/dal/post-column-capabilities";
 import { replaceLinksForPost } from "@/server/dal/post-links";
@@ -18,15 +29,29 @@ import { adminPostFormSchema } from "@/server/forms/admin-post-form";
 import { derivePostContent } from "@/server/posts/content";
 import { clonePostById } from "@/server/posts/clone";
 import { deactivateLinkedWishlistPlaces } from "@/server/dal/admin-wishlist-places";
-import { createPostPreviewAccess, revokePostPreviewTokens } from "@/server/posts/preview";
+import {
+  createPostPreviewAccess,
+  revokePostPreviewTokens,
+} from "@/server/posts/preview";
 import { deletePosts, type PostDeleteResult } from "@/server/posts/delete";
-import { publishPosts, unpublishPosts, type PostPublishResult } from "@/server/posts/publish";
+import {
+  publishPosts,
+  unpublishPosts,
+  type PostPublishResult,
+} from "@/server/posts/publish";
 import { generateUniquePostSlug } from "@/server/posts/slug";
-import { ADMIN_FLASH_COOKIE_NAME, getAdminFlashCookieOptions, type AdminFlashKind } from "@/lib/admin-flash";
+import {
+  ADMIN_FLASH_COOKIE_NAME,
+  getAdminFlashCookieOptions,
+  type AdminFlashKind,
+} from "@/lib/admin-flash";
 import { geocodeLocation, type GeoResult } from "@/lib/geocode";
 import { SITE_URL, slugify } from "@/lib/utils";
 
-type DbExecutor = Pick<ReturnType<typeof getDb>, "query" | "select" | "insert" | "update" | "delete">;
+type DbExecutor = Pick<
+  ReturnType<typeof getDb>,
+  "query" | "select" | "insert" | "update" | "delete"
+>;
 type AdminReturnRoute = "/admin" | `/admin?${string}`;
 
 function normalizeScheduledTimestamp(
@@ -81,7 +106,10 @@ async function ensureAdmin() {
   return session.user.id;
 }
 
-async function ensureCategoryIdTx(tx: DbExecutor, categoryName: string | undefined) {
+async function ensureCategoryIdTx(
+  tx: DbExecutor,
+  categoryName: string | undefined,
+) {
   const trimmedName = categoryName?.trim();
   if (!trimmedName) {
     return null;
@@ -132,7 +160,9 @@ function parseFormData(formData: FormData) {
     status: formData.get("status"),
     layoutType: formData.get("layoutType"),
     scheduledPublishTime: formData.get("scheduledPublishTime"),
-    scheduledPublishOffsetMinutes: formData.get("scheduledPublishOffsetMinutes"),
+    scheduledPublishOffsetMinutes: formData.get(
+      "scheduledPublishOffsetMinutes",
+    ),
     featuredImageUrl: formData.get("featuredImageUrl"),
     featuredImageAlt: formData.get("featuredImageAlt"),
     galleryEntries: formData.get("galleryEntries"),
@@ -147,8 +177,9 @@ function parseFormData(formData: FormData) {
   });
 
   if (!parsed.success) {
-    const contentOnlyFailure = parsed.error.issues.length > 0
-      && parsed.error.issues.every((issue) => issue.path[0] === "contentJson");
+    const contentOnlyFailure =
+      parsed.error.issues.length > 0 &&
+      parsed.error.issues.every((issue) => issue.path[0] === "contentJson");
 
     if (contentOnlyFailure) {
       throw new Error("Invalid post content");
@@ -160,7 +191,9 @@ function parseFormData(formData: FormData) {
   return parsed.data;
 }
 
-function normalizeAdminReturnTo(value: FormDataEntryValue | null): AdminReturnRoute {
+function normalizeAdminReturnTo(
+  value: FormDataEntryValue | null,
+): AdminReturnRoute {
   if (typeof value !== "string") {
     return "/admin";
   }
@@ -188,7 +221,11 @@ function normalizeAdminReturnTo(value: FormDataEntryValue | null): AdminReturnRo
   }
 }
 
-function buildAdminPostReturnPath(returnTo: AdminReturnRoute, postId: string, flag: "saved" | "cloned" | "editRemoved"): AdminReturnRoute {
+function buildAdminPostReturnPath(
+  returnTo: AdminReturnRoute,
+  postId: string,
+  flag: "saved" | "cloned" | "editRemoved",
+): AdminReturnRoute {
   const url = new URL(returnTo, SITE_URL);
   url.searchParams.set("postId", postId);
   url.searchParams.set(flag, "1");
@@ -202,11 +239,22 @@ async function setAdminFlash(kind: AdminFlashKind) {
   const forwardedProto = headerStore.get("x-forwarded-proto");
   const isSecure = forwardedProto?.split(",")[0]?.trim() === "https";
 
-  cookieStore.set(ADMIN_FLASH_COOKIE_NAME, kind, getAdminFlashCookieOptions(isSecure));
+  cookieStore.set(
+    ADMIN_FLASH_COOKIE_NAME,
+    kind,
+    getAdminFlashCookieOptions(isSecure),
+  );
 }
 
 function parseTagNames(value: string) {
-  return [...new Set(value.split(",").map((tag) => tag.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
 function parseUnknownJson(value: string): unknown {
@@ -214,7 +262,11 @@ function parseUnknownJson(value: string): unknown {
 }
 
 function isInvalidPostContentError(error: unknown) {
-  return error instanceof SyntaxError || (error instanceof Error && error.message === "Content must be valid Tiptap JSON");
+  return (
+    error instanceof SyntaxError ||
+    (error instanceof Error &&
+      error.message === "Content must be valid Tiptap JSON")
+  );
 }
 
 const galleryEntrySchema = z.object({
@@ -245,7 +297,9 @@ const postLinkEntrySchema = z.object({
 
 const postLinksSchema = z.array(postLinkEntrySchema).max(10);
 
-function parseLinksJson(value: FormDataEntryValue | null): Array<{ label: string; url: string; sortOrder: number }> {
+function parseLinksJson(
+  value: FormDataEntryValue | null,
+): Array<{ label: string; url: string; sortOrder: number }> {
   if (!value || typeof value !== "string" || !value.trim()) {
     return [];
   }
@@ -264,7 +318,11 @@ function parseLinksJson(value: FormDataEntryValue | null): Array<{ label: string
 
   return parsed.data
     .filter((entry) => entry.url.trim().startsWith("https://"))
-    .map((entry) => ({ label: entry.label, url: entry.url, sortOrder: entry.sortOrder }));
+    .map((entry) => ({
+      label: entry.label,
+      url: entry.url,
+      sortOrder: entry.sortOrder,
+    }));
 }
 
 function parseGalleryEntries(value: string) {
@@ -290,23 +348,38 @@ function parseGalleryEntries(value: string) {
       sortOrder: typeof entry.sortOrder === "number" ? entry.sortOrder : index,
       focalX: typeof entry.focalX === "number" ? entry.focalX : null,
       focalY: typeof entry.focalY === "number" ? entry.focalY : null,
-      exifTakenAt: typeof entry.exifTakenAt === "number" ? new Date(entry.exifTakenAt) : null,
+      exifTakenAt:
+        typeof entry.exifTakenAt === "number"
+          ? new Date(entry.exifTakenAt)
+          : null,
       exifLat: typeof entry.exifLat === "number" ? entry.exifLat : null,
       exifLng: typeof entry.exifLng === "number" ? entry.exifLng : null,
       exifCameraMake: entry.exifCameraMake?.trim() || null,
       exifCameraModel: entry.exifCameraModel?.trim() || null,
       exifLensModel: entry.exifLensModel?.trim() || null,
-      exifAperture: typeof entry.exifAperture === "number" ? entry.exifAperture : null,
+      exifAperture:
+        typeof entry.exifAperture === "number" ? entry.exifAperture : null,
       exifShutterSpeed: entry.exifShutterSpeed?.trim() || null,
-      exifIso: typeof entry.exifIso === "number" ? Math.round(entry.exifIso) : null,
+      exifIso:
+        typeof entry.exifIso === "number" ? Math.round(entry.exifIso) : null,
     }));
 }
 
-function getMediaProvider(imageUrl: string): "cloudinary" | "supabase" {
+function getMediaProvider(
+  imageUrl: string,
+): "cloudinary" | "supabase" | "local" {
+  if (imageUrl.startsWith("/media/")) {
+    return "local";
+  }
+
   return imageUrl.includes("cloudinary.com") ? "cloudinary" : "supabase";
 }
 
 function getMediaPublicId(imageUrl: string) {
+  if (imageUrl.startsWith("/media/")) {
+    return imageUrl.slice("/media/".length);
+  }
+
   try {
     const parsed = new URL(imageUrl);
     return `${parsed.hostname}${parsed.pathname}`;
@@ -315,17 +388,38 @@ function getMediaPublicId(imageUrl: string) {
   }
 }
 
-function getMediaFormat(imageUrl: string) {
-  try {
-    const parsed = new URL(imageUrl);
-    const fileName = parsed.pathname.split("/").filter(Boolean).pop() ?? "";
-    return fileName.includes(".") ? fileName.split(".").pop() ?? null : null;
-  } catch {
-    return null;
+async function cleanupRemovedLocalMedia(publicIds: string[]): Promise<void> {
+  for (const publicId of new Set(publicIds)) {
+    try {
+      await deleteLocalMediaIfUnreferenced(publicId);
+    } catch (error) {
+      console.error(
+        `[admin-actions] Failed to delete local media ${publicId}`,
+        error,
+      );
+    }
   }
 }
 
-async function syncTagsForPostTx(tx: DbExecutor, postId: string, tagNames: string[]) {
+function getMediaFormat(imageUrl: string) {
+  const pathname = imageUrl.startsWith("/media/")
+    ? imageUrl
+    : (() => {
+        try {
+          return new URL(imageUrl).pathname;
+        } catch {
+          return imageUrl;
+        }
+      })();
+  const fileName = pathname.split("/").filter(Boolean).pop() ?? "";
+  return fileName.includes(".") ? (fileName.split(".").pop() ?? null) : null;
+}
+
+async function syncTagsForPostTx(
+  tx: DbExecutor,
+  postId: string,
+  tagNames: string[],
+) {
   await tx.delete(postTags).where(eq(postTags.postId, postId));
 
   for (const tagName of tagNames) {
@@ -342,7 +436,13 @@ async function syncTagsForPostTx(tx: DbExecutor, postId: string, tagNames: strin
       const now = new Date();
       await tx
         .insert(tags)
-        .values({ id: tagId, name: tagName, slug, createdAt: now, updatedAt: now })
+        .values({
+          id: tagId,
+          name: tagName,
+          slug,
+          createdAt: now,
+          updatedAt: now,
+        })
         .onConflictDoNothing();
     }
 
@@ -350,28 +450,31 @@ async function syncTagsForPostTx(tx: DbExecutor, postId: string, tagNames: strin
   }
 }
 
-async function replacePostMediaTx(tx: DbExecutor, options: {
-  postId: string;
-  authorId: string;
-  featuredImageUrl: string;
-  featuredImageAlt: string;
-  galleryEntries: Array<{
-    imageUrl: string;
-    altText: string | null;
-    sortOrder: number;
-    focalX: number | null;
-    focalY: number | null;
-    exifTakenAt: Date | null;
-    exifLat: number | null;
-    exifLng: number | null;
-    exifCameraMake: string | null;
-    exifCameraModel: string | null;
-    exifLensModel: string | null;
-    exifAperture: number | null;
-    exifShutterSpeed: string | null;
-    exifIso: number | null;
-  }>;
-}) {
+async function replacePostMediaTx(
+  tx: DbExecutor,
+  options: {
+    postId: string;
+    authorId: string;
+    featuredImageUrl: string;
+    featuredImageAlt: string;
+    galleryEntries: Array<{
+      imageUrl: string;
+      altText: string | null;
+      sortOrder: number;
+      focalX: number | null;
+      focalY: number | null;
+      exifTakenAt: Date | null;
+      exifLat: number | null;
+      exifLng: number | null;
+      exifCameraMake: string | null;
+      exifCameraModel: string | null;
+      exifLensModel: string | null;
+      exifAperture: number | null;
+      exifShutterSpeed: string | null;
+      exifIso: number | null;
+    }>;
+  },
+) {
   const existingPost = await tx.query.posts.findFirst({
     where: eq(posts.id, options.postId),
     columns: { featuredImageId: true },
@@ -382,17 +485,48 @@ async function replacePostMediaTx(tx: DbExecutor, options: {
     .from(postImages)
     .where(eq(postImages.postId, options.postId));
 
+  const existingGalleryAssetIds = existingGalleryRows.map(
+    (r) => r.mediaAssetId,
+  );
+  const existingGalleryAssets = existingGalleryAssetIds.length
+    ? await tx
+        .select({
+          provider: mediaAssets.provider,
+          publicId: mediaAssets.publicId,
+        })
+        .from(mediaAssets)
+        .where(inArray(mediaAssets.id, existingGalleryAssetIds))
+    : [];
+
   await tx.delete(postImages).where(eq(postImages.postId, options.postId));
 
   for (const row of existingGalleryRows) {
     await tx.delete(mediaAssets).where(eq(mediaAssets.id, row.mediaAssetId));
   }
 
+  const removedLocalPublicIds: string[] = existingGalleryAssets
+    .filter((row) => row.provider === "local")
+    .map((row) => row.publicId);
+
   let featuredImageId: string | null = existingPost?.featuredImageId ?? null;
   if (featuredImageId) {
     const oldFeaturedImageId = featuredImageId;
+    const oldFeatured = await tx
+      .select({
+        provider: mediaAssets.provider,
+        publicId: mediaAssets.publicId,
+      })
+      .from(mediaAssets)
+      .where(eq(mediaAssets.id, oldFeaturedImageId));
+    if (oldFeatured[0]?.provider === "local") {
+      removedLocalPublicIds.push(oldFeatured[0].publicId);
+    }
+
     featuredImageId = null;
-    await tx.update(posts).set({ featuredImageId: null }).where(eq(posts.id, options.postId));
+    await tx
+      .update(posts)
+      .set({ featuredImageId: null })
+      .where(eq(posts.id, options.postId));
     await tx.delete(mediaAssets).where(eq(mediaAssets.id, oldFeaturedImageId));
   }
 
@@ -414,7 +548,10 @@ async function replacePostMediaTx(tx: DbExecutor, options: {
     });
   }
 
-  await tx.update(posts).set({ featuredImageId }).where(eq(posts.id, options.postId));
+  await tx
+    .update(posts)
+    .set({ featuredImageId })
+    .where(eq(posts.id, options.postId));
 
   for (const entry of options.galleryEntries) {
     if (!entry.imageUrl.trim()) {
@@ -457,6 +594,8 @@ async function replacePostMediaTx(tx: DbExecutor, options: {
       createdAt: new Date(),
     });
   }
+
+  return removedLocalPublicIds;
 }
 
 function buildPostSavePayload(values: ReturnType<typeof parseFormData>) {
@@ -493,13 +632,17 @@ function isStableRequestValidationError(error: unknown) {
 }
 
 function isPostNotFoundError(error: unknown) {
-  return error instanceof Error && error.message.toLowerCase().startsWith("post ") && error.message.toLowerCase().includes("not found");
+  return (
+    error instanceof Error &&
+    error.message.toLowerCase().startsWith("post ") &&
+    error.message.toLowerCase().includes("not found")
+  );
 }
 
 // createAdminPostAction
 // Input: FormData matching adminPostFormSchema
 // Output: redirect to /admin?postId=:postId&saved=1
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: submit editor form, then show saved state on edit screen
 export async function createAdminPostAction(formData: FormData) {
   const authorId = await ensureAdmin();
@@ -511,8 +654,14 @@ export async function createAdminPostAction(formData: FormData) {
   try {
     payload = buildPostSavePayload(values);
   } catch (error) {
-    if (!isStablePostContentError(error) && !isStableRequestValidationError(error)) {
-      console.error("[admin-actions] Failed to derive post content during create", error);
+    if (
+      !isStablePostContentError(error) &&
+      !isStableRequestValidationError(error)
+    ) {
+      console.error(
+        "[admin-actions] Failed to derive post content during create",
+        error,
+      );
       throw new Error("Failed to save post");
     }
 
@@ -523,7 +672,9 @@ export async function createAdminPostAction(formData: FormData) {
   const db = getDb();
   const [seriesId, geo, slug, caps] = await Promise.all([
     ensureSeriesId(values.seriesTitle ?? ""),
-    values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
+    values.locationName
+      ? geocodeLocation(values.locationName)
+      : Promise.resolve(null),
     generateUniquePostSlug(values.slug.trim() || values.title),
     getPostColumnCapabilities(),
   ]);
@@ -531,7 +682,7 @@ export async function createAdminPostAction(formData: FormData) {
   const now = new Date();
   const publishedAt = values.status === "published" ? now : null;
 
-  await db.transaction(async (tx) => {
+  const removedLocalMedia = await db.transaction(async (tx) => {
     const categoryId = await ensureCategoryIdTx(tx, values.categoryName);
 
     await tx.insert(posts).values({
@@ -554,7 +705,9 @@ export async function createAdminPostAction(formData: FormData) {
       externalGalleryUrl: null,
       externalGalleryLabel: null,
       ...(caps.layoutType ? { layoutType: values.layoutType } : {}),
-      ...(caps.locationName ? { locationName: values.locationName || null } : {}),
+      ...(caps.locationName
+        ? { locationName: values.locationName || null }
+        : {}),
       ...(caps.locationLat ? { locationLat: geo?.lat ?? null } : {}),
       ...(caps.locationLng ? { locationLng: geo?.lng ?? null } : {}),
       ...(caps.locationZoom ? { locationZoom: geo?.zoom ?? null } : {}),
@@ -567,7 +720,7 @@ export async function createAdminPostAction(formData: FormData) {
     });
 
     await syncTagsForPostTx(tx, postId, parseTagNames(values.tagNames));
-    await replacePostMediaTx(tx, {
+    return replacePostMediaTx(tx, {
       postId,
       authorId,
       featuredImageUrl: values.featuredImageUrl,
@@ -576,12 +729,17 @@ export async function createAdminPostAction(formData: FormData) {
     });
   });
 
+  await cleanupRemovedLocalMedia(removedLocalMedia);
+
   // Persist external links (best-effort: non-fatal if post_links table not yet migrated).
   try {
     const parsedLinks = parseLinksJson(formData.get("linksJson"));
     await replaceLinksForPost(postId, parsedLinks);
   } catch (error) {
-    console.error(`[admin-actions] Failed to save links for created post ${postId}`, error);
+    console.error(
+      `[admin-actions] Failed to save links for created post ${postId}`,
+      error,
+    );
   }
 
   revalidatePath("/");
@@ -592,7 +750,10 @@ export async function createAdminPostAction(formData: FormData) {
       await deactivateLinkedWishlistPlaces([postId]);
       revalidatePath("/wishlist");
     } catch (error) {
-      console.error(`[admin-actions] Failed to deactivate linked wishlist places for created post ${postId}`, error);
+      console.error(
+        `[admin-actions] Failed to deactivate linked wishlist places for created post ${postId}`,
+        error,
+      );
     }
   }
   await setAdminFlash("saved");
@@ -602,9 +763,12 @@ export async function createAdminPostAction(formData: FormData) {
 // updateAdminPostAction
 // Input: postId + FormData matching adminPostFormSchema
 // Output: redirect to /admin?postId=:postId&saved=1
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: submit editor form, invalidate preview links, keep edit page current
-export async function updateAdminPostAction(postId: string, formData: FormData) {
+export async function updateAdminPostAction(
+  postId: string,
+  formData: FormData,
+) {
   const authorId = await ensureAdmin();
   const validPostId = parseActionPostId(deletePostSchema, postId);
   const values = parseFormData(formData);
@@ -615,8 +779,14 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
   try {
     payload = buildPostSavePayload(values);
   } catch (error) {
-    if (!isStablePostContentError(error) && !isStableRequestValidationError(error)) {
-      console.error(`[admin-actions] Failed to derive post content during update for ${validPostId}`, error);
+    if (
+      !isStablePostContentError(error) &&
+      !isStableRequestValidationError(error)
+    ) {
+      console.error(
+        `[admin-actions] Failed to derive post content during update for ${validPostId}`,
+        error,
+      );
       throw new Error("Failed to save post");
     }
 
@@ -647,18 +817,21 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
       },
     }),
     ensureSeriesId(values.seriesTitle ?? ""),
-    values.locationName ? geocodeLocation(values.locationName) : Promise.resolve(null),
+    values.locationName
+      ? geocodeLocation(values.locationName)
+      : Promise.resolve(null),
     generateUniquePostSlug(values.slug.trim() || values.title, validPostId),
   ]);
   const now = new Date();
-  const publishedAt = values.status === "published" ? (existingPost?.publishedAt ?? now) : null;
+  const publishedAt =
+    values.status === "published" ? (existingPost?.publishedAt ?? now) : null;
 
-  await db.transaction(async (tx) => {
+  const removedLocalMedia = await db.transaction(async (tx) => {
     const categoryId = await ensureCategoryIdTx(tx, values.categoryName);
 
     await tx
-        .update(posts)
-        .set({
+      .update(posts)
+      .set({
         title: values.title,
         slug,
         contentJson: derivedContent.canonicalContentJson,
@@ -673,20 +846,24 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         seriesId,
         seriesOrder: values.seriesOrder ?? null,
         ...(caps.layoutType ? { layoutType: values.layoutType } : {}),
-        ...(caps.locationName ? { locationName: values.locationName || null } : {}),
+        ...(caps.locationName
+          ? { locationName: values.locationName || null }
+          : {}),
         ...(caps.locationLat ? { locationLat: geo?.lat ?? null } : {}),
         ...(caps.locationLng ? { locationLng: geo?.lng ?? null } : {}),
         ...(caps.locationZoom ? { locationZoom: geo?.zoom ?? null } : {}),
-        ...(caps.iovanderUrl ? { iovanderUrl: values.iovanderUrl || null } : {}),
+        ...(caps.iovanderUrl
+          ? { iovanderUrl: values.iovanderUrl || null }
+          : {}),
         ...(caps.songTitle ? { songTitle: songMetadata.songTitle } : {}),
         ...(caps.songArtist ? { songArtist: songMetadata.songArtist } : {}),
         ...(caps.songUrl ? { songUrl: songMetadata.songUrl } : {}),
         updatedAt: now,
-        })
-        .where(eq(posts.id, validPostId));
+      })
+      .where(eq(posts.id, validPostId));
 
     await syncTagsForPostTx(tx, validPostId, parseTagNames(values.tagNames));
-    await replacePostMediaTx(tx, {
+    return replacePostMediaTx(tx, {
       postId: validPostId,
       authorId,
       featuredImageUrl: values.featuredImageUrl,
@@ -695,12 +872,17 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
     });
   });
 
+  await cleanupRemovedLocalMedia(removedLocalMedia);
+
   // Persist external links (best-effort: non-fatal if post_links table not yet migrated).
   try {
     const parsedLinks = parseLinksJson(formData.get("linksJson"));
     await replaceLinksForPost(validPostId, parsedLinks);
   } catch (error) {
-    console.error(`[admin-actions] Failed to save links for updated post ${validPostId}`, error);
+    console.error(
+      `[admin-actions] Failed to save links for updated post ${validPostId}`,
+      error,
+    );
   }
 
   // Capture a revision snapshot of the pre-update state.
@@ -729,18 +911,31 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
         excerpt: existingTyped.excerpt ?? null,
         layoutType: caps.layoutType ? (existingTyped.layoutType ?? null) : null,
         categoryId: caps.categoryId ? (existingTyped.categoryId ?? null) : null,
-        featuredImageId: caps.featuredImageId ? (existingTyped.featuredImageId ?? null) : null,
-        locationName: caps.locationName ? (existingTyped.locationName ?? null) : null,
-        locationLat: caps.locationLat ? (existingTyped.locationLat ?? null) : null,
-        locationLng: caps.locationLng ? (existingTyped.locationLng ?? null) : null,
-        locationZoom: caps.locationZoom ? (existingTyped.locationZoom ?? null) : null,
+        featuredImageId: caps.featuredImageId
+          ? (existingTyped.featuredImageId ?? null)
+          : null,
+        locationName: caps.locationName
+          ? (existingTyped.locationName ?? null)
+          : null,
+        locationLat: caps.locationLat
+          ? (existingTyped.locationLat ?? null)
+          : null,
+        locationLng: caps.locationLng
+          ? (existingTyped.locationLng ?? null)
+          : null,
+        locationZoom: caps.locationZoom
+          ? (existingTyped.locationZoom ?? null)
+          : null,
         songTitle: caps.songTitle ? (existingTyped.songTitle ?? null) : null,
         songArtist: caps.songArtist ? (existingTyped.songArtist ?? null) : null,
         songUrl: caps.songUrl ? (existingTyped.songUrl ?? null) : null,
         savedByUserId: authorId,
       });
     } catch (error) {
-      console.error(`[revisions] Failed to create revision for post ${validPostId}`, error);
+      console.error(
+        `[revisions] Failed to create revision for post ${validPostId}`,
+        error,
+      );
     }
   }
 
@@ -755,7 +950,10 @@ export async function updateAdminPostAction(postId: string, formData: FormData) 
       await deactivateLinkedWishlistPlaces([validPostId]);
       revalidatePath("/wishlist");
     } catch (error) {
-      console.error(`[admin-actions] Failed to deactivate linked wishlist places for updated post ${validPostId}`, error);
+      console.error(
+        `[admin-actions] Failed to deactivate linked wishlist places for updated post ${validPostId}`,
+        error,
+      );
     }
   }
   await setAdminFlash("saved");
@@ -781,9 +979,11 @@ function parseActionPostIds(postIds: string[]) {
 // bulkPublishPosts
 // Input: { postIds: string[] }
 // Output: PostPublishResult
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: allow mixed selection; show updated/unchanged/missing counts in bulk toolbar
-export async function bulkPublishPosts(postIds: string[]): Promise<PostPublishResult> {
+export async function bulkPublishPosts(
+  postIds: string[],
+): Promise<PostPublishResult> {
   await ensureAdmin();
   const validPostIds = parseActionPostIds(postIds);
 
@@ -800,9 +1000,11 @@ export async function bulkPublishPosts(postIds: string[]): Promise<PostPublishRe
 // bulkUnpublishPosts
 // Input: { postIds: string[] }
 // Output: PostPublishResult
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: allow mixed selection; show updated/unchanged/missing counts in bulk toolbar
-export async function bulkUnpublishPosts(postIds: string[]): Promise<PostPublishResult> {
+export async function bulkUnpublishPosts(
+  postIds: string[],
+): Promise<PostPublishResult> {
   await ensureAdmin();
   const validPostIds = parseActionPostIds(postIds);
 
@@ -820,7 +1022,10 @@ const clonePostSchema = z.object({
   postId: actionPostIdSchema,
 });
 
-function parseActionPostId(schema: z.ZodObject<{ postId: z.ZodString }>, postId: string) {
+function parseActionPostId(
+  schema: z.ZodObject<{ postId: z.ZodString }>,
+  postId: string,
+) {
   const parsed = schema.safeParse({ postId });
 
   if (!parsed.success) {
@@ -833,7 +1038,7 @@ function parseActionPostId(schema: z.ZodObject<{ postId: z.ZodString }>, postId:
 // clonePost
 // Input: { postId: string }
 // Output: { postId: string; slug: string; title: string; status: "draft" }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: clone content/taxonomy/media refs into a new draft, then redirect to the new edit page
 export async function clonePost(postId: string) {
   await ensureAdmin();
@@ -854,7 +1059,10 @@ export async function clonePost(postId: string) {
   try {
     revalidatePath("/admin");
   } catch (error) {
-    console.error(`[admin-actions] Failed to revalidate admin after cloning ${validPostId}`, error);
+    console.error(
+      `[admin-actions] Failed to revalidate admin after cloning ${validPostId}`,
+      error,
+    );
   }
 
   await setAdminFlash("cloned");
@@ -869,7 +1077,7 @@ const postPreviewRequestSchema = z.object({
 // createPostPreviewLinkAction
 // Input: { postId: string }
 // Output: { postId: string; previewPath: string; token: string; expiresAt: string }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: call when user clicks Preview; open returned previewPath in a new tab and refresh after saves
 export async function createPostPreviewLinkAction(postId: string) {
   const adminUserId = await ensureAdmin();
@@ -882,7 +1090,10 @@ export async function createPostPreviewLinkAction(postId: string) {
       throw new Error("Post not found");
     }
 
-    console.error(`[admin-actions] Failed to create preview for ${validPostId}`, error);
+    console.error(
+      `[admin-actions] Failed to create preview for ${validPostId}`,
+      error,
+    );
     throw new Error("Failed to create preview");
   }
 }
@@ -890,9 +1101,12 @@ export async function createPostPreviewLinkAction(postId: string) {
 // validatePostContentWarningsAction
 // Input: { contentJson: string; excerpt?: string | null }
 // Output: { warnings: TiptapImageAltWarning[]; excerpt: string | null }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: run during editor changes or pre-publish review to surface non-blocking alt-text warnings
-export async function validatePostContentWarningsAction(contentJson: string, excerpt?: string | null) {
+export async function validatePostContentWarningsAction(
+  contentJson: string,
+  excerpt?: string | null,
+) {
   await ensureAdmin();
   let payload: ReturnType<typeof derivePostContent>;
 
@@ -900,7 +1114,10 @@ export async function validatePostContentWarningsAction(contentJson: string, exc
     payload = derivePostContent(contentJson, excerpt ?? null);
   } catch (error) {
     if (!isInvalidPostContentError(error)) {
-      console.error("[admin-actions] Failed to validate post content warnings", error);
+      console.error(
+        "[admin-actions] Failed to validate post content warnings",
+        error,
+      );
       throw new Error("Failed to validate post content");
     }
 
@@ -920,9 +1137,11 @@ const deletePostSchema = z.object({
 // deletePostAction
 // Input: { postId: string }
 // Output: PostDeleteResult
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: single post delete from dashboard row action, with confirmation dialog
-export async function deletePostAction(postId: string): Promise<PostDeleteResult> {
+export async function deletePostAction(
+  postId: string,
+): Promise<PostDeleteResult> {
   await ensureAdmin();
   const validPostId = parseActionPostId(deletePostSchema, postId);
 
@@ -931,7 +1150,10 @@ export async function deletePostAction(postId: string): Promise<PostDeleteResult
     revalidateTag("posts", "max");
     return result;
   } catch (error) {
-    console.error(`[admin-actions] Failed to delete post ${validPostId}`, error);
+    console.error(
+      `[admin-actions] Failed to delete post ${validPostId}`,
+      error,
+    );
     throw new Error("Failed to delete post");
   }
 }
@@ -939,9 +1161,11 @@ export async function deletePostAction(postId: string): Promise<PostDeleteResult
 // bulkDeletePosts
 // Input: { postIds: string[] }
 // Output: PostDeleteResult
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: bulk delete from dashboard toolbar, with confirmation dialog
-export async function bulkDeletePosts(postIds: string[]): Promise<PostDeleteResult> {
+export async function bulkDeletePosts(
+  postIds: string[],
+): Promise<PostDeleteResult> {
   await ensureAdmin();
   const validPostIds = parseActionPostIds(postIds);
 

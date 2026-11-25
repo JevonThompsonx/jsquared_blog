@@ -1,7 +1,12 @@
 import "server-only";
 
 import type { BlogPost } from "@/types/blog";
-import { escapeXml, getCanonicalPostUrl, htmlToPlainText } from "@/lib/utils";
+import {
+  escapeXml,
+  getCanonicalPostUrl,
+  htmlToPlainText,
+  SITE_URL,
+} from "@/lib/utils";
 
 type FeedOptions = {
   title: string;
@@ -11,12 +16,56 @@ type FeedOptions = {
   posts: BlogPost[];
 };
 
-export function buildRssXml({ title, description, siteUrl, selfUrl, posts }: FeedOptions): string {
+const DEFAULT_FEED_AUTHOR = "blog@jsquaredadventures.com (J²Adventures)";
+
+const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
+  avif: "image/avif",
+  gif: "image/gif",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
+
+/** Resolve possibly-relative media URLs against the canonical site URL. */
+function toAbsoluteUrl(value: string): string {
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  return `${SITE_URL}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
+function getImageMimeType(url: string): string {
+  const extension = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(url)?.[1]?.toLowerCase();
+
+  return (extension && IMAGE_MIME_BY_EXTENSION[extension]) || "image/jpeg";
+}
+
+export function buildRssXml({
+  title,
+  description,
+  siteUrl,
+  selfUrl,
+  posts,
+}: FeedOptions): string {
   const buildDate = new Date().toUTCString();
   const items = posts
     .map((post) => {
-      const descriptionText = escapeXml(htmlToPlainText(post.description).slice(0, 300));
+      const descriptionText = escapeXml(
+        htmlToPlainText(post.description).slice(0, 300),
+      );
       const postUrl = getCanonicalPostUrl(post);
+      const enclosure = post.imageUrl
+        ? `
+          <enclosure url="${escapeXml(toAbsoluteUrl(post.imageUrl))}" type="${getImageMimeType(post.imageUrl)}" length="0" />`
+        : "";
+      const categories = post.tags
+        .map(
+          (tag) => `
+          <category>${escapeXml(tag.name)}</category>`,
+        )
+        .join("");
 
       return `
         <item>
@@ -24,7 +73,8 @@ export function buildRssXml({ title, description, siteUrl, selfUrl, posts }: Fee
           <link>${postUrl}</link>
           <guid>${postUrl}</guid>
           <pubDate>${new Date(post.publishedAt ?? post.createdAt).toUTCString()}</pubDate>
-          <description>${descriptionText}</description>
+          <author>${escapeXml(DEFAULT_FEED_AUTHOR)}</author>
+          <description>${descriptionText}</description>${enclosure}${categories}
         </item>`;
     })
     .join("");

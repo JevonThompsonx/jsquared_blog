@@ -12,6 +12,8 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
 
   // Session Replay: record 10% of all sessions, 100% of sessions that hit an error
+  // PRIV-03: masking is pinned explicitly so a future SDK default change cannot
+  // silently unmask text, inputs, or media on authenticated pages.
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
 
@@ -22,8 +24,22 @@ Sentry.init({
   sendClientReports: false,
 
   integrations: [
-    Sentry.replayIntegration(),
+    Sentry.replayIntegration({
+      maskAllText: true,
+      blockAllMedia: true,
+      maskAllInputs: true,
+    }),
   ],
+
+  beforeSend(event) {
+    if (event.request) {
+      delete event.request.data;
+      delete event.request.headers;
+      delete event.request.cookies;
+      delete event.request.query_string;
+    }
+    return event;
+  },
 
   debug: false,
   enabled: process.env.NODE_ENV === "production",

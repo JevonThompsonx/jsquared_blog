@@ -1,9 +1,27 @@
+
+
+> **Hosting (2026-11-24).** Production origin is a local Node/Next server on
+> **templetonbak** behind its `templetonbak` Cloudflare Tunnel. Cloudflare still provides DNS,
+> TLS, WAF, cache, and Access. The Worker `jsquared-blog` is a rollback artifact
+> with no custom domains and no cron schedules. Deploy with
+> `pnpm run build:node` + `node scripts/package-standalone.mjs`, then follow
+> [`docs/runbooks/local-origin.md`](./docs/runbooks/local-origin.md). Never run
+> `pnpm run deploy:cf` unless deliberately rolling back to the Worker. Vercel
+> remains suspended (HTTP 402 / `DEPLOYMENT_DISABLED`).
+>
+> **Pending:** confirm a real Cloudflare Access login at `/admin` for
+> `jnshaver@protonmail.com` / `jevonx@protonmail.com` / `jnshaver@gmail.com` /
+> `blog@jsquaredadventures.com`. WorkOS AuthKit is the application admin gate;
+> Cloudflare Access remains the outer gate during soak, and its removal is an
+> orchestrator-owned post-soak operation. Both Workers' `*.workers.dev` hostnames
+> are disabled as of 2026-11-23, so the custom domains are the only public entry points.
+
 **Project**: J² Adventures blog
-**Stack**: Next.js 16 App Router, TypeScript strict, Turso/libSQL + Drizzle ORM, Supabase Auth, Auth.js/GitHub OAuth, Cloudinary, Upstash Redis, Sentry, TailwindCSS 4
+**Stack**: Next.js 16 App Router, TypeScript strict, SQLite/libSQL + Drizzle ORM, WorkOS AuthKit (keyless reader/admin auth) behind Cloudflare Access; legacy Better Auth/Auth.js tables and env retained for rollback, local WebP media, Sentry, TailwindCSS 4
 **Package manager**: pnpm (primary), bun (dev-only for `bunx` one-off commands)
-**Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run lint`, `pnpm run test`, `pnpm run typecheck`, `pnpm run db:migrate`, `pnpm run test:e2e` — **all run from `web/`**. The root `package.json` only defines `dev`, `build`, `lint`, `test` (+ `dev:web`/`build:web`/`lint:web`/`test:web`), which delegate via `pnpm --filter web run …`. There is no root-level `test:e2e`, `db:*`, or `seed:*` script. Equivalents: `pnpm dlx tsc --noEmit` or `pnpm --filter web exec tsc --noEmit`.
-**Env**: Zod-validated via `web/src/lib/env.ts`; loads `.env.test.local` → `.env.local` → `.env` → `.dev.vars`
-**Tests**: `web/tests/unit/` (Vitest, 164 files), `web/tests/e2e/` (Playwright, 20 spec files)
+**Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run build:node`, `pnpm run lint`, `pnpm run test`, `pnpm run typecheck`, `pnpm run db:migrate`, `pnpm run test:e2e` — **all run from `web/`**. The root `package.json` only defines `dev`, `build`, `lint`, `test` (+ `dev:web`/`build:web`/`lint:web`/`test:web`), which delegate via `pnpm --filter web run …`. There is no root-level `test:e2e`, `db:*`, or `seed:*` script. Equivalents: `pnpm dlx tsc --noEmit` or `pnpm --filter web exec tsc --noEmit`.
+**Env**: Zod-validated via `web/src/lib/env.ts`; loads `.env.test.local` → `.env.local` → `.env` → `.dev.vars`. WorkOS runtime is keyless: `WORKOS_CLIENT_ID`, exact `WORKOS_ISSUER`, approved `NEXT_PUBLIC_WORKOS_REDIRECT_URI`, `WORKOS_COOKIE_PASSWORD` (32+ chars), `WORKOS_COOKIE_MAX_AGE=1209600`, and `ADMIN_ALLOWED_EMAILS`. Never put `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
+**Tests**: `web/tests/unit/` (Vitest, 178 files), `web/tests/e2e/` (Playwright, 17 spec files)
 **Security**: CSP with per-request nonces (`web/src/proxy.ts`), CSRF on admin routes, Zod at API boundaries, `sanitize-html` allowlist
 **Docs index**: [`docs/INDEX.md`](docs/INDEX.md) — one line per document in `docs/`
 
@@ -122,7 +140,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 **API Routes**
 - Zod validation at route handler boundary
 - Rate limiting: `checkRateLimit()` from `web/src/lib/rate-limit.ts`
-- Auth: `getServerSession()` (admin), `getSupabaseSession()` (public)
+- Auth: `requireAdminSession()` (admin), `getRequestPublicUser()` (public cookie session)
 - Admin routes: `isAdmin()` check before data access
 
 **Security**
@@ -135,7 +153,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 - Unit: `web/tests/unit/` (Vitest)
 - DB tests: `server-only-stub.ts` mock
 - E2E: `web/tests/e2e/` (Playwright)
-- Auth states: admin storage state, public fixture user
+- Auth states: admin storage state from `pnpm run e2e:capture-workos-state` (SDK `sealedSession`, operator-only); unauthenticated Playwright suite needs no credentials
 
 **Data Flow**
 - Server Components → read DB directly via `getDb()` (server-only)
@@ -191,7 +209,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 ## ═══ SECTION 4: J² VERIFIER ═══
 You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary agent. Primary was lazy until proven otherwise.
 
-**Stack**: Next.js 16 App Router, TypeScript strict, Turso/libSQL + Drizzle ORM, Supabase Auth, Auth.js/GitHub OAuth, Cloudinary, Upstash Redis, Sentry, TailwindCSS 4
+**Stack**: Next.js 16 App Router, TypeScript strict, SQLite/libSQL + Drizzle ORM, WorkOS AuthKit (keyless reader/admin auth) behind Cloudflare Access; legacy Better Auth/Auth.js tables and env retained for rollback, local WebP media, Sentry, TailwindCSS 4
 **Commands** (all from `web/`): `pnpm run test`, `pnpm run test:e2e`, `pnpm run lint`, `pnpm run typecheck`, `pnpm --filter web exec tsc --noEmit`, `pnpm run build`
 **Tests**: `web/tests/unit/` (Vitest), `web/tests/e2e/` (Playwright)
 **Env**: `web/src/lib/env.ts` — Zod schemas, never `process.env` directly

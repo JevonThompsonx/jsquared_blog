@@ -1,0 +1,47 @@
+services:
+  app:
+    image: listmonk/listmonk:v6.2.0@sha256:f535d59e14991337a9f2d570273685378ae86b0d7698c3e00da444e3bc205286
+    container_name: listmonk_app
+    restart: unless-stopped
+    hostname: listmonk.jsquaredadventures.com
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "10.50.2.152:9000:9000"
+    command:
+      - sh
+      - -c
+      - "./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && ./listmonk --config ''"
+    env_file:
+      - .env
+    volumes:
+      - ./uploads:/listmonk/uploads:rw
+    networks:
+      - listmonk
+
+  db:
+    image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+    container_name: listmonk_db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: listmonk
+      POSTGRES_PASSWORD: ${LISTMONK_db__password}
+      POSTGRES_DB: listmonk
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    volumes:
+      - listmonk-data:/var/lib/postgresql/data
+    networks:
+      - listmonk
+
+networks:
+  listmonk: {}
+
+volumes:
+  listmonk-data: {}

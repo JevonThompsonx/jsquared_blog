@@ -9,7 +9,7 @@ import { listAdminPostRecords } from "@/server/dal/admin-posts";
 // GET /api/admin/posts
 // Query: { query?|search?, category?, status?, page?, pageSize?, sort? }
 // Response: { posts, totalCount, page, pageSize, totalPages, filters }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: bind dashboard list controls to URL state and fetch filtered paginated results
 export async function GET(request: Request): Promise<NextResponse> {
   const session = await requireAdminSession();
@@ -17,7 +17,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-posts-list:${session.user.id}:${getClientIp(request)}`, 120, 60_000);
+  const rl = await checkRateLimit(
+    `admin-posts-list:${session.user.id}:${getClientIp(request)}`,
+    120,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -37,17 +41,26 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Invalid query parameters" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid query parameters" },
+        { status: 400 },
+      );
     }
 
     console.error("[admin-posts] Failed to parse list filters", error);
-    return NextResponse.json({ error: "Failed to load posts" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load posts" },
+      { status: 500 },
+    );
   }
 
   try {
     return NextResponse.json(await listAdminPostRecords(filters));
   } catch (error) {
     console.error("[admin-posts] Failed to list posts", error);
-    return NextResponse.json({ error: "Failed to load posts" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load posts" },
+      { status: 500 },
+    );
   }
 }

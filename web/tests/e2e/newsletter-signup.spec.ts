@@ -4,15 +4,17 @@ import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
 skipIfDummyDbEnv();
 
 test.describe("newsletter signup form", () => {
-  test("homepage newsletter form submits the expected payload and shows success feedback", async ({ page }) => {
+  test("homepage newsletter form submits the expected payload and shows success feedback", async ({
+    page,
+  }) => {
     let requestBody: unknown = null;
 
     await page.route("**/api/newsletter", async (route) => {
       requestBody = route.request().postDataJSON();
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: "application/json",
-        body: JSON.stringify({ status: "subscribed", source: "created" }),
+        body: JSON.stringify({ status: "subscribed" }),
       });
     });
 
@@ -24,14 +26,23 @@ test.describe("newsletter signup form", () => {
 
     await page.getByRole("button", { name: "Subscribe" }).click();
 
-    await expect(page.getByText("You're subscribed!", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(
+        "If that address is eligible, check your inbox to confirm your subscription.",
+        {
+          exact: true,
+        },
+      ),
+    ).toBeVisible();
     expect(requestBody).toEqual({
       email: "traveler@example.com",
       source: "homepage-bottom",
     });
   });
 
-  test("homepage newsletter form shows bounded rate-limit feedback", async ({ page }) => {
+  test("homepage newsletter form shows bounded rate-limit feedback", async ({
+    page,
+  }) => {
     await page.route("**/api/newsletter", async (route) => {
       await route.fulfill({
         status: 429,
@@ -42,11 +53,22 @@ test.describe("newsletter signup form", () => {
 
     await page.goto("/");
 
-    const newsletterForm = page.locator('form:has(#newsletter-email)').first();
-    await newsletterForm.getByLabel("Email address").fill("traveler@example.com");
+    const newsletterForm = page.locator("form:has(#newsletter-email)").first();
+    await newsletterForm
+      .getByLabel("Email address")
+      .fill("traveler@example.com");
     await newsletterForm.getByRole("button", { name: "Subscribe" }).click();
 
-    await expect(newsletterForm.getByRole("alert")).toContainText("Too many attempts, please wait a moment.");
-    await expect(page.getByText("You're subscribed!", { exact: true })).toHaveCount(0);
+    await expect(newsletterForm.getByRole("alert")).toContainText(
+      "Too many attempts, please wait a moment.",
+    );
+    await expect(
+      page.getByText(
+        "If that address is eligible, check your inbox to confirm your subscription.",
+        {
+          exact: true,
+        },
+      ),
+    ).toHaveCount(0);
   });
 });

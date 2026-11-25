@@ -20,14 +20,18 @@ const contentLinks: FooterLink[] = [
   { href: "/tags", label: "Tags" },
   { href: "/categories", label: "Categories" },
   { href: "/series", label: "Series" },
+  { href: "/privacy", label: "Privacy" },
   { href: "/feed.xml", label: "RSS Feed", external: true },
 ];
+
+const footerLinkClass =
+  "text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)] focus:outline-none focus-visible:underline focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--card-bg)]";
 
 function FooterLinkItem({ link }: { link: FooterLink }) {
   if (link.external) {
     return (
       <a
-        className="text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)] focus:outline-none focus-visible:underline"
+        className={footerLinkClass}
         href={link.href}
         rel="noopener noreferrer"
         target="_blank"
@@ -38,10 +42,7 @@ function FooterLinkItem({ link }: { link: FooterLink }) {
   }
 
   return (
-    <Link
-      className="text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)] focus:outline-none focus-visible:underline"
-      href={link.href}
-    >
+    <Link className={footerLinkClass} href={link.href}>
       {link.label}
     </Link>
   );
@@ -66,13 +67,16 @@ export function SiteFooter() {
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h2 className="text-lg font-bold text-[var(--text-primary)]">J²Adventures</h2>
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">
+              J²Adventures
+            </h2>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Travel stories, maps, and photo-led field notes from the places we wander.
+              Travel stories, maps, and photo-led field notes from the places we
+              wander.
             </p>
             <a
               aria-label="Back to top"
-              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--primary)] transition-colors hover:text-[var(--accent-strong)] focus:outline-none focus-visible:underline"
+              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--primary)] transition-colors hover:text-[var(--accent-strong)] focus:outline-none focus-visible:underline focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--card-bg)]"
               href="#main-content"
             >
               <svg
@@ -92,7 +96,9 @@ export function SiteFooter() {
           </div>
 
           <nav aria-label="Footer navigation">
-            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Explore</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
+              Explore
+            </h3>
             <ul className="mt-3 space-y-2 text-sm">
               {navigationLinks.map((link) => (
                 <li key={link.href}>
@@ -103,7 +109,9 @@ export function SiteFooter() {
           </nav>
 
           <nav aria-label="Footer content">
-            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Discover</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
+              Discover
+            </h3>
             <ul className="mt-3 space-y-2 text-sm">
               {contentLinks.map((link) => (
                 <li key={link.href}>
@@ -114,7 +122,9 @@ export function SiteFooter() {
           </nav>
 
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Stay on the trail</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
+              Stay on the trail
+            </h3>
             <p className="mt-3 text-sm text-[var(--text-secondary)]">
               Get notified when we post new stories.
             </p>

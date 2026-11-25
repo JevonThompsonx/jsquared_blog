@@ -2,14 +2,18 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import { CdnImage } from "@/components/blog/cdn-image";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { PostDate } from "@/components/blog/post-date";
-import { getSeriesBySlug, listPublishedPostsInSeries } from "@/server/dal/series";
-import { getPostHref } from "@/lib/utils";
+import { buildAlternates } from "@/lib/seo";
+import {
+  getSeriesBySlug,
+  listPublishedPostsInSeries,
+} from "@/server/dal/series";
+import { getPostHref, getSeriesHref } from "@/lib/utils";
 
 type SeriesPageProps = { params: Promise<{ slug: string }> };
 
@@ -24,18 +28,24 @@ function normalizeSeriesSlug(rawParams: { slug: string }): string | null {
     return null;
   }
 
-  return parsed.data.slug;
+  return parsed.data.slug.toLowerCase();
 }
 
-export async function generateMetadata({ params }: SeriesPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: SeriesPageProps): Promise<Metadata> {
   const slug = normalizeSeriesSlug(await params);
   if (!slug) return {};
 
+  // Resolve existence before the shell renders so missing series return 404.
   const s = await getSeriesBySlug(slug);
-  if (!s) return {};
+
+  if (!s) notFound();
+
   return {
     title: s.title,
     description: s.description ?? `All posts in the ${s.title} series.`,
+    alternates: buildAlternates(getSeriesHref(s.slug)),
   };
 }
 
@@ -49,33 +59,56 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
   const seriesPosts = await listPublishedPostsInSeries(s.id);
 
   return (
-    <main id="main-content" className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen pb-20 pt-20 sm:pt-24"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
       <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-
         {/* Header */}
         <div className="mt-8 sm:mt-10">
-          <Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/">← All stories</Link>
-          <p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Series</p>
-          <h1 className="mt-1.5 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">{s.title}</h1>
+          <Link
+            className="text-xs font-semibold text-[var(--accent)] hover:underline"
+            href="/"
+          >
+            ← All stories
+          </Link>
+          <p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+            Series
+          </p>
+          <h1 className="mt-1.5 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
+            {s.title}
+          </h1>
           {s.description ? (
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)]">{s.description}</p>
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)]">
+              {s.description}
+            </p>
           ) : null}
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">{seriesPosts.length} {seriesPosts.length === 1 ? "part" : "parts"}</p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            {seriesPosts.length} {seriesPosts.length === 1 ? "part" : "parts"}
+          </p>
         </div>
 
         {/* Parts list */}
         {seriesPosts.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-10 text-center shadow-lg">
-            <p className="text-lg font-bold text-[var(--text-primary)]">No published posts yet</p>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">Check back soon — this series is in progress.</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
+              No published posts yet
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Check back soon — this series is in progress.
+            </p>
           </div>
         ) : (
           <ol className="mt-8 space-y-4">
             {seriesPosts.map((post, i) => {
               const partNumber = post.seriesOrder ?? i + 1;
-              const dateStr = (post.publishedAt ?? post.createdAt).toISOString();
+              const dateStr = (
+                post.publishedAt ?? post.createdAt
+              ).toISOString();
               return (
                 <li key={post.id}>
                   <Link
@@ -84,8 +117,12 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
                   >
                     {/* Part number badge */}
                     <div className="flex w-16 shrink-0 flex-col items-center justify-center border-r border-[var(--border)] bg-[var(--accent-soft)] py-5 sm:w-20">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Part</span>
-                      <span className="text-2xl font-bold text-[var(--primary)] sm:text-3xl">{partNumber}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
+                        Part
+                      </span>
+                      <span className="text-2xl font-bold text-[var(--primary)] sm:text-3xl">
+                        {partNumber}
+                      </span>
                     </div>
 
                     {/* Post info */}
@@ -94,14 +131,20 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
                         {post.title}
                       </h2>
                       {post.excerpt ? (
-                        <p className="line-clamp-2 text-sm leading-relaxed text-[var(--text-secondary)]">{post.excerpt}</p>
+                        <p className="line-clamp-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                          {post.excerpt}
+                        </p>
                       ) : null}
-                      <PostDate className="mt-1 text-xs text-[var(--text-secondary)]" dateString={dateStr} />
+                      <PostDate
+                        className="mt-1 text-xs text-[var(--text-secondary)]"
+                        dateString={dateStr}
+                        interactive={false}
+                      />
                     </div>
 
                     {/* Thumbnail */}
                     {post.imageUrl ? (
-                      <Image
+                      <CdnImage
                         alt={post.title}
                         className="hidden h-full w-32 shrink-0 object-cover sm:block"
                         height={96}

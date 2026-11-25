@@ -1,13 +1,28 @@
 export const dynamic = "force-dynamic";
 
-import { Suspense } from "react";
+import type { Metadata } from "next";
 
-import { SignupForm } from "./signup-form";
+import { AuthKitNotice } from "@/components/auth/authkit-notice";
 
-export default function SignupPage() {
+export const metadata: Metadata = {
+  title: "Sign Up",
+  robots: { index: false, follow: true },
+};
+
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    redirectTo?: string | string[];
+    returnTo?: string | string[];
+  }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const candidate = params.returnTo ?? params.redirectTo;
   return (
-    <Suspense fallback={<div className="w-full max-w-sm text-center"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-[var(--primary)]" /></div>}>
-      <SignupForm />
-    </Suspense>
+    <AuthKitNotice
+      returnTo={typeof candidate === "string" ? candidate : undefined}
+      screen="sign-up"
+    />
   );
 }

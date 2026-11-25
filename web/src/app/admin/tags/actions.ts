@@ -12,7 +12,10 @@ import {
   TagSlugConflictError,
   updateTagDescription,
 } from "@/server/dal/admin-tags";
-import { adminTagCreateFormSchema, adminTagIdFormSchema } from "@/server/forms/admin-taxonomy";
+import {
+  adminTagCreateFormSchema,
+  adminTagIdFormSchema,
+} from "@/server/forms/admin-taxonomy";
 
 const updateTagDescriptionSchema = z.object({
   tagId: z.string().trim().min(1),
@@ -29,15 +32,17 @@ async function ensureAdmin() {
 
 function isStableTagValidationError(error: unknown): boolean {
   return (
-    error instanceof Error
-    && (error.message === "Invalid request"
-      || error.message === "Tag name is required"
-      || error.message === "Tag slug is required"
-      || error.message === "Tag id is required")
+    error instanceof Error &&
+    (error.message === "Invalid request" ||
+      error.message === "Tag name is required" ||
+      error.message === "Tag slug is required" ||
+      error.message === "Tag id is required")
   );
 }
 
-export async function updateTagDescriptionAction(formData: FormData): Promise<void> {
+export async function updateTagDescriptionAction(
+  formData: FormData,
+): Promise<void> {
   const session = await ensureAdmin();
   void session;
 
@@ -50,7 +55,9 @@ export async function updateTagDescriptionAction(formData: FormData): Promise<vo
     return;
   }
 
-  const normalizedDescription = raw.data.description?.trim() ? raw.data.description.trim() : null;
+  const normalizedDescription = raw.data.description?.trim()
+    ? raw.data.description.trim()
+    : null;
 
   try {
     await updateTagDescription(raw.data.tagId, normalizedDescription);
@@ -75,7 +82,7 @@ export async function updateTagDescriptionAction(formData: FormData): Promise<vo
 // createTagAction
 // Input: FormData matching adminTagCreateFormSchema
 // Output: redirect to /admin/tags?error=…
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: submitted from "Create tag" form on the admin tags page
 export async function createTagAction(formData: FormData): Promise<void> {
   await ensureAdmin();
@@ -98,7 +105,9 @@ export async function createTagAction(formData: FormData): Promise<void> {
     });
   } catch (error) {
     if (error instanceof TagSlugConflictError) {
-      redirect(`/admin/tags?error=SlugTaken&slug=${encodeURIComponent(error.slug)}`);
+      redirect(
+        `/admin/tags?error=SlugTaken&slug=${encodeURIComponent(error.slug)}`,
+      );
     }
     if (isStableTagValidationError(error)) {
       redirect("/admin/tags?error=InvalidTag");
@@ -116,14 +125,17 @@ export async function createTagAction(formData: FormData): Promise<void> {
   try {
     revalidatePath("/tag/[slug]", "page");
   } catch (error) {
-    console.error("[admin tags] revalidation failed for /tag/[slug] after create", error);
+    console.error(
+      "[admin tags] revalidation failed for /tag/[slug] after create",
+      error,
+    );
   }
 }
 
 // deleteTagAction
 // Input: FormData with id
 // Output: redirect to /admin/tags?error=…
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: submitted from the "Delete" button on the admin tags page (only enabled when postCount=0)
 export async function deleteTagAction(formData: FormData): Promise<void> {
   await ensureAdmin();
@@ -137,7 +149,9 @@ export async function deleteTagAction(formData: FormData): Promise<void> {
     await deleteTag(parsed.data.id);
   } catch (error) {
     if (error instanceof TagInUseError) {
-      redirect(`/admin/tags?error=TagInUse&posts=${error.postCount}&id=${encodeURIComponent(error.tagId)}`);
+      redirect(
+        `/admin/tags?error=TagInUse&posts=${error.postCount}&id=${encodeURIComponent(error.tagId)}`,
+      );
     }
     if (isStableTagValidationError(error)) {
       redirect("/admin/tags?error=InvalidTag");
@@ -155,6 +169,9 @@ export async function deleteTagAction(formData: FormData): Promise<void> {
   try {
     revalidatePath("/tag/[slug]", "page");
   } catch (error) {
-    console.error("[admin tags] revalidation failed for /tag/[slug] after delete", error);
+    console.error(
+      "[admin tags] revalidation failed for /tag/[slug] after delete",
+      error,
+    );
   }
 }

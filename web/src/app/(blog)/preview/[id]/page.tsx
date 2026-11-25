@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { AuthorCard } from "@/components/blog/author-card";
 import { PostGallery } from "@/components/blog/post-gallery";
-import { PostMap } from "@/components/blog/post-map";
+import { PostMapClient } from "@/components/blog/post-map-client";
 import { PostSongMetadata } from "@/components/blog/post-song-metadata";
 import { ProseContent } from "@/components/blog/prose-content";
 import { ReadingProgressBar } from "@/components/blog/reading-progress-bar";
@@ -30,14 +30,22 @@ type PreviewPageProps = {
 };
 
 const previewParamsSchema = z.object({
-  id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
+  id: z
+    .string()
+    .trim()
+    .min(1)
+    .max(128)
+    .regex(/^[a-zA-Z0-9_-]+$/),
 });
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function PreviewPage({ params, searchParams }: PreviewPageProps) {
+export default async function PreviewPage({
+  params,
+  searchParams,
+}: PreviewPageProps) {
   const [rawParams, resolvedSearchParams, adminSession] = await Promise.all([
     params,
     searchParams,
@@ -52,7 +60,9 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
   const { id } = paramsParse.data;
 
   const previewToken = resolvedSearchParams?.token?.trim() ?? "";
-  const hasValidToken = previewToken ? await validatePostPreviewToken(id, previewToken) : false;
+  const hasValidToken = previewToken
+    ? await validatePostPreviewToken(id, previewToken)
+    : false;
 
   if (!adminSession && !hasValidToken) {
     notFound();
@@ -69,27 +79,45 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
   const { NEXT_PUBLIC_STADIA_MAPS_API_KEY } = getPublicEnv();
   const [seriesNav, authorProfile] = await Promise.all([
     getSeriesNavForPost(post.id),
-    post.authorId ? getPublicAuthorProfileById(post.authorId) : Promise.resolve(null),
+    post.authorId
+      ? getPublicAuthorProfileById(post.authorId)
+      : Promise.resolve(null),
   ]);
 
   const galleryOffset = (post.imageUrl ? 1 : 0) + post.images.length;
   type InlineImage = { imageUrl: string; altText: string | null };
   const inlineImages: InlineImage[] = [];
-  const proseHtml = safeDescription.replace(/<img\b([^>]*)>/gi, (match, attrs: string) => {
-    const srcMatch = /src="([^"]*)"/.exec(attrs);
-    if (!srcMatch) return match;
-    const altMatch = /alt="([^"]*)"/.exec(attrs);
-    const idx = galleryOffset + inlineImages.length;
-    inlineImages.push({ imageUrl: srcMatch[1], altText: altMatch?.[1] ?? null });
-    return `<img${attrs} data-gallery-idx="${idx}">`;
-  });
+  const proseHtml = safeDescription.replace(
+    /<img\b([^>]*)>/gi,
+    (match, attrs: string) => {
+      const srcMatch = /src="([^"]*)"/.exec(attrs);
+      if (!srcMatch) return match;
+      const altMatch = /alt="([^"]*)"/.exec(attrs);
+      const idx = galleryOffset + inlineImages.length;
+      inlineImages.push({
+        imageUrl: srcMatch[1],
+        altText: altMatch?.[1] ?? null,
+      });
+      return `<img${attrs} data-gallery-idx="${idx}">`;
+    },
+  );
 
   const hasMedia = post.imageUrl || post.images.length > 0;
 
-  const statusLabel = post.status === "draft" ? "Draft" : post.status === "scheduled" ? "Scheduled" : "Published";
+  const statusLabel =
+    post.status === "draft"
+      ? "Draft"
+      : post.status === "scheduled"
+        ? "Scheduled"
+        : "Published";
 
   return (
-    <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen pb-16 pt-20 sm:pt-24"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <ReadingProgressBar />
       <SiteHeader />
 
@@ -97,9 +125,23 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
       <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 text-sm shadow-sm backdrop-blur-md sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
           <span className="flex items-center gap-1.5 font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
             </svg>
             Preview Mode
           </span>
@@ -107,15 +149,27 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
           <span
             className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.12em]"
             style={{
-              borderColor: post.status === "published" ? "var(--primary)" : "var(--border)",
-              color: post.status === "published" ? "var(--primary)" : "var(--text-secondary)",
-              backgroundColor: post.status === "published" ? "var(--primary-soft)" : "transparent",
+              borderColor:
+                post.status === "published"
+                  ? "var(--primary)"
+                  : "var(--border)",
+              color:
+                post.status === "published"
+                  ? "var(--primary)"
+                  : "var(--text-secondary)",
+              backgroundColor:
+                post.status === "published"
+                  ? "var(--primary-soft)"
+                  : "transparent",
             }}
           >
             <span
               className="h-1.5 w-1.5 rounded-full"
               style={{
-                backgroundColor: post.status === "published" ? "var(--primary)" : "currentColor",
+                backgroundColor:
+                  post.status === "published"
+                    ? "var(--primary)"
+                    : "currentColor",
               }}
             />
             {statusLabel}
@@ -137,23 +191,33 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
       </div>
 
       <div className="container mx-auto mt-4 max-w-4xl px-4 sm:mt-6 sm:px-6 lg:px-8">
-
         {/* Breadcrumb */}
         <div className="mb-4 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm text-[var(--text-secondary)]">
-          <Link className="font-medium text-[var(--accent)] hover:underline" href="/admin">Admin</Link>
+          <Link
+            className="font-medium text-[var(--accent)] hover:underline"
+            href="/admin"
+          >
+            Admin
+          </Link>
           <span className="text-[var(--border)]">/</span>
           {post.category ? (
             <>
-              <Link className="font-medium text-[var(--accent)] hover:underline" href={getCategoryHref(post.category)}>{post.category}</Link>
+              <Link
+                className="font-medium text-[var(--accent)] hover:underline"
+                href={getCategoryHref(post.category)}
+              >
+                {post.category}
+              </Link>
               <span className="text-[var(--border)]">/</span>
             </>
           ) : null}
-          <span className="truncate max-w-[18ch] font-medium text-[var(--text-primary)]">{post.title}</span>
+          <span className="truncate max-w-[18ch] font-medium text-[var(--text-primary)]">
+            {post.title}
+          </span>
         </div>
 
         {/* Article card */}
         <article className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-2xl">
-
           {hasMedia ? (
             <PostGallery
               featuredImageUrl={post.imageUrl}
@@ -173,7 +237,9 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
                   {post.category}
                 </Link>
               ) : null}
-              {post.category ? <span className="text-[var(--border)]">·</span> : null}
+              {post.category ? (
+                <span className="text-[var(--border)]">·</span>
+              ) : null}
               <PostDate className="tabular-nums" dateString={post.createdAt} />
               <span className="text-[var(--border)]">·</span>
               <span>{readingTime} min read</span>
@@ -205,7 +271,9 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
           <div className="px-5 py-9 sm:px-10">
             <div className="mx-auto max-w-[68ch]">
               {seriesNav ? <SeriesNav nav={seriesNav} /> : null}
-              {headings.length >= 2 ? <TableOfContents headings={headings} /> : null}
+              {headings.length >= 2 ? (
+                <TableOfContents headings={headings} />
+              ) : null}
               <PostSongMetadata song={post.song ?? null} />
               <ProseContent
                 className="prose-content text-[1.0625rem] leading-[1.85]"
@@ -214,9 +282,11 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
             </div>
           </div>
 
-          {post.locationLat !== null && post.locationLng !== null && NEXT_PUBLIC_STADIA_MAPS_API_KEY ? (
+          {post.locationLat !== null &&
+          post.locationLng !== null &&
+          NEXT_PUBLIC_STADIA_MAPS_API_KEY ? (
             <div className="border-t border-[var(--border)] px-5 py-8 sm:px-10">
-              <PostMap
+              <PostMapClient
                 apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY}
                 iovanderUrl={post.iovanderUrl}
                 lat={post.locationLat}
@@ -232,7 +302,6 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
               <AuthorCard author={authorProfile} />
             </div>
           ) : null}
-
         </article>
       </div>
     </main>

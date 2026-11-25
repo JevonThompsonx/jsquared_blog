@@ -1,7 +1,19 @@
 import { Node } from "@tiptap/core";
 
-export const DEFAULT_THOUGHTS_BLOCK_SUMMARY = "Thoughts";
-export const THOUGHTS_BLOCK_NODE_NAME = "thoughtsBlock";
+import {
+  createThoughtsBlockNode,
+  DEFAULT_THOUGHTS_BLOCK_SUMMARY,
+  normalizeThoughtsBlockSummary,
+  THOUGHTS_BLOCK_NODE_NAME,
+} from "@/lib/tiptap/thoughts-block-shared";
+
+export {
+  createThoughtsBlockNode,
+  DEFAULT_THOUGHTS_BLOCK_SUMMARY,
+  normalizeThoughtsBlockSummary,
+  THOUGHTS_BLOCK_NODE_NAME,
+  type ThoughtsBlockNode,
+} from "@/lib/tiptap/thoughts-block-shared";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -9,33 +21,6 @@ declare module "@tiptap/core" {
       insertThoughtsBlock: (summary?: string | null) => ReturnType;
     };
   }
-}
-
-export type ThoughtsBlockNode = {
-  type: typeof THOUGHTS_BLOCK_NODE_NAME;
-  attrs: {
-    summary: string;
-  };
-  content: [{ type: "paragraph" }];
-};
-
-export function normalizeThoughtsBlockSummary(summary: string | null | undefined): string {
-  if (typeof summary !== "string") {
-    return DEFAULT_THOUGHTS_BLOCK_SUMMARY;
-  }
-
-  const trimmed = summary.trim();
-  return trimmed || DEFAULT_THOUGHTS_BLOCK_SUMMARY;
-}
-
-export function createThoughtsBlockNode(summary?: string | null): ThoughtsBlockNode {
-  return {
-    type: THOUGHTS_BLOCK_NODE_NAME,
-    attrs: {
-      summary: normalizeThoughtsBlockSummary(summary),
-    },
-    content: [{ type: "paragraph" }],
-  };
 }
 
 export const ThoughtsBlock = Node.create({
@@ -68,7 +53,15 @@ export const ThoughtsBlock = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "details",
-      ["summary", {}, normalizeThoughtsBlockSummary(typeof HTMLAttributes.summary === "string" ? HTMLAttributes.summary : null)],
+      [
+        "summary",
+        {},
+        normalizeThoughtsBlockSummary(
+          typeof HTMLAttributes.summary === "string"
+            ? HTMLAttributes.summary
+            : null,
+        ),
+      ],
       ["div", { class: "thoughts-block-content" }, 0],
     ];
   },

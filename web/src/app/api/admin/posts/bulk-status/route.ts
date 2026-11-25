@@ -15,7 +15,7 @@ const bulkStatusSchema = z.object({
 // POST /api/admin/posts/bulk-status
 // Body: { postIds: string[]; status: "published" | "draft" }
 // Response: PostPublishResult
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: bulk publish/unpublish selected rows and display updated/unchanged/missing counts
 export async function POST(request: Request): Promise<NextResponse> {
   const session = await requireAdminSession();
@@ -23,32 +23,46 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-posts-bulk-status:${session.user.id}:${getClientIp(request)}`, 20, 60_000);
+  const rl = await checkRateLimit(
+    `admin-posts-bulk-status:${session.user.id}:${getClientIp(request)}`,
+    20,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
 
   try {
     const body = bulkStatusSchema.parse(await request.json());
-    const result = body.status === "published"
-      ? await publishPosts(body.postIds)
-      : await unpublishPosts(body.postIds);
+    const result =
+      body.status === "published"
+        ? await publishPosts(body.postIds)
+        : await unpublishPosts(body.postIds);
 
     if (body.status === "published" && result.updatedPostIds.length > 0) {
       try {
         await deactivateLinkedWishlistPlaces(result.updatedPostIds);
         revalidatePath("/wishlist");
       } catch (err) {
-        console.error("[bulk-status] deactivateLinkedWishlistPlaces failed:", err);
+        console.error(
+          "[bulk-status] deactivateLinkedWishlistPlaces failed:",
+          err,
+        );
       }
     }
 
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid bulk update request" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid bulk update request" },
+        { status: 400 },
+      );
     }
     console.error("[bulk-status] Failed to update posts", error);
-    return NextResponse.json({ error: "Failed to update posts" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update posts" },
+      { status: 500 },
+    );
   }
 }

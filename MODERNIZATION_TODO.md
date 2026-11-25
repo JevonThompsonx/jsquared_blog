@@ -11,7 +11,7 @@
   21/48 E2E failing with dummy URLs (**NOT VERIFIED** here — no Playwright browsers on
   this host; treat as reported, re-prove in CI).
 - Fix applied: `web/tests/e2e/helpers/db-env-guard.ts` + `skipIfDummyDbEnv()` wired into
-  all 20 specs at file scope. Dummy/placeholder/missing Turso/Supabase URLs → whole file
+  all 17 specs at file scope. Dummy/placeholder/missing Turso/Supabase URLs → whole file
   skips with a clear reason; real-cred runs unaffected. `file:` Turso URLs count as real
   (local SQLite). Verified: `tsc --noEmit` + `eslint` (see gate log); E2E itself NOT
   VERIFIED locally — confirm in CI (`test:e2e` job should report skipped, not failed).

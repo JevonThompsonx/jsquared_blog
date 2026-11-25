@@ -26,14 +26,18 @@ async function ensureAdmin() {
 }
 
 function isStableValidationError(error: unknown): boolean {
-  return error instanceof Error
-    && (error.message === "Invalid request" || error.message === "Category name is required" || error.message === "Category slug is required");
+  return (
+    error instanceof Error &&
+    (error.message === "Invalid request" ||
+      error.message === "Category name is required" ||
+      error.message === "Category slug is required")
+  );
 }
 
 // createCategoryAction
 // Input: FormData matching adminCategoryCreateFormSchema
 // Output: redirect to /admin/categories?error=…
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: submitted from "Create category" form on the admin categories page
 export async function createCategoryAction(formData: FormData): Promise<void> {
   await ensureAdmin();
@@ -56,7 +60,9 @@ export async function createCategoryAction(formData: FormData): Promise<void> {
     });
   } catch (error) {
     if (error instanceof CategorySlugConflictError) {
-      redirect(`/admin/categories?error=SlugTaken&slug=${encodeURIComponent(error.slug)}`);
+      redirect(
+        `/admin/categories?error=SlugTaken&slug=${encodeURIComponent(error.slug)}`,
+      );
     }
     if (isStableValidationError(error)) {
       redirect("/admin/categories?error=InvalidCategory");
@@ -76,7 +82,7 @@ export async function createCategoryAction(formData: FormData): Promise<void> {
 // updateCategoryAction
 // Input: FormData matching adminCategoryUpdateFormSchema (id + name + slug + description)
 // Output: redirect to /admin/categories?error=…
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: submitted from the inline "Edit" form on the admin categories page
 export async function updateCategoryAction(formData: FormData): Promise<void> {
   await ensureAdmin();
@@ -101,7 +107,9 @@ export async function updateCategoryAction(formData: FormData): Promise<void> {
     });
   } catch (error) {
     if (error instanceof CategorySlugConflictError) {
-      redirect(`/admin/categories?error=SlugTaken&slug=${encodeURIComponent(error.slug)}&id=${encodeURIComponent(parsed.data.id)}`);
+      redirect(
+        `/admin/categories?error=SlugTaken&slug=${encodeURIComponent(error.slug)}&id=${encodeURIComponent(parsed.data.id)}`,
+      );
     }
     if (isStableValidationError(error)) {
       redirect("/admin/categories?error=InvalidCategory");
@@ -121,12 +129,14 @@ export async function updateCategoryAction(formData: FormData): Promise<void> {
 // deleteCategoryAction
 // Input: FormData with id
 // Output: redirect to /admin/categories?error=…
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: submitted from the "Delete" button on the admin categories page (only enabled when postCount=0)
 export async function deleteCategoryAction(formData: FormData): Promise<void> {
   await ensureAdmin();
 
-  const parsed = adminCategoryIdFormSchema.safeParse({ id: formData.get("id") });
+  const parsed = adminCategoryIdFormSchema.safeParse({
+    id: formData.get("id"),
+  });
   if (!parsed.success) {
     redirect("/admin/categories?error=InvalidCategory");
   }
@@ -135,7 +145,9 @@ export async function deleteCategoryAction(formData: FormData): Promise<void> {
     await deleteCategory(parsed.data.id);
   } catch (error) {
     if (error instanceof CategoryInUseError) {
-      redirect(`/admin/categories?error=CategoryInUse&posts=${error.postCount}&id=${encodeURIComponent(error.categoryId)}`);
+      redirect(
+        `/admin/categories?error=CategoryInUse&posts=${error.postCount}&id=${encodeURIComponent(error.categoryId)}`,
+      );
     }
     if (error instanceof Error && error.message === "Category id is required") {
       redirect("/admin/categories?error=InvalidCategory");

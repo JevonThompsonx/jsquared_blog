@@ -1,0 +1,11 @@
+[Unit]
+Description=Listmonk PostgreSQL logical backup
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/listmonk-backup
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

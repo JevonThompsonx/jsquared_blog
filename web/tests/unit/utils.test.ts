@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   escapeXml,
   formatSeasonYear,
+  getCategoryFeedHref,
   getCategoryHref,
   getPostHref,
   getSeasonKey,
@@ -69,35 +70,58 @@ describe("slugify", () => {
 
 describe("toPostSlug", () => {
   it("uses existing slug when present", () => {
-    expect(toPostSlug({ id: "1", title: "Ignored", slug: "my-slug" })).toBe("my-slug");
+    expect(toPostSlug({ id: "1", title: "Ignored", slug: "my-slug" })).toBe(
+      "my-slug",
+    );
   });
 
   it("builds slug from id + title when slug is empty", () => {
-    expect(toPostSlug({ id: "42", title: "Hello, Coastal Trails!", slug: "" })).toBe("42-hello-coastal-trails");
+    expect(
+      toPostSlug({ id: "42", title: "Hello, Coastal Trails!", slug: "" }),
+    ).toBe("42-hello-coastal-trails");
   });
 
   it("slugifies the title portion", () => {
-    expect(toPostSlug({ id: "7", title: "Café & Mountains", slug: "" })).toBe("7-cafe-mountains");
+    expect(toPostSlug({ id: "7", title: "Café & Mountains", slug: "" })).toBe(
+      "7-cafe-mountains",
+    );
   });
 });
 
 describe("getPostHref", () => {
   it("returns /posts/ prefixed path using the slug", () => {
-    expect(getPostHref({ id: "1", title: "Test", slug: "my-post" })).toBe("/posts/my-post");
+    expect(getPostHref({ id: "1", title: "Test", slug: "my-post" })).toBe(
+      "/posts/my-post",
+    );
   });
 
   it("builds slug from id+title when slug is blank", () => {
-    expect(getPostHref({ id: "5", title: "Big Adventure", slug: "" })).toBe("/posts/5-big-adventure");
+    expect(getPostHref({ id: "5", title: "Big Adventure", slug: "" })).toBe(
+      "/posts/5-big-adventure",
+    );
   });
 });
 
 describe("getCategoryHref", () => {
-  it("returns /category/ prefixed path", () => {
-    expect(getCategoryHref("Travel")).toBe("/category/Travel");
+  it("returns a slugified /category/ path", () => {
+    expect(getCategoryHref("Travel")).toBe("/category/travel");
   });
 
-  it("encodes special characters in category name", () => {
-    expect(getCategoryHref("Food & Drink")).toBe("/category/Food%20%26%20Drink");
+  it("returns a slugified feed path", () => {
+    expect(getCategoryFeedHref("Van Life")).toBe("/category/van-life/feed.xml");
+  });
+
+  it("slugifies special characters in category name", () => {
+    expect(getCategoryHref("Food & Drink")).toBe("/category/food-drink");
+  });
+
+  it("is idempotent for an already-slugified category", () => {
+    expect(getCategoryHref("van-life")).toBe("/category/van-life");
+  });
+
+  it("slugifies multi-word display names", () => {
+    expect(getCategoryHref("Van Life")).toBe("/category/van-life");
+    expect(getCategoryHref("Road Trips")).toBe("/category/road-trips");
   });
 });
 

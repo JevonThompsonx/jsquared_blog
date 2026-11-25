@@ -101,10 +101,7 @@ export default function GlobalError({
   return (
     <html lang="en">
       <head>
-        <meta
-          content="width=device-width, initial-scale=1"
-          name="viewport"
-        />
+        <meta content="width=device-width, initial-scale=1" name="viewport" />
         <style>{`
           @media (prefers-color-scheme: dark) {
             .global-error-page { background: #111812 !important; color: #e2e8e0 !important; }
@@ -117,20 +114,40 @@ export default function GlobalError({
         `}</style>
       </head>
       <body>
-        <div className="global-error-page" style={mergeStyles(baseStyles.page, lightStyles.page)}>
-          <div className="global-error-card" style={mergeStyles(baseStyles.card, lightStyles.card)}>
-            <p className="global-error-brand" style={mergeStyles(baseStyles.brand, lightStyles.brand)}>
+        <main
+          className="global-error-page"
+          id="main-content"
+          style={mergeStyles(baseStyles.page, lightStyles.page)}
+          tabIndex={-1}
+        >
+          <div
+            className="global-error-card"
+            style={mergeStyles(baseStyles.card, lightStyles.card)}
+          >
+            <p
+              className="global-error-brand"
+              style={mergeStyles(baseStyles.brand, lightStyles.brand)}
+            >
               J²Adventures
             </p>
-            <h1 className="global-error-heading" style={baseStyles.heading}>Something went wrong</h1>
-            <p className="global-error-body" style={mergeStyles(baseStyles.body, lightStyles.body)}>
-              An unexpected error occurred. Please try again or return to the home page.
+            <h1 className="global-error-heading" style={baseStyles.heading}>
+              Something went wrong
+            </h1>
+            <p
+              className="global-error-body"
+              style={mergeStyles(baseStyles.body, lightStyles.body)}
+            >
+              An unexpected error occurred. Please try again or return to the
+              home page.
             </p>
             <div style={baseStyles.actions}>
               <button
                 className="global-error-primary"
                 onClick={reset}
-                style={mergeStyles(baseStyles.primaryButton, lightStyles.primaryButton)}
+                style={mergeStyles(
+                  baseStyles.primaryButton,
+                  lightStyles.primaryButton,
+                )}
               >
                 Try again
               </button>
@@ -138,13 +155,16 @@ export default function GlobalError({
               <a
                 className="global-error-secondary"
                 href="/"
-                style={mergeStyles(baseStyles.secondaryLink, lightStyles.secondaryLink)}
+                style={mergeStyles(
+                  baseStyles.secondaryLink,
+                  lightStyles.secondaryLink,
+                )}
               >
                 Return home
               </a>
             </div>
           </div>
-        </div>
+        </main>
       </body>
     </html>
   );

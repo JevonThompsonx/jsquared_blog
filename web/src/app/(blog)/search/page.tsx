@@ -20,14 +20,16 @@ type SearchPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Search – J²Adventures",
-  description: "Search every adventure on J²Adventures by place, season, tag, or keyword.",
+  title: "Search",
+  description:
+    "Search every adventure on J²Adventures by place, season, tag, or keyword.",
+  robots: { index: false, follow: true },
 };
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const parsed = searchParamsSchema.safeParse(resolvedSearchParams ?? {});
-  const rawQuery = parsed.success ? parsed.data.q ?? "" : "";
+  const rawQuery = parsed.success ? (parsed.data.q ?? "") : "";
   const query = rawQuery.trim();
 
   const posts = await listPublishedPosts(20, 0, query);
@@ -35,14 +37,28 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const trimmedQueryForDisplay = rawQuery.trim();
 
   return (
-    <main id="main-content" className="min-h-screen" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
-      <div className="border-b border-[var(--border)]" style={{ background: "var(--card-bg)" }}>
+      <div
+        className="border-b border-[var(--border)]"
+        style={{ background: "var(--card-bg)" }}
+      >
         <div className="container mx-auto max-w-5xl px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent)]">Search</p>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent)]">
+            Search
+          </p>
           <h1 className="mt-1 text-balance text-3xl font-bold leading-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
-            {query ? (hasMatches ? `Results for “${trimmedQueryForDisplay}”` : `No results for “${trimmedQueryForDisplay}”`) : "Search adventures"}
+            {query
+              ? hasMatches
+                ? `Results for “${trimmedQueryForDisplay}”`
+                : `No results for “${trimmedQueryForDisplay}”`
+              : "Search adventures"}
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)]">
             {query

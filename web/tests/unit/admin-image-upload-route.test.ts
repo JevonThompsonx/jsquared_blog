@@ -6,26 +6,29 @@ import { NextResponse } from "next/server";
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
   getClientIp: vi.fn(() => "127.0.0.1"),
-  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+  tooManyRequests: vi.fn(() =>
+    NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+  ),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
   requireAdminSession: vi.fn(),
 }));
 
-vi.mock("@/lib/cloudinary/uploads", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/cloudinary/uploads")>();
+vi.mock("@/lib/media/local-storage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/media/local-storage")>();
 
   return {
     ...actual,
-    uploadEditorialImage: vi.fn(),
+    saveLocalImage: vi.fn(),
   };
 });
 
 import { POST } from "@/app/api/admin/uploads/images/route";
 import { requireAdminSession } from "@/lib/auth/session";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { uploadEditorialImage } from "@/lib/cloudinary/uploads";
+import { saveLocalImage } from "@/lib/media/local-storage";
 
 function makeAdminSession(): AdminSession {
   return {
@@ -92,7 +95,7 @@ describe("POST /api/admin/uploads/images", () => {
 
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ error: "Too many requests" });
-    expect(vi.mocked(uploadEditorialImage)).not.toHaveBeenCalled();
+    expect(vi.mocked(saveLocalImage)).not.toHaveBeenCalled();
   });
 
   it("rejects invalid form data", async () => {
@@ -123,7 +126,7 @@ describe("POST /api/admin/uploads/images", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Image file is required" });
-    expect(vi.mocked(uploadEditorialImage)).not.toHaveBeenCalled();
+    expect(vi.mocked(saveLocalImage)).not.toHaveBeenCalled();
   });
 
   it("rejects spoofed image files before upload", async () => {
@@ -135,15 +138,21 @@ describe("POST /api/admin/uploads/images", () => {
       resetAt: Date.now() + 60_000,
     });
 
-    const spoofedFile = new File([new Uint8Array([0x6e, 0x6f, 0x74, 0x2d, 0x69, 0x6d, 0x67])], "editorial.webp", {
-      type: "image/webp",
-    });
+    const spoofedFile = new File(
+      [new Uint8Array([0x6e, 0x6f, 0x74, 0x2d, 0x69, 0x6d, 0x67])],
+      "editorial.webp",
+      {
+        type: "image/webp",
+      },
+    );
 
     const response = await POST(makeUploadRequest(spoofedFile));
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Uploaded file content does not match a supported image format" });
-    expect(vi.mocked(uploadEditorialImage)).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({
+      error: "Uploaded file content does not match a supported image format",
+    });
+    expect(vi.mocked(saveLocalImage)).not.toHaveBeenCalled();
   });
 
   it("returns 503 when the upload service is unavailable", async () => {
@@ -155,18 +164,24 @@ describe("POST /api/admin/uploads/images", () => {
       resetAt: Date.now() + 60_000,
     });
 
-    const validPng = new File([
-      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    ], "editorial.png", {
-      type: "image/png",
-    });
+    const validPng = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "editorial.png",
+      {
+        type: "image/png",
+      },
+    );
 
-    vi.mocked(uploadEditorialImage).mockRejectedValue(new Error("Cloudinary is not configured"));
+    vi.mocked(saveLocalImage).mockRejectedValue(
+      Object.assign(new Error("write failed"), { code: "ENOSPC" }),
+    );
 
     const response = await POST(makeUploadRequest(validPng));
 
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "Upload service unavailable" });
+    expect(await response.json()).toEqual({
+      error: "Upload service unavailable",
+    });
   });
 
   it("returns a safe generic error when upload fails unexpectedly", async () => {
@@ -178,13 +193,15 @@ describe("POST /api/admin/uploads/images", () => {
       resetAt: Date.now() + 60_000,
     });
 
-    const validPng = new File([
-      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    ], "editorial.png", {
-      type: "image/png",
-    });
+    const validPng = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "editorial.png",
+      {
+        type: "image/png",
+      },
+    );
 
-    vi.mocked(uploadEditorialImage).mockRejectedValue(new Error("provider timeout"));
+    vi.mocked(saveLocalImage).mockRejectedValue(new Error("provider timeout"));
 
     const response = await POST(makeUploadRequest(validPng));
 

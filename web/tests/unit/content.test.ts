@@ -372,3 +372,42 @@ describe("processHeadings", () => {
     expect(headings).toHaveLength(0);
   });
 });
+
+describe("sanitizeRichTextHtml — self-hosted images", () => {
+  it("keeps root-relative /media images and their alt text", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<img src="/media/2026/11/a79493f1c6fad250-first-adventure.webp" alt="Lake">',
+    );
+
+    expect(sanitized).toContain(
+      'src="/media/2026/11/a79493f1c6fad250-first-adventure.webp"',
+    );
+    expect(sanitized).toContain('alt="Lake"');
+  });
+
+  it("keeps bundled /images assets", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<img src="/images/us.webp" alt="Author">',
+    );
+
+    expect(sanitized).toContain('src="/images/us.webp"');
+  });
+
+  it("drops traversal paths that escape the media root", () => {
+    const sanitized = sanitizeRichTextHtml(
+      '<img src="/media/../../etc/passwd.webp" alt="bad">',
+    );
+
+    expect(sanitized).not.toContain("passwd");
+    expect(sanitized).not.toContain("src=");
+  });
+
+  it("drops protocol-relative and non-media relative paths", () => {
+    expect(
+      sanitizeRichTextHtml('<img src="//evil.example/x.jpg" alt="bad">'),
+    ).not.toContain("evil.example");
+    expect(
+      sanitizeRichTextHtml('<img src="relative/photo.jpg" alt="bad">'),
+    ).not.toContain("relative/photo.jpg");
+  });
+});

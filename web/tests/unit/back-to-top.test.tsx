@@ -4,6 +4,12 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const usePathnameMock = vi.fn(() => "/");
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => usePathnameMock(),
+}));
+
 import { BackToTop } from "@/components/ui/back-to-top";
 
 describe("BackToTop", () => {
@@ -12,6 +18,7 @@ describe("BackToTop", () => {
 
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    usePathnameMock.mockReturnValue("/");
     if (!window.matchMedia) {
       window.matchMedia = vi.fn().mockImplementation((query: string) => ({
         matches: false,
@@ -47,6 +54,14 @@ describe("BackToTop", () => {
   function getButton(): HTMLButtonElement | null {
     return container.querySelector("button");
   }
+
+  it("renders nothing on admin routes so it cannot overlap the bulk-action bar", () => {
+    usePathnameMock.mockReturnValue("/admin/posts");
+    act(() => {
+      root.render(<BackToTop />);
+    });
+    expect(container.querySelector("button")).toBeNull();
+  });
 
   it("renders a button with an accessible label", () => {
     act(() => {
@@ -92,7 +107,9 @@ describe("BackToTop", () => {
       root.render(<BackToTop />);
     });
     setScrollY(1000);
-    const scrollSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    const scrollSpy = vi
+      .spyOn(window, "scrollTo")
+      .mockImplementation(() => undefined);
     act(() => {
       getButton()?.click();
     });
@@ -120,7 +137,9 @@ describe("BackToTop", () => {
       root.render(<BackToTop />);
     });
     setScrollY(1000);
-    const scrollSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    const scrollSpy = vi
+      .spyOn(window, "scrollTo")
+      .mockImplementation(() => undefined);
     act(() => {
       getButton()?.click();
     });

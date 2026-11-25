@@ -36,7 +36,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "server-only": path.resolve(__dirname, "./tests/unit/server-only-stub.ts"),
+      "@workos-inc/authkit-nextjs/components": path.resolve(
+        __dirname,
+        "./tests/unit/stubs/authkit-components.tsx",
+      ),
+      "server-only": path.resolve(
+        __dirname,
+        "./tests/unit/server-only-stub.ts",
+      ),
     },
   },
   test: {
@@ -45,6 +52,12 @@ export default defineConfig({
     testTimeout: 30_000,
     env: {
       NEXT_PUBLIC_SITE_URL: "https://jsquaredadventures.com",
+      WORKOS_CLIENT_ID: "client_test_dummy",
+      WORKOS_ISSUER: "https://auth.example.test",
+      NEXT_PUBLIC_WORKOS_REDIRECT_URI:
+        "https://jsquaredadventures.com/callback",
+      WORKOS_COOKIE_PASSWORD: "test-cookie-password-at-least-32-characters",
+      WORKOS_COOKIE_MAX_AGE: "1209600",
     },
   },
 });

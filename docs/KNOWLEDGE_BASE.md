@@ -826,3 +826,107 @@ For traceability, here's which branch discovered each pattern:
 - [`docs/ROADMAP.md`](./ROADMAP.md) — Feature work tracking
 - [`docs/CHANGELOG.md`](./CHANGELOG.md) — Completed work log
 - [`docs/branches/`](./branches/) — Per-branch implementation checklists
+
+## Better Auth + existing `users` table
+
+**Problem:** Better Auth's default `user` model expects its own table; a naive integration would force every FK to move.
+
+**Gotcha:** the Drizzle adapter resolves schema keys by model name. Mapping `user.modelName: "users"` requires the schema key to be `users` (not `user`), and `user.fields.email` must point at the Drizzle property (`primaryEmail`), not the SQL column (`primary_email`). Missing either produces `SchemaMismatchError: Missing tables users` or a silent lookup by the wrong column.
+
+**Solution:** `drizzleAdapter(db, { provider: "sqlite", schema: { users, session, account, verification } })` plus `user: { modelName: "users", fields: { email: "primaryEmail" } }`. Add `users.name`, `users.email_verified`, `users.image`, and a unique index on `primary_email`. Create `profiles` in `databaseHooks.user.create.after`; treat it as non-fatal and let `ensurePublicAppUser` recover.
+
+**Verified:** 2026-11-24 (spike + integration test + production signup/verify/login/reset).
+
+**Last verified:** 2026-11-24
+
+**Discovered in:** local reader auth migration.
+
+---
+
+### [Auth] WorkOS AuthKit keyless Next.js configuration
+
+**Discovered in:** WorkOS AuthKit migration, 2026-11-24
+**Last verified:** 2026-11-24
+
+**Problem:** The callback route needs an explicit browser-facing `baseURL`, but Next evaluates route modules while collecting build configuration without runtime env values.
+
+**Gotcha:** Calling `getWorkosEnv()` at module load makes `next build` fail on `/callback`. Letting the SDK infer the base URL from the request can redirect to the internal `127.0.0.1:3010` origin behind the tunnel. `WORKOS_ISSUER` must match the access-token `iss` claim, not the AuthKit OAuth host.
+
+**Solution:** Keep full Zod validation at runtime. Derive `baseURL` from the validated `NEXT_PUBLIC_WORKOS_REDIRECT_URI`; only during `NEXT_PHASE=phase-production-build`, use the fixed approved canonical origin. Reject `WORKOS_API_KEY` so the app cannot silently leave keyless mode.
+
+**Verified:** `workos-env.test.ts` covers approved callbacks, hostile issuers/callbacks, keyless enforcement, runtime validation, and the build-only fallback; `pnpm run build:node` collects `/callback` successfully.
+
+---
+
+### [Auth] AuthKit proxy composition must include prefetch
+
+**Discovered in:** WorkOS AuthKit migration, 2026-11-24
+**Last verified:** 2026-11-24
+
+**Problem:** The existing proxy excluded prefetch requests and only injected a CSP nonce.
+
+**Gotcha:** Excluding prefetch can leave `withAuth()` without `x-workos-middleware`/`x-workos-session`. Forwarding raw AuthKit headers to the response would expose sealed session material. `handleAuthkitHeaders` is deprecated in AuthKit Next.js 4.6.3.
+
+**Solution:** Use `authkit()` plus `partitionAuthkitHeaders()` and `applyResponseHeaders()`. Add `x-nonce` to the sanitized request headers, retain the existing CSP/CSRF logic, remove the matcher's prefetch exclusions, and explicitly strip any `x-workos-*` response header.
+
+**Verified:** `workos-proxy.test.ts` proves trusted headers reach downstream requests, spoofed headers are removed, cookies survive, CSP nonces remain, and prefetch is matched.
+
+---
+
+### [Auth] Provision WorkOS admins explicitly; never promote during login
+
+**Discovered in:** WorkOS AuthKit migration, 2026-11-24
+**Last verified:** 2026-11-24
+
+**Problem:** Admin authorization must require the current local `users.role`, while `ADMIN_ALLOWED_EMAILS` identifies who may be provisioned.
+
+**Gotcha:** Auto-promoting an allowlisted email during callback or session revalidation undoes local role demotion and lets anyone able to create a WorkOS user in the environment mint an app admin.
+
+**Solution:** `resolveWorkosIdentity` defaults `promoteAllowedUser` to false and the callback explicitly disables promotion. Only the operator-only `workos:provision-admins` script creates/promotes local admin rows; it is dry-run by default and requires `--apply`.
+
+**Verified:** Identity tests prove demoted linked users and new allowlisted users remain readers; provisioning tests prove existing IDs/profiles are preserved and repeated applies are idempotent.
+
+---
+
+### [Testing] AuthKit's server entry point needs a components stub in Vitest
+
+**Discovered in:** WorkOS AuthKit migration, 2026-11-24
+**Last verified:** 2026-11-24
+
+**Problem:** Client-component tests import `AppProviders`, which now imports AuthKit's real components entry point.
+
+**Gotcha:** That entry point imports server actions using extensionless `next/cache`, which Vitest's Node resolver does not resolve even though Next's production bundler does.
+
+**Solution:** Alias `@workos-inc/authkit-nextjs/components` to a small test-only stub in `vitest.config.ts`. Tests that exercise auth behavior override `useAuth` with `vi.mock`; server-side WorkOS tests mock the server SDK entry point.
+
+**Verified:** Full Vitest suite passes without network calls or real credentials.
+
+---
+
+### [Auth] AuthKit pending PKCE cookies are not response cookies
+
+**Discovered in:** WorkOS AuthKit repair cycle 1, 2026-11-24
+**Last verified:** 2026-11-24
+
+**Problem:** Ordinary anonymous HTML pages received `wos-auth-verifier-*` and `Cache-Control: no-store`.
+
+**Gotcha:** `authkit()` creates pending PKCE headers/cookies for anonymous requests so a later helper can redirect. `handleAuthkitProxy` strips those pending cookies unless the response actually redirects to the authorization URL; composing only `partitionAuthkitHeaders` forwards them to every page.
+
+**Solution:** Before partitioning, detect both pending PKCE internal headers and remove only `wos-auth-verifier*` Set-Cookie values. Preserve `wos-session` refresh/deletion cookies. Give ordinary anonymous safe-method responses a public revalidation policy. Verify against the real SDK in both Playwright and the packaged-production smoke script.
+
+**Verified:** Real `/about` requests receive no PKCE cookie; real `/api/auth/login` still redirects and sets a verifier.
+
+---
+
+### [Auth] WorkOS callbacks are per approved request host
+
+**Discovered in:** WorkOS AuthKit repair cycle 1, 2026-11-24
+**Last verified:** 2026-11-24
+
+**Problem:** A single configured apex callback stranded `www`/`next` sessions on the apex host.
+
+**Gotcha:** `handleAuth` accepts `baseURL` only when its handler factory is created, so a module-level factory pins every request to one origin.
+
+**Solution:** Validate `Host`/`x-forwarded-host` against apex, `www`, `next`, and localhost/loopback aliases. Create the callback handler per request with that approved origin; use the same resolver for sign-in/signup redirect URIs and logout roots. Keep the configured callback only as the no-host fallback.
+
+**Verified:** Origin tests cover all approved hosts and hostile Host/forwarded-host values; route/proxy tests prove per-request callbacks.

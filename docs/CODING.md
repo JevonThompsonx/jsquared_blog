@@ -11,14 +11,14 @@ web/
 ├── src/
 │   ├── app/          # Next.js App Router — pages + API routes
 │   ├── components/   # React components (admin, auth, blog, layout, providers, theme, ui)
-│   ├── drizzle/      # Schema (18 tables), Drizzle ORM with Turso/libSQL
+│   ├── drizzle/      # Schema (21 tables), Drizzle ORM with Turso/libSQL
 │   ├── lib/          # Client libs: auth, cloudinary, supabase, rate-limit, env, geocode, email
 │   ├── server/       # Server-only: DAL, forms, services, queries, auth, feeds, cloudinary
 │   ├── types/        # TypeScript type definitions
 │   ├── proxy.ts      # CSP + CSRF middleware
 │   └── instrumentation.ts  # Sentry init
 ├── tests/
-│   ├── unit/         # Vitest (164 test files)
+│   ├── unit/         # Vitest (178 test files)
 │   └── e2e/          # Playwright (21 spec files)
 │       └── helpers/  # E2E auth helpers
 ├── drizzle/          # Migration files (24 SQL + meta/)
@@ -49,11 +49,9 @@ src/app/
 │   ├── search/               # /search?q=...
 │   ├── about/                # /about
 │   └── accessibility/        # /accessibility
-├── (public-auth)/    # Route group: Supabase auth
-│   ├── login/
-│   ├── signup/
-│   └── callback/
-├── admin/            # Admin pages (Auth.js protected)
+├── (public-auth)/    # Hosted AuthKit notices: login, signup, password/verification
+├── callback/         # WorkOS PKCE callback + identity mapping
+├── admin/            # Admin pages (WorkOS + local role + recent auth)
 ├── account/          # Public account settings
 ├── settings/         # Theme/settings
 └── api/              # API routes
@@ -66,7 +64,7 @@ src/app/
 | Dir | Files | Pattern |
 |-----|-------|---------|
 | `components/admin/` | 12 | Admin editor, dashboard, widgets |
-| `components/auth/` | 1 | AdminAuthButton |
+| `components/auth/` | 2 | AdminAuthButton, AuthKitNotice |
 | `components/blog/` | 25 | Post rendering, feed, comments, map, search |
 | `components/layout/` | 3 | SiteHeader, MobileNav, SiteFooter, BackToTop |
 | `components/providers/` | 3 | AppProviders, Theme, Navigation |
@@ -85,9 +83,8 @@ src/app/
 | `server/services/` | External integrations (email, newsletter) |
 | `server/queries/` | Read-only aggregated queries (dashboard, posts, wishlist) |
 | `server/posts/` | Post write operations (clone, delete, publish, preview) |
-| `server/auth/` | Admin + public user DB operations |
+| `server/auth/` | WorkOS identity mapping, reader resolution, admin authorization |
 | `server/feeds/` | RSS feed generation |
-| `server/supabase/` | Supabase keepalive cron |
 
 ---
 
@@ -103,7 +100,7 @@ src/app/
 
 **Rate limiting**: `checkRateLimit()` from `lib/rate-limit.ts` on public endpoints. Upstash Redis in prod, in-memory fallback in dev/test.
 
-**Auth**: Admin → Auth.js + GitHub OAuth (`requireAdminSession()`). Public → Supabase (`getRequestSupabaseUser()`). Cron → Bearer token (`checkCronAuth()`).
+**Auth**: Readers and admins → WorkOS AuthKit (`withAuth()` / `useAuth()`). Readers resolve through `getRequestPublicUser()`; admins additionally require `requireAdminSession()` with verified email, current allowlist, local admin role, and recent `auth_time`. Cron → Bearer token (`checkCronAuth()`).
 
 **Security headers**: CSP + nonce in `proxy.ts`. Static headers in `next.config.ts`.
 
@@ -114,18 +111,18 @@ src/app/
 ### Public (no auth required unless noted)
 - `GET /api/posts` — paginated published posts
 - `GET /api/posts/[postId]/comments`
-- `POST /api/posts/[postId]/comments` — Supabase auth
-- `GET/POST /api/posts/[postId]/bookmark` — Supabase auth
+- `POST /api/posts/[postId]/comments` — WorkOS session
+- `GET/POST /api/posts/[postId]/bookmark` — WorkOS session
 - `POST /api/posts/[postId]/view` — cookie-deduped view count
-- `POST /api/comments/[commentId]/like` — Supabase auth
-- `DELETE /api/comments/[commentId]` — Supabase auth
-- `GET /api/bookmarks` — Supabase auth
-- `GET/PATCH /api/account/profile` — Supabase auth
-- `POST /api/account/avatar` — Supabase auth
+- `POST /api/comments/[commentId]/like` — WorkOS session
+- `DELETE /api/comments/[commentId]` — WorkOS session
+- `GET /api/bookmarks` — WorkOS session
+- `GET/PATCH /api/account/profile` — WorkOS session
+- `POST /api/account/avatar` — WorkOS session
 - `POST /api/newsletter`
 - `POST /api/route-plans`
 
-### Admin (Auth.js JWT required)
+### Admin (WorkOS + local admin role + recent auth)
 - `GET /api/admin/posts` — list all posts
 - `POST /api/admin/posts/clone` — clone a post
 - `POST /api/admin/posts/preview` — generate preview token
@@ -143,12 +140,11 @@ src/app/
 
 ### Cron (Bearer CRON_SECRET)
 - `GET /api/cron/publish-scheduled` — daily midnight
-- `GET /api/cron/keep-supabase-awake` — daily 6 AM
 
 ---
 
-## Drizzle Schema (18 tables)
+## Drizzle Schema (21 tables)
 
 Core tables: `users`, `profiles`, `posts`, `post_revisions`, `post_preview_tokens`, `post_images`, `post_tags`, `post_bookmarks`, `post_links`, `media_assets`, `categories`, `tags`, `series`, `comments`, `comment_likes`, `auth_accounts`, `wishlist_places`, `seasons`.
 
-`sessions` is managed by the Auth.js Turso adapter (not in schema.ts). All tables indexed on FK columns and query-filtered fields.
+WorkOS identities use `auth_accounts` with a unique `(provider, provider_user_id)` index. The existing `users.id` remains every content FK target. Legacy Better Auth `session`, `account`, and `verification` tables are retained for rollback. All tables are indexed on FK columns and query-filtered fields.

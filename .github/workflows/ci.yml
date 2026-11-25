@@ -13,17 +13,16 @@ concurrency:
 env:
   TURSO_DATABASE_URL: https://test-db.turso.io
   TURSO_AUTH_TOKEN: test-token
-  AUTH_SECRET: test-secret-minimum-32-characters!!
-  AUTH_GITHUB_ID: test-id
-  AUTH_GITHUB_SECRET: test-secret
+  WORKOS_CLIENT_ID: client_test_dummy
+  WORKOS_ISSUER: https://auth.example.test/user_management/client_test_dummy
+  NEXT_PUBLIC_WORKOS_REDIRECT_URI: https://jsquaredadventures.com/callback
+  WORKOS_COOKIE_PASSWORD: test-cookie-password-at-least-32-characters
+  WORKOS_COOKIE_MAX_AGE: "1209600"
+  ADMIN_ALLOWED_EMAILS: admin@example.com
   CLOUDINARY_CLOUD_NAME: test
   CLOUDINARY_API_KEY: test-key
   CLOUDINARY_API_SECRET: test-secret
-  SUPABASE_URL: https://test.supabase.co
-  SUPABASE_ANON_KEY: test-key
   CRON_SECRET: test-cron-secret-min-16
-  NEXT_PUBLIC_SUPABASE_URL: https://test.supabase.co
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: test-key
   NEXT_PUBLIC_SITE_URL: http://localhost:3000
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   SENTRY_RELEASE: ${{ github.sha }}
@@ -114,7 +113,17 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web run build
+      - run: pnpm --filter web run build:node
+      - name: Package standalone release
+        working-directory: web
+        run: node scripts/package-standalone.mjs /tmp/jsquared-blog-release
+      - name: Verify WorkOS runtime dependencies resolve
+        working-directory: /tmp/jsquared-blog-release/web
+        run: |
+          node --input-type=module -e 'for (const id of ["@workos-inc/authkit-nextjs", "@workos-inc/node"]) { const resolved = import.meta.resolve(id); if (!resolved.includes("node_modules")) throw new Error(`Unresolved ${id}`); console.info(`${id}: ${resolved}`); }'
+      - name: Smoke anonymous AuthKit response headers
+        working-directory: web
+        run: pnpm run test:authkit-smoke /tmp/jsquared-blog-release
 
   e2e:
     name: E2E tests

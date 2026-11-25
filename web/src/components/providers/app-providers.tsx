@@ -1,6 +1,6 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 
 import { NextThemeProvider } from "@/components/theme/theme-provider";
 import { UserThemeSync } from "@/components/providers/user-theme-sync";
@@ -8,12 +8,12 @@ import { NavigationScrollFix } from "@/components/providers/navigation-scroll-fi
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <AuthKitProvider>
       <NextThemeProvider>
         <UserThemeSync />
         <NavigationScrollFix />
         {children}
       </NextThemeProvider>
-    </SessionProvider>
+    </AuthKitProvider>
   );
 }

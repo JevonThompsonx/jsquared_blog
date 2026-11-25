@@ -9,6 +9,16 @@ Sentry.init({
   sendDefaultPii: false,
   enableLogs: true,
 
+  beforeSend(event) {
+    if (event.request) {
+      delete event.request.data;
+      delete event.request.headers;
+      delete event.request.cookies;
+      delete event.request.query_string;
+    }
+    return event;
+  },
+
   // Disable client reports (SDK telemetry about dropped events)
   sendClientReports: false,
 

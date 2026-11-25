@@ -8,7 +8,8 @@ import { z } from "zod";
 
 import { FilteredFeed } from "@/components/blog/filtered-feed";
 import { SiteHeader } from "@/components/layout/site-header";
-import { getCategoryFeedHref, SITE_URL } from "@/lib/utils";
+import { buildAlternates } from "@/lib/seo";
+import { getCategoryFeedHref, getCategoryHref, slugify } from "@/lib/utils";
 import { getCategoryNameBySlug } from "@/server/dal/categories";
 import { countPublishedPostsByCategory } from "@/server/dal/posts";
 import { listPublishedPostsByCategory } from "@/server/queries/posts";
@@ -21,7 +22,9 @@ const categoryParamsSchema = z.object({
   category: z.string().trim().min(1),
 });
 
-function normalizeCategoryParam(rawParams: { category: string }): string | null {
+function normalizeCategoryParam(rawParams: {
+  category: string;
+}): string | null {
   let decodedCategory: string;
 
   try {
@@ -36,26 +39,33 @@ function normalizeCategoryParam(rawParams: { category: string }): string | null 
     return null;
   }
 
-  return parsed.data.category;
+  return slugify(parsed.data.category);
 }
 
-export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: CategoryPageProps): Promise<Metadata> {
   const label = normalizeCategoryParam(await params);
 
   if (!label) {
     return {};
   }
 
-  const displayName = (await getCategoryNameBySlug(label)) ?? label;
+  // Existence check runs before the shell renders so a missing category
+  // returns a 404 status instead of a 200 soft 404.
+  const displayName = await getCategoryNameBySlug(label);
+
+  if (!displayName) {
+    notFound();
+  }
 
   return {
-    title: `${displayName} – J²Adventures`,
+    title: displayName,
     description: `Explore all ${displayName} adventures on J²Adventures.`,
-    alternates: {
-      types: {
-        "application/rss+xml": `${SITE_URL}${getCategoryFeedHref(label)}`,
-      },
-    },
+    alternates: buildAlternates(
+      getCategoryHref(label),
+      getCategoryFeedHref(label),
+    ),
   };
 }
 
@@ -148,7 +158,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  const displayName = (await getCategoryNameBySlug(label)) ?? label;
+  const displayName = await getCategoryNameBySlug(label);
+
+  if (!displayName) {
+    notFound();
+  }
 
   const slug = getCategorySlug(label);
   const [initialPosts, postCount] = await Promise.all([
@@ -157,21 +171,30 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   ]);
 
   return (
-    <main id="main-content" className="min-h-screen" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
       {/* Category hero */}
-      <div className="border-b border-[var(--border)]" style={{ background: "var(--card-bg)" }}>
+      <div
+        className="border-b border-[var(--border)]"
+        style={{ background: "var(--card-bg)" }}
+      >
         <div className="container mx-auto max-w-5xl px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:px-8">
           <div className="flex items-start gap-4 sm:gap-6">
-
             {/* Category icon badge */}
             <div className="group/badge mt-0.5 flex h-12 w-12 shrink-0 cursor-default items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--accent-soft)] shadow-sm transition-all duration-200 hover:scale-110 hover:border-[var(--primary)] hover:shadow-md sm:h-14 sm:w-14">
               <CategoryIcon slug={slug} />
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-secondary)]">Category</p>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-secondary)]">
+                Category
+              </p>
               <h1 className="mt-1 text-balance text-3xl font-bold leading-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
                 {displayName}
               </h1>
@@ -189,7 +212,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                 </Link>
               </div>
             </div>
-
           </div>
         </div>
       </div>

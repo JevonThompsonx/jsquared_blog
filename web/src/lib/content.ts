@@ -1,7 +1,8 @@
 import sanitizeHtml, { type Attributes, type IFrame } from "sanitize-html";
 import { z } from "zod";
 
-import { normalizeThoughtsBlockSummary } from "@/lib/tiptap/thoughts-block";
+import { decodeHtmlEntities } from "@/lib/html-text";
+import { normalizeThoughtsBlockSummary } from "@/lib/tiptap/thoughts-block-shared";
 
 const tiptapMarkSchema = z.object({
   type: z.string().optional(),
@@ -56,41 +57,6 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function decodeHtmlEntities(value: string): string {
-  return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (entity, token: string) => {
-    const normalizedToken = token.toLowerCase();
-
-    switch (normalizedToken) {
-      case "amp":
-        return "&";
-      case "lt":
-        return "<";
-      case "gt":
-        return ">";
-      case "quot":
-        return '"';
-      case "apos":
-        return "'";
-      case "nbsp":
-        return " ";
-      default:
-        break;
-    }
-
-    if (normalizedToken.startsWith("#x")) {
-      const codePoint = Number.parseInt(normalizedToken.slice(2), 16);
-      return Number.isNaN(codePoint) ? entity : String.fromCodePoint(codePoint);
-    }
-
-    if (normalizedToken.startsWith("#")) {
-      const codePoint = Number.parseInt(normalizedToken.slice(1), 10);
-      return Number.isNaN(codePoint) ? entity : String.fromCodePoint(codePoint);
-    }
-
-    return entity;
-  });
-}
-
 function safeJsonParse(value: string): unknown {
   return JSON.parse(value);
 }
@@ -108,6 +74,9 @@ function sanitizeHref(value: unknown): string | null {
   return null;
 }
 
+const LOCAL_IMAGE_PATH_PATTERN =
+  /^\/(?:media|images)\/[A-Za-z0-9][A-Za-z0-9/_.-]*$/;
+
 function sanitizeImageSrc(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -115,6 +84,15 @@ function sanitizeImageSrc(value: unknown): string | null {
 
   const trimmed = value.trim();
   if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Self-hosted media is stored as a root-relative path. Reject any traversal
+  // segment even though the pattern already blocks most of them.
+  if (
+    LOCAL_IMAGE_PATH_PATTERN.test(trimmed) &&
+    !trimmed.split("/").includes("..")
+  ) {
     return trimmed;
   }
 

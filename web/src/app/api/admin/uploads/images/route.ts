@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
-import { uploadEditorialImage, validateUploadedImage } from "@/lib/cloudinary/uploads";
+import { validateUploadedImage } from "@/lib/cloudinary/uploads";
+import { saveLocalImage } from "@/lib/media/local-storage";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
 const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: Request) {
@@ -13,7 +19,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-upload-image:${session.user.id}:${getClientIp(request)}`, 20, 60_000);
+  const rl = await checkRateLimit(
+    `admin-upload-image:${session.user.id}:${getClientIp(request)}`,
+    20,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -29,7 +39,10 @@ export async function POST(request: Request) {
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Image file is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Image file is required" },
+        { status: 400 },
+      );
     }
 
     await validateUploadedImage(file, {
@@ -37,7 +50,7 @@ export async function POST(request: Request) {
       maxBytes: MAX_BYTES,
     });
 
-    const upload = await uploadEditorialImage(file);
+    const upload = await saveLocalImage(file, { kind: "editorial" });
 
     return NextResponse.json(upload, { status: 201 });
   } catch (error) {
@@ -45,13 +58,26 @@ export async function POST(request: Request) {
       errorName: error instanceof Error ? error.name : "UnknownError",
     });
     if (error instanceof Error) {
-      if (error.message === "Only JPEG, PNG, WebP, or GIF images are allowed" || error.message === "Image must be under 10 MB" || error.message === "Uploaded file content does not match a supported image format") {
+      if (
+        error.message === "Only JPEG, PNG, WebP, or GIF images are allowed" ||
+        error.message === "Image must be under 10 MB" ||
+        error.message ===
+          "Uploaded file content does not match a supported image format"
+      ) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
     }
 
-    const status = error instanceof Error && error.message.includes("not configured") ? 503 : 500;
-    const safeMessage = status === 503 ? "Upload service unavailable" : "Upload failed";
+    const errorCode =
+      error && typeof error === "object" && "code" in error
+        ? String((error as NodeJS.ErrnoException).code)
+        : "";
+    const storageUnavailable =
+      (error instanceof Error && error.message.includes("not configured")) ||
+      ["EACCES", "ENOSPC", "EROFS", "EMFILE"].includes(errorCode);
+    const status = storageUnavailable ? 503 : 500;
+    const safeMessage =
+      status === 503 ? "Upload service unavailable" : "Upload failed";
     return NextResponse.json({ error: safeMessage }, { status });
   }
 }

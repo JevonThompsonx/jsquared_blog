@@ -2,15 +2,23 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
-import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
+import {
+  adminRouteFailureResponse,
+  logAdminRouteFailure,
+} from "@/lib/admin-route-errors";
 import { requireAdminSession } from "@/lib/auth/session";
 import { getSeriesPartNumbers } from "@/server/dal/series";
 
-const seriesIdSchema = z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/);
+const seriesIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(/^[a-zA-Z0-9_-]+$/);
 
 // GET /api/admin/series/:seriesId/part-numbers
 // Output: { takenNumbers: number[]; next: number }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 
 export async function GET(
   request: Request,
@@ -21,7 +29,11 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-series-part-numbers:${session.user.id}:${getClientIp(request)}`, 120, 60_000);
+  const rl = await checkRateLimit(
+    `admin-series-part-numbers:${session.user.id}:${getClientIp(request)}`,
+    120,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -36,10 +48,13 @@ export async function GET(
     const result = await getSeriesPartNumbers(parsedSeriesId.data);
     return NextResponse.json(result);
   } catch (error) {
-    logAdminRouteFailure("[admin series part numbers] failed to load series part numbers", {
-      seriesId: parsedSeriesId.data,
-      error,
-    });
+    logAdminRouteFailure(
+      "[admin series part numbers] failed to load series part numbers",
+      {
+        seriesId: parsedSeriesId.data,
+        error,
+      },
+    );
     return adminRouteFailureResponse("Failed to load series part numbers");
   }
 }

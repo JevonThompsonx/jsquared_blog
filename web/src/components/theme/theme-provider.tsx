@@ -1,6 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 
 type ThemeMode = "light" | "dark";
 type ThemeLook = "sage" | "lichen";
@@ -15,13 +24,22 @@ type ThemeContextValue = {
   darkLook: ThemeLook;
   lightLookLabel: string;
   darkLookLabel: string;
-  availableLooks: Array<{ value: ThemeLook; label: string; description: string; swatches: string[] }>;
+  availableLooks: Array<{
+    value: ThemeLook;
+    label: string;
+    description: string;
+    swatches: string[];
+  }>;
   setMode: (mode: ThemeMode) => void;
   setLook: (look: ThemeLook) => void;
   toggleMode: () => void;
   cycleLook: () => void;
   /** Atomically restore all three theme dimensions from a saved preference. */
-  restorePreference: (mode: ThemeMode, lightLook: ThemeLook, darkLook: ThemeLook) => void;
+  restorePreference: (
+    mode: ThemeMode,
+    lightLook: ThemeLook,
+    darkLook: ThemeLook,
+  ) => void;
 };
 
 type ThemeVariables = CSSProperties & Record<`--${string}`, string>;
@@ -44,7 +62,11 @@ function isThemeLook(value: unknown): value is ThemeLook {
   return value === "sage" || value === "lichen";
 }
 
-function readThemeCookie(): { mode: ThemeMode | null; lightLook: ThemeLook | null; darkLook: ThemeLook | null } {
+function readThemeCookie(): {
+  mode: ThemeMode | null;
+  lightLook: ThemeLook | null;
+  darkLook: ThemeLook | null;
+} {
   try {
     const match = document.cookie.match(/(?:^|; )j2_theme=([^;]*)/);
     if (!match?.[1]) return { mode: null, lightLook: null, darkLook: null };
@@ -67,12 +89,20 @@ function readThemeCookie(): { mode: ThemeMode | null; lightLook: ThemeLook | nul
   }
 }
 
-function writeThemeCookie(mode: ThemeMode, lightLook: ThemeLook, darkLook: ThemeLook) {
+function writeThemeCookie(
+  mode: ThemeMode,
+  lightLook: ThemeLook,
+  darkLook: ThemeLook,
+) {
   const value = JSON.stringify({ mode, lightLook, darkLook });
   document.cookie = `${THEME_COOKIE}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; SameSite=Lax`;
 }
 
-function readStoredThemePreference(): { mode: ThemeMode; lightLook: ThemeLook; darkLook: ThemeLook } {
+function readStoredThemePreference(): {
+  mode: ThemeMode;
+  lightLook: ThemeLook;
+  darkLook: ThemeLook;
+} {
   if (typeof window === "undefined") {
     return { mode: "light", lightLook: "sage", darkLook: "lichen" };
   }
@@ -117,22 +147,45 @@ const LOOK_LABELS: Record<ThemeLook, string> = {
 };
 const LOOK_DESCRIPTIONS: Record<ThemeLook, string> = {
   sage: "Creamy moss-and-linen neutrals with calm green depth for an earthy night look.",
-  lichen: "A bright yellow-green palette with blue-green depth and cleaner daylight contrast.",
+  lichen:
+    "A bright yellow-green palette with blue-green depth and cleaner daylight contrast.",
 };
 const LOOK_SWATCHES: Record<ThemeLook, string[]> = {
   sage: ["#7c9557", "#557468", "#fdf8ef", "#2f4037"],
   lichen: ["#9aae58", "#5f877b", "#fffaf1", "#33433a"],
 };
 
+/**
+ * Light-mode accent tokens are verified for WCAG AA contrast (>= 4.5:1).
+ * Ratios were computed with the WCAG relative-luminance formula against the
+ * darkest stop of each `--background` gradient and against each card fill:
+ *
+ *   sage   #55663c on #dbe2d4 = 4.73:1, on #fdf8ef = 5.92:1
+ *   sage   #4b665c on #dbe2d4 = 4.72:1, on #fdf8ef = 5.92:1
+ *   lichen #586431 on #d6e1d9 = 4.76:1, on #fffaf1 = 6.15:1
+ *   lichen #4b6557 on #d6e1d9 = 4.74:1, on #fffaf1 = 6.12:1
+ *
+ * White text on the primary button fills:
+ *   #ffffff on sage #55663c = 6.26:1
+ *   #ffffff on lichen #586431 = 6.40:1
+ *
+ * These replace the old #7c9557 (3.15:1 on #fdf8ef) and #9aae58 (2.36:1 on
+ * #fffaf1) text accents. Hue and saturation are unchanged; only lightness was
+ * reduced. Soft/background tints (--accent-soft, --primary-soft) and the
+ * decorative --primary-light fill are intentionally untouched. Lichen's
+ * --on-primary moved from #1e2f1f to #ffffff because the darker fill now
+ * requires light text.
+ */
 const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
   light: {
     sage: {
-      "--background": "linear-gradient(180deg, #f6f2e8 0%, #e9e6d7 44%, #dbe2d4 100%)",
+      "--background":
+        "linear-gradient(180deg, #f6f2e8 0%, #e9e6d7 44%, #dbe2d4 100%)",
       "--text-primary": "#293328",
       "--text-secondary": "#59665d",
       "--text-highlight": "linear-gradient(90deg, #7c9557 0%, #557468 100%)",
       "--card-bg": "#fdf8ef",
-      "--primary": "#7c9557",
+      "--primary": "#55663c",
       "--primary-light": "#9aae58",
       "--on-primary": "#ffffff",
       "--btn-bg": "#3d5427",
@@ -146,8 +199,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--muted": "#59665d",
       "--surface": "rgba(253, 248, 239, 0.88)",
       "--surface-strong": "#fdf8ef",
-      "--accent": "#7c9557",
-      "--accent-strong": "#557468",
+      "--accent": "#55663c",
+      "--accent-strong": "#4b665c",
       "--accent-soft": "rgba(124, 149, 87, 0.12)",
       "--primary-soft": "rgba(124, 149, 87, 0.12)",
       "--shadow": "0 18px 42px rgba(68, 72, 58, 0.11)",
@@ -157,7 +210,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--input-bg": "rgba(255, 252, 246, 0.94)",
       "--input-border": "#d9d1c1",
       "--input-text": "#293328",
-      "--hero-panel-bg": "linear-gradient(135deg, rgba(40, 49, 38, 0.70) 0%, rgba(78, 101, 90, 0.42) 100%)",
+      "--hero-panel-bg":
+        "linear-gradient(135deg, rgba(40, 49, 38, 0.70) 0%, rgba(78, 101, 90, 0.42) 100%)",
       "--hero-panel-border": "rgba(255, 250, 240, 0.22)",
       "--hero-shadow": "0 22px 60px rgba(25, 34, 28, 0.24)",
       "--card-shell-bg": "#f7f2e8",
@@ -169,14 +223,16 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--card-title": "#293328",
       "--card-body": "#59665d",
       "--card-meta": "#707a70",
-      "--card-kicker": "#7c9557",
+      "--card-kicker": "#55663c",
       "--card-chip-bg": "rgba(124, 149, 87, 0.10)",
       "--card-chip-border": "rgba(85, 116, 104, 0.16)",
       "--card-chip-text": "#647950",
-      "--card-link": "#557468",
-      "--card-link-hover": "#7c9557",
-      "--overlay-scrim": "linear-gradient(180deg, rgba(18, 23, 18, 0.08) 0%, rgba(18, 24, 19, 0.26) 38%, rgba(15, 20, 16, 0.86) 100%)",
-      "--overlay-panel-bg": "linear-gradient(180deg, rgba(48, 63, 54, 0.22) 0%, rgba(39, 52, 45, 0.88) 28%, rgba(24, 33, 27, 0.98) 100%)",
+      "--card-link": "#4b665c",
+      "--card-link-hover": "#55663c",
+      "--overlay-scrim":
+        "linear-gradient(180deg, rgba(18, 23, 18, 0.08) 0%, rgba(18, 24, 19, 0.26) 38%, rgba(15, 20, 16, 0.86) 100%)",
+      "--overlay-panel-bg":
+        "linear-gradient(180deg, rgba(48, 63, 54, 0.22) 0%, rgba(39, 52, 45, 0.88) 28%, rgba(24, 33, 27, 0.98) 100%)",
       "--overlay-panel-border": "rgba(246, 239, 227, 0.18)",
       "--overlay-panel-shadow": "0 -18px 40px rgba(8, 12, 9, 0.28)",
       "--overlay-title": "#fff9ef",
@@ -189,14 +245,15 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--card-image-filter": "saturate(0.98) contrast(1.01)",
     },
     lichen: {
-      "--background": "linear-gradient(180deg, #fbf7eb 0%, #e8ecd8 50%, #d6e1d9 100%)",
+      "--background":
+        "linear-gradient(180deg, #fbf7eb 0%, #e8ecd8 50%, #d6e1d9 100%)",
       "--text-primary": "#273228",
       "--text-secondary": "#5f7067",
       "--text-highlight": "linear-gradient(90deg, #9aae58 0%, #5f877b 100%)",
       "--card-bg": "#fffaf1",
-      "--primary": "#9aae58",
+      "--primary": "#586431",
       "--primary-light": "#bbca79",
-      "--on-primary": "#1e2f1f",
+      "--on-primary": "#ffffff",
       "--btn-bg": "#3a5432",
       "--btn-text": "#c8eb75",
       "--border": "#d8d8c7",
@@ -208,8 +265,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--muted": "#5f7067",
       "--surface": "rgba(255, 250, 241, 0.88)",
       "--surface-strong": "#fffaf1",
-      "--accent": "#9aae58",
-      "--accent-strong": "#5f877b",
+      "--accent": "#586431",
+      "--accent-strong": "#47655c",
       "--accent-soft": "rgba(154, 174, 88, 0.14)",
       "--primary-soft": "rgba(154, 174, 88, 0.12)",
       "--shadow": "0 18px 42px rgba(78, 85, 62, 0.13)",
@@ -219,7 +276,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--input-bg": "rgba(255, 253, 247, 0.94)",
       "--input-border": "#d8d8c7",
       "--input-text": "#273228",
-      "--hero-panel-bg": "linear-gradient(135deg, rgba(45, 56, 37, 0.72) 0%, rgba(67, 102, 92, 0.42) 100%)",
+      "--hero-panel-bg":
+        "linear-gradient(135deg, rgba(45, 56, 37, 0.72) 0%, rgba(67, 102, 92, 0.42) 100%)",
       "--hero-panel-border": "rgba(255, 250, 240, 0.24)",
       "--hero-shadow": "0 22px 60px rgba(28, 36, 28, 0.24)",
       "--card-shell-bg": "#f8f4e8",
@@ -231,14 +289,16 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--card-title": "#2a3429",
       "--card-body": "#5d6e63",
       "--card-meta": "#738177",
-      "--card-kicker": "#6d927e",
+      "--card-kicker": "#4b6557",
       "--card-chip-bg": "rgba(154, 174, 88, 0.10)",
       "--card-chip-border": "rgba(95, 135, 123, 0.18)",
       "--card-chip-text": "#617a53",
-      "--card-link": "#6d927e",
-      "--card-link-hover": "#9aae58",
-      "--overlay-scrim": "linear-gradient(180deg, rgba(15, 21, 16, 0.08) 0%, rgba(19, 28, 22, 0.28) 38%, rgba(17, 26, 20, 0.88) 100%)",
-      "--overlay-panel-bg": "linear-gradient(180deg, rgba(54, 76, 63, 0.22) 0%, rgba(41, 59, 49, 0.88) 28%, rgba(24, 36, 29, 0.98) 100%)",
+      "--card-link": "#4b6557",
+      "--card-link-hover": "#586431",
+      "--overlay-scrim":
+        "linear-gradient(180deg, rgba(15, 21, 16, 0.08) 0%, rgba(19, 28, 22, 0.28) 38%, rgba(17, 26, 20, 0.88) 100%)",
+      "--overlay-panel-bg":
+        "linear-gradient(180deg, rgba(54, 76, 63, 0.22) 0%, rgba(41, 59, 49, 0.88) 28%, rgba(24, 36, 29, 0.98) 100%)",
       "--overlay-panel-border": "rgba(255, 247, 233, 0.18)",
       "--overlay-panel-shadow": "0 -18px 40px rgba(10, 14, 11, 0.30)",
       "--overlay-title": "#fffaf0",
@@ -253,7 +313,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
   },
   dark: {
     sage: {
-      "--background": "linear-gradient(180deg, #19231d 0%, #223029 44%, #2b3a32 100%)",
+      "--background":
+        "linear-gradient(180deg, #19231d 0%, #223029 44%, #2b3a32 100%)",
       "--text-primary": "#f4f1e7",
       "--text-secondary": "#d0d4c5",
       "--text-highlight": "linear-gradient(90deg, #d5e39a 0%, #9cc7bc 100%)",
@@ -283,7 +344,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--input-bg": "rgba(49, 65, 56, 0.92)",
       "--input-border": "#495b50",
       "--input-text": "#f8f4ea",
-      "--hero-panel-bg": "linear-gradient(135deg, rgba(16, 23, 18, 0.78) 0%, rgba(40, 67, 59, 0.50) 100%)",
+      "--hero-panel-bg":
+        "linear-gradient(135deg, rgba(16, 23, 18, 0.78) 0%, rgba(40, 67, 59, 0.50) 100%)",
       "--hero-panel-border": "rgba(238, 243, 224, 0.14)",
       "--hero-shadow": "0 28px 68px rgba(0, 0, 0, 0.40)",
       "--card-shell-bg": "#2f4037",
@@ -301,8 +363,10 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--card-chip-text": "#e8e0d3",
       "--card-link": "#9dc7bc",
       "--card-link-hover": "#dbe8ab",
-      "--overlay-scrim": "linear-gradient(180deg, rgba(5, 8, 6, 0.10) 0%, rgba(6, 10, 8, 0.28) 40%, rgba(4, 7, 5, 0.90) 100%)",
-      "--overlay-panel-bg": "linear-gradient(180deg, rgba(38, 58, 47, 0.22) 0%, rgba(30, 48, 39, 0.88) 28%, rgba(17, 28, 22, 0.98) 100%)",
+      "--overlay-scrim":
+        "linear-gradient(180deg, rgba(5, 8, 6, 0.10) 0%, rgba(6, 10, 8, 0.28) 40%, rgba(4, 7, 5, 0.90) 100%)",
+      "--overlay-panel-bg":
+        "linear-gradient(180deg, rgba(38, 58, 47, 0.22) 0%, rgba(30, 48, 39, 0.88) 28%, rgba(17, 28, 22, 0.98) 100%)",
       "--overlay-panel-border": "rgba(244, 239, 228, 0.16)",
       "--overlay-panel-shadow": "0 -18px 40px rgba(0, 0, 0, 0.34)",
       "--overlay-title": "#fffaf0",
@@ -315,7 +379,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--card-image-filter": "saturate(0.98) contrast(1.01)",
     },
     lichen: {
-      "--background": "linear-gradient(180deg, #1a241d 0%, #223028 44%, #2c3d34 100%)",
+      "--background":
+        "linear-gradient(180deg, #1a241d 0%, #223028 44%, #2c3d34 100%)",
       "--text-primary": "#f3f1e7",
       "--text-secondary": "#d0d4c5",
       "--text-highlight": "linear-gradient(90deg, #d6e48d 0%, #9dc9be 100%)",
@@ -345,7 +410,8 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--input-bg": "rgba(51, 67, 58, 0.92)",
       "--input-border": "#4b5d52",
       "--input-text": "#f8f4ea",
-      "--hero-panel-bg": "linear-gradient(135deg, rgba(17, 24, 19, 0.78) 0%, rgba(40, 72, 63, 0.50) 100%)",
+      "--hero-panel-bg":
+        "linear-gradient(135deg, rgba(17, 24, 19, 0.78) 0%, rgba(40, 72, 63, 0.50) 100%)",
       "--hero-panel-border": "rgba(238, 243, 224, 0.14)",
       "--hero-shadow": "0 28px 68px rgba(0, 0, 0, 0.40)",
       "--card-shell-bg": "#2f4037",
@@ -363,8 +429,10 @@ const themePresets: Record<ThemeMode, Record<ThemeLook, ThemeVariables>> = {
       "--card-chip-text": "#e8e0d3",
       "--card-link": "#9dc9be",
       "--card-link-hover": "#e0eba3",
-      "--overlay-scrim": "linear-gradient(180deg, rgba(5, 8, 6, 0.10) 0%, rgba(7, 11, 8, 0.30) 40%, rgba(4, 8, 6, 0.92) 100%)",
-      "--overlay-panel-bg": "linear-gradient(180deg, rgba(38, 61, 49, 0.22) 0%, rgba(31, 50, 41, 0.89) 28%, rgba(18, 30, 24, 0.99) 100%)",
+      "--overlay-scrim":
+        "linear-gradient(180deg, rgba(5, 8, 6, 0.10) 0%, rgba(7, 11, 8, 0.30) 40%, rgba(4, 8, 6, 0.92) 100%)",
+      "--overlay-panel-bg":
+        "linear-gradient(180deg, rgba(38, 61, 49, 0.22) 0%, rgba(31, 50, 41, 0.89) 28%, rgba(18, 30, 24, 0.99) 100%)",
       "--overlay-panel-border": "rgba(244, 239, 228, 0.16)",
       "--overlay-panel-shadow": "0 -18px 40px rgba(0, 0, 0, 0.34)",
       "--overlay-title": "#fffaf0",
@@ -388,9 +456,15 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
     () => false,
   );
 
-  const [modeState, setModeState] = useState<ThemeMode>(() => readStoredThemePreference().mode);
-  const [lightLookState, setLightLookState] = useState<ThemeLook>(() => readStoredThemePreference().lightLook);
-  const [darkLookState, setDarkLookState] = useState<ThemeLook>(() => readStoredThemePreference().darkLook);
+  const [modeState, setModeState] = useState<ThemeMode>(
+    () => readStoredThemePreference().mode,
+  );
+  const [lightLookState, setLightLookState] = useState<ThemeLook>(
+    () => readStoredThemePreference().lightLook,
+  );
+  const [darkLookState, setDarkLookState] = useState<ThemeLook>(
+    () => readStoredThemePreference().darkLook,
+  );
 
   const mode = useMemo<ThemeMode>(() => {
     if (!hydrated) {
@@ -421,74 +495,84 @@ export function NextThemeProvider({ children }: { children: ReactNode }) {
 
   const look = mode === "light" ? lightLook : darkLook;
 
-  const value = useMemo<ThemeContextValue>(() => ({
-    currentTheme: `${mode}-${look}`,
-    mode,
-    look,
-    lookLabel: LOOK_LABELS[look],
-    lookDescription: LOOK_DESCRIPTIONS[look],
-    lightLook,
-    darkLook,
-    lightLookLabel: LOOK_LABELS[lightLook],
-    darkLookLabel: LOOK_LABELS[darkLook],
-    availableLooks: LOOK_ORDER.map((value) => ({
-      value,
-      label: LOOK_LABELS[value],
-      description: LOOK_DESCRIPTIONS[value],
-      swatches: LOOK_SWATCHES[value],
-    })),
-    setMode: (nextMode) => {
-      setModeState(nextMode);
-      window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
-      writeThemeCookie(nextMode, lightLook, darkLook);
-    },
-    setLook: (nextLook) => {
-      if (mode === "light") {
-        setLightLookState(nextLook);
-        window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLook);
-        writeThemeCookie(mode, nextLook, darkLook);
-        return;
-      }
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      currentTheme: `${mode}-${look}`,
+      mode,
+      look,
+      lookLabel: LOOK_LABELS[look],
+      lookDescription: LOOK_DESCRIPTIONS[look],
+      lightLook,
+      darkLook,
+      lightLookLabel: LOOK_LABELS[lightLook],
+      darkLookLabel: LOOK_LABELS[darkLook],
+      availableLooks: LOOK_ORDER.map((value) => ({
+        value,
+        label: LOOK_LABELS[value],
+        description: LOOK_DESCRIPTIONS[value],
+        swatches: LOOK_SWATCHES[value],
+      })),
+      setMode: (nextMode) => {
+        setModeState(nextMode);
+        window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+        writeThemeCookie(nextMode, lightLook, darkLook);
+      },
+      setLook: (nextLook) => {
+        if (mode === "light") {
+          setLightLookState(nextLook);
+          window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLook);
+          writeThemeCookie(mode, nextLook, darkLook);
+          return;
+        }
 
-      setDarkLookState(nextLook);
-      window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextLook);
-      writeThemeCookie(mode, lightLook, nextLook);
-    },
-    toggleMode: () => {
-      const nextMode = mode === "light" ? "dark" : "light";
-      setModeState(nextMode);
-      window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
-      writeThemeCookie(nextMode, lightLook, darkLook);
-    },
-    cycleLook: () => {
-      const nextLook = LOOK_ORDER[(LOOK_ORDER.indexOf(look) + 1) % LOOK_ORDER.length];
-      if (mode === "light") {
-        setLightLookState(nextLook);
-        window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLook);
-        writeThemeCookie(mode, nextLook, darkLook);
-        return;
-      }
+        setDarkLookState(nextLook);
+        window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextLook);
+        writeThemeCookie(mode, lightLook, nextLook);
+      },
+      toggleMode: () => {
+        const nextMode = mode === "light" ? "dark" : "light";
+        setModeState(nextMode);
+        window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+        writeThemeCookie(nextMode, lightLook, darkLook);
+      },
+      cycleLook: () => {
+        const nextLook =
+          LOOK_ORDER[(LOOK_ORDER.indexOf(look) + 1) % LOOK_ORDER.length];
+        if (mode === "light") {
+          setLightLookState(nextLook);
+          window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLook);
+          writeThemeCookie(mode, nextLook, darkLook);
+          return;
+        }
 
-      setDarkLookState(nextLook);
-      window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextLook);
-      writeThemeCookie(mode, lightLook, nextLook);
-    },
-    restorePreference: (nextMode, nextLightLook, nextDarkLook) => {
-      setModeState(nextMode);
-      setLightLookState(nextLightLook);
-      setDarkLookState(nextDarkLook);
-      window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
-      window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLightLook);
-      window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextDarkLook);
-      writeThemeCookie(nextMode, nextLightLook, nextDarkLook);
-    },
-  }), [darkLook, lightLook, look, mode]);
+        setDarkLookState(nextLook);
+        window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextLook);
+        writeThemeCookie(mode, lightLook, nextLook);
+      },
+      restorePreference: (nextMode, nextLightLook, nextDarkLook) => {
+        setModeState(nextMode);
+        setLightLookState(nextLightLook);
+        setDarkLookState(nextDarkLook);
+        window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+        window.localStorage.setItem(LIGHT_LOOK_STORAGE_KEY, nextLightLook);
+        window.localStorage.setItem(DARK_LOOK_STORAGE_KEY, nextDarkLook);
+        writeThemeCookie(nextMode, nextLightLook, nextDarkLook);
+      },
+    }),
+    [darkLook, lightLook, look, mode],
+  );
 
   const themeStyle = themePresets[mode][look];
 
   return (
     <ThemeContext.Provider value={value}>
-      <div suppressHydrationWarning className="theme-root min-h-screen transition-[background,color,border-color,box-shadow] duration-300" data-theme-look={look} data-theme-mode={mode} style={themeStyle}>
+      <div
+        suppressHydrationWarning
+        className="theme-root min-h-screen transition-[background,color,border-color,box-shadow] duration-300"
+        data-theme-look={look}
+        data-theme-mode={mode}
+        style={themeStyle}
+      >
         {children}
       </div>
     </ThemeContext.Provider>

@@ -11,12 +11,25 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header shell"),
+  SiteHeader: () =>
+    createElement("div", { "data-testid": "site-header" }, "Header shell"),
 }));
 
 vi.mock("@/components/blog/filtered-feed", () => ({
-  FilteredFeed: ({ apiParams, emptyTitle, initialPosts }: { apiParams: Record<string, string>; emptyTitle: string; initialPosts: Array<{ id: string }> }) =>
-    createElement("div", { "data-testid": "filtered-feed", "data-category": apiParams.category }, `${emptyTitle} | Feed posts: ${initialPosts.length}`),
+  FilteredFeed: ({
+    apiParams,
+    emptyTitle,
+    initialPosts,
+  }: {
+    apiParams: Record<string, string>;
+    emptyTitle: string;
+    initialPosts: Array<{ id: string }>;
+  }) =>
+    createElement(
+      "div",
+      { "data-testid": "filtered-feed", "data-category": apiParams.category },
+      `${emptyTitle} | Feed posts: ${initialPosts.length}`,
+    ),
 }));
 
 vi.mock("@/server/dal/categories", () => ({
@@ -31,7 +44,10 @@ vi.mock("@/server/queries/posts", () => ({
   listPublishedPostsByCategory: vi.fn(),
 }));
 
-import CategoryPage, { dynamic, generateMetadata } from "@/app/(blog)/category/[category]/page";
+import CategoryPage, {
+  dynamic,
+  generateMetadata,
+} from "@/app/(blog)/category/[category]/page";
 import { getCategoryNameBySlug } from "@/server/dal/categories";
 import { countPublishedPostsByCategory } from "@/server/dal/posts";
 import { listPublishedPostsByCategory } from "@/server/queries/posts";
@@ -66,12 +82,16 @@ describe("CategoryPage", () => {
   it("keeps the route dynamic and builds encoded category metadata", async () => {
     vi.mocked(getCategoryNameBySlug).mockResolvedValue("Van Life");
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ category: "van-life" }) });
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ category: "van-life" }),
+    });
 
     expect(dynamic).toBe("force-dynamic");
     expect(getCategoryNameBySlug).toHaveBeenCalledWith("van-life");
-    expect(metadata.title).toBe("Van Life – J²Adventures");
-    expect(metadata.alternates?.types?.["application/rss+xml"]).toBe("https://jsquaredadventures.com/category/van-life/feed.xml");
+    expect(metadata.title).toBe("Van Life");
+    expect(metadata.alternates?.types?.["application/rss+xml"]).toBe(
+      "https://jsquaredadventures.com/category/van-life/feed.xml",
+    );
   });
 
   it("renders the category shell with the filtered feed contract", async () => {
@@ -79,10 +99,16 @@ describe("CategoryPage", () => {
     vi.mocked(listPublishedPostsByCategory).mockResolvedValue([categoryPost]);
     vi.mocked(countPublishedPostsByCategory).mockResolvedValue(1);
 
-    const markup = renderToStaticMarkup(await CategoryPage({ params: Promise.resolve({ category: "van-life" }) }));
+    const markup = renderToStaticMarkup(
+      await CategoryPage({ params: Promise.resolve({ category: "van-life" }) }),
+    );
 
     expect(getCategoryNameBySlug).toHaveBeenCalledWith("van-life");
-    expect(listPublishedPostsByCategory).toHaveBeenCalledWith("van-life", 20, 0);
+    expect(listPublishedPostsByCategory).toHaveBeenCalledWith(
+      "van-life",
+      20,
+      0,
+    );
     expect(countPublishedPostsByCategory).toHaveBeenCalledWith("van-life");
     expect(markup).toContain('data-testid="site-header"');
     expect(markup).toContain("Van Life");
@@ -93,16 +119,21 @@ describe("CategoryPage", () => {
     expect(markup).toContain("Feed posts: 1");
   });
 
-  it("falls back to the slug for the title when the category is not in the database", async () => {
+  it("notFounds from metadata when the category is not in the database", async () => {
     vi.mocked(getCategoryNameBySlug).mockResolvedValue(null);
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ category: "unknown-slug" }) });
-
-    expect(metadata.title).toBe("unknown-slug – J²Adventures");
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({ category: "unknown-slug" }),
+      }),
+    ).rejects.toThrow(notFoundError);
+    expect(notFound).toHaveBeenCalled();
   });
 
   it("fails closed on malformed category params before querying posts", async () => {
-    await expect(CategoryPage({ params: Promise.resolve({ category: "%E0%A4%A" }) })).rejects.toThrow(notFoundError);
+    await expect(
+      CategoryPage({ params: Promise.resolve({ category: "%E0%A4%A" }) }),
+    ).rejects.toThrow(notFoundError);
 
     expect(notFound).toHaveBeenCalled();
     expect(getCategoryNameBySlug).not.toHaveBeenCalled();
@@ -111,9 +142,13 @@ describe("CategoryPage", () => {
   });
 
   it("fails closed on percent-encoded whitespace-only category params", async () => {
-    const metadata = await generateMetadata({ params: Promise.resolve({ category: "%20%20" }) });
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ category: "%20%20" }),
+    });
 
-    await expect(CategoryPage({ params: Promise.resolve({ category: "%20%20" }) })).rejects.toThrow(notFoundError);
+    await expect(
+      CategoryPage({ params: Promise.resolve({ category: "%20%20" }) }),
+    ).rejects.toThrow(notFoundError);
 
     expect(metadata).toEqual({});
     expect(notFound).toHaveBeenCalled();

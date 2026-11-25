@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
+import {
+  adminRouteFailureResponse,
+  logAdminRouteFailure,
+} from "@/lib/admin-route-errors";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { clonePostById } from "@/server/posts/clone";
@@ -13,7 +16,7 @@ const clonePostSchema = z.object({
 // POST /api/admin/posts/clone
 // Body: { postId: string }
 // Response: { postId: string; slug: string; title: string; status: "draft" }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: clone a post into a new draft, then navigate to the cloned edit screen
 export async function POST(request: Request): Promise<NextResponse> {
   const session = await requireAdminSession();
@@ -21,7 +24,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-posts-clone:${session.user.id}:${getClientIp(request)}`, 20, 60_000);
+  const rl = await checkRateLimit(
+    `admin-posts-clone:${session.user.id}:${getClientIp(request)}`,
+    20,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -31,14 +38,19 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     body = clonePostSchema.parse(await request.json());
   } catch {
-    return NextResponse.json({ error: "Invalid clone request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid clone request" },
+      { status: 400 },
+    );
   }
 
   try {
     const result = await clonePostById(body.postId);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    const isNotFound = error instanceof Error && error.message.toLowerCase().includes("not found");
+    const isNotFound =
+      error instanceof Error &&
+      error.message.toLowerCase().includes("not found");
     if (isNotFound) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }

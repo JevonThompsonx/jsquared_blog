@@ -1,22 +1,35 @@
 import { NextResponse } from "next/server";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
-import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
+import {
+  adminRouteFailureResponse,
+  logAdminRouteFailure,
+} from "@/lib/admin-route-errors";
 import { requireAdminSession } from "@/lib/auth/session";
 import { listCommentsForAdmin } from "@/server/dal/comments";
-import { commentSortSchema, postCommentsParamsSchema } from "@/server/forms/comments";
+import {
+  commentSortSchema,
+  postCommentsParamsSchema,
+} from "@/server/forms/comments";
 
 // GET /api/admin/posts/[postId]/comments?sort=likes|newest|oldest
 // Response: { comments: Array<{ id: string; postId: string; authorId: string; authorDisplayName: string; authorAvatarUrl: string | null; content: string; parentId: string | null; createdAt: string; updatedAt: string; likeCount: number; userHasLiked: boolean; canDelete: boolean; visibility: "visible" | "hidden" | "deleted"; isFlagged: boolean; moderatedAt: string | null; moderatedByUserId: string | null; canLike: boolean }> }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: fetch the full moderation-aware thread for a post so admins can review hidden/flagged/deleted comments without losing original content
-export async function GET(request: Request, context: { params: Promise<{ postId: string }> }): Promise<NextResponse> {
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ postId: string }> },
+): Promise<NextResponse> {
   const session = await requireAdminSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-post-comments:${session.user.id}:${getClientIp(request)}`, 120, 60_000);
+  const rl = await checkRateLimit(
+    `admin-post-comments:${session.user.id}:${getClientIp(request)}`,
+    120,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -28,7 +41,9 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
 
   const { postId } = paramsParse.data;
   const url = new URL(request.url);
-  const sortParse = commentSortSchema.safeParse(url.searchParams.get("sort") ?? "likes");
+  const sortParse = commentSortSchema.safeParse(
+    url.searchParams.get("sort") ?? "likes",
+  );
   if (!sortParse.success) {
     return NextResponse.json({ error: "Invalid sort option" }, { status: 400 });
   }
@@ -37,7 +52,11 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
     const comments = await listCommentsForAdmin(postId, sortParse.data);
     return NextResponse.json({ comments });
   } catch (error) {
-    logAdminRouteFailure("[admin post comments] failed to load comments", { postId, sort: sortParse.data, error });
+    logAdminRouteFailure("[admin post comments] failed to load comments", {
+      postId,
+      sort: sortParse.data,
+      error,
+    });
     return adminRouteFailureResponse("Failed to load comments");
   }
 }

@@ -3,7 +3,7 @@
 > **For any agent opening this repo:** This is the master tracking document for the feature improvement plan. Start here. The current state, what's done, what's next, and how to pick up work are all in this file.
 
 **Last updated:** 2026-06-15
-**Project state:** Stable baseline established; all 10 roadmap branches + 2 patches + 1 docs branch merged. CI (`.github/workflows/ci.yml`) currently runs 6 jobs — Lint, Typecheck, Unit tests, Security audit, Build, E2E. The "3/3 jobs green" figure below is a historical note from the original 2026-06-15 baseline; re-check the Actions tab for current status.
+**Project state:** Stable baseline established; all 10 original roadmap branches + 2 patches + 1 docs branch merged. WorkOS AuthKit migration is implemented on `t3/blog-audit-hardening-optimization` and awaits orchestrator-owned production cutover. CI (`.github/workflows/ci.yml`) currently runs 6 jobs — Lint, Typecheck, Unit tests, Security audit, Build/package smoke, E2E.
 
 ---
 
@@ -32,6 +32,7 @@
 | 10 | `feat/polish` | ✅ Merged | [#53](https://github.com/JevonThompsonx/jsquared_blog/pull/53) | 2026-06-15 | 4-5h | Print styles, a11y, PWA, social links |
 | patch | `fix/footer-polish` | ✅ Merged | [#46](https://github.com/JevonThompsonx/jsquared_blog/pull/46) | 2026-06-15 | 30min | Removed "All rights reserved", gradient transition above footer |
 | docs | `docs/knowledge-base` | ✅ Merged | [#45](https://github.com/JevonThompsonx/jsquared_blog/pull/45) | 2026-06-15 | 1h | KNOWLEDGE_BASE.md created, LESSONS.md merged in |
+| auth | `t3/blog-audit-hardening-optimization` | 🟡 Cutover pending | — | — | — | WorkOS AuthKit reader/admin migration; approved plan `docs/plans/2026-11-24-workos-authkit-migration.md` |
 
 **Legend:**
 - 🔵 **Ready** — Can be picked up immediately
@@ -39,7 +40,7 @@
 - 🟢 **In Progress** — Currently being worked on (see "Active Branch" below)
 - ✅ **Merged** — Done and shipped to main
 
-**Active Branch:** *(none — all 10 branches + 2 patches + 1 docs merged; project roadmap complete)*
+**Active Branch:** `t3/blog-audit-hardening-optimization` — WorkOS AuthKit implementation complete; production cutover and live smoke are orchestrator-owned.
 
 ## Updated: 2026-06-15 — All phases complete
 
