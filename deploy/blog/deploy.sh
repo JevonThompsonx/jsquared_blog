@@ -66,7 +66,7 @@ RELEASE_DIR=""
 OWNER=$(stat -c '%U' "$REPO_ROOT")
 run_as_builder() {
   if [[ $EUID -eq 0 && $OWNER != root ]] && command -v runuser >/dev/null; then
-    runuser -u "$OWNER" -- env PATH="${NODE_DIR:-$PATH}" "$@"
+    runuser -u "$OWNER" -- env PATH="${NODE_DIR:+$NODE_DIR:}$PATH" "$@"
   else
     "$@"
   fi
