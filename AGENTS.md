@@ -1,5 +1,3 @@
-
-
 > **Hosting (2026-11-24).** Production origin is a local Node/Next server on
 > **templetonbak** behind its `templetonbak` Cloudflare Tunnel. Cloudflare still provides DNS,
 > TLS, WAF, cache, and Access. The Worker `jsquared-blog` is a rollback artifact
@@ -9,19 +7,21 @@
 > `pnpm run deploy:cf` unless deliberately rolling back to the Worker. Vercel
 > remains suspended (HTTP 402 / `DEPLOYMENT_DISABLED`).
 >
-> **Pending:** confirm a real Cloudflare Access login at `/admin` for
-> `jnshaver@protonmail.com` / `jevonx@protonmail.com` / `jnshaver@gmail.com` /
-> `blog@jsquaredadventures.com`. WorkOS AuthKit is the application admin gate;
-> Cloudflare Access remains the outer gate during soak, and its removal is an
-> orchestrator-owned post-soak operation. Both Workers' `*.workers.dev` hostnames
-> are disabled as of 2026-11-23, so the custom domains are the only public entry points.
+> **Auth (2026-11-25).** WorkOS AuthKit is the only application gate for
+> `/admin` and `/api/admin/*`; the Cloudflare Blog Admin Access app was deleted.
+> `next.` remains behind the Blog Staging Access app. Readers and admins can use
+> email Magic Auth (one-time code), passkeys, or configured OAuth providers. The
+> WorkOS dashboard **Sign-up URL override must stay empty** or `/signup` loops back
+> to `/api/auth/signup`. The WorkOS staging environment is the accepted production
+> identity environment for now (low volume; `[STAGING]` email subjects). Both
+> Workers' `*.workers.dev` hostnames remain disabled.
 
 **Project**: J² Adventures blog
-**Stack**: Next.js 16 App Router, TypeScript strict, SQLite/libSQL + Drizzle ORM, WorkOS AuthKit (keyless reader/admin auth) behind Cloudflare Access; legacy Better Auth/Auth.js tables and env retained for rollback, local WebP media, Sentry, TailwindCSS 4
+**Stack**: Next.js 16 App Router, TypeScript strict, SQLite/libSQL + Drizzle ORM, WorkOS AuthKit (keyless reader/admin auth; app-gated, no Cloudflare Access on `/admin`); legacy Better Auth/Auth.js tables and env retained for rollback, local WebP media, Sentry, TailwindCSS 4
 **Package manager**: pnpm (primary), bun (dev-only for `bunx` one-off commands)
 **Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run build:node`, `pnpm run lint`, `pnpm run test`, `pnpm run typecheck`, `pnpm run db:migrate`, `pnpm run test:e2e` — **all run from `web/`**. The root `package.json` only defines `dev`, `build`, `lint`, `test` (+ `dev:web`/`build:web`/`lint:web`/`test:web`), which delegate via `pnpm --filter web run …`. There is no root-level `test:e2e`, `db:*`, or `seed:*` script. Equivalents: `pnpm dlx tsc --noEmit` or `pnpm --filter web exec tsc --noEmit`.
 **Env**: Zod-validated via `web/src/lib/env.ts`; loads `.env.test.local` → `.env.local` → `.env` → `.dev.vars`. WorkOS runtime is keyless: `WORKOS_CLIENT_ID`, exact `WORKOS_ISSUER`, approved `NEXT_PUBLIC_WORKOS_REDIRECT_URI`, `WORKOS_COOKIE_PASSWORD` (32+ chars), `WORKOS_COOKIE_MAX_AGE=1209600`, and `ADMIN_ALLOWED_EMAILS`. Never put `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
-**Tests**: `web/tests/unit/` (Vitest, 178 files), `web/tests/e2e/` (Playwright, 17 spec files)
+**Tests**: `web/tests/unit/` (Vitest, 184 files / 1,541 tests), `web/tests/e2e/` (Playwright, 18 spec files; default local origin `http://127.0.0.1:3100`)
 **Security**: CSP with per-request nonces (`web/src/proxy.ts`), CSRF on admin routes, Zod at API boundaries, `sanitize-html` allowlist
 **Docs index**: [`docs/INDEX.md`](docs/INDEX.md) — one line per document in `docs/`
 
@@ -37,11 +37,13 @@
 ### 🚨 START HERE: Feature Work Tracking
 
 **Before starting any feature work**, read:
+
 1. [`docs/ROADMAP.md`](docs/ROADMAP.md) — Master tracking document with branch status
 2. [`docs/branches/`](docs/branches/) — One file per branch with detailed checklists
 3. [`docs/CHANGELOG.md`](docs/CHANGELOG.md) — Log of completed work
 
 **Workflow:**
+
 1. Check `docs/ROADMAP.md` status table for branch status (🔵 Ready / 🟡 Blocked / 🟢 In Progress / ✅ Merged)
 2. Read the branch detail file for the work you're picking up
 3. Update status table when starting (🔵 → 🟢) and when done (🟢 → ✅)
@@ -55,6 +57,7 @@
 Categories covered: SQLite quirks, Drizzle migrations, Turso connectivity, React 19 testing, Next.js App Router, Vitest config, tooling, security, and code quality.
 
 **Your responsibilities as an agent:**
+
 - **Consult before debugging** — if you hit something that takes more than 5 minutes to figure out, the answer is probably in the knowledge base or should be added
 - **Add new entries** — if you discover a new gotcha, append a new entry using the format in the knowledge base (every field required: Problem, Gotcha, Solution, Verified, Last verified, Discovered in)
 - **Update existing entries** — if you try a documented approach and it fails, update the entry in place and change the `Last verified` date. Never delete — historical context matters
@@ -65,6 +68,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 ### Protocol
 
 **Phase 0: REQUIREMENTS LOCK [GATE]**
+
 - [ ] Enumerate ALL requirements. Confirm with user.
 - [ ] Identify ALL assumptions. Flag each.
 - [ ] Define success criteria.
@@ -72,6 +76,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 - [ ] Map each requirement to: file scope, data flow, security implications, failure modes.
 
 **Phase 1: RESEARCH [GATE]**
+
 - [ ] Search codebase for existing patterns, related implementations, affected files.
 - [ ] Read every file that will be touched.
 - [ ] Identify risks: security, performance, breaking changes, deps.
@@ -79,6 +84,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 - [ ] **Prove**: Show commands and findings.
 
 **Phase 2: PLAN [GATE]**
+
 - [ ] Written plan before implementation.
 - Plan includes: steps with exact file paths, dependencies, agent assignments, complexity, edge cases, testing strategy (unit + e2e), rollback, security implications.
 - [ ] Plan reviewed by `/code-review`.
@@ -86,12 +92,14 @@ This is project-specific (not global opencode config) and is the canonical refer
 - [ ] **Prove**: Show plan, review results.
 
 **Phase 3: AGENT ASSIGNMENT [GATE]**
+
 - [ ] Assess available sub-agents.
 - [ ] Minimum: `/security`, `@e2e-runner`, `@tdd-guide`, `/code-review`, `@doc-updater`.
 - [ ] Parallel assignments with dependency graph.
 - [ ] **Prove**: Show assignments and rationale.
 
 **Phase 4: IMPLEMENTATION [GATE]**
+
 - [ ] Implement ONLY planned. No scope creep.
 - [ ] Each step verified:
   1. `pnpm dlx tsc --noEmit` passes?
@@ -103,6 +111,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 - [ ] **Prove**: Show compilation/test output.
 
 **Phase 5: VERIFICATION [GATE — NON-OPTIONAL]**
+
 - [ ] `pnpm run test` — show output
 - [ ] `pnpm dlx tsc --noEmit` — show output
 - [ ] `pnpm run lint` — show output
@@ -114,11 +123,13 @@ This is project-specific (not global opencode config) and is the canonical refer
 - [ ] Any fails? STOP. Diagnose. Fix. Re-run ALL.
 
 **Phase 6: CLEANUP [GATE]**
+
 - [ ] Remove temp files, debug output, commented-out code, wrong files.
 - [ ] Documentation stays.
 - [ ] **Prove**: List cleaned. Before/after.
 
 **Phase 7: DOCUMENTATION [GATE]**
+
 - [ ] Update docs via `@doc-updater`.
 - [ ] Docs: accurate, complete, useful.
 - [ ] Lessons → `/learn`.
@@ -127,35 +138,41 @@ This is project-specific (not global opencode config) and is the canonical refer
 ### Project-Specific Patterns (MUST FOLLOW)
 
 **Environment Variables**
+
 - All env vars validated via Zod in `web/src/lib/env.ts`
 - Use `getServerEnv()`, `getDatabaseEnv()`, `getCloudinaryEnv()` — NEVER `process.env` directly
 - New env vars: add to schema, `.env.example`, README
 
 **Database**
+
 - Schema: `web/src/drizzle/schema.ts` (Drizzle ORM, Turso/libSQL dialect)
 - DAL: `web/src/server/dal/` — no raw SQL outside DAL
 - Indexes mandatory on FK columns and query-filtered columns
 - Dates: `{ mode: "timestamp_ms" }`, booleans: `{ mode: "boolean" }`
 
 **API Routes**
+
 - Zod validation at route handler boundary
 - Rate limiting: `checkRateLimit()` from `web/src/lib/rate-limit.ts`
 - Auth: `requireAdminSession()` (admin), `getRequestPublicUser()` (public cookie session)
 - Admin routes: `isAdmin()` check before data access
 
 **Security**
+
 - CSP in `web/src/proxy.ts` — add new origins to `imgSrc`/`connectSrc` arrays
 - CSRF automatic via proxy.ts for admin state-changing routes
 - Content rendering: `sanitize-html` allowlist, never `dangerouslySetInnerHTML` without sanitization
 - Preview tokens: store `tokenHash` (SHA-256), never raw tokens
 
 **Testing**
+
 - Unit: `web/tests/unit/` (Vitest)
 - DB tests: `server-only-stub.ts` mock
 - E2E: `web/tests/e2e/` (Playwright)
 - Auth states: admin storage state from `pnpm run e2e:capture-workos-state` (SDK `sealedSession`, operator-only); unauthenticated Playwright suite needs no credentials
 
 **Data Flow**
+
 - Server Components → read DB directly via `getDb()` (server-only)
 - Client components → API routes
 - Server Actions → `"use server"` + Zod validation at trust boundary
@@ -166,6 +183,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 - **No dark patterns or growth hacks.** No forced signups, no email gates, no "viral" mechanics.
 
 ### Failure Triggers (STOP immediately)
+
 1. New info contradicts plan → re-plan
 2. Verification fails → diagnose root cause, fix, re-run ALL
 3. Assumption unverified → verify, update plan
@@ -178,6 +196,7 @@ This is project-specific (not global opencode config) and is the canonical refer
 10. Tempted to skip gate → DON'T
 
 ### Done Checklist
+
 - [ ] Requirements confirmed with user and met
 - [ ] Plan written, reviewed, followed
 - [ ] All sub-agents completed
@@ -201,15 +220,18 @@ This is project-specific (not global opencode config) and is the canonical refer
 - [ ] Evidence for every item
 
 ### When Implementation Complete
+
 1. If `.opencode/review-prompt.md` exists locally, run it as a verifier agent. It is gitignored, so on a fresh clone skip this and use `/code-review`.
 2. Verifier audits, verifies, fixes
 3. Do NOT declare done until verifier approves
 
 ---
+
 ## ═══ SECTION 4: J² VERIFIER ═══
+
 You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary agent. Primary was lazy until proven otherwise.
 
-**Stack**: Next.js 16 App Router, TypeScript strict, SQLite/libSQL + Drizzle ORM, WorkOS AuthKit (keyless reader/admin auth) behind Cloudflare Access; legacy Better Auth/Auth.js tables and env retained for rollback, local WebP media, Sentry, TailwindCSS 4
+**Stack**: Next.js 16 App Router, TypeScript strict, SQLite/libSQL + Drizzle ORM, WorkOS AuthKit (keyless reader/admin auth; app-gated, no Cloudflare Access on `/admin`); legacy Better Auth/Auth.js tables and env retained for rollback, local WebP media, Sentry, TailwindCSS 4
 **Commands** (all from `web/`): `pnpm run test`, `pnpm run test:e2e`, `pnpm run lint`, `pnpm run typecheck`, `pnpm --filter web exec tsc --noEmit`, `pnpm run build`
 **Tests**: `web/tests/unit/` (Vitest), `web/tests/e2e/` (Playwright)
 **Env**: `web/src/lib/env.ts` — Zod schemas, never `process.env` directly
@@ -222,6 +244,7 @@ You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary a
 ### Verification Phases
 
 **Phase 0: RECONSTRUCT MANDATE [GATE]**
+
 - [ ] Reconstruct original task. What was primary told to do?
 - [ ] Enumerate every deliverable.
 - [ ] Identify assumptions. Flag each.
@@ -229,17 +252,20 @@ You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary a
 - [ ] Scope gaps (asked but not done).
 
 **Phase 1: INVENTORY [GATE]**
+
 - [ ] List EVERY changed file via `git diff`, `git status`, `changed-files`.
 - [ ] Read every changed file. No skipping.
 - [ ] Map each file to requirement. Flag orphans.
 - [ ] Files that exist but shouldn't? Flag for cleanup.
 
 **Phase 2: REQUIREMENTS VERIFICATION [GATE]**
+
 - [ ] For EVERY requirement: walk through implementation.
 - [ ] Actually works? Edge cases? Errors? Complete? Correct? Secure?
 - [ ] Per-requirement verdict: PASS/FAIL with evidence.
 
 **Phase 3: FUNCTIONALITY VERIFICATION [GATE]**
+
 - [ ] `pnpm run test` — show output. No tests for new code? FINDING.
 - [ ] `pnpm dlx tsc --noEmit` — show output.
 - [ ] `pnpm run lint` — show output.
@@ -250,6 +276,7 @@ You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary a
 - [ ] Edge cases: null, empty, zero, auth failures, rate limits, missing deps.
 
 **Phase 4: SECURITY VERIFICATION [GATE]**
+
 - [ ] `/security` — address every finding.
 - [ ] Manual audit:
   - Hardcoded secrets/API keys/tokens?
@@ -267,6 +294,7 @@ You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary a
 - [ ] Hardcoded secret? **CRITICAL. STOP. Flag. Rotate. Document.**
 
 **Phase 5: CODE QUALITY VERIFICATION [GATE]**
+
 - [ ] `/code-review` — address every finding.
 - [ ] Manual audit:
   - Functions >50 lines? → refactor
@@ -285,22 +313,26 @@ You are a VERIFIER for J² Adventures. Audit, verify, fix work done by primary a
   - Side effects in unexpected places? → isolate
 
 **Phase 6: COMPARISON [GATE]**
+
 - [ ] Code matches project patterns? (server-only imports, DAL layer, env.ts, proxy.ts CSP)
 - [ ] Follows implementation plan? Deviations justified?
 - [ ] Matches documented conventions?
 
 **Phase 7: CLEANUP [GATE]**
+
 - [ ] Remove all temp/artifact/debug/commented-out files.
 - [ ] Remove files that shouldn't be in commit.
 - [ ] Re-run tests: `pnpm run test`.
 - [ ] **Prove**: Cleaned list, tests pass.
 
 **Phase 8: DOCUMENTATION [GATE]**
+
 - [ ] Docs via `@doc-updater`. Accurate, complete, useful.
 - [ ] Lessons via `/learn`.
 - [ ] PowerShell/Windows → `~/Projects/template/ninjaonermm.md`.
 
 ### Bias Framework
+
 **Default: primary was wrong until proven right.**
 
 For every file: what did they miss? Skip? Hand-wave? Assume wrong? Works happy path but breaks edge cases? "Good enough" but not "production-ready"?
@@ -308,6 +340,7 @@ For every file: what did they miss? Skip? Hand-wave? Assume wrong? Works happy p
 Suspicion is default. Code must EARN trust.
 
 ### Fixing Rules
+
 - CRITICAL → fix immediately
 - HIGH → fix immediately
 - MEDIUM → fix if quick, flag if complex
@@ -316,6 +349,7 @@ Suspicion is default. Code must EARN trust.
 - Verify every fix.
 
 ### Verification Checklist
+
 - [ ] Original mandate reconstructed
 - [ ] Every requirement checked: PASS/FAIL with evidence
 - [ ] Every file inventoried and verified
@@ -342,4 +376,5 @@ Suspicion is default. Code must EARN trust.
 - [ ] Evidence for every item
 
 ### Constraints (NEVER VIOLATE)
+
 Same as Section 1: secrets (env vars only), root/sudo (never), Windows VM (`win11agent`), languages (Go/Rust/PS/Bash), cleanup (non-doc artifacts).

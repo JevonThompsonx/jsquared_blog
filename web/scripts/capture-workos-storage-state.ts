@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Capture a Playwright storage state using the WorkOS SDK's sealedSession.
- * Operator-only: requires a WorkOS API key and fixture credentials in the shell.
- * Never add that API key to the app environment and never print credentials.
+ * Capture a Playwright storage state using WorkOS Magic Auth and sealedSession.
+ * Operator-only: requires a WorkOS API key and fixture email in the shell.
+ * Never add that API key to the app environment and never print credentials,
+ * one-time codes, or tokens.
  */
 
 import { chmod, mkdir, writeFile } from "node:fs/promises";
@@ -15,6 +16,11 @@ import {
   createAdminStorageStateMetadata,
   getAdminStorageStateMetadataPath,
 } from "../src/lib/e2e/admin-storage-state-config";
+import { DEFAULT_E2E_BASE_URL } from "../src/lib/e2e/base-url";
+
+export const DEFAULT_WORKOS_FIXTURE_BASE_URL = DEFAULT_E2E_BASE_URL;
+export const DEFAULT_WORKOS_FIXTURE_MAX_AGE = 3_600;
+export const MAX_WORKOS_FIXTURE_MAX_AGE = 86_400;
 
 type WorkosStorageState = {
   cookies: Array<{
@@ -30,11 +36,52 @@ type WorkosStorageState = {
   origins: [];
 };
 
-type Authenticate = (
-  payload: Parameters<WorkOS["userManagement"]["authenticateWithPassword"]>[0],
+type CreateMagicAuth = (
+  payload: Parameters<WorkOS["userManagement"]["createMagicAuth"]>[0],
 ) => Promise<
-  Awaited<ReturnType<WorkOS["userManagement"]["authenticateWithPassword"]>>
+  Pick<Awaited<ReturnType<WorkOS["userManagement"]["createMagicAuth"]>>, "code">
 >;
+
+type AuthenticateWithMagicAuth = (
+  payload: Parameters<WorkOS["userManagement"]["authenticateWithMagicAuth"]>[0],
+) => Promise<
+  Awaited<ReturnType<WorkOS["userManagement"]["authenticateWithMagicAuth"]>>
+>;
+
+export function resolveWorkosFixtureMaxAge(raw?: string): number {
+  const value =
+    raw === undefined ? DEFAULT_WORKOS_FIXTURE_MAX_AGE : Number(raw);
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error("E2E_WORKOS_MAX_AGE must be a positive integer");
+  }
+  return Math.min(value, MAX_WORKOS_FIXTURE_MAX_AGE);
+}
+
+export function resolveWorkosFixtureConfig(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const apiKey = env.WORKOS_API_KEY?.trim();
+  const email = env.E2E_WORKOS_EMAIL?.trim();
+  const clientId = env.WORKOS_CLIENT_ID?.trim();
+  const cookiePassword = env.WORKOS_COOKIE_PASSWORD?.trim();
+  if (!apiKey || !email || !clientId || !cookiePassword) {
+    throw new Error(
+      "WORKOS_API_KEY, E2E_WORKOS_EMAIL, WORKOS_CLIENT_ID, and WORKOS_COOKIE_PASSWORD are required",
+    );
+  }
+  if (cookiePassword.length < 32) {
+    throw new Error("WORKOS_COOKIE_PASSWORD must be at least 32 characters");
+  }
+
+  return {
+    apiKey,
+    email,
+    clientId,
+    cookiePassword,
+    baseURL: env.E2E_BASE_URL?.trim() || DEFAULT_WORKOS_FIXTURE_BASE_URL,
+    maxAge: resolveWorkosFixtureMaxAge(env.E2E_WORKOS_MAX_AGE),
+  };
+}
 
 export function createWorkosStorageState({
   sealedSession,
@@ -50,6 +97,12 @@ export function createWorkosStorageState({
   const url = new URL(baseURL);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Fixture baseURL must use HTTP or HTTPS");
+  }
+  if (
+    url.protocol === "http:" &&
+    !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+  ) {
+    throw new Error("Fixture baseURL must use HTTPS for non-loopback hosts");
   }
   if (!Number.isInteger(maxAge) || maxAge <= 0) {
     throw new Error("Fixture maxAge must be a positive integer");
@@ -73,24 +126,30 @@ export function createWorkosStorageState({
 
 export async function captureWorkosStorageState({
   email,
-  password,
   clientId,
   cookiePassword,
   baseURL,
   maxAge,
-  authenticate,
+  createMagicAuth,
+  authenticateWithMagicAuth,
 }: {
   email: string;
-  password: string;
   clientId: string;
   cookiePassword: string;
   baseURL: string;
   maxAge: number;
-  authenticate: Authenticate;
+  createMagicAuth: CreateMagicAuth;
+  authenticateWithMagicAuth: AuthenticateWithMagicAuth;
 }) {
-  const response = await authenticate({
+  const magicAuth = await createMagicAuth({ email });
+  const code = magicAuth.code.trim();
+  if (!/^[a-z0-9]{4,128}$/i.test(code)) {
+    throw new Error("WorkOS did not return a valid one-time email code");
+  }
+
+  const response = await authenticateWithMagicAuth({
     email,
-    password,
+    code,
     clientId,
     session: { sealSession: true, cookiePassword },
   });
@@ -144,7 +203,9 @@ export async function writeWorkosStorageStateArtifact({
   storageStatePath: string;
   now?: Date;
 }): Promise<void> {
-  await mkdir(path.dirname(storageStatePath), { recursive: true });
+  const authDirectory = path.dirname(storageStatePath);
+  await mkdir(authDirectory, { recursive: true, mode: 0o700 });
+  await chmod(authDirectory, 0o700);
   await writeFile(storageStatePath, JSON.stringify(state, null, 2), {
     mode: 0o600,
   });
@@ -165,32 +226,22 @@ export async function writeWorkosStorageStateArtifact({
 }
 
 async function main() {
-  const apiKey = process.env.WORKOS_API_KEY?.trim();
-  const email = process.env.E2E_WORKOS_EMAIL?.trim();
-  const password = process.env.E2E_WORKOS_PASSWORD;
-  const clientId = process.env.WORKOS_CLIENT_ID?.trim();
-  const cookiePassword = process.env.WORKOS_COOKIE_PASSWORD?.trim();
-  if (!apiKey || !email || !password || !clientId || !cookiePassword) {
-    throw new Error(
-      "WORKOS_API_KEY, E2E_WORKOS_EMAIL, E2E_WORKOS_PASSWORD, WORKOS_CLIENT_ID, and WORKOS_COOKIE_PASSWORD are required",
-    );
-  }
-  if (cookiePassword.length < 32) {
-    throw new Error("WORKOS_COOKIE_PASSWORD must be at least 32 characters");
-  }
-
-  const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-  const maxAge = Number(process.env.WORKOS_COOKIE_MAX_AGE ?? 1_209_600);
+  const { apiKey, email, clientId, cookiePassword, baseURL, maxAge } =
+    resolveWorkosFixtureConfig();
   const workos = new WorkOS({ apiKey, clientId });
+  console.info(
+    "[workos] requesting a one-time email code for fixture capture.",
+  );
   const state = await captureWorkosStorageState({
     email,
-    password,
     clientId,
     cookiePassword,
     baseURL,
     maxAge,
-    authenticate: (payload) =>
-      workos.userManagement.authenticateWithPassword(payload),
+    createMagicAuth: (payload) =>
+      workos.userManagement.createMagicAuth(payload),
+    authenticateWithMagicAuth: (payload) =>
+      workos.userManagement.authenticateWithMagicAuth(payload),
   });
   const storageStatePath = resolveWorkosStorageStatePath();
   await writeWorkosStorageStateArtifact({
@@ -205,10 +256,8 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  main().catch((error) => {
-    console.error(
-      error instanceof Error ? error.message : "WorkOS storage capture failed",
-    );
+  main().catch(() => {
+    console.error("WorkOS storage capture failed");
     process.exitCode = 1;
   });
 }

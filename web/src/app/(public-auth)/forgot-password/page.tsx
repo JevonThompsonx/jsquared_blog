@@ -5,10 +5,26 @@ import type { Metadata } from "next";
 import { AuthKitNotice } from "@/components/auth/authkit-notice";
 
 export const metadata: Metadata = {
-  title: "Forgot Password",
+  title: "Email Sign-In Help",
+  description:
+    "Recover account access with a one-time email code from WorkOS AuthKit. No password is required.",
   robots: { index: false, follow: false },
 };
 
-export default function ForgotPasswordPage() {
-  return <AuthKitNotice screen="password" />;
+export default async function ForgotPasswordPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    redirectTo?: string | string[];
+    returnTo?: string | string[];
+  }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const candidate = params.returnTo ?? params.redirectTo;
+  return (
+    <AuthKitNotice
+      returnTo={typeof candidate === "string" ? candidate : undefined}
+      screen="recovery"
+    />
+  );
 }

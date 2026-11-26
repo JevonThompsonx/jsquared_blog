@@ -18,7 +18,8 @@ export function AccountPageFallback() {
         Account Settings
       </h1>
       <p className="mt-2 text-sm text-[var(--text-secondary)]">
-        Sign in to manage your profile, email, password, and theme preference.
+        Sign in to manage your profile, email sign-in methods, and theme
+        preference.
       </p>
       <Link
         className="mt-4 inline-flex rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--card-bg)]"

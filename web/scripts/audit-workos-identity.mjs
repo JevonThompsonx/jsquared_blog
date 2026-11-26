@@ -33,6 +33,15 @@ export async function auditWorkosIdentity(client, { allowedEmails = [] } = {}) {
       having count(*) > 1
     )
   `);
+  const duplicateWorkosLinks = await client.execute(`
+    select count(*) as n from (
+      select user_id
+      from auth_accounts
+      where provider = 'workos'
+      group by user_id
+      having count(*) > 1
+    )
+  `);
   const legacy = await client.execute(`
     select count(*) as n
     from auth_accounts a
@@ -46,22 +55,54 @@ export async function auditWorkosIdentity(client, { allowedEmails = [] } = {}) {
     left join users u on u.id = a.user_id
     where a.provider = 'workos' and u.id is null
   `);
+  const providerEmailMismatch = await client.execute(`
+    select count(*) as n
+    from auth_accounts a
+    inner join users u on u.id = a.user_id
+    where a.provider = 'workos'
+      and a.provider_email is not null
+      and trim(a.provider_email) != ''
+      and lower(trim(a.provider_email)) != lower(trim(u.primary_email))
+  `);
+  const providerEmailMissing = await client.execute(`
+    select count(*) as n
+    from auth_accounts a
+    where a.provider = 'workos'
+      and (a.provider_email is null or trim(a.provider_email) = '')
+  `);
 
   const normalizedAllowed = new Set(
     allowedEmails.map((email) => email.trim().toLowerCase()).filter(Boolean),
   );
-  let allowlistedNonAdmins = 0;
-  if (normalizedAllowed.size > 0) {
-    const users = await client.execute({
-      sql: "select lower(primary_email) as email, role from users",
-      args: [],
-    });
-    allowlistedNonAdmins = users.rows.filter(
-      (row) =>
-        normalizedAllowed.has(String(row.email)) &&
-        String(row.role) !== "admin",
-    ).length;
-  }
+  const users = await client.execute({
+    sql: "select lower(primary_email) as email, role from users",
+    args: [],
+  });
+  const workosLinkedUsers = await client.execute({
+    sql: "select distinct user_id from auth_accounts where provider = 'workos'",
+    args: [],
+  });
+  const linkedUserIds = new Set(
+    workosLinkedUsers.rows.map((row) => String(row.user_id)),
+  );
+  const userRows = await client.execute({
+    sql: "select id, lower(primary_email) as email, role from users",
+    args: [],
+  });
+  const allowlistedNonAdmins = users.rows.filter(
+    (row) =>
+      normalizedAllowed.has(String(row.email)) && String(row.role) !== "admin",
+  ).length;
+  const allowlistedAdminsWithoutWorkos = userRows.rows.filter(
+    (row) =>
+      normalizedAllowed.has(String(row.email)) &&
+      String(row.role) === "admin" &&
+      !linkedUserIds.has(String(row.id)),
+  ).length;
+  const adminEmailsNotAllowlisted = userRows.rows.filter(
+    (row) =>
+      String(row.role) === "admin" && !normalizedAllowed.has(String(row.email)),
+  ).length;
 
   return {
     users: toCount(counts.rows[0]?.users),
@@ -72,7 +113,24 @@ export async function auditWorkosIdentity(client, { allowedEmails = [] } = {}) {
     legacyWorkosLinks: toCount(legacy.rows[0]?.n),
     orphanWorkosLinks: toCount(orphans.rows[0]?.n),
     allowlistedNonAdmins,
+    providerEmailMismatch: toCount(providerEmailMismatch.rows[0]?.n),
+    providerEmailMissing: toCount(providerEmailMissing.rows[0]?.n),
+    duplicateWorkosLinksPerUser: toCount(duplicateWorkosLinks.rows[0]?.n),
+    allowlistedAdminsWithoutWorkos,
+    adminEmailsNotAllowlisted,
   };
+}
+
+export function hasFatalWorkosIdentityFindings(report) {
+  return (
+    report.duplicateNormalizedEmails > 0 ||
+    report.duplicateProviderSubjects > 0 ||
+    report.legacyWorkosLinks > 0 ||
+    report.orphanWorkosLinks > 0 ||
+    report.allowlistedNonAdmins > 0 ||
+    report.providerEmailMismatch > 0 ||
+    report.duplicateWorkosLinksPerUser > 0
+  );
 }
 
 async function main() {
@@ -92,13 +150,7 @@ async function main() {
   try {
     const report = await auditWorkosIdentity(client, { allowedEmails });
     console.info(JSON.stringify(report));
-    if (
-      report.duplicateNormalizedEmails > 0 ||
-      report.duplicateProviderSubjects > 0 ||
-      report.legacyWorkosLinks > 0 ||
-      report.orphanWorkosLinks > 0 ||
-      report.allowlistedNonAdmins > 0
-    ) {
+    if (hasFatalWorkosIdentityFindings(report)) {
       process.exitCode = 2;
     }
   } finally {

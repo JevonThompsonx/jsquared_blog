@@ -164,7 +164,7 @@ For populating the new column, use either a constant or `strftime('%s','now') * 
 // In a test script that uses @libsql/client
 try {
   await client.execute({
-    sql: "INSERT INTO wishlist_places (..., linked_post_id) VALUES (..., 'definitely-not-a-real-id')"
+    sql: "INSERT INTO wishlist_places (..., linked_post_id) VALUES (..., 'definitely-not-a-real-id')",
   });
   console.log("FAIL: insert succeeded, FK not enforced");
 } catch (e) {
@@ -205,6 +205,7 @@ Clean up the test row with `DELETE FROM ... WHERE id = 'test-row'`.
 **Solution:** Two parts:
 
 1. Add the migration to `drizzle/meta/_journal.json`:
+
 ```json
 {
   "idx": 22,
@@ -216,6 +217,7 @@ Clean up the test row with `DELETE FROM ... WHERE id = 'test-row'`.
 ```
 
 2. To pre-mark a migration as already applied (when the DDL was run out-of-band), compute the hash and insert it into `__drizzle_migrations`:
+
 ```typescript
 import { createHash } from "crypto";
 import { readFileSync } from "fs";
@@ -225,7 +227,7 @@ const hash = createHash("sha256").update(sql).digest("hex");
 
 await client.execute({
   sql: "INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)",
-  args: [hash, Date.now()]
+  args: [hash, Date.now()],
 });
 ```
 
@@ -245,20 +247,27 @@ await client.execute({
 **Solution:** Manual drift detection. For any new migration, after running it, compare `PRAGMA table_info(<table>)` and `PRAGMA foreign_key_list(<table>)` output with the schema file. Use a quick Node script:
 
 ```typescript
-import { createClient } from '@libsql/client';
-import { readFileSync } from 'fs';
+import { createClient } from "@libsql/client";
+import { readFileSync } from "fs";
 
 const env = Object.fromEntries(
-  readFileSync('.env.local', 'utf8').split('\n')
-    .filter(l => l.includes('=') && !l.startsWith('#'))
-    .map(l => [l.split('=')[0].trim(), l.split('=').slice(1).join('=').replace(/^"|"$/g, '')])
+  readFileSync(".env.local", "utf8")
+    .split("\n")
+    .filter((l) => l.includes("=") && !l.startsWith("#"))
+    .map((l) => [
+      l.split("=")[0].trim(),
+      l.split("=").slice(1).join("=").replace(/^"|"$/g, ""),
+    ]),
 );
 
-const c = createClient({ url: env.TURSO_DATABASE_URL, authToken: env.TURSO_AUTH_TOKEN });
+const c = createClient({
+  url: env.TURSO_DATABASE_URL,
+  authToken: env.TURSO_AUTH_TOKEN,
+});
 const cols = await c.execute(`PRAGMA table_info(wishlist_places)`);
-console.log("DB columns:", cols.rows.map(r => r.name).join(", "));
+console.log("DB columns:", cols.rows.map((r) => r.name).join(", "));
 const fks = await c.execute(`PRAGMA foreign_key_list(wishlist_places)`);
-console.log("DB FKs:", fks.rows.map(r => `${r.from}->${r.table}`).join(", "));
+console.log("DB FKs:", fks.rows.map((r) => `${r.from}->${r.table}`).join(", "));
 ```
 
 Then compare against the schema file.
@@ -297,16 +306,17 @@ Then compare against the schema file.
 
 ```javascript
 // test-turso.mjs (delete after use)
-import { createClient } from '@libsql/client';
-import { readFileSync } from 'fs';
+import { createClient } from "@libsql/client";
+import { readFileSync } from "fs";
 
 const env = Object.fromEntries(
-  readFileSync('.env.local', 'utf8').split('\n')
-    .filter(l => l.includes('=') && !l.startsWith('#'))
-    .map(l => {
-      const [k, ...v] = l.split('=');
-      return [k.trim(), v.join('=').replace(/^"|"$/g, '')];
-    })
+  readFileSync(".env.local", "utf8")
+    .split("\n")
+    .filter((l) => l.includes("=") && !l.startsWith("#"))
+    .map((l) => {
+      const [k, ...v] = l.split("=");
+      return [k.trim(), v.join("=").replace(/^"|"$/g, "")];
+    }),
 );
 
 const c = createClient({
@@ -315,12 +325,13 @@ const c = createClient({
 });
 
 const rs = await c.execute("SELECT name FROM sqlite_master WHERE type='table'");
-console.log(rs.rows.map(r => r.name).join(", "));
+console.log(rs.rows.map((r) => r.name).join(", "));
 ```
 
 Run with `node test-turso.mjs` from the `web/` directory. **Always delete the script before committing** (add to `.gitignore` if you create many).
 
 **Verified:** Branch 3 used this pattern extensively to:
+
 - Inspect DB state before/after migrations
 - Apply hand-written migrations
 - Verify FK constraint enforcement
@@ -462,7 +473,13 @@ beforeEach(() => {
 // global-error.tsx
 "use client";
 
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <html lang="en">
       <body>
@@ -518,15 +535,17 @@ Or use `dynamic = "force-static"` + `generateStaticParams` if you want to opt in
 **Gotcha:** In Next.js 16.2.9, `cacheTag()` / `cacheLife()` (exported from `next/cache`) throw `E886` ("only available with the `cacheComponents` config") at runtime unless `process.env.__NEXT_USE_CACHE` is set — which only happens when the top-level `cacheComponents: true` flag is enabled in `next.config.ts`. So `'use cache'` cannot be used as a "small pilot" without flipping that flag.
 
 Enabling `cacheComponents: true` **compiles**, but it is the **Cache Components** rendering model and forces an app-wide constraint:
+
 1. Every `export const dynamic = "force-dynamic"` and `export const runtime = "nodejs"` segment config becomes a build error ("not compatible with `nextConfig.cacheComponents`. Please remove it"). In this repo that was **17 route files**.
-2. Far worse: the production build then fails on **34 routes** with *"Uncached data was accessed outside of `<Suspense>`"* — under Cache Components, every dynamic page must be either statically cacheable or wrap its data access in `<Suspense>`. Fixing that is a full Suspense migration across the app, not a pilot.
+2. Far worse: the production build then fails on **34 routes** with _"Uncached data was accessed outside of `<Suspense>`"_ — under Cache Components, every dynamic page must be either statically cacheable or wrap its data access in `<Suspense>`. Fixing that is a full Suspense migration across the app, not a pilot.
 
 **Solution:** Achieve the same tag-based dedup + on-demand `revalidateTag` semantics with the **stable `unstable_cache` API** (already used in `web/src/server/queries/posts.ts`). `unstable_cache(cb, keyParts, { revalidate, tags })` supports `tags: string[]` and interoperates with `revalidateTag(tag, "max")` with **no** `cacheComponents` flag and no Suspense migration. This is the correct path here:
+
 - `listPublishedPosts` → `unstable_cache(..., { revalidate: 3600, tags: ["posts"] })`
 - `getPublishedPostBySlug` → `unstable_cache(..., { revalidate: 3600, tags: ["posts"] })` (was previously uncached; now a per-slug cache entry via keyParts)
 - Publish/unpublish/delete/admin actions already call `revalidateTag("posts", "max")` → purges both.
 
-Note: `unstable_cache`'s `tags` must be a **static** `string[]` (no per-call dynamic tags — that's the one thing `'use cache'`+`cacheTag` adds). Per-post *precise* invalidation via `cacheTag(\`post:${slug}\`)` is therefore not available without `cacheComponents`; the shared `"posts"` tag + per-slug keyParts is the stable equivalent.
+Note: `unstable_cache`'s `tags` must be a **static** `string[]` (no per-call dynamic tags — that's the one thing `'use cache'`+`cacheTag` adds). Per-post _precise_ invalidation via `cacheTag(\`post:${slug}\`)`is therefore not available without`cacheComponents`; the shared `"posts"` tag + per-slug keyParts is the stable equivalent.
 
 **Verified:** With `cacheComponents` removed and `unstable_cache` tags in place, `pnpm run typecheck`, `pnpm run lint`, `pnpm run build`, and `pnpm run test` (1121/1121) all pass. The `cacheComponents: true` attempt was reverted after confirming the 34-route build failure via `next build --debug-prerender`.
 
@@ -601,6 +620,7 @@ For complex Next.js client components with hooks, see `web/src/app/(blog)/page.t
 **Gotcha:** Project used bun as the primary package manager. Root `tsconfig.json` had `"types": ["bun-types"]`. Playwright config used `bunx`. Scripts referenced `bun run`.
 
 **Solution:** Use `pnpm` as the primary package manager:
+
 - `packageManager` field in root `package.json` is set to `pnpm@11.1.1`
 - `bun` may still be used for `bunx <one-off-cmd>` but never as the project package manager
 - `bun.lock`, `yarn.lock`, `.yarnrc.yml` are all in `.gitignore`
@@ -809,12 +829,12 @@ useEffect(() => {
 
 For traceability, here's which branch discovered each pattern:
 
-| Branch | Entries Added |
-|--------|---------------|
-| Initial codebase (bun→pnpm migration) | 8 entries: Tooling, Security, Code Quality |
-| Branch 1: `feat/seo-and-discovery` | 2 entries: Next.js dynamic routes, Vitest env stub |
-| Branch 2: `feat/layout-footer-and-nav` | 4 entries: React 19 testing, Next.js global-error |
-| Branch 3: `chore/schema-hardening` | 12 entries: SQLite, Drizzle, Turso |
+| Branch                                 | Entries Added                                      |
+| -------------------------------------- | -------------------------------------------------- |
+| Initial codebase (bun→pnpm migration)  | 8 entries: Tooling, Security, Code Quality         |
+| Branch 1: `feat/seo-and-discovery`     | 2 entries: Next.js dynamic routes, Vitest env stub |
+| Branch 2: `feat/layout-footer-and-nav` | 4 entries: React 19 testing, Next.js global-error  |
+| Branch 3: `chore/schema-hardening`     | 12 entries: SQLite, Drizzle, Turso                 |
 
 ---
 
@@ -882,7 +902,7 @@ For traceability, here's which branch discovered each pattern:
 
 **Gotcha:** Auto-promoting an allowlisted email during callback or session revalidation undoes local role demotion and lets anyone able to create a WorkOS user in the environment mint an app admin.
 
-**Solution:** `resolveWorkosIdentity` defaults `promoteAllowedUser` to false and the callback explicitly disables promotion. Only the operator-only `workos:provision-admins` script creates/promotes local admin rows; it is dry-run by default and requires `--apply`.
+**Solution:** `resolveWorkosIdentity` defaults `promoteAllowedUser` to false and the callback explicitly disables promotion. Only the operator-only `workos:provision-admins` script may grant admin; it is dry-run by default, promotes existing rows only, and refuses missing/duplicate/conflicting identities.
 
 **Verified:** Identity tests prove demoted linked users and new allowlisted users remain readers; provisioning tests prove existing IDs/profiles are preserved and repeated applies are idempotent.
 
@@ -930,3 +950,48 @@ For traceability, here's which branch discovered each pattern:
 **Solution:** Validate `Host`/`x-forwarded-host` against apex, `www`, `next`, and localhost/loopback aliases. Create the callback handler per request with that approved origin; use the same resolver for sign-in/signup redirect URIs and logout roots. Keep the configured callback only as the no-host fallback.
 
 **Verified:** Origin tests cover all approved hosts and hostile Host/forwarded-host values; route/proxy tests prove per-request callbacks.
+
+---
+
+### [Auth] AuthKit dashboard Sign-up URL overrides hosted sign-up and can loop
+
+**Discovered in:** WorkOS Magic Auth repair, 2026-11-25
+**Last verified:** 2026-11-25
+
+**Problem:** `/signup` redirected through WorkOS and then back to `/api/auth/signup` until the app returned 429; the browser showed a connection error.
+
+**Gotcha:** The optional WorkOS dashboard **Sign-up URL** is an override for AuthKit's hosted `/sign-up` screen. Pointing it at the app's initiation endpoint makes the hosted screen redirect back to the same endpoint. Pointing it at the app's `/signup` notice also loops.
+
+**Solution:** Leave the dashboard Sign-up URL empty. Keep the app flow `/signup` → `/api/auth/signup` → AuthKit hosted `/sign-up`. The operator-gated `authkit-hosted-signup.spec.ts` catches regressions without submitting the form.
+
+**Verified:** Real-browser smoke reached `pensive-picture-47-staging.authkit.app/sign-up` with an email input after the override was cleared.
+
+---
+
+### [Auth] Verify Magic Auth through the API, not only the hosted UI
+
+**Discovered in:** WorkOS Magic Auth repair, 2026-11-25
+**Last verified:** 2026-11-25
+
+**Problem:** The AuthKit page showed “Continue with email”, but `createMagicAuth` failed with `authentication_method_not_allowed`.
+
+**Gotcha:** “Continue with email” can be the password-first flow. UI text alone does not prove Magic Auth is enabled.
+
+**Solution:** Enable Magic Auth in the WorkOS dashboard, then call `createMagicAuth` + `authenticateWithMagicAuth` with the returned code. Assert `authenticationMethod=MagicAuth`, `emailVerified=true`, a valid sealed session, and `auth_time` in the access token. Never print the code or tokens.
+
+**Verified:** API smoke passed; `auth_time` was present and preserved across refresh; the same GitHub-created WorkOS user authenticated with Magic Auth.
+
+---
+
+### [Testing] Port 3000 belongs to Open WebUI on this host
+
+**Discovered in:** WorkOS Magic Auth E2E repair, 2026-11-25
+**Last verified:** 2026-11-25
+
+**Problem:** Default Playwright runs loaded Open WebUI instead of the blog and reported false 404s.
+
+**Gotcha:** Open WebUI publishes `127.0.0.1:3000`; Playwright's `reuseExistingServer` treats any 200 response as the expected app and never starts Next.
+
+**Solution:** Default local E2E and fixture capture to `http://127.0.0.1:3100`. Keep fixture and Playwright defaults on the same host because `wos-session` is host-scoped. Use production for full hosted-auth round trips; the approved local callback remains port 3000.
+
+**Verified:** Targeted Playwright auth tests passed on managed Next at `127.0.0.1:3100`.

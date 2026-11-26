@@ -98,6 +98,7 @@ describe("AdminPage", () => {
     vi.mocked(getAdminAccessState).mockResolvedValue({
       session: null,
       stale: false,
+      viewer: null,
     });
   });
 
@@ -115,6 +116,7 @@ describe("AdminPage", () => {
         },
       } as never,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
 
@@ -125,6 +127,8 @@ describe("AdminPage", () => {
     expect(markup).toContain('href="/admin/tags"');
     expect(markup).toContain('href="/admin/posts/new"');
     expect(markup).toContain("Travel wishlist");
+    expect(markup).toContain('href="/api/auth/logout?returnTo=%2Fadmin"');
+    expect(markup).not.toContain("switch account");
     expect(getAdminDashboardData).toHaveBeenCalled();
     expect(getAdminDashboardMetadata).toHaveBeenCalled();
   });
@@ -133,6 +137,7 @@ describe("AdminPage", () => {
     vi.mocked(getAdminAccessState).mockResolvedValue({
       session: null,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
 
@@ -148,6 +153,7 @@ describe("AdminPage", () => {
     vi.mocked(getAdminAccessState).mockResolvedValue({
       session: null,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
 
@@ -155,13 +161,45 @@ describe("AdminPage", () => {
 
     expect(markup).toContain('href="/api/auth/login?returnTo=%2Fadmin"');
     expect(markup).toContain("Sign in with WorkOS");
+    expect(markup).toContain("one-time code");
+    expect(markup).toContain("10 minutes");
+    expect(markup).not.toContain("Sign out and switch account");
     expect(markup).not.toContain("Admin pages");
+  });
+
+  it("offers sign-out and account-switch recovery to a signed-in non-admin", async () => {
+    vi.mocked(getAdminAccessState).mockResolvedValue({
+      session: null,
+      stale: false,
+      viewer: {
+        id: "user_workos_reader",
+        email: "reader@example.com",
+        name: "Reader",
+      },
+    });
+    cookiesMock.mockResolvedValue(makeCookieStore());
+
+    const markup = renderToStaticMarkup(await AdminPage({}));
+
+    expect(markup).toContain("Signed in as");
+    expect(markup).toContain("Reader");
+    expect(markup).toContain("This account does not have admin access.");
+    expect(markup).toContain("Sign out and switch account");
+    expect(markup).toContain('href="/api/auth/logout?returnTo=%2Fadmin"');
+    expect(markup.match(/Sign out and switch account/g)).toHaveLength(1);
+    expect(markup.match(/\/api\/auth\/logout/g)).toHaveLength(1);
+    expect(markup).not.toContain(">Sign out</a>");
+    expect(markup).not.toContain("Sign in with WorkOS");
+    expect(markup).not.toContain("Admin pages");
+    expect(getAdminDashboardData).not.toHaveBeenCalled();
+    expect(getAdminDashboardMetadata).not.toHaveBeenCalled();
   });
 
   it("offers forced reauthentication for a live but stale admin session", async () => {
     vi.mocked(getAdminAccessState).mockResolvedValue({
       session: null,
       stale: true,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
 
@@ -178,6 +216,7 @@ describe("AdminPage", () => {
     vi.mocked(getAdminAccessState).mockResolvedValue({
       session: null,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
 
@@ -199,6 +238,7 @@ describe("AdminPage", () => {
         },
       } as never,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(
       makeCookieStore({ "j2-admin-flash": "saved" }),
@@ -230,6 +270,7 @@ describe("AdminPage", () => {
         },
       } as never,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
 
@@ -259,6 +300,7 @@ describe("AdminPage", () => {
         },
       } as never,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
     vi.mocked(getAdminEditablePostById).mockResolvedValue({
@@ -349,6 +391,7 @@ describe("AdminPage", () => {
         },
       } as never,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
     vi.mocked(getAdminEditablePostById).mockResolvedValue({
@@ -412,6 +455,7 @@ describe("AdminPage", () => {
     vi.mocked(getAdminAccessState).mockResolvedValue({
       session: null,
       stale: false,
+      viewer: null,
     });
     cookiesMock.mockResolvedValue(makeCookieStore());
 

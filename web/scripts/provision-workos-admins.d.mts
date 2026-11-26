@@ -9,8 +9,9 @@ export declare function provisionWorkosAdmins(
   },
 ): Promise<{
   examined: number;
-  created: number;
   promoted: number;
   profilesCreated: number;
+  missing: number;
+  blocked: number;
   unchanged: number;
 }>;

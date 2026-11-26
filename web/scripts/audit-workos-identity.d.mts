@@ -1,9 +1,6 @@
 import type { Client } from "@libsql/client";
 
-export declare function auditWorkosIdentity(
-  client: Client,
-  options?: { allowedEmails?: string[] },
-): Promise<{
+export interface WorkosIdentityAuditReport {
   users: number;
   profiles: number;
   workosAccounts: number;
@@ -12,4 +9,18 @@ export declare function auditWorkosIdentity(
   legacyWorkosLinks: number;
   orphanWorkosLinks: number;
   allowlistedNonAdmins: number;
-}>;
+  providerEmailMismatch: number;
+  providerEmailMissing: number;
+  duplicateWorkosLinksPerUser: number;
+  allowlistedAdminsWithoutWorkos: number;
+  adminEmailsNotAllowlisted: number;
+}
+
+export declare function auditWorkosIdentity(
+  client: Client,
+  options?: { allowedEmails?: string[] },
+): Promise<WorkosIdentityAuditReport>;
+
+export declare function hasFatalWorkosIdentityFindings(
+  report: WorkosIdentityAuditReport,
+): boolean;

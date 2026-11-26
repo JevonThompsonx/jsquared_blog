@@ -28,20 +28,20 @@
 
 ### Component Breakdown
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Runtime** | Node.js, pnpm (primary) | Package manager, local dev server |
-| **Framework** | Next.js 16 App Router | Pages, API routes, server components |
-| **Primary DB** | SQLite (libSQL `file:` URL) + Drizzle ORM | Content store on the local origin; Turso is only used by the rollback Worker |
-| **Public + Admin Auth** | WorkOS AuthKit (keyless PKCE) | Hosted email/password identity, `wos-session`, verified-email mapping, restrictive admin gate |
-| **Media** | Local content-addressed WebP + `sharp` | Upload, EXIF stripping, `/media` delivery, Next image optimizer |
-| **Email** | Resend (SMTP relay + comments), Listmonk (self-hosted newsletter) | Newsletter subscriptions, comment notifications |
-| **Rate Limiting** | In-process sliding window (`RATE_LIMIT_DRIVER=memory`) | Single Node process on templetonbak; Upstash only for the rollback Worker |
-| **Observability** | Sentry (optional) | Error tracking, performance monitoring |
-| **Maps** | Stadia Maps (tiles) + MapLibre GL, Geoapify (routing), Nominatim (geocoding) | Interactive maps, route planner |
-| **Styling** | TailwindCSS 4 | Utility-first CSS |
-| **Editor** | Tiptap | Rich text editor for post content |
-| **Deployment** | templetonbak: systemd `jsquared-blog.service` + Cloudflare Tunnel; systemd timers for cron | Hosting, scheduled tasks |
+| Layer                   | Technology                                                                                 | Purpose                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Runtime**             | Node.js, pnpm (primary)                                                                    | Package manager, local dev server                                                                       |
+| **Framework**           | Next.js 16 App Router                                                                      | Pages, API routes, server components                                                                    |
+| **Primary DB**          | SQLite (libSQL `file:` URL) + Drizzle ORM                                                  | Content store on the local origin; Turso is only used by the rollback Worker                            |
+| **Public + Admin Auth** | WorkOS AuthKit (keyless PKCE)                                                              | Hosted Magic Auth/passkey/OAuth identity, `wos-session`, verified-email mapping, restrictive admin gate |
+| **Media**               | Local content-addressed WebP + `sharp`                                                     | Upload, EXIF stripping, `/media` delivery, Next image optimizer                                         |
+| **Email**               | Resend (SMTP relay + comments), Listmonk (self-hosted newsletter)                          | Newsletter subscriptions, comment notifications                                                         |
+| **Rate Limiting**       | In-process sliding window (`RATE_LIMIT_DRIVER=memory`)                                     | Single Node process on templetonbak; Upstash only for the rollback Worker                               |
+| **Observability**       | Sentry (optional)                                                                          | Error tracking, performance monitoring                                                                  |
+| **Maps**                | Stadia Maps (tiles) + MapLibre GL, Geoapify (routing), Nominatim (geocoding)               | Interactive maps, route planner                                                                         |
+| **Styling**             | TailwindCSS 4                                                                              | Utility-first CSS                                                                                       |
+| **Editor**              | Tiptap                                                                                     | Rich text editor for post content                                                                       |
+| **Deployment**          | templetonbak: systemd `jsquared-blog.service` + Cloudflare Tunnel; systemd timers for cron | Hosting, scheduled tasks                                                                                |
 
 ---
 
@@ -56,7 +56,7 @@ WorkOS API key.
         |
 GET /api/auth/login or /api/auth/signup
         |
-WorkOS hosted AuthKit (Email + Password)
+WorkOS hosted AuthKit (email Magic Auth, passkeys, configured OAuth)
         |
 GET /callback (explicit validated public baseURL)
         |
@@ -105,8 +105,9 @@ admin requests: requireAdminSession()
   prefetch requests remain in the proxy matcher.
 - Login, signup, and callback routes are rate-limited; stale live admin sessions
   are offered forced reauthentication rather than being treated as anonymous.
-- Cloudflare Access remains the outer `/admin` gate during soak; its JWT is not
-  an application admin credential.
+- `/admin` and `/api/admin/*` are app-gated only by WorkOS; the Cloudflare Blog
+  Admin Access app was deleted. `next.` remains behind Blog Staging Access. No
+  Cloudflare Access JWT is accepted as an application credential.
 - Better Auth tables/env and Auth.js settings remain for one code-rollback cycle.
 
 Full operations, verified dashboard values, cutover, smoke, and rollback:
@@ -122,29 +123,29 @@ The current schema defines all application and rollback auth tables. WorkOS
 sessions live in the sealed cookie; the three Better Auth tables are retained
 only for rollback.
 
-| Table | Key Columns | Purpose |
-|-------|------------|---------|
-| `users` | id, primaryEmail, role (reader/author/admin) | Core identity record for all users |
-| `auth_accounts` | userId, provider (supabase/github/workos), providerUserId | Provider identity mapping; unique provider/subject index |
-| `profiles` | userId, displayName, avatarUrl, bio, themePreference | Public-facing profile data |
-| `posts` | id, title, slug, contentJson, contentFormat, status, categoryId, seriesId, featuredImageId, location*, song*, viewCount | Blog posts with scheduling, metadata |
-| `post_revisions` | postId, revisionNum, title, contentJson, song*, savedByUserId | Revision history snapshots |
-| `post_preview_tokens` | postId, tokenHash, expiresAt, revokedAt | Expiring preview links for unpublished posts |
-| `post_images` | postId, mediaAssetId, sortOrder, focalX/Y, caption | Gallery ordering per post |
-| `post_tags` | postId, tagId (composite PK) | Many-to-many post-tag junction |
-| `post_bookmarks` | postId, userId (composite PK) | Saved posts per public user |
-| `post_links` | postId, label, url, sortOrder | External links per post |
-| `media_assets` | id, ownerUserId, provider, publicId, secureUrl, resourceType, width, height, bytes, exif* | Uploaded image/video metadata |
-| `categories` | id, name, slug, description | Post categorization |
-| `tags` | id, name, slug, description | Post tagging |
-| `series` | id, title, slug, description | Post series grouping |
-| `comments` | id, postId, authorId, content, parentId, visibility, isFlagged, moderatedAt | Post comments with moderation |
-| `comment_likes` | commentId, userId (composite PK) | Comment likes |
-| `wishlist_places` | id, name, location*, visited, isPublic, linkedPostId, itemType, parentId | Travel wishlist entries |
-| `seasons` | id, seasonKey, displayName | Seasonal content grouping for homepage hero |
-| `session` | userId, token, expiresAt | Legacy Better Auth reader sessions; rollback only |
-| `account` | userId, providerId, password | Legacy Better Auth credentials; rollback only |
-| `verification` | identifier, value, expiresAt | Legacy Better Auth verification tokens; rollback only |
+| Table                 | Key Columns                                                                                                             | Purpose                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `users`               | id, primaryEmail, role (reader/author/admin)                                                                            | Core identity record for all users                       |
+| `auth_accounts`       | userId, provider (supabase/github/workos), providerUserId                                                               | Provider identity mapping; unique provider/subject index |
+| `profiles`            | userId, displayName, avatarUrl, bio, themePreference                                                                    | Public-facing profile data                               |
+| `posts`               | id, title, slug, contentJson, contentFormat, status, categoryId, seriesId, featuredImageId, location*, song*, viewCount | Blog posts with scheduling, metadata                     |
+| `post_revisions`      | postId, revisionNum, title, contentJson, song*, savedByUserId                                                           | Revision history snapshots                               |
+| `post_preview_tokens` | postId, tokenHash, expiresAt, revokedAt                                                                                 | Expiring preview links for unpublished posts             |
+| `post_images`         | postId, mediaAssetId, sortOrder, focalX/Y, caption                                                                      | Gallery ordering per post                                |
+| `post_tags`           | postId, tagId (composite PK)                                                                                            | Many-to-many post-tag junction                           |
+| `post_bookmarks`      | postId, userId (composite PK)                                                                                           | Saved posts per public user                              |
+| `post_links`          | postId, label, url, sortOrder                                                                                           | External links per post                                  |
+| `media_assets`        | id, ownerUserId, provider, publicId, secureUrl, resourceType, width, height, bytes, exif*                               | Uploaded image/video metadata                            |
+| `categories`          | id, name, slug, description                                                                                             | Post categorization                                      |
+| `tags`                | id, name, slug, description                                                                                             | Post tagging                                             |
+| `series`              | id, title, slug, description                                                                                            | Post series grouping                                     |
+| `comments`            | id, postId, authorId, content, parentId, visibility, isFlagged, moderatedAt                                             | Post comments with moderation                            |
+| `comment_likes`       | commentId, userId (composite PK)                                                                                        | Comment likes                                            |
+| `wishlist_places`     | id, name, location*, visited, isPublic, linkedPostId, itemType, parentId                                                | Travel wishlist entries                                  |
+| `seasons`             | id, seasonKey, displayName                                                                                              | Seasonal content grouping for homepage hero              |
+| `session`             | userId, token, expiresAt                                                                                                | Legacy Better Auth reader sessions; rollback only        |
+| `account`             | userId, providerId, password                                                                                            | Legacy Better Auth credentials; rollback only            |
+| `verification`        | identifier, value, expiresAt                                                                                            | Legacy Better Auth verification tokens; rollback only    |
 
 ### Key Relationships
 
@@ -189,91 +190,91 @@ wishlist_places --1:1--> posts (linkedPostId)
 
 ### Public API Routes
 
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/posts` | None | Paginated published posts feed |
-| GET | `/api/posts/[postId]/comments` | None | List comments for a post |
-| POST | `/api/posts/[postId]/comments` | WorkOS session (required) | Add comment or reply |
-| GET | `/api/posts/[postId]/bookmark` | WorkOS session (optional) | Check bookmark status |
-| POST | `/api/posts/[postId]/bookmark` | WorkOS session | Toggle bookmark |
-| POST | `/api/posts/[postId]/view` | None | Increment view count (cookie-deduped) |
-| POST | `/api/comments/[commentId]/like` | WorkOS session | Like a comment |
-| DELETE | `/api/comments/[commentId]` | WorkOS session | Delete own comment |
-| GET | `/api/bookmarks` | WorkOS session | List user's bookmarks |
-| GET | `/api/account/profile` | WorkOS session | Get own profile |
-| PATCH | `/api/account/profile` | WorkOS session | Update profile |
-| POST | `/api/account/avatar` | WorkOS session | Upload avatar image |
-| POST | `/api/newsletter` | None | Newsletter signup |
-| POST | `/api/route-plans` | None | Get route suggestions |
+| Method | Route                            | Auth                      | Purpose                               |
+| ------ | -------------------------------- | ------------------------- | ------------------------------------- |
+| GET    | `/api/posts`                     | None                      | Paginated published posts feed        |
+| GET    | `/api/posts/[postId]/comments`   | None                      | List comments for a post              |
+| POST   | `/api/posts/[postId]/comments`   | WorkOS session (required) | Add comment or reply                  |
+| GET    | `/api/posts/[postId]/bookmark`   | WorkOS session (optional) | Check bookmark status                 |
+| POST   | `/api/posts/[postId]/bookmark`   | WorkOS session            | Toggle bookmark                       |
+| POST   | `/api/posts/[postId]/view`       | None                      | Increment view count (cookie-deduped) |
+| POST   | `/api/comments/[commentId]/like` | WorkOS session            | Like a comment                        |
+| DELETE | `/api/comments/[commentId]`      | WorkOS session            | Delete own comment                    |
+| GET    | `/api/bookmarks`                 | WorkOS session            | List user's bookmarks                 |
+| GET    | `/api/account/profile`           | WorkOS session            | Get own profile                       |
+| PATCH  | `/api/account/profile`           | WorkOS session            | Update profile                        |
+| POST   | `/api/account/avatar`            | WorkOS session            | Upload avatar image                   |
+| POST   | `/api/newsletter`                | None                      | Newsletter signup                     |
+| POST   | `/api/route-plans`               | None                      | Get route suggestions                 |
 
 ### Auth Routes
 
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/auth/login` | None | Start hosted sign-in with a safe return path |
-| GET | `/api/auth/signup` | None | Start hosted sign-up with a safe return path |
-| GET | `/callback` | PKCE state + verifier cookie | Exchange code, map identity, set sealed session |
-| GET | `/api/auth/logout` | WorkOS session | Clear session and continue to the public return URL |
-| GET | `/api/auth/session` | WorkOS admin gate | Public-safe, token-free display fields for client navigation |
-| GET | `/api/admin/session` | WorkOS admin gate + Cloudflare Access | Same handler retained at the planned admin path |
+| Method | Route                | Auth                         | Purpose                                                       |
+| ------ | -------------------- | ---------------------------- | ------------------------------------------------------------- |
+| GET    | `/api/auth/login`    | None                         | Start hosted sign-in with a safe return path                  |
+| GET    | `/api/auth/signup`   | None                         | Start hosted sign-up with a safe return path                  |
+| GET    | `/callback`          | PKCE state + verifier cookie | Exchange code, map identity, set sealed session               |
+| GET    | `/api/auth/logout`   | WorkOS session               | Clear session and continue to the public return URL           |
+| GET    | `/api/auth/session`  | WorkOS admin gate            | Public-safe, token-free display fields for client navigation  |
+| GET    | `/api/admin/session` | WorkOS admin gate            | Same handler retained at the admin path; no Cloudflare Access |
 
 ### Admin API Routes
 
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/admin/posts` | WorkOS admin | List all posts (incl. drafts/scheduled) |
-| POST | `/api/admin/posts/clone` | WorkOS admin | Clone a post |
-| POST | `/api/admin/posts/preview` | WorkOS admin | Generate preview token |
-| POST | `/api/admin/posts/bulk-status` | WorkOS admin | Bulk update post status |
-| GET | `/api/admin/posts/[postId]/comments` | WorkOS admin | List comments for moderation |
-| GET | `/api/admin/posts/[postId]/revisions` | WorkOS admin | List revision history |
-| GET | `/api/admin/posts/[postId]/revisions/[revisionId]` | WorkOS admin | Get specific revision |
-| POST | `/api/admin/posts/[postId]/revisions/[revisionId]/restore` | WorkOS admin | Restore a revision |
-| POST | `/api/admin/comments/moderate` | WorkOS admin | Moderate comment visibility |
-| GET | `/api/admin/series/[seriesId]/part-numbers` | WorkOS admin | Get series part numbers |
-| POST | `/api/admin/uploads/images` | WorkOS admin | Upload editorial image |
-| POST | `/api/admin/song-preview` | WorkOS admin | Song preview/autofill |
-| GET | `/api/admin/location-autocomplete` | WorkOS admin | Location autocomplete |
-| GET | `/api/admin/posts/warnings` | WorkOS admin | Content warning checks |
+| Method | Route                                                      | Auth         | Purpose                                 |
+| ------ | ---------------------------------------------------------- | ------------ | --------------------------------------- |
+| GET    | `/api/admin/posts`                                         | WorkOS admin | List all posts (incl. drafts/scheduled) |
+| POST   | `/api/admin/posts/clone`                                   | WorkOS admin | Clone a post                            |
+| POST   | `/api/admin/posts/preview`                                 | WorkOS admin | Generate preview token                  |
+| POST   | `/api/admin/posts/bulk-status`                             | WorkOS admin | Bulk update post status                 |
+| GET    | `/api/admin/posts/[postId]/comments`                       | WorkOS admin | List comments for moderation            |
+| GET    | `/api/admin/posts/[postId]/revisions`                      | WorkOS admin | List revision history                   |
+| GET    | `/api/admin/posts/[postId]/revisions/[revisionId]`         | WorkOS admin | Get specific revision                   |
+| POST   | `/api/admin/posts/[postId]/revisions/[revisionId]/restore` | WorkOS admin | Restore a revision                      |
+| POST   | `/api/admin/comments/moderate`                             | WorkOS admin | Moderate comment visibility             |
+| GET    | `/api/admin/series/[seriesId]/part-numbers`                | WorkOS admin | Get series part numbers                 |
+| POST   | `/api/admin/uploads/images`                                | WorkOS admin | Upload editorial image                  |
+| POST   | `/api/admin/song-preview`                                  | WorkOS admin | Song preview/autofill                   |
+| GET    | `/api/admin/location-autocomplete`                         | WorkOS admin | Location autocomplete                   |
+| GET    | `/api/admin/posts/warnings`                                | WorkOS admin | Content warning checks                  |
 
 ### Cron Routes
 
-| Method | Route | Auth | Purpose | Schedule |
-|--------|-------|------|---------|----------|
-| GET | `/api/cron/publish-scheduled` | Bearer CRON_SECRET | Publish scheduled posts | Every 5 minutes |
+| Method | Route                         | Auth               | Purpose                 | Schedule        |
+| ------ | ----------------------------- | ------------------ | ----------------------- | --------------- |
+| GET    | `/api/cron/publish-scheduled` | Bearer CRON_SECRET | Publish scheduled posts | Every 5 minutes |
 
 ### Page Routes (App Router)
 
-| Route | Type | Purpose |
-|-------|------|---------|
-| `/` | RSC | Homepage / paginated feed |
-| `/posts/[slug]` | RSC | Published post detail page |
-| `/preview/[id]?token=...` | RSC | Expiring post preview |
-| `/map` | RSC | World map of geotagged posts |
-| `/wishlist` | RSC | Public travel wishlist |
-| `/route-planner` | RSC | Route planner with wishlist stops |
-| `/category/[category]` | RSC | Category feed |
-| `/tag/[slug]` | RSC | Tag feed |
-| `/tags` | RSC | All tags browse page |
-| `/categories` | RSC | All categories browse page |
-| `/series/[slug]` | RSC | Series detail |
-| `/bookmarks` | RSC | Signed-in user's saved posts |
-| `/account` | RSC | Account settings page |
-| `/settings` | RSC | Theme/settings page |
-| `/login` | RSC | Public auth login |
-| `/signup` | RSC | Public auth signup |
-| `/search` | RSC | Search results page |
-| `/about` | RSC | About page |
-| `/accessibility` | RSC | Accessibility statement |
-| `/admin` | RSC | Admin dashboard |
-| `/admin/posts/` | RSC | Admin post editor/list |
-| `/admin/wishlist/` | RSC | Admin wishlist editor |
-| `/admin/tags/` | RSC | Admin tag management |
-| `/admin/categories/` | RSC | Admin category management |
-| `/admin/seasons/` | RSC | Admin season management |
-| `/sitemap.xml` | RSC | Dynamic sitemap |
-| `/feed.xml` | RSC | RSS feed |
-| `/manifest.ts` | RSC | PWA manifest |
+| Route                     | Type | Purpose                           |
+| ------------------------- | ---- | --------------------------------- |
+| `/`                       | RSC  | Homepage / paginated feed         |
+| `/posts/[slug]`           | RSC  | Published post detail page        |
+| `/preview/[id]?token=...` | RSC  | Expiring post preview             |
+| `/map`                    | RSC  | World map of geotagged posts      |
+| `/wishlist`               | RSC  | Public travel wishlist            |
+| `/route-planner`          | RSC  | Route planner with wishlist stops |
+| `/category/[category]`    | RSC  | Category feed                     |
+| `/tag/[slug]`             | RSC  | Tag feed                          |
+| `/tags`                   | RSC  | All tags browse page              |
+| `/categories`             | RSC  | All categories browse page        |
+| `/series/[slug]`          | RSC  | Series detail                     |
+| `/bookmarks`              | RSC  | Signed-in user's saved posts      |
+| `/account`                | RSC  | Account settings page             |
+| `/settings`               | RSC  | Theme/settings page               |
+| `/login`                  | RSC  | Public auth login                 |
+| `/signup`                 | RSC  | Public auth signup                |
+| `/search`                 | RSC  | Search results page               |
+| `/about`                  | RSC  | About page                        |
+| `/accessibility`          | RSC  | Accessibility statement           |
+| `/admin`                  | RSC  | Admin dashboard                   |
+| `/admin/posts/`           | RSC  | Admin post editor/list            |
+| `/admin/wishlist/`        | RSC  | Admin wishlist editor             |
+| `/admin/tags/`            | RSC  | Admin tag management              |
+| `/admin/categories/`      | RSC  | Admin category management         |
+| `/admin/seasons/`         | RSC  | Admin season management           |
+| `/sitemap.xml`            | RSC  | Dynamic sitemap                   |
+| `/feed.xml`               | RSC  | RSS feed                          |
+| `/manifest.ts`            | RSC  | PWA manifest                      |
 
 ---
 
@@ -311,6 +312,7 @@ checkRateLimit(key, limit, windowMs)
 ### Configuration Per Endpoint
 
 Each endpoint sets its own limit and window:
+
 - Comment creation: e.g., 5 per minute
 - Newsletter signup: e.g., 3 per hour
 - View tracking: generous limits
@@ -373,6 +375,7 @@ Social cards:
 ```
 
 **Key files:**
+
 - `web/src/lib/media/local-storage.ts` - local WebP storage, EXIF stripping, reference-safe delete
 - `web/src/app/media/[...path]/route.ts` - immutable `/media` delivery
 - `web/src/app/api/og-image/[...path]/route.ts` - cached 1200x630 JPEG social cards
@@ -407,11 +410,11 @@ systemd `jsquared-blog.service`
 
 ### Environment Split
 
-| Env | DB | Rate Limiting | Auth |
-|-----|----|--------------|------|
-| Local dev | SQLite `file:` or Turso remote | In-memory fallback | WorkOS AuthKit, localhost callback |
-| Staging (`next.`) | same SQLite file as production | In-memory | WorkOS AuthKit, `next.` callback |
-| Production | SQLite `file:` | In-memory (`RATE_LIMIT_DRIVER=memory`) | WorkOS AuthKit, apex/`www` callbacks |
+| Env               | DB                             | Rate Limiting                          | Auth                                 |
+| ----------------- | ------------------------------ | -------------------------------------- | ------------------------------------ |
+| Local dev         | SQLite `file:` or Turso remote | In-memory fallback                     | WorkOS AuthKit, localhost callback   |
+| Staging (`next.`) | same SQLite file as production | In-memory                              | WorkOS AuthKit, `next.` callback     |
+| Production        | SQLite `file:`                 | In-memory (`RATE_LIMIT_DRIVER=memory`) | WorkOS AuthKit, apex/`www` callbacks |
 
 ### Cron Jobs (systemd timers on templetonbak)
 
@@ -470,6 +473,7 @@ web/src/proxy.ts — exports proxy() with middleware config matcher
 Dynamic per-request CSP is set via `proxy.ts`. Production and dev use different `style-src` policies:
 
 **Production (hardened):**
+
 ```
 Content-Security-Policy:
   default-src 'self';
@@ -492,6 +496,7 @@ Content-Security-Policy:
 ```
 
 **Dev:**
+
 - `style-src 'self' 'unsafe-inline'` (no nonce, no `style-src-attr`)
 - Same dev condition pattern as `script-src` (`'unsafe-eval'` vs `'wasm-unsafe-eval'`)
 
@@ -502,6 +507,7 @@ Content-Security-Policy:
 - Dev keeps `'unsafe-inline'` in `style-src` because Next.js dev mode injects hot-reload CSS directly without nonce support.
 
 Additional static headers set in `next.config.ts`:
+
 - `Referrer-Policy`, `X-Content-Type-Options`, `X-Frame-Options`
 - `Permissions-Policy` (restrictive), `Cross-Origin-Opener-Policy`
 - `Strict-Transport-Security` (production only, 2-year max-age)
@@ -611,24 +617,24 @@ docs/
 
 > Version figures below were recorded on **2026-06-18** and drift with every dependency bump. Treat `web/package.json` as the source of truth; the ranges listed here are the last verified snapshot.
 
-| Package | Version Range | Purpose |
-|---------|--------------|---------|
-| next | 16.3.4 | Framework |
-| @libsql/client | 0.18.0 | Turso/libSQL database client |
-| drizzle-orm | 0.45.2 | ORM / query builder |
-| @workos-inc/authkit-nextjs | 4.6.3 | Reader/admin AuthKit sessions |
-| @workos-inc/node | 12.4.0 | WorkOS SDK / operator fixtures |
-| better-auth | 1.7.27 | Local public auth (email/password, sessions, reset) |
-| @upstash/ratelimit | ^2.0.8 | Distributed rate limiting |
-| @upstash/redis | ^1.38.3 | Redis client for rate limiting |
-| @sentry/nextjs | 10.73.0 | Error tracking |
-| @tiptap/* | 3.31.0 | Rich text editor |
-| maplibre-gl | 6.19.0 | Map rendering (`public/maplibre-worker.js` is the matching v6 module worker) |
-| react-map-gl | ^8.1.2 | React map component |
-| sanitize-html | 2.17.7 (exact) | HTML content sanitization — pinned exact to avoid the XSS vulnerability in 2.17.3 |
-| zod | 4.5.4 | Schema validation |
-| tailwindcss | 4.3.3 | CSS framework |
-| typescript | 6.0.3 | Type checking |
+| Package                    | Version Range  | Purpose                                                                           |
+| -------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| next                       | 16.3.4         | Framework                                                                         |
+| @libsql/client             | 0.18.0         | Turso/libSQL database client                                                      |
+| drizzle-orm                | 0.45.2         | ORM / query builder                                                               |
+| @workos-inc/authkit-nextjs | 4.6.3          | Reader/admin AuthKit sessions                                                     |
+| @workos-inc/node           | 12.4.0         | WorkOS SDK / Magic Auth operator fixtures                                         |
+| better-auth                | removed        | Legacy tables/env retained for one rollback cycle; not a runtime dependency       |
+| @upstash/ratelimit         | ^2.0.8         | Distributed rate limiting                                                         |
+| @upstash/redis             | ^1.38.3        | Redis client for rate limiting                                                    |
+| @sentry/nextjs             | 10.73.0        | Error tracking                                                                    |
+| @tiptap/*                  | 3.31.0         | Rich text editor                                                                  |
+| maplibre-gl                | 6.19.0         | Map rendering (`public/maplibre-worker.js` is the matching v6 module worker)      |
+| react-map-gl               | ^8.1.2         | React map component                                                               |
+| sanitize-html              | 2.17.7 (exact) | HTML content sanitization — pinned exact to avoid the XSS vulnerability in 2.17.3 |
+| zod                        | 4.5.4          | Schema validation                                                                 |
+| tailwindcss                | 4.3.3          | CSS framework                                                                     |
+| typescript                 | 6.0.3          | Type checking                                                                     |
 
 ---
 

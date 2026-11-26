@@ -16,16 +16,16 @@ Last verified: 2026-10-30.
 
 ## 1. What runs where
 
-| Piece | Where | Notes |
-|---|---|---|
-| Web app | Cloudflare Worker `jsquared-blog` | Custom domains `jsquaredadventures.com` + `www` |
-| Preview copy | Cloudflare Worker `jsquared-blog-preview` | `*.workers.dev`; safe to break |
-| Database | Turso, org *yours* (`webdevjev` group, `aws-us-west-2`) | DB name `jsquared-blog` |
-| Images | Cloudinary (unchanged) | same account as before |
-| Email | Resend (unchanged) | same account as before |
-| Auth | GitHub OAuth (unchanged app) | callback `https://jsquaredadventures.com/api/auth/callback/github` |
-| DNS | Cloudflare zone `jsquaredadventures.com` | apex + www are Worker custom domains |
-| Crons | Cloudflare Cron Triggers | 00:00 UTC publish, 06:00 UTC Supabase keep-awake |
+| Piece        | Where                                                   | Notes                                                              |
+| ------------ | ------------------------------------------------------- | ------------------------------------------------------------------ |
+| Web app      | Cloudflare Worker `jsquared-blog`                       | Custom domains `jsquaredadventures.com` + `www`                    |
+| Preview copy | Cloudflare Worker `jsquared-blog-preview`               | `*.workers.dev`; safe to break                                     |
+| Database     | Turso, org _yours_ (`webdevjev` group, `aws-us-west-2`) | DB name `jsquared-blog`                                            |
+| Images       | Cloudinary (unchanged)                                  | same account as before                                             |
+| Email        | Resend (unchanged)                                      | same account as before                                             |
+| Auth         | GitHub OAuth (unchanged app)                            | callback `https://jsquaredadventures.com/api/auth/callback/github` |
+| DNS          | Cloudflare zone `jsquaredadventures.com`                | apex + www are Worker custom domains                               |
+| Crons        | Cloudflare Cron Triggers                                | 00:00 UTC publish, 06:00 UTC Supabase keep-awake                   |
 
 The Vercel project still exists as a rollback target, but nothing points at it.
 
@@ -53,7 +53,7 @@ any are missing.
 4. Hit `/api/posts` and fail loudly if it is not `200`.
 
 **Do not run `pnpm run deploy:vinext` on its own.** A bare code deploy rewrites
-the Worker's binding list and *drops the secrets*, so the site 500s until they
+the Worker's binding list and _drops the secrets_, so the site 500s until they
 are re-applied. `deploy:cf` exists to make that impossible.
 
 Preview worker instead:
@@ -135,10 +135,10 @@ same `TURSO_DATABASE_URL`.
 
 `vercel.json` crons were replaced by Worker Cron Triggers:
 
-| Schedule (UTC) | Route |
-|---|---|
-| `0 0 * * *` | `/api/cron/publish-scheduled` |
-| `0 6 * * *` | `/api/cron/keep-supabase-awake` |
+| Schedule (UTC) | Route                           |
+| -------------- | ------------------------------- |
+| `0 0 * * *`    | `/api/cron/publish-scheduled`   |
+| `0 6 * * *`    | `/api/cron/keep-supabase-awake` |
 
 `worker-entry.ts` maps the schedule string to the route and calls it with
 `Authorization: Bearer $CRON_SECRET`. List or change them:
@@ -165,64 +165,51 @@ only) and `[entry] runtimeEnv ...` lengths on cold start — enough to tell
 
 Common symptoms:
 
-| Symptom | Cause |
-|---|---|
+| Symptom                                                         | Cause                                                     |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
 | `error code: 1101` + "Missing or invalid environment variables" | secrets were dropped — redeploy with `pnpm run deploy:cf` |
-| Empty pages, `listAllSeasons failed` | database token invalid or DB unreachable |
-| `/api/auth/*` 500 | `next-auth` interop regression (see `route.ts` resolver) |
-| Cron route 500 | `CRON_SECRET` missing |
+| Empty pages, `listAllSeasons failed`                            | database token invalid or DB unreachable                  |
+| `/api/auth/*` 500                                               | `next-auth` interop regression (see `route.ts` resolver)  |
+| Cron route 500                                                  | `CRON_SECRET` missing                                     |
 
 ---
 
-## 6b. Admin access (Cloudflare Access)
+## 6b. Admin access (WorkOS AuthKit)
 
-`/admin` and `/api/admin` (apex **and** `www`) sit behind the Zero Trust
-application **Blog Admin**. Allowed identities:
+`/admin` and `/api/admin/*` on apex and `www` are **not behind Cloudflare Access**.
+The Blog Admin Access app was deleted on 2026-11-24. WorkOS AuthKit is the only
+application admin gate and also handles reader sessions.
 
-- `jnshaver@protonmail.com`
-- `jevonx@protonmail.com`
-- `jnshaver@gmail.com`
-- `blog@jsquaredadventures.com`
+Admin access requires a verified WorkOS email, current `ADMIN_ALLOWED_EMAILS`
+membership, a live local `users.role = 'admin'`, and `auth_time` no older than 24
+hours. Readers and admins can use email Magic Auth, passkeys, or configured OAuth
+providers. No application password is generated or stored.
 
-Session 24 h. Team domain `https://jsquaredadventures.cloudflareaccess.com`,
-app AUD `e5a22e0584856f704d952060106a1f4be380a89b06f3814ee4f1a853ac160234`.
+The WorkOS dashboard **Sign-up URL override must remain empty**. If it points to
+`/api/auth/signup`, AuthKit's hosted `/sign-up` page redirects back to that endpoint,
+which starts the same flow again until the rate limiter returns 429.
 
-The rollback Worker source verifies the signed `Cf-Access-Jwt-Assertion` (JWKS +
-issuer + audience), then maps the email to a local `users` row. The current Node
-origin does **not** trust that JWT as an application credential; WorkOS AuthKit
-is the inner admin gate and Cloudflare Access remains the outer edge gate.
+`next.jsquaredadventures.com` remains behind the separate **Blog Staging** Access
+app. Do not delete or modify it when operating apex admin auth.
 
-**In the rollback Worker, Access was the only admin path.** When `CF_ACCESS_*`
-was set, `requireAdminSession()` returned null without a valid Access JWT and
-GitHub remained a local-development fallback. The current Node origin replaces
-that inner check with WorkOS AuthKit while keeping Access at the edge.
+### Rollback Worker only
 
-**`*.workers.dev` is disabled** on both `jsquared-blog` and
-`jsquared-blog-preview` as of 2026-11-23. The only public entry points are the
-apex and `www` custom domains. The preview Worker still holds the production
-secret set, so it must stay private; use `vite dev` or a local build for review,
-or give it its own database before exposing it again.
+The retained Worker source still verifies `Cf-Access-Jwt-Assertion` (JWKS +
+issuer + audience) and maps the email to a local `users` row. That is a rollback
+path, not the current Node auth model. To put admin behind Access again, recreate
+the Blog Admin app from the operator-side backup, update the rollback environment
+if required, and purge cache. Never trust
+`Cf-Access-Authenticated-User-Email` without the signed assertion.
 
-**Never trust `Cf-Access-Authenticated-User-Email` on its own** — the Worker is
-also reachable on `*.workers.dev`, where a client can set that header itself.
-
-Add or remove an admin: Zero Trust → Access → Applications → **Blog Admin** →
-Policies → **Blog admins**. Rotating the app (new AUD) means updating
-`CF_ACCESS_AUD` in `.env` and redeploying.
-
-Verify gating without a browser:
-
-```bash
-curl -sI https://jsquaredadventures.com/admin | grep -i location
-# → https://jsquaredadventures.cloudflareaccess.com/cdn-cgi/access/login/...
-```
+**`*.workers.dev` is disabled** on both Workers. The custom domains are the only
+public entry points.
 
 ---
 
 ## 7. Rolling back
 
 **A deploy:** Cloudflare keeps versions. In the dashboard: Worker
-`jsquared-blog` → Deployments → pick a previous version → *Rollback*.
+`jsquared-blog` → Deployments → pick a previous version → _Rollback_.
 Secrets are per-version, so a rollback keeps the config that version had.
 
 **To Vercel entirely:** the Vercel project was never deleted. Restore the DNS

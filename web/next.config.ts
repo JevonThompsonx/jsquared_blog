@@ -65,7 +65,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   typedRoutes: true,
   poweredByHeader: false,
-  allowedDevOrigins: ["debai", "192.168.3.43"],
+  allowedDevOrigins: ["debai", "192.168.3.43", "127.0.0.1"],
   ...(process.env.NEXT_OUTPUT === "standalone"
     ? { output: "standalone" as const }
     : {}),

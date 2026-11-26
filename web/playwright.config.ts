@@ -1,8 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 import { loadPlaywrightEnv } from "./playwright-env";
+import {
+  DEFAULT_E2E_BASE_URL,
+  resolveE2EBaseURL,
+} from "./src/lib/e2e/base-url";
 
-const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const baseURL = resolveE2EBaseURL(process.env.E2E_BASE_URL);
 const isCI = Boolean(process.env.CI);
 const webServerEnv = loadPlaywrightEnv();
 
@@ -17,11 +21,17 @@ function getLocalWebServerConfig() {
       return undefined;
     }
 
-    const port = parsedUrl.port || "3000";
+    const port =
+      parsedUrl.port ||
+      (baseURL === DEFAULT_E2E_BASE_URL
+        ? "3100"
+        : parsedUrl.protocol === "https:"
+          ? "443"
+          : "80");
 
     return {
       // Pass `--port` as a flag to `next dev`, NOT as a positional arg after a
-      // `--` separator. `next dev -- <port>` treats `<port>` as a project
+      // `--` separator. `next dev -- <port>` treats `<port>` as the project
       // directory and fails with "Invalid project directory provided".
       command: `pnpm run dev --port ${port}`,
       env: webServerEnv,

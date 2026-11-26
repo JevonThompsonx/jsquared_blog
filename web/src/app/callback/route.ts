@@ -2,6 +2,7 @@ import { handleAuth } from "@workos-inc/authkit-nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { enforceAuthRateLimit, parseAllowedEmails } from "@/lib/auth/workos";
+import { mapAuthErrorToCode } from "@/lib/auth/auth-errors";
 import { getServerEnv, getWorkosRequestOrigin } from "@/lib/env";
 import { resolveWorkosIdentity } from "@/server/auth/workos-identity";
 
@@ -34,10 +35,13 @@ export async function GET(request: NextRequest): Promise<Response> {
         promoteAllowedUser: false,
       });
     },
-    onError: () =>
-      new NextResponse("Sign-in failed. Please try again.", {
-        status: 400,
-        headers: { "Cache-Control": "no-store" },
-      }),
+    onError: ({ error }) =>
+      NextResponse.redirect(
+        new URL(`/login?error=${mapAuthErrorToCode(error)}`, baseURL),
+        {
+          status: 302,
+          headers: { "Cache-Control": "no-store" },
+        },
+      ),
   })(request);
 }

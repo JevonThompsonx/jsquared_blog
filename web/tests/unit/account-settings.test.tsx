@@ -90,7 +90,7 @@ describe("AccountSettings", () => {
     expect(init?.headers).toBeUndefined();
   });
 
-  it("delegates password and email management to WorkOS AuthKit", async () => {
+  it("delegates one-time-code, passkey, and recovery management to WorkOS AuthKit", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -115,6 +115,10 @@ describe("AccountSettings", () => {
 
     expect(container.querySelector('input[type="password"]')).toBeNull();
     expect(container.textContent).toContain("WorkOS AuthKit");
+    expect(container.textContent).toContain("one-time code");
+    expect(container.textContent).toContain("passkey");
+    expect(container.textContent).toContain("recovery");
+    expect(container.textContent).not.toContain("Email, password");
     expect(
       container.querySelector('a[href="/api/auth/logout"]'),
     ).not.toBeNull();

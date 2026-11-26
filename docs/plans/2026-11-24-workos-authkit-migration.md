@@ -1,5 +1,9 @@
 # WorkOS AuthKit migration implementation plan
 
+> **Superseded for auth policy by [`2026-11-25-workos-magic-auth-access.md`](../plans/2026-11-25-workos-magic-auth-access.md).**
+> The shipped implementation never auto-promotes during login; only the explicit
+> operator provisioning script grants local admin role.
+
 Date: 2026-11-24
 Status: approved for implementation
 Branch: `t3/blog-audit-hardening-optimization`
@@ -62,15 +66,15 @@ owner-supplied WorkOS staging environment in production now.
 
 PASS threshold: 90/100. A critical security failure is an automatic FAIL.
 
-| Category | Points |
-|---|---:|
-| Reader flows | 20 |
-| Identity mapping/data integrity | 15 |
-| Admin authorization | 20 |
-| Security | 15 |
-| Tests/build/lint/typecheck | 15 |
-| Ops/docs/rollback | 10 |
-| Code quality/cleanup | 5 |
+| Category                        | Points |
+| ------------------------------- | -----: |
+| Reader flows                    |     20 |
+| Identity mapping/data integrity |     15 |
+| Admin authorization             |     20 |
+| Security                        |     15 |
+| Tests/build/lint/typecheck      |     15 |
+| Ops/docs/rollback               |     10 |
+| Code quality/cleanup            |      5 |
 
 ## Architecture
 
@@ -84,8 +88,8 @@ safe return path.
 
 `/admin` -> WorkOS session -> verified email -> `ADMIN_ALLOWED_EMAILS` -> local
 `users.role === 'admin'` -> recent-auth check. Reader sessions are denied.
-Cloudflare Access remains as an outer gate during rollout; removal is an
-orchestrator-owned post-soak operation.
+Cloudflare Access was retained briefly during rollout and was removed on
+2026-11-24; WorkOS is now the only application admin gate.
 
 ### Identity mapping
 
@@ -98,7 +102,8 @@ Use `auth_accounts` with `provider='workos'` and a unique
 4. Otherwise resolve a local user by normalized email and link it.
 5. Otherwise create `users.id = 'workos-user-' + user.id`, role `reader`, plus
    a profile.
-6. If the verified email is allowlisted, promote the local user to `admin`.
+6. Never promote during login, even when the verified email is allowlisted. Only
+   the explicit operator provisioning script may grant the local admin role.
 7. Never auto-relink an email already owned by a different WorkOS identity.
 8. Never link synthetic `@legacy.supabase.local` rows.
 
@@ -126,8 +131,8 @@ logins cannot create duplicate users or links.
 3. `handleAuth` must receive an explicit `baseURL` derived from a validated
    public origin (`apex`, `www`, `next`, or localhost). Do not let the callback
    redirect to the internal `127.0.0.1:3010` origin.
-4. Test/storage-state scripts should use the `sealedSession` returned by
-   `authenticateWithPassword({ session: { sealSession: true, cookiePassword } })`.
+4. Test/storage-state scripts use the `sealedSession` returned by
+   `createMagicAuth` + `authenticateWithMagicAuth`; no password is required.
    Do not add a direct `iron-session` dependency or manually seal sessions.
 5. Use `handleAuthkitProxy` / `partitionAuthkitHeaders` / `applyResponseHeaders`;
    `handleAuthkitHeaders` is deprecated in v4.6.3.

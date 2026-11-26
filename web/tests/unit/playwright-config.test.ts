@@ -47,6 +47,22 @@ describe("playwright config", () => {
     expect(config.use?.screenshot).toBe("only-on-failure");
   }, 15_000);
 
+  it("defaults to the collision-free loopback port 3100", async () => {
+    vi.stubEnv("E2E_BASE_URL", undefined);
+    vi.stubEnv("CI", "");
+    clearWorkosEnv();
+
+    const { default: config } = await importConfigModule();
+
+    expect(config.use?.baseURL).toBe("http://127.0.0.1:3100");
+    expect(config.webServer).toEqual(
+      expect.objectContaining({
+        command: "pnpm run dev --port 3100",
+        url: "http://127.0.0.1:3100",
+      }),
+    );
+  }, 15_000);
+
   it("starts a managed dev server only for localhost targets", async () => {
     vi.stubEnv("E2E_BASE_URL", "http://localhost:4123");
     vi.stubEnv("CI", "");

@@ -1,5 +1,10 @@
 # WorkOS AuthKit migration — implementation review
 
+> **Update 2026-11-25:** Magic Auth/passkeys/OAuth are now enabled, Cloudflare
+> Access was removed from `/admin`, and the five admin identities were verified.
+> The “no social providers” and Access-outer-gate statements below are historical.
+> See [`2026-11-25-workos-magic-auth-access.md`](./2026-11-25-workos-magic-auth-access.md).
+
 **Date:** 2026-11-24
 **Branch:** `t3/blog-audit-hardening-optimization`
 **Plan:** [`../plans/2026-11-24-workos-authkit-migration.md`](../plans/2026-11-24-workos-authkit-migration.md)
@@ -42,19 +47,19 @@ From `web/`:
 
 ## RED → GREEN evidence (PROVEN)
 
-| Area | RED command and observed failure | GREEN result |
-|---|---|---|
-| Env | `pnpm exec vitest run tests/unit/workos-env.test.ts` — 6 failures, `getWorkosEnv is not a function` | env + build-fallback tests pass |
-| Redirects | same targeted run — 14 unsafe encoded/auth-loop paths accepted | 37 env/redirect tests pass together |
-| Migration | `pnpm exec vitest run tests/unit/workos-migration.test.ts` — provider enum lacked `workos`; unique index absent | 2 tests pass on a migrated temp DB |
-| Identity | `pnpm exec vitest run tests/unit/workos-identity.test.ts` — missing identity module | 10 tests pass, including concurrent first login and FK preservation |
-| Admin | `pnpm exec vitest run tests/unit/workos-admin.test.ts` — missing admin module; later caught unwanted re-promotion | 10 tests pass after promotion-only-on-first-login correction |
-| Proxy | `pnpm exec vitest run tests/unit/workos-proxy.test.ts` — AuthKit not composed; prefetch excluded | 7 tests pass |
-| Routes | `pnpm exec vitest run tests/unit/workos-routes.test.ts` — callback/auth routes missing | 14 tests pass |
-| Client hooks | `pnpm exec vitest run tests/unit/workos-client-auth.test.tsx` — hook module missing | 2 tests pass |
-| UI | targeted provider/login/signup/account/bookmarks/header/mobile/admin tests — 11 failures | 41 tests pass |
-| Scripts | `pnpm exec vitest run tests/unit/workos-scripts.test.ts` — scripts missing; then 2 expectation/error-contract failures | 8 tests pass |
-| Packaging | `pnpm exec vitest run tests/unit/workos-package.test.ts` — WorkOS tracing/link assertions absent | 2 tests pass after config/script changes |
+| Area         | RED command and observed failure                                                                                       | GREEN result                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Env          | `pnpm exec vitest run tests/unit/workos-env.test.ts` — 6 failures, `getWorkosEnv is not a function`                    | env + build-fallback tests pass                                     |
+| Redirects    | same targeted run — 14 unsafe encoded/auth-loop paths accepted                                                         | 37 env/redirect tests pass together                                 |
+| Migration    | `pnpm exec vitest run tests/unit/workos-migration.test.ts` — provider enum lacked `workos`; unique index absent        | 2 tests pass on a migrated temp DB                                  |
+| Identity     | `pnpm exec vitest run tests/unit/workos-identity.test.ts` — missing identity module                                    | 10 tests pass, including concurrent first login and FK preservation |
+| Admin        | `pnpm exec vitest run tests/unit/workos-admin.test.ts` — missing admin module; later caught unwanted re-promotion      | 10 tests pass after promotion-only-on-first-login correction        |
+| Proxy        | `pnpm exec vitest run tests/unit/workos-proxy.test.ts` — AuthKit not composed; prefetch excluded                       | 7 tests pass                                                        |
+| Routes       | `pnpm exec vitest run tests/unit/workos-routes.test.ts` — callback/auth routes missing                                 | 14 tests pass                                                       |
+| Client hooks | `pnpm exec vitest run tests/unit/workos-client-auth.test.tsx` — hook module missing                                    | 2 tests pass                                                        |
+| UI           | targeted provider/login/signup/account/bookmarks/header/mobile/admin tests — 11 failures                               | 41 tests pass                                                       |
+| Scripts      | `pnpm exec vitest run tests/unit/workos-scripts.test.ts` — scripts missing; then 2 expectation/error-contract failures | 8 tests pass                                                        |
+| Packaging    | `pnpm exec vitest run tests/unit/workos-package.test.ts` — WorkOS tracing/link assertions absent                       | 2 tests pass after config/script changes                            |
 
 ## Implementation summary
 
@@ -94,39 +99,44 @@ From `web/`:
 
 ## Acceptance criteria
 
-| # | Criterion | Status | Evidence |
-|---|---|---|---|
-| 1 | WorkOS is the only session; legacy routes removed | PASS | route/module/dependency diff; callback/proxy tests |
-| 2 | Safe reader return paths and logout | PASS | redirect + route tests |
-| 3 | Existing/new identity mapping preserves FKs | PASS | identity + migration tests |
-| 4 | Unverified email never links/authorizes | PASS | identity + admin + callback tests |
-| 5 | Restrictive live admin gate | PASS | admin tests |
-| 6 | CSRF and rate limits remain | PASS | proxy/CSRF/rate-limit suites |
-| 7 | CSP nonce and no browser `x-workos-*` | PASS | proxy tests |
-| 8 | Unit/typecheck/lint/build/unauth E2E | PASS | final gates below |
-| 9 | Additive/reversible | PASS | migration test; retained tables/env |
-| 10 | Docs/env/CI/scripts/runbook | PASS | docs and script/config diff |
+| #   | Criterion                                         | Status | Evidence                                           |
+| --- | ------------------------------------------------- | ------ | -------------------------------------------------- |
+| 1   | WorkOS is the only session; legacy routes removed | PASS   | route/module/dependency diff; callback/proxy tests |
+| 2   | Safe reader return paths and logout               | PASS   | redirect + route tests                             |
+| 3   | Existing/new identity mapping preserves FKs       | PASS   | identity + migration tests                         |
+| 4   | Unverified email never links/authorizes           | PASS   | identity + admin + callback tests                  |
+| 5   | Restrictive live admin gate                       | PASS   | admin tests                                        |
+| 6   | CSRF and rate limits remain                       | PASS   | proxy/CSRF/rate-limit suites                       |
+| 7   | CSP nonce and no browser `x-workos-*`             | PASS   | proxy tests                                        |
+| 8   | Unit/typecheck/lint/build/unauth E2E              | PASS   | final gates below                                  |
+| 9   | Additive/reversible                               | PASS   | migration test; retained tables/env                |
+| 10  | Docs/env/CI/scripts/runbook                       | PASS   | docs and script/config diff                        |
 
 ## Final gates (PROVEN)
 
 All commands below ran from `web/` unless noted.
 
-| Command / check | Result |
-|---|---|
-| `pnpm run typecheck` | PASS |
-| `pnpm run lint` | PASS, 0 errors / 2 unchanged warnings (`cdn-image.tsx`, `worker-entry.ts`) |
-| `pnpm run test` | PASS, 178 files / 1,443 tests |
-| `pnpm run build:node` | PASS, exit 0; existing Sentry deprecation, dummy-DB sitemap, and media-tracing warnings only |
-| Exact clean-checkout Playwright command with only `E2E_BASE_URL` set | PASS, 6 passed / 5 DB-backed skipped |
-| Prior temp-SQLite Playwright auth/account/admin run | PASS, 11/11 Chromium tests |
-| `node scripts/package-standalone.mjs /tmp/opencode/jsquared-blog-workos-release` | PASS |
-| Packaged `import.meta.resolve()` for both WorkOS packages | PASS; both resolved under `/tmp/opencode/jsquared-blog-workos-release/node_modules` |
-| `pnpm run test:authkit-smoke /tmp/opencode/jsquared-blog-workos-release` | PASS |
+| Command / check                                                                  | Result                                                                                       |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `pnpm run typecheck`                                                             | PASS                                                                                         |
+| `pnpm run lint`                                                                  | PASS, 0 errors / 2 unchanged warnings (`cdn-image.tsx`, `worker-entry.ts`)                   |
+| `pnpm run test`                                                                  | PASS, 178 files / 1,443 tests                                                                |
+| `pnpm run build:node`                                                            | PASS, exit 0; existing Sentry deprecation, dummy-DB sitemap, and media-tracing warnings only |
+| Exact clean-checkout Playwright command with only `E2E_BASE_URL` set             | PASS, 6 passed / 5 DB-backed skipped                                                         |
+| Prior temp-SQLite Playwright auth/account/admin run                              | PASS, 11/11 Chromium tests                                                                   |
+| `node scripts/package-standalone.mjs /tmp/opencode/jsquared-blog-workos-release` | PASS                                                                                         |
+| Packaged `import.meta.resolve()` for both WorkOS packages                        | PASS; both resolved under `/tmp/opencode/jsquared-blog-workos-release/node_modules`          |
+| `pnpm run test:authkit-smoke /tmp/opencode/jsquared-blog-workos-release`         | PASS                                                                                         |
 
 Packaged real-SDK smoke evidence:
 
 ```json
-{"anonymousAbout":"PASS","loginInitiation":"PASS","perHostCallbacks":"PASS","hostileHostRejected":"PASS"}
+{
+  "anonymousAbout": "PASS",
+  "loginInitiation": "PASS",
+  "perHostCallbacks": "PASS",
+  "hostileHostRejected": "PASS"
+}
 ```
 
 Exact repair commands (run from `web/` unless noted):

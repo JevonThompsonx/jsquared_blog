@@ -6,6 +6,8 @@ import { AuthKitNotice } from "@/components/auth/authkit-notice";
 
 export const metadata: Metadata = {
   title: "Sign Up",
+  description:
+    "Create an account with a one-time email code from WorkOS AuthKit, a passkey, or a configured social account.",
   robots: { index: false, follow: true },
 };
 

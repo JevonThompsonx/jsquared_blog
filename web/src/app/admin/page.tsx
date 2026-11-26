@@ -70,7 +70,8 @@ export default async function AdminPage({
     postId?: string;
   }>;
 }) {
-  const { session, stale } = await getAdminAccessState();
+  const { session, stale, viewer } = await getAdminAccessState();
+  const signedInViewer = session?.user ?? viewer;
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const cookieStore = await cookies();
   const flashCookieValue = cookieStore.get(ADMIN_FLASH_COOKIE_NAME)?.value;
@@ -178,14 +179,25 @@ export default async function AdminPage({
           </div>
         ) : (
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <AdminAuthButton isSignedIn={Boolean(session?.user?.id)} />
-            {session?.user?.id ? (
-              <span className="min-w-0 break-all text-sm text-[var(--muted)]">
-                Signed in as{" "}
-                <strong className="text-[var(--foreground)]">
-                  {session.user.name ?? session.user.email ?? session.user.id}
-                </strong>
-              </span>
+            <AdminAuthButton
+              signedInAs={session?.user ? "admin" : viewer ? "non-admin" : null}
+            />
+            {signedInViewer?.id ? (
+              <>
+                <span className="min-w-0 break-all text-sm text-[var(--muted)]">
+                  Signed in as{" "}
+                  <strong className="text-[var(--foreground)]">
+                    {signedInViewer.name ??
+                      signedInViewer.email ??
+                      signedInViewer.id}
+                  </strong>
+                </span>
+                {!session?.user ? (
+                  <span className="text-sm text-[var(--muted)]">
+                    This account does not have admin access.
+                  </span>
+                ) : null}
+              </>
             ) : (
               <span className="min-w-0 break-all text-sm text-[var(--muted)]">
                 Admin access requires an allowlisted WorkOS account with a local

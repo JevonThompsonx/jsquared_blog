@@ -675,8 +675,9 @@ export function AccountSettings() {
         </p>
 
         <p className="text-sm text-[var(--text-secondary)]">
-          Email, password, verification, and recovery are managed by WorkOS
-          AuthKit. Use the hosted sign-in page to update your account.
+          Email one-time codes, passkeys, verification, and account recovery are
+          managed by WorkOS AuthKit. Use the hosted sign-in page to update your
+          account.
         </p>
       </section>
 

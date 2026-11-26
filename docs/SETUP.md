@@ -5,7 +5,6 @@
 > sections below are **legacy/rollback** instructions. Current setup, deploy,
 > and rollback: [`runbooks/local-origin.md`](./runbooks/local-origin.md).
 
-
 **Last Updated:** 2026-11-24
 
 ## Prerequisites
@@ -39,17 +38,17 @@ App runs at `http://localhost:3000`.
 
 Copy `web/.env.example` to `web/.env.local` and configure:
 
-| Variable | Description | Source |
-|----------|-------------|--------|
-| `TURSO_DATABASE_URL` | `file:/absolute/path/blog.db`, or a remote libsql/https URL | local file / Turso |
-| `TURSO_AUTH_TOKEN` | Only for remote libsql/https URLs | Turso |
-| `WORKOS_CLIENT_ID` | AuthKit public client ID | WorkOS staging dashboard |
-| `WORKOS_ISSUER` | Exact access-token issuer from OIDC discovery | WorkOS discovery document |
-| `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | Approved `/callback` URI | WorkOS Redirects tab |
-| `WORKOS_COOKIE_PASSWORD` | 32+ character session sealing secret | `openssl rand -base64 24` |
-| `WORKOS_COOKIE_MAX_AGE` | Session cookie lifetime; use `1209600` (14 days) | repo default |
-| `ADMIN_ALLOWED_EMAILS` | Comma/space-separated admin emails | owner-approved list |
-| `RATE_LIMIT_DRIVER` | `memory` for the single templetonbak Node process | repo default |
+| Variable                          | Description                                                 | Source                    |
+| --------------------------------- | ----------------------------------------------------------- | ------------------------- |
+| `TURSO_DATABASE_URL`              | `file:/absolute/path/blog.db`, or a remote libsql/https URL | local file / Turso        |
+| `TURSO_AUTH_TOKEN`                | Only for remote libsql/https URLs                           | Turso                     |
+| `WORKOS_CLIENT_ID`                | AuthKit public client ID                                    | WorkOS staging dashboard  |
+| `WORKOS_ISSUER`                   | Exact access-token issuer from OIDC discovery               | WorkOS discovery document |
+| `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | Approved `/callback` URI                                    | WorkOS Redirects tab      |
+| `WORKOS_COOKIE_PASSWORD`          | 32+ character session sealing secret                        | `openssl rand -base64 24` |
+| `WORKOS_COOKIE_MAX_AGE`           | Session cookie lifetime; use `1209600` (14 days)            | repo default              |
+| `ADMIN_ALLOWED_EMAILS`            | Comma/space-separated admin emails                          | owner-approved list       |
+| `RATE_LIMIT_DRIVER`               | `memory` for the single templetonbak Node process           | repo default              |
 
 Do not set `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
 `NEXT_PUBLIC_SITE_URL` must be HTTPS and non-loopback in deployed environments.
@@ -57,7 +56,7 @@ The runtime is keyless and sessions are host-scoped.
 
 Legacy `BETTER_AUTH_*`, `AUTH_SECRET`, `AUTH_GITHUB_*`, `AUTH_ADMIN_GITHUB_IDS`,
 and `CF_ACCESS_*` variables are optional and retained only for one code-rollback
-cycle. Cloudflare Access remains the outer admin edge gate.
+cycle. Cloudflare Access no longer gates `/admin`; `next.` remains Access-gated.
 
 ### Test Environment
 
@@ -81,24 +80,24 @@ tests never call WorkOS or depend on `next/cache` ESM resolution.
 
 ### Optional Integrations
 
-| Variable | Required For | Default Behavior If Missing |
-|----------|-------------|----------------------------|
-| `NEXT_PUBLIC_STADIA_MAPS_API_KEY` | Stadia Maps tile rendering | Maps degrade gracefully |
-| `ROUTING_PROVIDER` (geoapify) | Route planner | Route planner returns 503 |
-| `GEOCODING_PROVIDER` (geoapify) | Route geocoding | Falls back (limited) |
-| `GEOAPIFY_API_KEY` | Geoapify API access | Route planner returns 503 |
-| `RESEND_API_KEY` | Comment notifications + Listmonk SMTP relay | Email features skip gracefully |
-| `RESEND_FROM_EMAIL` | Sending emails | Email features skip gracefully |
-| `COMMENT_NOTIFICATION_TO_EMAIL` | Admin comment notifications | Notifications skip |
-| `LISTMONK_URL` / `LISTMONK_LIST_UUID` | Self-hosted newsletter | Newsletter signup returns skipped |
-| `LISTMONK_ACCESS_CLIENT_ID` / `_SECRET` | Worker → Listmonk Access service token | API request denied |
-| `UPSTASH_REDIS_REST_URL` | Production rate limiting | In-memory fallback in dev/test; **required in prod** |
-| `UPSTASH_REDIS_REST_TOKEN` | Production rate limiting | Same as above |
-| `CRON_SECRET` | Cron job endpoints (deployed) | Cron returns 500 in prod; local dev bypasses |
-| `LOCAL_MEDIA_ROOT` | Directory served at `/media`; required on the local origin | e.g. `/srv/blog/shared/media` |
-| `RATE_LIMIT_DRIVER` | `memory` for the single templetonbak process | required locally; Upstash only for rollback |
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry error tracking | Sentry disabled |
-| `SENTRY_AUTH_TOKEN` | Source map uploads during build | Source maps not uploaded |
+| Variable                                | Required For                                               | Default Behavior If Missing                          |
+| --------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------- |
+| `NEXT_PUBLIC_STADIA_MAPS_API_KEY`       | Stadia Maps tile rendering                                 | Maps degrade gracefully                              |
+| `ROUTING_PROVIDER` (geoapify)           | Route planner                                              | Route planner returns 503                            |
+| `GEOCODING_PROVIDER` (geoapify)         | Route geocoding                                            | Falls back (limited)                                 |
+| `GEOAPIFY_API_KEY`                      | Geoapify API access                                        | Route planner returns 503                            |
+| `RESEND_API_KEY`                        | Comment notifications + Listmonk SMTP relay                | Email features skip gracefully                       |
+| `RESEND_FROM_EMAIL`                     | Sending emails                                             | Email features skip gracefully                       |
+| `COMMENT_NOTIFICATION_TO_EMAIL`         | Admin comment notifications                                | Notifications skip                                   |
+| `LISTMONK_URL` / `LISTMONK_LIST_UUID`   | Self-hosted newsletter                                     | Newsletter signup returns skipped                    |
+| `LISTMONK_ACCESS_CLIENT_ID` / `_SECRET` | Worker → Listmonk Access service token                     | API request denied                                   |
+| `UPSTASH_REDIS_REST_URL`                | Production rate limiting                                   | In-memory fallback in dev/test; **required in prod** |
+| `UPSTASH_REDIS_REST_TOKEN`              | Production rate limiting                                   | Same as above                                        |
+| `CRON_SECRET`                           | Cron job endpoints (deployed)                              | Cron returns 500 in prod; local dev bypasses         |
+| `LOCAL_MEDIA_ROOT`                      | Directory served at `/media`; required on the local origin | e.g. `/srv/blog/shared/media`                        |
+| `RATE_LIMIT_DRIVER`                     | `memory` for the single templetonbak process               | required locally; Upstash only for rollback          |
+| `NEXT_PUBLIC_SENTRY_DSN`                | Sentry error tracking                                      | Sentry disabled                                      |
+| `SENTRY_AUTH_TOKEN`                     | Source map uploads during build                            | Source maps not uploaded                             |
 
 ---
 
@@ -107,6 +106,7 @@ tests never call WorkOS or depend on `next/cache` ESM resolution.
 ### Turso
 
 1. Create a Turso database (if not existing):
+
    ```bash
    turso db create jsquared-blog
    turso db show jsquared-blog --url
@@ -116,6 +116,7 @@ tests never call WorkOS or depend on `next/cache` ESM resolution.
 2. Set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in `web/.env.local`.
 
 3. Run migrations:
+
    ```bash
    cd web
    pnpm run db:migrate
@@ -216,26 +217,28 @@ pnpm run test:e2e
 Configuration: `web/playwright.config.ts`
 
 - Runs in Chromium only
-- Auto-starts dev server on `localhost:3000`
+- Auto-starts dev server on `127.0.0.1:3100` (port 3000 is reserved by Open WebUI on this host)
 - Retries once on CI
 - Screenshots on failure, traces retained on first retry
 - E2E specs in `web/tests/e2e/`
 
 ### E2E Auth State Capture
 
-Authenticated live smoke is orchestrator-owned. The optional fixture script
-uses the WorkOS SDK `sealedSession` and stores no raw tokens:
+Authenticated live smoke is orchestrator-owned. The optional fixture script uses
+WorkOS Magic Auth and the SDK `sealedSession`; it does not use or require a password:
 
 ```bash
 cd web
-WORKOS_API_KEY=... E2E_WORKOS_EMAIL=... E2E_WORKOS_PASSWORD=... \
+WORKOS_API_KEY=... E2E_WORKOS_EMAIL=owner@example.com \
 WORKOS_CLIENT_ID=client_... WORKOS_COOKIE_PASSWORD=... \
-E2E_BASE_URL=http://localhost:3000 \
+E2E_BASE_URL=https://jsquaredadventures.com E2E_WORKOS_MAX_AGE=3600 \
 pnpm run e2e:capture-workos-state
 ```
 
-The API key and fixture credentials belong only in the operator shell. Never add
-them to the app service environment or commit the generated storage state.
+The API key belongs only in the operator shell. The script uses the one-time code
+returned by `createMagicAuth` in memory, stores only the sealed session, writes the
+fixture as `0600` under a `0700` `playwright/.auth` directory, and never logs the
+code or raw tokens. Revoke the session and delete the fixture after smoke.
 
 ## Seeding Data
 
@@ -327,13 +330,19 @@ Newsletter signup safely returns a non-fatal "skipped" result when Listmonk is n
 
 Use the staging values recorded in [`runbooks/workos-auth.md`](./runbooks/workos-auth.md).
 The verified dashboard has all four callbacks (apex default), the apex initiate
-login and sign-up URLs, four sign-out roots, Email + Password with signups, no
-social providers, minimum password length 12, 14-day maximum sessions, 5-minute
-access tokens, and 7-day inactivity.
+login URI, four sign-out roots, Magic Auth, passkeys, Email + Password, signups,
+and Google/Microsoft/GitHub/Apple OAuth. The dashboard **Sign-up URL override must
+remain empty**; setting it to `/api/auth/signup` creates a redirect loop. Session
+maximum is 14 days, access-token lifetime 5 minutes, and inactivity limit 7 days.
 
 Implementation and routine deployment must not modify the dashboard. The
 optional `workos:configure-redirects` script is for an intentional, separately
 approved callback change and needs an API key only in the operator shell.
+
+The WorkOS staging environment is the accepted production identity environment
+for now (owner decision, 2026-11-25; low expected volume). Transactional emails are
+`[STAGING]`-prefixed, and no environment migration is planned unless volume, SLA,
+compliance, or support requirements change.
 
 ---
 
@@ -346,6 +355,7 @@ Set all required variables in Vercel project settings (Environment Variables). D
 ### Cron Jobs
 
 Defined in `web/vercel.json`:
+
 - `GET /api/cron/publish-scheduled` - daily at midnight
 - `GET /api/cron/keep-supabase-awake` - daily at 6 AM
 
@@ -382,12 +392,12 @@ This means `web/.env.local` overrides `.env`, and test env files take highest pr
 
 `pnpm-workspace.yaml` contains a small set of security-driven overrides applied across the dependency tree:
 
-| Package | Override | Reason |
-|---------|----------|--------|
+| Package   | Override   | Reason                                                          |
+| --------- | ---------- | --------------------------------------------------------------- |
 | `postcss` | `>=8.5.10` | Addresses a known postcss vulnerability in older 8.4.x versions |
-| `ws` | `>=8.20.1` | Addresses a `ws` vulnerability (CVE) in older 8.x versions |
-| `uuid` | `>=11.1.1` | Addresses a `uuid` vulnerability in older 10.x/8.x versions |
-| `tar` | `>=7.5.19` | GHSA-23hp-3jrh-7fpw / GHSA-83g3-92jg-28cx |
+| `ws`      | `>=8.20.1` | Addresses a `ws` vulnerability (CVE) in older 8.x versions      |
+| `uuid`    | `>=11.1.1` | Addresses a `uuid` vulnerability in older 10.x/8.x versions     |
+| `tar`     | `>=7.5.19` | GHSA-23hp-3jrh-7fpw / GHSA-83g3-92jg-28cx                       |
 
 These overrides are intentionally minimal and security-focused. They apply transitively to any package in the dependency tree that depends on these. Review and update them when bumping major dependencies.
 

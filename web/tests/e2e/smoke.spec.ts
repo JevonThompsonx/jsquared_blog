@@ -27,7 +27,7 @@ function buildAxe(
 
 // These tests run against a live server (local dev or production).
 // Set E2E_BASE_URL to target a specific environment, otherwise defaults to
-// http://localhost:3000 (local dev server must be running).
+// http://127.0.0.1:3100 (the managed local dev server starts automatically).
 
 const statusOptionLabels: Record<"published" | "draft" | "scheduled", string> =
   {
@@ -237,14 +237,19 @@ test.describe("public pages smoke tests", () => {
     ).toBeVisible();
   });
 
-  test("signup page renders", async ({ page }) => {
+  test("signup page renders the hosted email-code notice", async ({ page }) => {
     await page.goto("/signup");
-    await expect(page.locator("main")).toBeVisible();
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(main).toBeVisible();
     await expect(
-      page.getByLabel("Confirm password", { exact: true }),
+      main.getByRole("heading", { name: "Create an account" }),
     ).toBeVisible();
+    await expect(main.getByText(/one-time email code/i)).toBeVisible();
+    await expect(main.getByText(/expire after 10 minutes/i)).toBeVisible();
+    await expect(
+      main.getByRole("link", { name: "Continue to sign up" }),
+    ).toHaveAttribute("href", "/api/auth/signup");
+    await expect(main.locator('input[type="password"]')).toHaveCount(0);
   });
 
   test("tag page loads when a public tag exists", async ({ page, request }) => {
@@ -323,11 +328,19 @@ test.describe("public pages smoke tests", () => {
     ).toBeVisible();
   });
 
-  test("login page renders", async ({ page }) => {
+  test("login page renders the hosted email-code notice", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.locator("main")).toBeVisible();
-    // Should have an email input
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(main).toBeVisible();
+    await expect(
+      main.getByRole("heading", { name: "Sign in", exact: true }),
+    ).toBeVisible();
+    await expect(main.getByText(/one-time email code/i)).toBeVisible();
+    await expect(main.getByText(/expire after 10 minutes/i)).toBeVisible();
+    await expect(
+      main.getByRole("link", { name: "Continue to sign in" }),
+    ).toHaveAttribute("href", "/api/auth/login");
+    await expect(main.locator('input[type="password"]')).toHaveCount(0);
   });
 
   test("bookmarks prompts unauthenticated users to sign in", async ({
@@ -373,14 +386,14 @@ test.describe("public pages smoke tests", () => {
 
   test("login page has no critical axe-core violations", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
     const results = await buildAxe(page)
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
     expect(results.violations).toEqual([]);
   });
 
-  test("admin redirects to GitHub sign-in when unauthenticated", async ({
+  test("admin redirects to WorkOS sign-in when unauthenticated", async ({
     browser,
   }) => {
     // Use a fresh context with no storage state so we are definitely unauthenticated,
@@ -393,7 +406,10 @@ test.describe("public pages smoke tests", () => {
       page.getByRole("heading", { name: "Editorial control center" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Sign in with GitHub" }),
+      page.getByRole("main").getByRole("link", { name: "Sign in with WorkOS" }),
+    ).toHaveAttribute("href", "/api/auth/login?returnTo=%2Fadmin");
+    await expect(
+      page.getByRole("main").getByText(/one-time code.*10 minutes/i),
     ).toBeVisible();
     await context.close();
   });
@@ -409,7 +425,10 @@ test.describe("public pages smoke tests", () => {
       page.getByRole("heading", { name: "Editorial control center" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Sign in with GitHub" }),
+      page.getByRole("main").getByRole("link", { name: "Sign in with WorkOS" }),
+    ).toHaveAttribute("href", "/api/auth/login?returnTo=%2Fadmin");
+    await expect(
+      page.getByRole("main").getByText(/one-time code.*10 minutes/i),
     ).toBeVisible();
     await context.close();
   });
@@ -503,7 +522,7 @@ adminTest.describe("authenticated admin smoke tests", () => {
 
       await expect(page.getByText("Editorial workspace")).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "Manage tags" }),
+        page.getByRole("link", { name: "Manage tags", exact: true }),
       ).toBeVisible();
       await expect(page.getByLabel("Search posts")).toBeVisible();
 

@@ -126,6 +126,8 @@ describe("error and 404 pages", () => {
 
     expect(markup.match(/<h1\b/g)?.length).toBe(1);
     expect(markup).toContain("Account Settings");
+    expect(markup).toContain("email sign-in methods");
+    expect(markup).not.toContain("password");
     expect(markup).toContain("/login?redirectTo=%2Faccount");
   });
 });

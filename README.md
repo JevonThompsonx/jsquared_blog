@@ -8,21 +8,21 @@ A production travel blog platform built around the live Next.js app in `web/`. I
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **App** | Next.js 16 App Router |
-| **Language** | TypeScript (`strict: true`) |
-| **Database** | SQLite (libSQL `file:`) + Drizzle ORM; Turso only for the rollback Worker |
-| **Reader + Admin Auth** | WorkOS AuthKit (keyless PKCE, hosted Email + Password) |
-| **Storage** | Local content-addressed WebP via `sharp`, served at `/media` |
-| **Routing / geocoding** | Geoapify |
-| **Email** | Resend (comment notifications + newsletter relay); Listmonk self-hosted for newsletter subscriptions |
-| **Rate limiting** | In-process on the single Node origin; Upstash only for the rollback Worker |
-| **Observability** | Sentry (optional) |
-| **Styling** | TailwindCSS 4 + CSS variables |
-| **Testing** | Vitest + Playwright |
-| **Deployment** | templetonbak host (systemd) behind its Cloudflare Tunnel; Cloudflare DNS/TLS/WAF/Access |
-| **Runtime / package manager** | pnpm (primary), bun (dev-only for `bunx`) |
+| Layer                         | Technology                                                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **App**                       | Next.js 16 App Router                                                                                    |
+| **Language**                  | TypeScript (`strict: true`)                                                                              |
+| **Database**                  | SQLite (libSQL `file:`) + Drizzle ORM; Turso only for the rollback Worker                                |
+| **Reader + Admin Auth**       | WorkOS AuthKit (keyless PKCE; email Magic Auth, passkeys, OAuth)                                         |
+| **Storage**                   | Local content-addressed WebP via `sharp`, served at `/media`                                             |
+| **Routing / geocoding**       | Geoapify                                                                                                 |
+| **Email**                     | Resend (comment notifications + newsletter relay); Listmonk self-hosted for newsletter subscriptions     |
+| **Rate limiting**             | In-process on the single Node origin; Upstash only for the rollback Worker                               |
+| **Observability**             | Sentry (optional)                                                                                        |
+| **Styling**                   | TailwindCSS 4 + CSS variables                                                                            |
+| **Testing**                   | Vitest + Playwright                                                                                      |
+| **Deployment**                | templetonbak host (systemd) behind its Cloudflare Tunnel; Cloudflare DNS/TLS/WAF, Access only on `next.` |
+| **Runtime / package manager** | pnpm (primary), bun (dev-only for `bunx`)                                                                |
 
 ---
 
@@ -54,6 +54,7 @@ jsquared_blog/
 ## Quick Start
 
 ### Prerequisites
+
 - [pnpm](https://pnpm.io/installation)
 - [Node.js](https://nodejs.org/) >= 22.13
 - A SQLite database at `file:/absolute/path/blog.db` (or Turso credentials for the legacy path)
@@ -62,6 +63,7 @@ jsquared_blog/
 - `LOCAL_MEDIA_ROOT` for uploads (no Cloudinary account required)
 
 ### 1. Install Dependencies
+
 ```bash
 pnpm install
 ```
@@ -115,6 +117,7 @@ SENTRY_AUTH_TOKEN=...
 ```
 
 Notes:
+
 - `CRON_SECRET` is optional only for local loopback development, but required for deployed cron routes.
 - Upstash credentials are required in deployed environments unless `RATE_LIMIT_DRIVER=memory` is explicitly selected for the single Node origin.
 - WorkOS runs keyless: do not set `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
@@ -124,27 +127,36 @@ Notes:
 - Optional Playwright/operator helpers live in `web/.env.example`; authenticated fixture capture uses the WorkOS SDK `sealedSession`.
 
 ### 3. Run Development Server
+
 ```bash
 cd web
 pnpm run dev
 ```
 
-App runs at `http://localhost:3000`.
+App runs at `http://localhost:3000` by default. On this host port 3000 is occupied
+by Open WebUI; use `pnpm run dev --port 3100` for the blog. Playwright already
+defaults to `http://127.0.0.1:3100`.
 
 ### Optional: Capture a WorkOS Playwright fixture
 
-Operator-only; the API key and fixture credentials stay in the shell:
+Operator-only; the API key and fixture email stay in the shell. No password is used:
 
 ```bash
 cd web
-WORKOS_API_KEY=... E2E_WORKOS_EMAIL=... E2E_WORKOS_PASSWORD=... \
+WORKOS_API_KEY=... E2E_WORKOS_EMAIL=owner@example.com \
 WORKOS_CLIENT_ID=client_... WORKOS_COOKIE_PASSWORD=... \
+E2E_BASE_URL=https://jsquaredadventures.com E2E_WORKOS_MAX_AGE=3600 \
 pnpm run e2e:capture-workos-state
 ```
 
-The fixture is written to `playwright/.auth/admin.json` with origin metadata.
-Staging `example.com` is reserved for Test Organization SSO; use an
-owner-controlled non-example inbox for real email/password smoke.
+The fixture is written to `playwright/.auth/admin.json` with origin metadata,
+mode `0600`, inside a `0700` directory. It contains only the SDK-sealed session;
+the one-time code and raw tokens are never persisted. Revoke the session and
+delete the fixture after authenticated smoke.
+
+Local Playwright defaults to `http://127.0.0.1:3100` because port 3000 is occupied
+by Open WebUI on this host. Full hosted-auth round-trip smoke targets production;
+local port-3100 E2E validates pages and redirect initiation only.
 
 See [`docs/runbooks/workos-auth.md`](./docs/runbooks/workos-auth.md) for verified
 dashboard values, cutover, live smoke, and rollback.
@@ -154,6 +166,7 @@ dashboard values, cutover, live smoke, and rollback.
 ## Key Features
 
 ### Content Management
+
 - Rich text editor (Tiptap) with canonical JSON storage
 - Safe derived HTML/plain-text rendering for prose
 - Legacy HTML migration support behind allowlist sanitization
@@ -166,6 +179,7 @@ dashboard values, cutover, live smoke, and rollback.
 - Categories, tags, series, location metadata, song metadata, and previews
 
 ### User Experience
+
 - Infinite scroll with Intersection Observer
 - Server-side search (title, description, category, tags)
 - Seasonal homepage hero and grouped feed sections
@@ -175,6 +189,7 @@ dashboard values, cutover, live smoke, and rollback.
 - Per-post view tracking with cookie dedupe
 
 ### Travel Tools
+
 - Public wishlist page with map/list rendering for future destinations
 - Visited wishlist stops excluded by default, with an opt-in include-visited toggle
 - Admin wishlist editor supports place names, autocompleted locations, optional info links, short descriptions, and public/private visibility
@@ -183,18 +198,21 @@ dashboard values, cutover, live smoke, and rollback.
 - Linked published posts are excluded from public wishlist surfaces automatically
 
 ### User Profiles
+
 - Display name and avatar customization
 - Letter avatars, preset icons, or uploaded avatars
 - Theme preference persistence
 - Account settings page
 
 ### Reader + Admin Auth Contract
+
 - WorkOS AuthKit is the only session source; `wos-session` is host-scoped, HttpOnly, SameSite=Lax, and Secure in production.
 - First login maps a verified normalized email to the existing local `users.id`, preserving profiles and content FKs.
-- Admin access requires a live WorkOS session, verified email, current `ADMIN_ALLOWED_EMAILS`, local `users.role === 'admin'`, and `auth_time` no older than 24 hours.
-- Cloudflare Access remains the outer `/admin` edge gate during soak.
+- Admin access requires a live WorkOS session, verified email, current `ADMIN_ALLOWED_EMAILS`, local `users.role === 'admin'`, and `auth_time` no older than 24 hours. Production currently uses the WorkOS staging environment by owner decision; its emails are `[STAGING]`-prefixed.
+- Cloudflare Access is removed from `/admin`; WorkOS is the only admin gate. `next.` remains Access-gated.
 
 ### Social Features
+
 - Comments with replies, likes, and owner deletion
 - Admin comment moderation
 - Bookmarks for signed-in public users
@@ -202,6 +220,7 @@ dashboard values, cutover, live smoke, and rollback.
 - Newsletter signup
 
 ### SEO
+
 - Dynamic sitemap.xml
 - RSS feed (`/feed.xml`)
 - Open Graph + Twitter Cards
@@ -255,7 +274,9 @@ pnpm exec tsx ./scripts/seed-locations.ts             # Seed location metadata
 Until that file exists locally, the only repo-local recovery surface is the migration set in `web/drizzle/` (25 SQL files) plus `pnpm run db:migrate`. Row-level restore depends on a Turso backup/branch procedure that is not documented in this repo.
 
 ### New Project Setup
+
 Apply Drizzle migrations against the configured SQLite/libSQL database from `web/`:
+
 ```bash
 cd web
 pnpm run db:migrate
@@ -270,6 +291,7 @@ pnpm exec tsx ./scripts/seed-rich-content.ts
 ```
 
 ### Core Tables (21 Drizzle)
+
 - `users` / `auth_accounts` - Local authorization + provider-linked identities
 - `profiles` - Public profile data, avatars, theme preference
 - `posts` - Blog posts, scheduling, content format, view count, location and song metadata
@@ -359,7 +381,7 @@ GET  /api/auth/login              # Start hosted sign-in
 GET  /api/auth/signup             # Start hosted sign-up
 GET  /api/auth/logout             # Clear WorkOS session
 GET  /api/auth/session           # Public-safe token-free admin display fields
-GET  /api/admin/session          # Same handler behind Cloudflare Access
+GET  /api/admin/session          # Same WorkOS admin handler; no Cloudflare Access
 POST /api/newsletter
 POST /api/route-plans              # Route planner (needs Geoapify)
 POST /api/csp-report               # Log-only CSP violation collector
@@ -390,17 +412,17 @@ GET  /feed.xml
 
 ## Code Quality
 
-| Check | Tool | Command |
-|-------|------|---------|
-| Type-check | TypeScript | `cd web && pnpm run typecheck` (or `pnpm exec tsc --noEmit`) |
-| Lint | ESLint | `cd web && pnpm run lint` |
-| Unit tests | Vitest | `cd web && pnpm run test` |
-| E2E smoke | Playwright | `cd web && pnpm run test:e2e` |
-| WorkOS fixture capture | Playwright + WorkOS SDK | `cd web && pnpm run e2e:capture-workos-state` |
-| Identity audit | libSQL | `cd web && pnpm run workos:audit-identities` |
-| Format | Prettier | `pnpm run format` / `pnpm run format:check` (root or `web`) |
-| CI | GitHub Actions | `.github/workflows/ci.yml` — 6 jobs: Lint, Typecheck, Unit tests, Security audit, Build, E2E |
-| Deploy | Node standalone | `cd web && pnpm run build:node` + `node scripts/package-standalone.mjs` |
+| Check                  | Tool                    | Command                                                                                      |
+| ---------------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
+| Type-check             | TypeScript              | `cd web && pnpm run typecheck` (or `pnpm exec tsc --noEmit`)                                 |
+| Lint                   | ESLint                  | `cd web && pnpm run lint`                                                                    |
+| Unit tests             | Vitest                  | `cd web && pnpm run test`                                                                    |
+| E2E smoke              | Playwright              | `cd web && pnpm run test:e2e`                                                                |
+| WorkOS fixture capture | Playwright + WorkOS SDK | `cd web && pnpm run e2e:capture-workos-state`                                                |
+| Identity audit         | libSQL                  | `cd web && pnpm run workos:audit-identities`                                                 |
+| Format                 | Prettier                | `pnpm run format` / `pnpm run format:check` (root or `web`)                                  |
+| CI                     | GitHub Actions          | `.github/workflows/ci.yml` — 6 jobs: Lint, Typecheck, Unit tests, Security audit, Build, E2E |
+| Deploy                 | Node standalone         | `cd web && pnpm run build:node` + `node scripts/package-standalone.mjs`                      |
 
 **Input validation** uses [Zod](https://zod.dev) at API and action trust boundaries.
 
@@ -416,23 +438,23 @@ GET  /feed.xml
 
 Start at [`docs/INDEX.md`](./docs/INDEX.md) — it has one line for every document in `docs/`.
 
-| Document | Purpose |
-|----------|---------|
-| [docs/INDEX.md](./docs/INDEX.md) | Index of every doc in `docs/` (start here) |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, auth flow, data model, API routes, deployment |
-| [docs/CODING.md](./docs/CODING.md) | Codemap: file patterns, conventions, component organization |
-| [docs/SETUP.md](./docs/SETUP.md) | Environment setup, database config, running tests, integrations |
-| [docs/KNOWLEDGE_BASE.md](./docs/KNOWLEDGE_BASE.md) | Living reference of project-specific gotchas (SQLite, Drizzle, Turso, React 19, Next.js). Agents add to this when they discover new patterns. |
-| [docs/IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) | Prioritized backlog of tech debt, features, security, and perf work |
-| [docs/MODERNIZATION-AUDIT.md](./docs/MODERNIZATION-AUDIT.md) | Security / efficiency / speed / QoL audit — snapshot dated 2026-08-24, re-verify versions against `web/package.json` |
-| [docs/VERCEL-CLI-REFERENCE.md](./docs/VERCEL-CLI-REFERENCE.md) | Vercel CLI operational reference |
-| [docs/STYLEGUIDE.md](./docs/STYLEGUIDE.md) | Design tokens, component patterns, and conventions |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | Active branch tracking and implementation status |
-| [docs/CHANGELOG.md](./docs/CHANGELOG.md) | Version history and completed work log |
-| [docs/branches/](./docs/branches/) | Per-branch implementation checklists (all merged) |
-| [docs/runbooks/](./docs/runbooks/) | Manual operational smoke tests |
-| `docs/DISASTER-RECOVERY.md` | Post deletion recovery via Turso PITR — **internal, gitignored, not in a fresh clone** |
-| [AGENTS.md](./AGENTS.md) | Agent operating instructions (workflow, patterns, constraints) |
+| Document                                                       | Purpose                                                                                                                                       |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| [docs/INDEX.md](./docs/INDEX.md)                               | Index of every doc in `docs/` (start here)                                                                                                    |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                 | System architecture, auth flow, data model, API routes, deployment                                                                            |
+| [docs/CODING.md](./docs/CODING.md)                             | Codemap: file patterns, conventions, component organization                                                                                   |
+| [docs/SETUP.md](./docs/SETUP.md)                               | Environment setup, database config, running tests, integrations                                                                               |
+| [docs/KNOWLEDGE_BASE.md](./docs/KNOWLEDGE_BASE.md)             | Living reference of project-specific gotchas (SQLite, Drizzle, Turso, React 19, Next.js). Agents add to this when they discover new patterns. |
+| [docs/IMPROVEMENTS.md](./docs/IMPROVEMENTS.md)                 | Prioritized backlog of tech debt, features, security, and perf work                                                                           |
+| [docs/MODERNIZATION-AUDIT.md](./docs/MODERNIZATION-AUDIT.md)   | Security / efficiency / speed / QoL audit — snapshot dated 2026-08-24, re-verify versions against `web/package.json`                          |
+| [docs/VERCEL-CLI-REFERENCE.md](./docs/VERCEL-CLI-REFERENCE.md) | Vercel CLI operational reference                                                                                                              |
+| [docs/STYLEGUIDE.md](./docs/STYLEGUIDE.md)                     | Design tokens, component patterns, and conventions                                                                                            |
+| [docs/ROADMAP.md](./docs/ROADMAP.md)                           | Active branch tracking and implementation status                                                                                              |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                       | Version history and completed work log                                                                                                        |
+| [docs/branches/](./docs/branches/)                             | Per-branch implementation checklists (all merged)                                                                                             |
+| [docs/runbooks/](./docs/runbooks/)                             | Manual operational smoke tests                                                                                                                |
+| `docs/DISASTER-RECOVERY.md`                                    | Post deletion recovery via Turso PITR — **internal, gitignored, not in a fresh clone**                                                        |
+| [AGENTS.md](./AGENTS.md)                                       | Agent operating instructions (workflow, patterns, constraints)                                                                                |
 
 ---
 

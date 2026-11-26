@@ -8,6 +8,7 @@ import {
   getAdminStorageStateMetadataPath,
   isAdminStorageStateMetadata,
 } from "@/lib/e2e/admin-storage-state-config";
+import { resolveE2EBaseURL } from "@/lib/e2e/base-url";
 import {
   getStorageStateHint,
   resolveExistingStorageStatePath,
@@ -22,8 +23,7 @@ const defaultAdminStorageStatePath = path.resolve(
   ".auth",
   "admin.json",
 );
-const configuredBaseUrl =
-  process.env.E2E_BASE_URL?.trim() || "http://localhost:3000";
+const configuredBaseUrl = resolveE2EBaseURL(process.env.E2E_BASE_URL);
 
 function isLocalTarget(urlValue: string): boolean {
   try {

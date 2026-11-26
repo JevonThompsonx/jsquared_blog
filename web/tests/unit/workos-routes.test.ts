@@ -156,22 +156,67 @@ describe("WorkOS callback", () => {
     });
   });
 
-  it("fails closed when callback identity mapping fails", async () => {
+  it.each([
+    "unverified_email",
+    "invalid_email",
+    "legacy_email",
+    "identity_conflict",
+  ] as const)(
+    "redirects structured %s mapping failures to a fixed login error",
+    async (code) => {
+      await callbackGET(
+        new NextRequest("https://jsquaredadventures.com/callback"),
+      );
+      const options = getCallbackOptions();
+      resolveWorkosIdentityMock.mockRejectedValue(
+        Object.assign(new Error("sensitive internal detail"), { code }),
+      );
+
+      await expect(
+        options.onSuccess({ user: verifiedUser } as never),
+      ).rejects.toThrow("sensitive internal detail");
+      const response = await options.onError({
+        error: Object.assign(new Error("sensitive internal detail"), { code }),
+        request: new NextRequest(
+          "https://jsquaredadventures.com/callback?returnTo=//evil.example",
+        ),
+      });
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toBe(
+        `https://jsquaredadventures.com/login?error=${code}`,
+      );
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(await response.text()).not.toContain("sensitive internal detail");
+      expect(response.headers.get("location")).not.toContain("evil.example");
+    },
+  );
+
+  it("redirects expired and unknown callback failures without raw details", async () => {
     await callbackGET(
       new NextRequest("https://jsquaredadventures.com/callback"),
     );
     const options = getCallbackOptions();
-    resolveWorkosIdentityMock.mockRejectedValue(new Error("mapping failed"));
 
-    await expect(
-      options.onSuccess({ user: verifiedUser } as never),
-    ).rejects.toThrow("mapping failed");
-    const response = await options.onError({
-      error: new Error("sensitive internal detail"),
-      request: new NextRequest("http://127.0.0.1:3010/callback"),
-    });
-    expect(response.status).toBe(400);
-    expect(await response.text()).not.toContain("sensitive internal detail");
+    for (const [error, code] of [
+      [new Error("invalid_grant"), "expired_link"],
+      [new Error("secret internal detail"), "unknown"],
+    ] as const) {
+      const response = await options.onError({
+        error,
+        request: new NextRequest(
+          "https://jsquaredadventures.com/callback?returnTo=https://evil.example",
+        ),
+      });
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toBe(
+        `https://jsquaredadventures.com/login?error=${code}`,
+      );
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(await response.text()).toBe("");
+      expect(response.headers.get("location")).not.toContain("evil.example");
+    }
   });
 });
 

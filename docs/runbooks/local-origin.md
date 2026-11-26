@@ -7,20 +7,20 @@ as a rollback copy but are stopped.
 
 ## Topology
 
-| Piece | Where |
-|---|---|
-| Edge | Cloudflare DNS, TLS, WAF, Access, cache |
-| Tunnel | `templetonbak` (`ede2f4c2-4793-4d94-b4c5-8237fba8b10f`) via the host Docker `cloudflared` |
-| Ingress | `jsquaredadventures.com`, `www.jsquaredadventures.com`, `next.` → `http://127.0.0.1:3010` |
-| App | templetonbak host, Debian 13, Node 26, systemd `jsquared-blog.service` as user `blog` |
-| Release | `/srv/blog/releases/<UTC timestamp>/web` + `/srv/blog/current` symlink |
-| Database | `/srv/blog/shared/blog.db` (SQLite, WAL) |
-| Media | `/srv/blog/shared/media/` served at `/media/*` |
-| Uploads | admin/avatar routes write content-addressed WebP via `sharp` |
-| Rate limit | in-process (`RATE_LIMIT_DRIVER=memory`); single Node process |
-| Cron | systemd timers on templetonbak (`jsquared-blog-publish`, `-backup`) |
-| Backups | `sqlite3 .backup` daily 03:30 UTC, 14-day retention; templetonbak restic includes `/srv/blog/shared` (DB + media) offsite |
-| Staging | `next.jsquaredadventures.com` (whole site behind Access) |
+| Piece      | Where                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Edge       | Cloudflare DNS, TLS, WAF, Access, cache                                                                                   |
+| Tunnel     | `templetonbak` (`ede2f4c2-4793-4d94-b4c5-8237fba8b10f`) via the host Docker `cloudflared`                                 |
+| Ingress    | `jsquaredadventures.com`, `www.jsquaredadventures.com`, `next.` → `http://127.0.0.1:3010`                                 |
+| App        | templetonbak host, Debian 13, Node 26, systemd `jsquared-blog.service` as user `blog`                                     |
+| Release    | `/srv/blog/releases/<UTC timestamp>/web` + `/srv/blog/current` symlink                                                    |
+| Database   | `/srv/blog/shared/blog.db` (SQLite, WAL)                                                                                  |
+| Media      | `/srv/blog/shared/media/` served at `/media/*`                                                                            |
+| Uploads    | admin/avatar routes write content-addressed WebP via `sharp`                                                              |
+| Rate limit | in-process (`RATE_LIMIT_DRIVER=memory`); single Node process                                                              |
+| Cron       | systemd timers on templetonbak (`jsquared-blog-publish`, `-backup`)                                                       |
+| Backups    | `sqlite3 .backup` daily 03:30 UTC, 14-day retention; templetonbak restic includes `/srv/blog/shared` (DB + media) offsite |
+| Staging    | `next.jsquaredadventures.com` (whole site behind Access)                                                                  |
 
 The Cloudflare Worker `jsquared-blog` is **retained as a rollback artifact only**.
 Its custom domains, cron schedules, and DNS records were removed at cutover.
@@ -76,18 +76,18 @@ previous release and restart.
   `NEXT_PUBLIC_WORKOS_REDIRECT_URI`, `WORKOS_COOKIE_PASSWORD` (32+ chars),
   `WORKOS_COOKIE_MAX_AGE=1209600`, `ADMIN_ALLOWED_EMAILS`, and `CRON_SECRET`.
 - `WORKOS_API_KEY` and `WORKOS_COOKIE_DOMAIN` must not be set in the app service.
-- `CF_ACCESS_TEAM_DOMAIN` / `CF_ACCESS_AUD` are legacy app vars; Cloudflare Access
-  is still configured at the edge as the outer `/admin` gate during soak.
+- `CF_ACCESS_TEAM_DOMAIN` / `CF_ACCESS_AUD` are legacy rollback vars. Cloudflare
+  Access no longer gates `/admin`; only `next.` remains Access-gated.
 - Legacy Better Auth / Auth.js env vars may remain for one code-rollback cycle.
 - Cloudinary, Upstash, and `TURSO_AUTH_TOKEN` are no longer set in production.
 - Never copy this file into a release directory or commit it.
 
 ## Cron
 
-| Timer | Schedule | Action |
-|---|---|---|
+| Timer                         | Schedule         | Action                            |
+| ----------------------------- | ---------------- | --------------------------------- |
 | `jsquared-blog-publish.timer` | every 5 min, UTC | `GET /api/cron/publish-scheduled` |
-| `jsquared-blog-backup.timer` | daily 03:30 UTC | SQLite hot backup + 14-day prune |
+| `jsquared-blog-backup.timer`  | daily 03:30 UTC  | SQLite hot backup + 14-day prune  |
 
 The publish service authenticates with `Authorization: Bearer $CRON_SECRET`.
 Check:
