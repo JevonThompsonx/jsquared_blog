@@ -3,11 +3,15 @@ import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { captureException } from "@/lib/sentry";
-import { getRequestSupabaseUser } from "@/lib/supabase/server";
-import { ensurePublicAppUser } from "@/server/auth/public-users";
+import { rejectCrossSiteMutation } from "@/lib/auth/csrf";
+import { getRequestPublicUser } from "@/server/auth/public-users";
 import { deleteCommentRecord } from "@/server/dal/comments";
 
-const commentIdSchema = z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/);
+const commentIdSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-zA-Z0-9_-]+$/);
 
 export async function DELETE(
   request: Request,
@@ -20,18 +24,24 @@ export async function DELETE(
   }
   const commentId = parseId.data;
 
-  const supabaseUser = await getRequestSupabaseUser(request);
-  if (!supabaseUser) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+
+  const publicUser = await getRequestPublicUser(request);
+  if (!publicUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`comment-delete:${supabaseUser.id}:${getClientIp(request)}`, 20, 60_000);
+  const rl = await checkRateLimit(
+    `comment-delete:${publicUser.id}:${getClientIp(request)}`,
+    20,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
 
   try {
-    const publicUser = await ensurePublicAppUser(supabaseUser);
     const deleted = await deleteCommentRecord(commentId, publicUser.id);
     if (!deleted) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
@@ -41,10 +51,17 @@ export async function DELETE(
   } catch (error) {
     console.error("[comment delete] failed to delete comment", {
       commentId,
-      supabaseUserId: supabaseUser.id,
+      userId: publicUser.id,
       error,
     });
-    captureException(error, { route: "comment-delete", commentId, supabaseUserId: supabaseUser.id });
-    return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 });
+    captureException(error, {
+      route: "comment-delete",
+      commentId,
+      userId: publicUser.id,
+    });
+    return NextResponse.json(
+      { error: "Failed to delete comment" },
+      { status: 500 },
+    );
   }
 }

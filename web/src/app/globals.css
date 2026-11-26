@@ -33,7 +33,11 @@
   --input-bg: rgba(255, 253, 248, 0.92);
   --input-border: #d8d0c1;
   --input-text: #273126;
-  --hero-panel-bg: linear-gradient(135deg, rgba(41, 51, 39, 0.70) 0%, rgba(74, 88, 65, 0.44) 100%);
+  --hero-panel-bg: linear-gradient(
+    135deg,
+    rgba(41, 51, 39, 0.7) 0%,
+    rgba(74, 88, 65, 0.44) 100%
+  );
   --hero-panel-border: rgba(255, 250, 240, 0.24);
   --hero-shadow: 0 22px 60px rgba(27, 35, 28, 0.26);
   --card-shell-bg: #f7f1e7;
@@ -46,20 +50,30 @@
   --card-body: #556255;
   --card-meta: #6b7368;
   --card-kicker: #6f865b;
-  --card-chip-bg: rgba(111, 134, 91, 0.10);
-  --card-chip-border: rgba(111, 134, 91, 0.20);
+  --card-chip-bg: rgba(111, 134, 91, 0.1);
+  --card-chip-border: rgba(111, 134, 91, 0.2);
   --card-chip-text: #637853;
   --card-link: #6f865b;
   --card-link-hover: #89a071;
-  --overlay-scrim: linear-gradient(180deg, rgba(19, 24, 18, 0.04) 8%, rgba(23, 29, 22, 0.18) 42%, rgba(22, 27, 21, 0.78) 100%);
-  --overlay-panel-bg: linear-gradient(180deg, rgba(55, 65, 48, 0.08) 0%, rgba(44, 55, 40, 0.78) 30%, rgba(28, 37, 28, 0.94) 100%);
+  --overlay-scrim: linear-gradient(
+    180deg,
+    rgba(19, 24, 18, 0.04) 8%,
+    rgba(23, 29, 22, 0.18) 42%,
+    rgba(22, 27, 21, 0.78) 100%
+  );
+  --overlay-panel-bg: linear-gradient(
+    180deg,
+    rgba(55, 65, 48, 0.08) 0%,
+    rgba(44, 55, 40, 0.78) 30%,
+    rgba(28, 37, 28, 0.94) 100%
+  );
   --overlay-panel-border: rgba(244, 236, 222, 0.18);
   --overlay-panel-shadow: 0 -18px 36px rgba(10, 16, 12, 0.18);
   --overlay-title: #f7f0e6;
   --overlay-body: rgba(247, 240, 230, 0.88);
-  --overlay-meta: rgba(232, 224, 212, 0.80);
+  --overlay-meta: rgba(232, 224, 212, 0.8);
   --overlay-kicker: #cee0bc;
-  --overlay-chip-bg: rgba(255, 248, 238, 0.10);
+  --overlay-chip-bg: rgba(255, 248, 238, 0.1);
   --overlay-chip-border: rgba(255, 248, 238, 0.16);
   --overlay-chip-text: #f7f0e6;
   --card-image-filter: saturate(0.96) contrast(0.98);
@@ -140,7 +154,13 @@ body {
   min-height: 100vh;
   color: var(--foreground);
   background: transparent;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   overflow-x: hidden;
 }
 
@@ -246,7 +266,10 @@ mark {
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px) saturate(130%);
   -webkit-backdrop-filter: blur(18px) saturate(130%);
-  transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out;
+  transition:
+    background 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out,
+    border-color 0.3s ease-in-out;
 }
 
 .site-brand {
@@ -266,13 +289,13 @@ mark {
 /* Dark mode navbar — explicit overrides so text stays legible over dark backdrop */
 [data-theme-mode="dark"] .navbar-landing {
   background: rgba(18, 27, 21, 0.92);
-  border-color: rgba(220, 235, 200, 0.10);
+  border-color: rgba(220, 235, 200, 0.1);
 }
 
 [data-theme-mode="dark"] .nav-link-pill {
   background: rgba(52, 70, 59, 0.72);
   color: #e8e5da;
-  border-color: rgba(200, 218, 165, 0.20);
+  border-color: rgba(200, 218, 165, 0.2);
 }
 
 [data-theme-mode="dark"] .nav-link-pill:hover {
@@ -281,7 +304,7 @@ mark {
 }
 
 [data-theme-mode="dark"] .search-input {
-  background-color: rgba(44, 60, 50, 0.90);
+  background-color: rgba(44, 60, 50, 0.9);
   color: #ede8dc;
   border-color: rgba(160, 185, 140, 0.28);
 }
@@ -324,7 +347,11 @@ mark {
   font-size: 0.92rem;
   font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: border-color 180ms ease, color 180ms ease, background 180ms ease, transform 180ms ease;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .nav-link-pill:hover {
@@ -361,7 +388,12 @@ mark {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(11, 17, 13, 0.34) 0%, rgba(17, 26, 20, 0.20) 30%, rgba(18, 28, 21, 0.48) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(11, 17, 13, 0.34) 0%,
+    rgba(17, 26, 20, 0.2) 30%,
+    rgba(18, 28, 21, 0.48) 100%
+  );
 }
 
 .landing-page > * {
@@ -445,7 +477,10 @@ mark {
   font-weight: 700;
   letter-spacing: 0.05em;
   backdrop-filter: blur(12px);
-  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
 }
 
 .hero-secondary-link:hover {
@@ -462,9 +497,19 @@ mark {
 }
 
 @keyframes bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-20px); }
-  60% { transform: translateY(-10px); }
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
 }
 
 .arrow-down {
@@ -479,16 +524,22 @@ mark {
   font-size: 2.5rem;
   font-weight: 900;
   font-family: var(--font-lora, Georgia, serif);
-  text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    2px 2px 12px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(0, 0, 0, 0.5);
   letter-spacing: -0.02em;
 }
 
 @media (min-width: 640px) {
-  .landing-title { font-size: 3.5rem; }
+  .landing-title {
+    font-size: 3.5rem;
+  }
 }
 
 @media (min-width: 1024px) {
-  .landing-title { font-size: 4rem; }
+  .landing-title {
+    font-size: 4rem;
+  }
 }
 
 .landing-subtitle {
@@ -604,11 +655,15 @@ mark {
 }
 
 @media (min-width: 640px) {
-  .landing-subtitle { font-size: 1.25rem; }
+  .landing-subtitle {
+    font-size: 1.25rem;
+  }
 }
 
 @media (min-width: 1024px) {
-  .landing-subtitle { font-size: 1.5rem; }
+  .landing-subtitle {
+    font-size: 1.5rem;
+  }
 }
 
 .main-content {
@@ -631,14 +686,32 @@ a {
   text-decoration: none;
 }
 
+/* Visible keyboard focus everywhere.
+   Kept in Tailwind's `base` layer so component-level utilities
+   (`focus:outline-none`, custom `focus-visible:ring-*`) still win — an
+   unlayered rule would outrank every utility regardless of specificity.
+   Controls without their own treatment get a consistent 2px accent outline. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+}
+
 ::selection {
   background: var(--selection-bg);
   color: var(--selection-text);
 }
 
 @keyframes lightbox-fade-in {
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .lightbox-img-enter {
@@ -722,7 +795,11 @@ a {
   margin: 1.4rem 0;
   border: 1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
   border-radius: 1rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(111, 134, 91, 0.08) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(111, 134, 91, 0.08) 100%
+  );
   overflow: hidden;
 }
 
@@ -790,7 +867,10 @@ a {
 
 .post-card-panel,
 .post-card-shell {
-  transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
 }
 
 .post-card-kicker {
@@ -799,7 +879,9 @@ a {
   border-radius: 0.25rem;
   padding: 0.1rem 0.35rem;
   margin: -0.1rem -0.35rem;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .post-card-kicker:hover {
@@ -852,7 +934,12 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.02) 24%, rgba(0, 0, 0, 0.18) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.02) 24%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
   pointer-events: none;
   z-index: 0;
 }
@@ -891,7 +978,12 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 36%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.01) 36%,
+    rgba(255, 255, 255, 0) 100%
+  );
   pointer-events: none;
 }
 
@@ -913,7 +1005,9 @@ a {
   border-radius: 0.25rem;
   padding: 0.1rem 0.35rem;
   margin: -0.1rem -0.35rem;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .card-overlay-kicker:hover {
@@ -960,7 +1054,9 @@ a {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.88;
-  transition: transform 180ms ease, opacity 180ms ease;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
 }
 
 .card-overlay:hover .card-overlay-link {
@@ -1189,7 +1285,9 @@ a {
   -webkit-backdrop-filter: blur(12px) saturate(120%);
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out;
 }
 
 .filter-dropdown[data-state="open"] {
@@ -1235,7 +1333,9 @@ a {
   line-height: 1.25rem;
   color: var(--text-primary);
   outline: none;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
   border-left: 2px solid transparent;
 }
 
@@ -1318,6 +1418,7 @@ a {
   .share-buttons,
   [aria-label="Share this story"],
   .copy-link-button,
+  [aria-label="Copy link to this story"],
   .bookmark-button,
   /* Newsletter signup form (footer + standalone) */
   .newsletter-signup-form,
@@ -1329,6 +1430,9 @@ a {
   .back-to-top,
   /* Map and other non-print embeds */
   .post-map,
+  .world-map-container,
+  [aria-label^="Map of "],
+  [aria-label="Location map"],
   /* Allow opt-in for individual elements via [data-print-hide] */
   [data-print-hide] {
     display: none !important;

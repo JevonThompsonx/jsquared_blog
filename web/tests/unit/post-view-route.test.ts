@@ -16,7 +16,9 @@ vi.mock("@/server/dal/posts", () => ({
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
   getClientIp: vi.fn(() => "127.0.0.1"),
-  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+  tooManyRequests: vi.fn(() =>
+    NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+  ),
 }));
 
 vi.mock("@/lib/sentry", () => ({
@@ -50,19 +52,38 @@ describe("POST /api/posts/[postId]/view", () => {
     vi.clearAllMocks();
   });
 
+  it("rejects cross-site posts before parsing params or counting", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/posts/test/view", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+      }),
+      { params: Promise.resolve({ postId: "" }) },
+    );
+
+    expect(response.status).toBe(403);
+    expect(vi.mocked(incrementPostViewCount)).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid post ids", async () => {
-    const response = await POST(new Request("http://localhost/api/posts/test/view", { method: "POST" }), {
-      params: Promise.resolve({ postId: "" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/posts/test/view", { method: "POST" }),
+      {
+        params: Promise.resolve({ postId: "" }),
+      },
+    );
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid post id" });
   });
 
   it("rejects malformed post ids before using them in cookie names", async () => {
-    const response = await POST(new Request("http://localhost/api/posts/test/view", { method: "POST" }), {
-      params: Promise.resolve({ postId: "invalid id" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/posts/test/view", { method: "POST" }),
+      {
+        params: Promise.resolve({ postId: "invalid id" }),
+      },
+    );
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid post id" });
@@ -74,9 +95,12 @@ describe("POST /api/posts/[postId]/view", () => {
     });
     cookiesMock.mockResolvedValue(cookieStore);
 
-    const response = await POST(new Request("http://localhost/api/posts/post-1/view", { method: "POST" }), {
-      params: Promise.resolve({ postId: "post-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/view", { method: "POST" }),
+      {
+        params: Promise.resolve({ postId: "post-1" }),
+      },
+    );
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ counted: false });
@@ -92,15 +116,26 @@ describe("POST /api/posts/[postId]/view", () => {
     const cookieStore = makeCookieStore({
       "j2-viewer-id": "viewer-123",
     });
-    const throttledResponse = NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    const throttledResponse = NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 },
+    );
 
     cookiesMock.mockResolvedValue(cookieStore);
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 20, remaining: 0, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: false,
+      limit: 20,
+      remaining: 0,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(tooManyRequests).mockReturnValue(throttledResponse);
 
-    const response = await POST(new Request("http://localhost/api/posts/post-1/view", { method: "POST" }), {
-      params: Promise.resolve({ postId: "post-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/view", { method: "POST" }),
+      {
+        params: Promise.resolve({ postId: "post-1" }),
+      },
+    );
 
     expect(response).toBe(throttledResponse);
     expect(vi.mocked(incrementPostViewCount)).not.toHaveBeenCalled();
@@ -112,15 +147,27 @@ describe("POST /api/posts/[postId]/view", () => {
     });
 
     cookiesMock.mockResolvedValue(cookieStore);
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
-
-    const response = await POST(new Request("http://localhost/api/posts/post-1/view", { method: "POST" }), {
-      params: Promise.resolve({ postId: "post-1" }),
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
     });
+
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/view", { method: "POST" }),
+      {
+        params: Promise.resolve({ postId: "post-1" }),
+      },
+    );
 
     expect(response.status).toBe(202);
     expect(await response.json()).toEqual({ counted: true });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("post-view:post-1:127.0.0.1", 20, 60_000);
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith(
+      "post-view:post-1:127.0.0.1",
+      20,
+      60_000,
+    );
     expect(vi.mocked(incrementPostViewCount)).toHaveBeenCalledWith("post-1");
     expect(cookieStore.set).toHaveBeenCalledWith(
       "j2-viewed-post-post-1",
@@ -135,16 +182,26 @@ describe("POST /api/posts/[postId]/view", () => {
     });
 
     cookiesMock.mockResolvedValue(cookieStore);
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
+    });
     const dbError = new Error("database offline");
     vi.mocked(incrementPostViewCount).mockRejectedValue(dbError);
 
-    const response = await POST(new Request("http://localhost/api/posts/post-1/view", { method: "POST" }), {
-      params: Promise.resolve({ postId: "post-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/posts/post-1/view", { method: "POST" }),
+      {
+        params: Promise.resolve({ postId: "post-1" }),
+      },
+    );
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Failed to record post view" });
+    expect(await response.json()).toEqual({
+      error: "Failed to record post view",
+    });
     expect(cookieStore.set).not.toHaveBeenCalledWith(
       "j2-viewed-post-post-1",
       "1",

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import path from "node:path";
 
-import { getStorageStateHint, resolveExistingStorageStatePath } from "@/lib/e2e/storage-state-helper";
+import {
+  getStorageStateHint,
+  resolveExistingStorageStatePath,
+} from "@/lib/e2e/storage-state-helper";
 
 describe("storage state helper", () => {
   it("prefers an existing explicit path before the managed default", () => {
@@ -9,7 +12,8 @@ describe("storage state helper", () => {
       configuredPath: "tmp/state.json",
       defaultPath: "playwright/.auth/default.json",
       cwd: "C:/repo/web",
-      hasStorageState: (filePath) => filePath === path.resolve("C:/repo/web", "tmp/state.json"),
+      hasStorageState: (filePath) =>
+        filePath === path.resolve("C:/repo/web", "tmp/state.json"),
     });
 
     expect(result).toBe(path.resolve("C:/repo/web", "tmp/state.json"));
@@ -20,7 +24,8 @@ describe("storage state helper", () => {
       configuredPath: "tmp/state.json",
       defaultPath: "playwright/.auth/default.json",
       cwd: "C:/repo/web",
-      hasStorageState: (filePath) => filePath === "playwright/.auth/default.json",
+      hasStorageState: (filePath) =>
+        filePath === "playwright/.auth/default.json",
     });
 
     expect(result).toBe("playwright/.auth/default.json");
@@ -38,8 +43,13 @@ describe("storage state helper", () => {
   });
 
   it("formats capture hints consistently", () => {
-    expect(getStorageStateHint({ command: "pnpm run e2e:capture-admin-state", label: "playwright/.auth/admin.json" })).toBe(
-      "Set the explicit storage-state env or create playwright/.auth/admin.json with `pnpm run e2e:capture-admin-state`.",
+    expect(
+      getStorageStateHint({
+        command: "pnpm run e2e:capture-workos-state",
+        label: "playwright/.auth/admin.json",
+      }),
+    ).toBe(
+      "Set the explicit storage-state env or create playwright/.auth/admin.json with `pnpm run e2e:capture-workos-state`.",
     );
   });
 });

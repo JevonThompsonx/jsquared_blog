@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { hasStoredThemePreference, useNextTheme } from "@/components/theme/theme-provider";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
+import { useEffect, useRef } from "react";
+import {
+  hasStoredThemePreference,
+  useNextTheme,
+} from "@/components/theme/theme-provider";
 
 type ThemeMode = "light" | "dark";
 type ThemeLook = "sage" | "lichen";
@@ -12,7 +14,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
-function parseThemePref(raw: string): { mode: ThemeMode; lightLook: ThemeLook; darkLook: ThemeLook } | null {
+function parseThemePref(
+  raw: string,
+): { mode: ThemeMode; lightLook: ThemeLook; darkLook: ThemeLook } | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed)) {
@@ -36,24 +40,17 @@ function parseThemePref(raw: string): { mode: ThemeMode; lightLook: ThemeLook; d
 }
 
 /**
- * Runs once per session. If the user is signed in via Supabase and localStorage
- * has no saved theme, fetches their DB preference and restores it. This ensures
- * the saved theme applies on every page, not just /account.
+ * Runs once per session. If the reader is signed in and localStorage has no
+ * saved theme, fetches their DB preference and restores it. This ensures the
+ * saved theme applies on every page, not just /account.
  */
 export function UserThemeSync() {
   const { restorePreference } = useNextTheme();
   const synced = useRef(false);
-
-  const supabase = useMemo(() => {
-    try {
-      return getSupabaseBrowserClient();
-    } catch {
-      return null;
-    }
-  }, []);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (synced.current || !supabase) return;
+    if (synced.current || loading || !user) return;
 
     // If localStorage already has a theme, nothing to do — it's already applied
     // by NextThemeProvider on mount.
@@ -65,12 +62,7 @@ export function UserThemeSync() {
     synced.current = true;
 
     void (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
-
-      const res = await fetch("/api/account/profile", {
-        headers: { Authorization: `Bearer ${data.session.access_token}` },
-      });
+      const res = await fetch("/api/account/profile");
       if (!res.ok) return;
 
       const json: unknown = await res.json();
@@ -83,7 +75,10 @@ export function UserThemeSync() {
         return;
       }
 
-      const raw = typeof profile["themePreference"] === "string" ? profile["themePreference"] : null;
+      const raw =
+        typeof profile["themePreference"] === "string"
+          ? profile["themePreference"]
+          : null;
       if (!raw) return;
 
       const pref = parseThemePref(raw);
@@ -91,7 +86,7 @@ export function UserThemeSync() {
         restorePreference(pref.mode, pref.lightLook, pref.darkLook);
       }
     })();
-  }, [supabase, restorePreference]);
+  }, [loading, user, restorePreference]);
 
   return null;
 }

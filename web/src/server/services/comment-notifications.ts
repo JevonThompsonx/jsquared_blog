@@ -9,6 +9,7 @@ import { escapeHtml } from "@/lib/content";
 import { getResendConfig, sendResendEmail } from "@/lib/email/resend";
 import { getCanonicalPostUrl } from "@/lib/utils";
 import type { CommentNotificationRecord } from "@/server/dal/comments";
+import { getEnvSource } from "@/lib/env";
 
 const COMMENT_NOTIFICATION_TO_ENV_KEY = "COMMENT_NOTIFICATION_TO_EMAIL";
 const commentNotificationRecipientSchema = z.string().email();
@@ -29,7 +30,7 @@ export type CommentNotificationResult =
   | { status: "failed"; reason: "send-error" };
 
 function getNotificationRecipient(): string | null {
-  const recipient = process.env[COMMENT_NOTIFICATION_TO_ENV_KEY]?.trim();
+  const recipient = getEnvSource()[COMMENT_NOTIFICATION_TO_ENV_KEY]?.trim();
   if (!recipient) {
     return null;
   }

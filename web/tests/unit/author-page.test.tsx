@@ -11,11 +11,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src }: { alt: string; src: string }) => createElement("img", { alt, src }),
+  default: ({ alt, src }: { alt: string; src: string }) =>
+    createElement("img", { alt, src }),
 }));
 
 vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header shell"),
+  SiteHeader: () =>
+    createElement("div", { "data-testid": "site-header" }, "Header shell"),
 }));
 
 vi.mock("@/server/dal/profiles", () => ({
@@ -27,8 +29,13 @@ vi.mock("@/server/dal/comments", () => ({
   listCommentsByUserId: vi.fn(),
 }));
 
-import AuthorProfilePage, { generateMetadata } from "@/app/(blog)/author/[id]/page";
-import { countCommentsByUserId, listCommentsByUserId } from "@/server/dal/comments";
+import AuthorProfilePage, {
+  generateMetadata,
+} from "@/app/(blog)/author/[id]/page";
+import {
+  countCommentsByUserId,
+  listCommentsByUserId,
+} from "@/server/dal/comments";
 import { getPublicAuthorProfileById } from "@/server/dal/profiles";
 import { notFound } from "next/navigation";
 
@@ -52,10 +59,12 @@ describe("AuthorProfilePage", () => {
   it("builds metadata from the public author profile", async () => {
     vi.mocked(getPublicAuthorProfileById).mockResolvedValue(publicProfile);
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ id: "user-1" }) });
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ id: "user-1" }),
+    });
 
     expect(getPublicAuthorProfileById).toHaveBeenCalledWith("user-1");
-    expect(metadata.title).toBe("Avery Trail — J²Adventures");
+    expect(metadata.title).toBe("Avery Trail");
     expect(metadata.description).toBe("Backpacking every chance I get.");
   });
 
@@ -64,7 +73,9 @@ describe("AuthorProfilePage", () => {
     vi.mocked(listCommentsByUserId).mockResolvedValue([]);
     vi.mocked(countCommentsByUserId).mockResolvedValue(0);
 
-    const markup = renderToStaticMarkup(await AuthorProfilePage({ params: Promise.resolve({ id: "user-1" }) }));
+    const markup = renderToStaticMarkup(
+      await AuthorProfilePage({ params: Promise.resolve({ id: "user-1" }) }),
+    );
 
     expect(getPublicAuthorProfileById).toHaveBeenCalledWith("user-1");
     expect(listCommentsByUserId).toHaveBeenCalledWith("user-1", 20);
@@ -101,7 +112,9 @@ describe("AuthorProfilePage", () => {
     ]);
     vi.mocked(countCommentsByUserId).mockResolvedValue(24);
 
-    const markup = renderToStaticMarkup(await AuthorProfilePage({ params: Promise.resolve({ id: "user-1" }) }));
+    const markup = renderToStaticMarkup(
+      await AuthorProfilePage({ params: Promise.resolve({ id: "user-1" }) }),
+    );
 
     expect(markup).toContain("24");
     expect(markup).toContain("3");
@@ -117,7 +130,9 @@ describe("AuthorProfilePage", () => {
     vi.mocked(listCommentsByUserId).mockResolvedValue([]);
     vi.mocked(countCommentsByUserId).mockResolvedValue(0);
 
-    await expect(AuthorProfilePage({ params: Promise.resolve({ id: "missing-user" }) })).rejects.toThrow(notFoundError);
+    await expect(
+      AuthorProfilePage({ params: Promise.resolve({ id: "missing-user" }) }),
+    ).rejects.toThrow(notFoundError);
     expect(notFound).toHaveBeenCalled();
   });
 });

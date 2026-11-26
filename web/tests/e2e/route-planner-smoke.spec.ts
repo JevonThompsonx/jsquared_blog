@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { resolveE2EBaseURL } from "@/lib/e2e/base-url";
 import { skipIfDummyDbEnv } from "./helpers/db-env-guard";
 
 skipIfDummyDbEnv();
 
-const allowedOrigin = new URL(process.env.E2E_BASE_URL ?? "http://localhost:3000").origin;
+const allowedOrigin = new URL(resolveE2EBaseURL(process.env.E2E_BASE_URL))
+  .origin;
 
 function trackUnexpectedExternalRequests(page: Page) {
   const unexpectedRequests: string[] = [];
@@ -31,7 +33,9 @@ test.describe("route planner retirement", () => {
     await page.goto("/route-planner");
 
     await expect(page).toHaveURL(/\/wishlist$/);
-    await expect(page.getByRole("heading", { name: "Travel Wishlist" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Travel Wishlist" }),
+    ).toBeVisible();
     expect(unexpectedRequests).toEqual([]);
   });
 

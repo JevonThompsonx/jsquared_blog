@@ -16,7 +16,12 @@ import {
   mediaAssets,
 } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
-import { destroyCloudinaryAsset, logCloudinaryCleanupError, type CloudinaryDestroyTarget } from "@/server/cloudinary/destroy-asset";
+import {
+  destroyCloudinaryAsset,
+  logCloudinaryCleanupError,
+  type CloudinaryDestroyTarget,
+} from "@/server/cloudinary/destroy-asset";
+import { deleteLocalMediaIfUnreferenced } from "@/server/media/cleanup";
 
 export type PostDeleteResult = {
   requestedCount: number;
@@ -27,7 +32,7 @@ export type PostDeleteResult = {
 
 type GalleryAssetRow = {
   id: string;
-  provider: "cloudinary" | "supabase";
+  provider: "cloudinary" | "supabase" | "local";
   publicId: string;
   resourceType: "image" | "video";
 };
@@ -36,17 +41,14 @@ function dedupeIds(postIds: string[]): string[] {
   return [...new Set(postIds)];
 }
 
-async function collectCloudinaryTargets(
+async function collectMediaTargets(
   galleryAssetIds: string[],
   featuredImageIds: string[],
-): Promise<CloudinaryDestroyTarget[]> {
-  if (galleryAssetIds.length === 0 && featuredImageIds.length === 0) {
-    return [];
-  }
-
+): Promise<GalleryAssetRow[]> {
   const allIds = [...new Set([...galleryAssetIds, ...featuredImageIds])];
-  const db = getDb();
-  const rows: GalleryAssetRow[] = await db
+  if (allIds.length === 0) return [];
+
+  return getDb()
     .select({
       id: mediaAssets.id,
       provider: mediaAssets.provider,
@@ -55,23 +57,30 @@ async function collectCloudinaryTargets(
     })
     .from(mediaAssets)
     .where(inArray(mediaAssets.id, allIds));
-
-  return rows
-    .filter((row) => row.provider === "cloudinary")
-    .map((row) => ({ publicId: row.publicId, resourceType: row.resourceType }));
 }
 
-export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> {
+export async function deletePosts(
+  postIds: string[],
+): Promise<PostDeleteResult> {
   const ids = dedupeIds(postIds);
   if (ids.length === 0) {
-    return { requestedCount: 0, deletedCount: 0, missingIds: [], deletedPostIds: [] };
+    return {
+      requestedCount: 0,
+      deletedCount: 0,
+      missingIds: [],
+      deletedPostIds: [],
+    };
   }
 
   const db = getDb();
 
   // Fetch existing posts to determine which IDs are valid
   const existing = await db
-    .select({ id: posts.id, slug: posts.slug, featuredImageId: posts.featuredImageId })
+    .select({
+      id: posts.id,
+      slug: posts.slug,
+      featuredImageId: posts.featuredImageId,
+    })
     .from(posts)
     .where(inArray(posts.id, ids));
 
@@ -80,7 +89,12 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
   const toDelete = existing.map((p) => p.id);
 
   if (toDelete.length === 0) {
-    return { requestedCount: ids.length, deletedCount: 0, missingIds, deletedPostIds: [] };
+    return {
+      requestedCount: ids.length,
+      deletedCount: 0,
+      missingIds,
+      deletedPostIds: [],
+    };
   }
 
   // Collect cloudinary asset references before the transaction so we can
@@ -93,6 +107,13 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
     .map((p) => p.featuredImageId)
     .filter((id): id is string => id !== null);
 
+  // Resolve providers before the transaction deletes the media_assets rows —
+  // querying afterwards always returned an empty list.
+  const mediaTargets = await collectMediaTargets(
+    previewGallery.map((r) => r.mediaAssetId),
+    previewFeatured,
+  );
+
   await db.transaction(async (tx) => {
     // 1. Delete comment likes for comments on these posts
     const postComments = await tx
@@ -102,23 +123,31 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
 
     const commentIds = postComments.map((c) => c.id);
     if (commentIds.length > 0) {
-      await tx.delete(commentLikes).where(inArray(commentLikes.commentId, commentIds));
+      await tx
+        .delete(commentLikes)
+        .where(inArray(commentLikes.commentId, commentIds));
     }
 
     // 2. Delete comments
     await tx.delete(comments).where(inArray(comments.postId, toDelete));
 
     // 3. Delete post bookmarks
-    await tx.delete(postBookmarks).where(inArray(postBookmarks.postId, toDelete));
+    await tx
+      .delete(postBookmarks)
+      .where(inArray(postBookmarks.postId, toDelete));
 
     // 4. Delete post tags
     await tx.delete(postTags).where(inArray(postTags.postId, toDelete));
 
     // 5. Delete post preview tokens
-    await tx.delete(postPreviewTokens).where(inArray(postPreviewTokens.postId, toDelete));
+    await tx
+      .delete(postPreviewTokens)
+      .where(inArray(postPreviewTokens.postId, toDelete));
 
     // 6. Delete post revisions
-    await tx.delete(postRevisions).where(inArray(postRevisions.postId, toDelete));
+    await tx
+      .delete(postRevisions)
+      .where(inArray(postRevisions.postId, toDelete));
 
     // 7. Delete post links (external links like iovander/booking URLs).
     //    post_links.post_id is a NOT NULL FK to posts.id; without this
@@ -137,33 +166,58 @@ export async function deletePosts(postIds: string[]): Promise<PostDeleteResult> 
 
     const galleryAssetIds = previewGallery.map((r) => r.mediaAssetId);
     if (galleryAssetIds.length > 0) {
-      await tx.delete(mediaAssets).where(inArray(mediaAssets.id, galleryAssetIds));
+      await tx
+        .delete(mediaAssets)
+        .where(inArray(mediaAssets.id, galleryAssetIds));
     }
 
     // 9. Clear featured image FK, then delete featured media assets
     if (previewFeatured.length > 0) {
       for (const postId of toDelete) {
-        await tx.update(posts).set({ featuredImageId: null }).where(eq(posts.id, postId));
+        await tx
+          .update(posts)
+          .set({ featuredImageId: null })
+          .where(eq(posts.id, postId));
       }
-      await tx.delete(mediaAssets).where(inArray(mediaAssets.id, previewFeatured));
+      await tx
+        .delete(mediaAssets)
+        .where(inArray(mediaAssets.id, previewFeatured));
     }
 
     // 10. Delete the posts themselves
     await tx.delete(posts).where(inArray(posts.id, toDelete));
   });
 
-  // Best-effort cloudinary cleanup. Errors are logged but do not undo the
+  // Best-effort remote/local cleanup. Errors are logged but do not undo the
   // post deletion — orphaned assets can be reaped out-of-band if necessary.
-  const cloudinaryTargets = await collectCloudinaryTargets(
-    previewGallery.map((r) => r.mediaAssetId),
-    previewFeatured,
-  );
+  const cloudinaryTargets: CloudinaryDestroyTarget[] = mediaTargets
+    .filter((row) => row.provider === "cloudinary")
+    .map((row) => ({ publicId: row.publicId, resourceType: row.resourceType }));
 
   for (const target of cloudinaryTargets) {
     try {
       await destroyCloudinaryAsset(target);
     } catch (error) {
       logCloudinaryCleanupError(target, error);
+    }
+  }
+
+  const localTargets = [
+    ...new Set(
+      mediaTargets
+        .filter((row) => row.provider === "local")
+        .map((row) => row.publicId),
+    ),
+  ];
+  for (const publicId of localTargets) {
+    try {
+      await deleteLocalMediaIfUnreferenced(publicId);
+    } catch (error) {
+      console.error(
+        "[posts.delete] Failed to delete local media",
+        publicId,
+        error,
+      );
     }
   }
 

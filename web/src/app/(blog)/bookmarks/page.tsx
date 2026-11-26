@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { z } from "zod";
 
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
+
+import { CdnImage } from "@/components/blog/cdn-image";
 import { SiteHeader } from "@/components/layout/site-header";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getPostHref } from "@/lib/utils";
 
 type BookmarkedPost = {
@@ -33,24 +34,26 @@ const bookmarksResponseSchema = z.object({
 });
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(iso));
 }
 
 export default function BookmarksPage() {
-  const [status, setStatus] = useState<"loading" | "unauthenticated" | "ready">("loading");
+  const [status, setStatus] = useState<"loading" | "unauthenticated" | "ready">(
+    "loading",
+  );
   const [posts, setPosts] = useState<BookmarkedPost[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const supabase = useMemo(() => {
-    try {
-      return getSupabaseBrowserClient();
-    } catch {
-      return null;
-    }
-  }, []);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!supabase) {
+    if (loading) return;
+
+    if (!user) {
       flushSync(() => {
         setLoadError(null);
         setStatus("unauthenticated");
@@ -62,19 +65,7 @@ export default function BookmarksPage() {
 
     void (async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token;
-        if (!token) {
-          if (!cancelled) {
-            setLoadError(null);
-            setStatus("unauthenticated");
-          }
-          return;
-        }
-
-        const res = await fetch("/api/bookmarks", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch("/api/bookmarks");
 
         if (!cancelled) {
           if (res.status === 401 || res.status === 403) {
@@ -117,17 +108,28 @@ export default function BookmarksPage() {
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [supabase]);
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user]);
 
   return (
-    <main id="main-content" className="min-h-screen pb-20 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen pb-20 pt-20 sm:pt-24"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
       <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="mt-10">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Your library</p>
-          <h1 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Saved posts</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+            Your library
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+            Saved posts
+          </h1>
         </div>
 
         {status === "loading" ? (
@@ -136,8 +138,12 @@ export default function BookmarksPage() {
           </div>
         ) : status === "unauthenticated" ? (
           <div className="mt-10 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-10 text-center shadow-lg">
-            <p className="text-lg font-bold text-[var(--text-primary)]">Sign in to see your saved posts</p>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">Bookmark any post and it will show up here.</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
+              Sign in to see your saved posts
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Bookmark any post and it will show up here.
+            </p>
             <Link
               className="btn-primary mt-6 inline-block rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"
               href="/login?redirectTo=/bookmarks"
@@ -147,13 +153,21 @@ export default function BookmarksPage() {
           </div>
         ) : loadError ? (
           <div className="mt-10 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-10 text-center shadow-lg">
-            <p className="text-lg font-bold text-[var(--text-primary)]">{loadError}</p>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">Please refresh and try again.</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
+              {loadError}
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Please refresh and try again.
+            </p>
           </div>
         ) : posts.length === 0 ? (
           <div className="mt-10 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-10 text-center shadow-lg">
-            <p className="text-lg font-bold text-[var(--text-primary)]">No saved posts yet</p>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">Hit the bookmark button on any post to save it here.</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
+              No saved posts yet
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Hit the bookmark button on any post to save it here.
+            </p>
             <Link
               className="btn-primary mt-6 inline-block rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition-transform hover:-translate-y-0.5"
               href="/"
@@ -164,11 +178,18 @@ export default function BookmarksPage() {
         ) : (
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             {posts.map((post) => (
-              <article key={post.id} className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-                <Link aria-label={`Read: ${post.title}`} className="absolute inset-0 z-[1]" href={getPostHref(post)} />
+              <article
+                key={post.id}
+                className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <Link
+                  aria-label={`Read: ${post.title}`}
+                  className="absolute inset-0 z-[1]"
+                  href={getPostHref(post)}
+                />
                 {post.imageUrl ? (
                   <div className="relative aspect-[5/3] w-full overflow-hidden">
-                    <Image
+                    <CdnImage
                       alt={post.title}
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       fill
@@ -180,11 +201,17 @@ export default function BookmarksPage() {
                   <div className="aspect-[5/3] w-full bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />
                 )}
                 <div className="p-5">
-                  <h2 className="text-balance text-base font-bold leading-snug text-[var(--text-primary)] sm:text-lg">{post.title}</h2>
+                  <h2 className="text-balance text-base font-bold leading-snug text-[var(--text-primary)] sm:text-lg">
+                    {post.title}
+                  </h2>
                   {post.excerpt ? (
-                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[var(--text-secondary)]">{post.excerpt}</p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      {post.excerpt}
+                    </p>
                   ) : null}
-                  <p className="mt-3 text-xs text-[var(--text-secondary)]">Saved {formatDate(post.bookmarkedAt)}</p>
+                  <p className="mt-3 text-xs text-[var(--text-secondary)]">
+                    Saved {formatDate(post.bookmarkedAt)}
+                  </p>
                 </div>
               </article>
             ))}

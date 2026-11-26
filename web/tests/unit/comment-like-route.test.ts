@@ -1,14 +1,8 @@
-import type { User } from "@supabase/supabase-js";
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 
-vi.mock("@/lib/supabase/server", () => ({
-  getRequestSupabaseUser: vi.fn(),
-}));
-
 vi.mock("@/server/auth/public-users", () => ({
-  ensurePublicAppUser: vi.fn(),
+  getRequestPublicUser: vi.fn(),
 }));
 
 vi.mock("@/server/dal/comments", () => ({
@@ -19,7 +13,9 @@ vi.mock("@/server/dal/comments", () => ({
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
   getClientIp: vi.fn(() => "127.0.0.1"),
-  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+  tooManyRequests: vi.fn(() =>
+    NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+  ),
 }));
 
 vi.mock("@/lib/sentry", () => ({
@@ -27,19 +23,17 @@ vi.mock("@/lib/sentry", () => ({
 }));
 
 import { POST } from "@/app/api/comments/[commentId]/like/route";
+import { getRequestPublicUser } from "@/server/auth/public-users";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { captureException } from "@/lib/sentry";
-import { getRequestSupabaseUser } from "@/lib/supabase/server";
-import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { commentExists, toggleCommentLikeRecord } from "@/server/dal/comments";
 
-function makeSupabaseUser(id = "supabase-user-1"): User {
+function makePublicUser(id = "reader-1") {
   return {
     id,
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: "2026-01-01T00:00:00.000Z",
+    email: "reader@example.com",
+    displayName: "Reader",
+    avatarUrl: null,
   };
 }
 
@@ -49,20 +43,30 @@ describe("POST /api/comments/[commentId]/like", () => {
   });
 
   it("returns 400 for an invalid comment id", async () => {
-    const response = await POST(new Request("http://localhost/api/comments/invalid id/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "invalid id" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/comments/invalid id/like", {
+        method: "POST",
+      }),
+      {
+        params: Promise.resolve({ commentId: "invalid id" }),
+      },
+    );
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid comment ID" });
   });
 
   it("returns 401 when the caller is unauthenticated", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
+    vi.mocked(getRequestPublicUser).mockResolvedValue(null);
 
-    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/comments/comment-1/like", {
+        method: "POST",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
@@ -71,104 +75,143 @@ describe("POST /api/comments/[commentId]/like", () => {
   });
 
   it("rejects likes for non-visible comments", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(commentExists).mockResolvedValue(false);
 
-    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/comments/comment-1/like", {
+        method: "POST",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(404);
     expect(vi.mocked(toggleCommentLikeRecord)).not.toHaveBeenCalled();
   });
 
   it("returns 500 when comment lookup fails unexpectedly", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
+    });
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(commentExists).mockRejectedValue(new Error("lookup failed"));
 
-    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/comments/comment-1/like", {
+        method: "POST",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Failed to update comment like" });
-  });
-
-  it("returns 500 when public-user resolution fails unexpectedly", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(commentExists).mockResolvedValue(true);
-    vi.mocked(ensurePublicAppUser).mockRejectedValue(new Error("lookup failed"));
-
-    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
+    expect(await response.json()).toEqual({
+      error: "Failed to update comment like",
     });
-
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Failed to update comment like" });
   });
 
   it("returns 500 when the like toggle fails unexpectedly", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(commentExists).mockResolvedValue(true);
-    vi.mocked(ensurePublicAppUser).mockResolvedValue({
-      id: "public-user-1",
-      supabaseUserId: "supabase-user-1",
-      email: "reader@example.com",
-      displayName: "Reader",
-      avatarUrl: null,
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
     });
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
+    vi.mocked(commentExists).mockResolvedValue(true);
     const dbError = new Error("toggle failed");
     vi.mocked(toggleCommentLikeRecord).mockRejectedValue(dbError);
 
-    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/comments/comment-1/like", {
+        method: "POST",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Failed to update comment like" });
+    expect(await response.json()).toEqual({
+      error: "Failed to update comment like",
+    });
     expect(vi.mocked(captureException)).toHaveBeenCalledWith(
       dbError,
-      expect.objectContaining({ route: "comment-like", commentId: "comment-1" }),
+      expect.objectContaining({
+        route: "comment-like",
+        commentId: "comment-1",
+      }),
     );
   });
 
   it("toggles likes for visible comments", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 });
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(commentExists).mockResolvedValue(true);
-    vi.mocked(ensurePublicAppUser).mockResolvedValue({
-      id: "public-user-1",
-      supabaseUserId: "supabase-user-1",
-      email: "reader@example.com",
-      displayName: "Reader",
-      avatarUrl: null,
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
     });
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
+    vi.mocked(commentExists).mockResolvedValue(true);
     vi.mocked(toggleCommentLikeRecord).mockResolvedValue({ liked: true });
 
-    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/comments/comment-1/like", {
+        method: "POST",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(201);
-    expect(vi.mocked(toggleCommentLikeRecord)).toHaveBeenCalledWith("comment-1", "public-user-1");
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith("like:supabase-user-1:127.0.0.1", 30, 60_000);
+    expect(vi.mocked(toggleCommentLikeRecord)).toHaveBeenCalledWith(
+      "comment-1",
+      "reader-1",
+    );
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith(
+      "like:reader-1:127.0.0.1",
+      30,
+      60_000,
+    );
     expect(await response.json()).toEqual({ liked: true });
   });
 
   it("returns the rate limit response when throttled", async () => {
-    const throttledResponse = NextResponse.json({ error: "Too many requests" }, { status: 429 });
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 30, remaining: 0, resetAt: Date.now() + 60_000 });
+    const throttledResponse = NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 },
+    );
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: false,
+      limit: 30,
+      remaining: 0,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(tooManyRequests).mockReturnValue(throttledResponse);
 
-    const response = await POST(new Request("http://localhost/api/comments/comment-1/like", { method: "POST" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await POST(
+      new Request("http://localhost/api/comments/comment-1/like", {
+        method: "POST",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response).toBe(throttledResponse);
-    expect(vi.mocked(getRequestSupabaseUser)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getRequestPublicUser)).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,14 +1,8 @@
-import type { User } from "@supabase/supabase-js";
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 
-vi.mock("@/lib/supabase/server", () => ({
-  getRequestSupabaseUser: vi.fn(),
-}));
-
 vi.mock("@/server/auth/public-users", () => ({
-  ensurePublicAppUser: vi.fn(),
+  getRequestPublicUser: vi.fn(),
 }));
 
 vi.mock("@/server/dal/comments", () => ({
@@ -18,7 +12,9 @@ vi.mock("@/server/dal/comments", () => ({
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
   getClientIp: vi.fn(() => "127.0.0.1"),
-  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+  tooManyRequests: vi.fn(() =>
+    NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+  ),
 }));
 
 vi.mock("@/lib/sentry", () => ({
@@ -26,19 +22,17 @@ vi.mock("@/lib/sentry", () => ({
 }));
 
 import { DELETE } from "@/app/api/comments/[commentId]/route";
+import { getRequestPublicUser } from "@/server/auth/public-users";
 import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { captureException } from "@/lib/sentry";
-import { getRequestSupabaseUser } from "@/lib/supabase/server";
-import { ensurePublicAppUser } from "@/server/auth/public-users";
 import { deleteCommentRecord } from "@/server/dal/comments";
 
-function makeSupabaseUser(id = "supabase-user-1"): User {
+function makePublicUser(id = "reader-1") {
   return {
     id,
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: "2026-01-01T00:00:00.000Z",
+    email: "reader@example.com",
+    displayName: "Reader",
+    avatarUrl: null,
   };
 }
 
@@ -48,20 +42,30 @@ describe("DELETE /api/comments/[commentId]", () => {
   });
 
   it("returns 400 for an invalid comment id", async () => {
-    const response = await DELETE(new Request("http://localhost/api/comments/invalid id", { method: "DELETE" }), {
-      params: Promise.resolve({ commentId: "invalid id" }),
-    });
+    const response = await DELETE(
+      new Request("http://localhost/api/comments/invalid id", {
+        method: "DELETE",
+      }),
+      {
+        params: Promise.resolve({ commentId: "invalid id" }),
+      },
+    );
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid comment ID" });
   });
 
   it("returns 401 when the caller is unauthenticated", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
+    vi.mocked(getRequestPublicUser).mockResolvedValue(null);
 
-    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await DELETE(
+      new Request("http://localhost/api/comments/comment-1", {
+        method: "DELETE",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
@@ -69,95 +73,111 @@ describe("DELETE /api/comments/[commentId]", () => {
   });
 
   it("returns the throttled response when rate limited", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 20, remaining: 0, resetAt: Date.now() + 60_000 });
-    const throttledResponse = NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: false,
+      limit: 20,
+      remaining: 0,
+      resetAt: Date.now() + 60_000,
+    });
+    const throttledResponse = NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 },
+    );
     vi.mocked(tooManyRequests).mockReturnValue(throttledResponse);
 
-    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await DELETE(
+      new Request("http://localhost/api/comments/comment-1", {
+        method: "DELETE",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response).toBe(throttledResponse);
-    expect(vi.mocked(ensurePublicAppUser)).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the comment cannot be deleted", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
-    vi.mocked(ensurePublicAppUser).mockResolvedValue({
-      id: "public-user-1",
-      supabaseUserId: "supabase-user-1",
-      email: "reader@example.com",
-      displayName: "Reader",
-      avatarUrl: null,
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
     });
     vi.mocked(deleteCommentRecord).mockResolvedValue(false);
 
-    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await DELETE(
+      new Request("http://localhost/api/comments/comment-1", {
+        method: "DELETE",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "Comment not found" });
   });
 
-  it("returns 500 when public-user resolution fails unexpectedly", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
-    vi.mocked(ensurePublicAppUser).mockRejectedValue(new Error("lookup failed"));
-
-    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
-
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Failed to delete comment" });
-  });
-
   it("returns 500 when delete fails unexpectedly", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
-    vi.mocked(ensurePublicAppUser).mockResolvedValue({
-      id: "public-user-1",
-      supabaseUserId: "supabase-user-1",
-      email: "reader@example.com",
-      displayName: "Reader",
-      avatarUrl: null,
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
     });
     const dbError = new Error("delete failed");
     vi.mocked(deleteCommentRecord).mockRejectedValue(dbError);
 
-    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await DELETE(
+      new Request("http://localhost/api/comments/comment-1", {
+        method: "DELETE",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Failed to delete comment" });
+    expect(await response.json()).toEqual({
+      error: "Failed to delete comment",
+    });
     expect(vi.mocked(captureException)).toHaveBeenCalledWith(
       dbError,
-      expect.objectContaining({ route: "comment-delete", commentId: "comment-1" }),
+      expect.objectContaining({
+        route: "comment-delete",
+        commentId: "comment-1",
+      }),
     );
   });
 
   it("returns success when the caller deletes their own comment", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 20, remaining: 19, resetAt: Date.now() + 60_000 });
-    vi.mocked(ensurePublicAppUser).mockResolvedValue({
-      id: "public-user-1",
-      supabaseUserId: "supabase-user-1",
-      email: "reader@example.com",
-      displayName: "Reader",
-      avatarUrl: null,
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 20,
+      remaining: 19,
+      resetAt: Date.now() + 60_000,
     });
     vi.mocked(deleteCommentRecord).mockResolvedValue(true);
 
-    const response = await DELETE(new Request("http://localhost/api/comments/comment-1", { method: "DELETE" }), {
-      params: Promise.resolve({ commentId: "comment-1" }),
-    });
+    const response = await DELETE(
+      new Request("http://localhost/api/comments/comment-1", {
+        method: "DELETE",
+      }),
+      {
+        params: Promise.resolve({ commentId: "comment-1" }),
+      },
+    );
 
     expect(response.status).toBe(200);
-    expect(vi.mocked(deleteCommentRecord)).toHaveBeenCalledWith("comment-1", "public-user-1");
+    expect(vi.mocked(deleteCommentRecord)).toHaveBeenCalledWith(
+      "comment-1",
+      "reader-1",
+    );
     expect(await response.json()).toEqual({ ok: true });
   });
 });

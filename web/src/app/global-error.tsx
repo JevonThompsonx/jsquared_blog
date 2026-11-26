@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { captureException } from "@/lib/sentry";
 
@@ -87,6 +87,22 @@ function mergeStyles(
   );
 }
 
+function usePrefersDarkMode(): boolean {
+  const [prefersDark, setPrefersDark] = useState(false);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setPrefersDark(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  return prefersDark;
+}
+
 export default function GlobalError({
   error,
   reset,
@@ -94,6 +110,11 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const prefersDark = usePrefersDarkMode();
+  // No `<style>` element: global-error renders outside the app shell and the
+  // CSP treats an inline stylesheet differently from inline style attributes.
+  const theme = prefersDark ? darkStyles : lightStyles;
+
   useEffect(() => {
     captureException(error);
   }, [error]);
@@ -101,50 +122,46 @@ export default function GlobalError({
   return (
     <html lang="en">
       <head>
-        <meta
-          content="width=device-width, initial-scale=1"
-          name="viewport"
-        />
-        <style>{`
-          @media (prefers-color-scheme: dark) {
-            .global-error-page { background: #111812 !important; color: #e2e8e0 !important; }
-            .global-error-card { border-color: #2d382e !important; background: #1a231b !important; }
-            .global-error-brand { color: #93a780 !important; }
-            .global-error-body { color: #a0ac9c !important; }
-            .global-error-primary { background: #93a780 !important; color: #111812 !important; }
-            .global-error-secondary { border-color: #2d382e !important; color: #e2e8e0 !important; }
-          }
-        `}</style>
+        <meta content="width=device-width, initial-scale=1" name="viewport" />
       </head>
       <body>
-        <div className="global-error-page" style={mergeStyles(baseStyles.page, lightStyles.page)}>
-          <div className="global-error-card" style={mergeStyles(baseStyles.card, lightStyles.card)}>
-            <p className="global-error-brand" style={mergeStyles(baseStyles.brand, lightStyles.brand)}>
+        <main
+          id="main-content"
+          style={mergeStyles(baseStyles.page, theme.page)}
+          tabIndex={-1}
+        >
+          <div style={mergeStyles(baseStyles.card, theme.card)}>
+            <p style={mergeStyles(baseStyles.brand, theme.brand)}>
               J²Adventures
             </p>
-            <h1 className="global-error-heading" style={baseStyles.heading}>Something went wrong</h1>
-            <p className="global-error-body" style={mergeStyles(baseStyles.body, lightStyles.body)}>
-              An unexpected error occurred. Please try again or return to the home page.
+            <h1 style={baseStyles.heading}>Something went wrong</h1>
+            <p style={mergeStyles(baseStyles.body, theme.body)}>
+              An unexpected error occurred. Please try again or return to the
+              home page.
             </p>
             <div style={baseStyles.actions}>
               <button
-                className="global-error-primary"
                 onClick={reset}
-                style={mergeStyles(baseStyles.primaryButton, lightStyles.primaryButton)}
+                style={mergeStyles(
+                  baseStyles.primaryButton,
+                  theme.primaryButton,
+                )}
               >
                 Try again
               </button>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- global-error renders outside the Next.js app shell; Link is unavailable here */}
               <a
-                className="global-error-secondary"
                 href="/"
-                style={mergeStyles(baseStyles.secondaryLink, lightStyles.secondaryLink)}
+                style={mergeStyles(
+                  baseStyles.secondaryLink,
+                  theme.secondaryLink,
+                )}
               >
                 Return home
               </a>
             </div>
           </div>
-        </div>
+        </main>
       </body>
     </html>
   );

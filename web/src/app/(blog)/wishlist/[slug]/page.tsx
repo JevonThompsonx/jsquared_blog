@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import Image from "next/image";
+import { CdnImage } from "@/components/blog/cdn-image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -9,6 +9,7 @@ import { WorldMap } from "@/components/blog/world-map";
 import { MultiSiteNav } from "@/components/blog/multi-site-nav";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getPublicEnv } from "@/lib/env";
+import { absoluteUrl, buildOgImage } from "@/lib/seo";
 import { groupWishlistByLocation } from "@/lib/wishlist/grouping";
 import { getAdminServerSession } from "@/lib/auth/session";
 import {
@@ -22,23 +23,33 @@ type WishlistDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({ params }: WishlistDetailPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: WishlistDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
   const place = await getPublicWishlistPlaceBySlug(slug);
 
   if (!place) {
-    return {};
+    // 404 during metadata resolution so the status code is correct.
+    notFound();
   }
 
-  const description = place.description ?? `${place.name} on the J squared travel wishlist.`;
+  const description =
+    place.description ?? `${place.name} on the J squared travel wishlist.`;
+  const path = `/wishlist/${encodeURIComponent(place.detailSlug ?? slug)}`;
+  const canonical = absoluteUrl(path);
 
   return {
     title: `${place.name} | Travel Wishlist`,
     description,
+    alternates: { canonical },
     openGraph: {
       title: place.name,
       description,
-      images: place.imageUrl ? [{ url: place.imageUrl }] : undefined,
+      url: canonical,
+      images: place.imageUrl
+        ? [buildOgImage(place.imageUrl, place.name)]
+        : undefined,
     },
   };
 }
@@ -60,7 +71,9 @@ function toMapPost(place: PublicWishlistPlace) {
   };
 }
 
-export default async function WishlistDetailPage({ params }: WishlistDetailPageProps) {
+export default async function WishlistDetailPage({
+  params,
+}: WishlistDetailPageProps) {
   const { slug } = await params;
   const [place, adminSession] = await Promise.all([
     getPublicWishlistPlaceBySlug(slug),
@@ -93,7 +106,10 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
     );
     const currentIndex = allSiblings.findIndex((s) => s.id === place.id);
     prevSibling = currentIndex > 0 ? allSiblings[currentIndex - 1]! : null;
-    nextSibling = currentIndex < allSiblings.length - 1 ? allSiblings[currentIndex + 1]! : null;
+    nextSibling =
+      currentIndex < allSiblings.length - 1
+        ? allSiblings[currentIndex + 1]!
+        : null;
 
     // Fetch grandchildren for nested multi-sites
     const childMultiSites = children.filter((c) => c.itemType === "multi");
@@ -109,12 +125,21 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
   const childMapPosts = children.map(toMapPost);
 
   return (
-    <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen pb-16 pt-20 sm:pt-24"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
       <div className="container mx-auto mt-4 max-w-5xl px-4 sm:mt-6 sm:px-6 lg:px-8">
         <div className="mb-6">
-          <Link aria-label="Back to wishlist" className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline" href="/wishlist">
+          <Link
+            aria-label="Back to wishlist"
+            className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+            href="/wishlist"
+          >
             <span aria-hidden="true">← </span>Back to wishlist
           </Link>
           {isAdmin ? (
@@ -127,10 +152,16 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
             </a>
           ) : null}
           <p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
-            {place.itemType === "multi" ? "Multi-site destination" : "Wishlist destination"}
+            {place.itemType === "multi"
+              ? "Multi-site destination"
+              : "Wishlist destination"}
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">{place.name}</h1>
-          <p className="mt-2 text-base leading-relaxed text-[var(--text-secondary)]">{place.locationName}</p>
+          <h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
+            {place.name}
+          </h1>
+          <p className="mt-2 text-base leading-relaxed text-[var(--text-secondary)]">
+            {place.locationName}
+          </p>
         </div>
 
         {/* Multi-site view */}
@@ -156,7 +187,11 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
               {/* Map */}
               {children.length > 0 && NEXT_PUBLIC_STADIA_MAPS_API_KEY ? (
                 <div className="mb-6">
-                  <WorldMap apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY} posts={childMapPosts} showPostList={false} />
+                  <WorldMap
+                    apiKey={NEXT_PUBLIC_STADIA_MAPS_API_KEY}
+                    posts={childMapPosts}
+                    showPostList={false}
+                  />
                 </div>
               ) : null}
 
@@ -164,24 +199,41 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
               <article className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
                 {place.imageUrl ? (
                   <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-[var(--border)]">
-                    <Image alt={place.name} className="object-cover" fill sizes="(min-width: 1024px) 672px, 100vw" src={place.imageUrl} />
+                    <CdnImage
+                      alt={place.name}
+                      className="object-cover"
+                      fill
+                      sizes="(min-width: 1024px) 672px, 100vw"
+                      src={place.imageUrl}
+                    />
                   </div>
                 ) : null}
 
                 <div className="space-y-4 px-6 py-6 sm:px-8">
                   <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
                     <span>{place.locationName}</span>
-                    {place.visited ? <span>• Visited</span> : <span>• Wishlist</span>}
-                    {place.visitedYear ? <span>• {place.visitedYear}</span> : null}
+                    {place.visited ? (
+                      <span>• Visited</span>
+                    ) : (
+                      <span>• Wishlist</span>
+                    )}
+                    {place.visitedYear ? (
+                      <span>• {place.visitedYear}</span>
+                    ) : null}
                     <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
-                      📍 {children.length} {children.length === 1 ? "location" : "locations"}
+                      📍 {children.length}{" "}
+                      {children.length === 1 ? "location" : "locations"}
                     </span>
                   </div>
 
                   {place.description ? (
-                    <p className="text-base leading-relaxed text-[var(--text-primary)]">{place.description}</p>
+                    <p className="text-base leading-relaxed text-[var(--text-primary)]">
+                      {place.description}
+                    </p>
                   ) : (
-                    <p className="text-base leading-relaxed text-[var(--text-secondary)]">More notes for this destination are coming soon.</p>
+                    <p className="text-base leading-relaxed text-[var(--text-secondary)]">
+                      More notes for this destination are coming soon.
+                    </p>
                   )}
 
                   <div className="flex flex-wrap gap-3">
@@ -205,7 +257,9 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
                 <div className="mt-8 space-y-6">
                   {featuredChildren.length > 0 ? (
                     <section>
-                      <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">📌 Featured spots</h2>
+                      <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+                        📌 Featured spots
+                      </h2>
                       <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
                         {featuredChildren.map((child) => (
                           <WishlistChildItem
@@ -238,21 +292,33 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
               ) : null}
 
               {children.length === 0 ? (
-                <p className="mt-6 text-sm text-[var(--text-secondary)]">No child locations added yet.</p>
+                <p className="mt-6 text-sm text-[var(--text-secondary)]">
+                  No child locations added yet.
+                </p>
               ) : null}
 
               {/* Prev/Next navigation */}
               {(prevSibling || nextSibling) && (
-                <nav aria-label="Destination navigation" className="mt-10 flex items-center justify-between gap-4 border-t border-[var(--border)] pt-6" data-testid="multi-site-nav-prev-next">
+                <nav
+                  aria-label="Destination navigation"
+                  className="mt-10 flex items-center justify-between gap-4 border-t border-[var(--border)] pt-6"
+                  data-testid="multi-site-nav-prev-next"
+                >
                   {prevSibling?.detailSlug ? (
-                    <Link className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline" href={`/wishlist/${prevSibling.detailSlug}`}>
+                    <Link
+                      className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+                      href={`/wishlist/${prevSibling.detailSlug}`}
+                    >
                       ← {prevSibling.name}
                     </Link>
                   ) : (
                     <span />
                   )}
                   {nextSibling?.detailSlug ? (
-                    <Link className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline" href={`/wishlist/${nextSibling.detailSlug}`}>
+                    <Link
+                      className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+                      href={`/wishlist/${nextSibling.detailSlug}`}
+                    >
                       {nextSibling.name} →
                     </Link>
                   ) : (
@@ -267,23 +333,37 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
           <article className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-xl">
             {place.detailLevel === "full_page" && place.imageUrl ? (
               <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-[var(--border)]">
-                <Image alt={place.name} className="object-cover" fill sizes="(min-width: 1024px) 896px, 100vw" src={place.imageUrl} />
+                <CdnImage
+                  alt={place.name}
+                  className="object-cover"
+                  fill
+                  sizes="(min-width: 1024px) 896px, 100vw"
+                  src={place.imageUrl}
+                />
               </div>
             ) : null}
 
             <div className="space-y-4 px-6 py-6 sm:px-8">
               <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
                 <span>{place.locationName}</span>
-                {place.visited ? <span>• Visited</span> : <span>• Wishlist</span>}
+                {place.visited ? (
+                  <span>• Visited</span>
+                ) : (
+                  <span>• Wishlist</span>
+                )}
                 {place.visitedYear ? <span>• {place.visitedYear}</span> : null}
               </div>
 
               {place.detailLevel === "full_page" ? (
                 <>
                   {place.description ? (
-                    <p className="text-base leading-relaxed text-[var(--text-primary)]">{place.description}</p>
+                    <p className="text-base leading-relaxed text-[var(--text-primary)]">
+                      {place.description}
+                    </p>
                   ) : (
-                    <p className="text-base leading-relaxed text-[var(--text-secondary)]">More notes for this destination are coming soon.</p>
+                    <p className="text-base leading-relaxed text-[var(--text-secondary)]">
+                      More notes for this destination are coming soon.
+                    </p>
                   )}
 
                   <div className="flex flex-wrap gap-3">
@@ -303,7 +383,12 @@ export default async function WishlistDetailPage({ params }: WishlistDetailPageP
               ) : (
                 <p className="text-sm text-[var(--text-secondary)]">
                   {place.externalUrl ? (
-                    <a className="text-[var(--accent)] underline-offset-4 hover:underline" href={place.externalUrl} rel="noopener noreferrer" target="_blank">
+                    <a
+                      className="text-[var(--accent)] underline-offset-4 hover:underline"
+                      href={place.externalUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
                       View details →
                     </a>
                   ) : null}
@@ -324,7 +409,8 @@ function WishlistChildItem({
   child: PublicWishlistPlace;
   grandchildren: PublicWishlistPlace[];
 }) {
-  const hasGrandchildren = child.itemType === "multi" && grandchildren.length > 0;
+  const hasGrandchildren =
+    child.itemType === "multi" && grandchildren.length > 0;
 
   return (
     <li className="px-6 py-5" data-testid="wishlist-child-item">
@@ -339,10 +425,15 @@ function WishlistChildItem({
                 {child.name}
               </Link>
             ) : (
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">{child.name}</h3>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                {child.name}
+              </h3>
             )}
             {child.itemType === "multi" ? (
-              <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]" data-testid="child-multi-site-badge">
+              <span
+                className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]"
+                data-testid="child-multi-site-badge"
+              >
                 📍 Multi-site
               </span>
             ) : null}
@@ -357,9 +448,13 @@ function WishlistChildItem({
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{child.locationName}</p>
+          <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+            {child.locationName}
+          </p>
           {child.description ? (
-            <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{child.description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">
+              {child.description}
+            </p>
           ) : null}
         </div>
         {child.externalUrl ? (
@@ -378,20 +473,29 @@ function WishlistChildItem({
       {/* Nested grandchildren (for multi within multi) */}
       {hasGrandchildren ? (
         <div className="mt-3 border-t border-[var(--border)] pt-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Nested locations</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Nested locations
+          </p>
           <ul className="space-y-2">
             {grandchildren.map((gc) => (
               <li key={gc.id} className="flex items-start gap-2 text-sm">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
                 <div>
                   {gc.detailSlug ? (
-                    <Link className="font-medium text-[var(--text-primary)] underline-offset-4 hover:text-[var(--accent)] hover:underline" href={`/wishlist/${gc.detailSlug}`}>
+                    <Link
+                      className="font-medium text-[var(--text-primary)] underline-offset-4 hover:text-[var(--accent)] hover:underline"
+                      href={`/wishlist/${gc.detailSlug}`}
+                    >
                       {gc.name}
                     </Link>
                   ) : (
-                    <span className="font-medium text-[var(--text-primary)]">{gc.name}</span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {gc.name}
+                    </span>
                   )}
-                  <span className="ml-1.5 text-xs text-[var(--text-secondary)]">{gc.locationName}</span>
+                  <span className="ml-1.5 text-xs text-[var(--text-secondary)]">
+                    {gc.locationName}
+                  </span>
                 </div>
               </li>
             ))}

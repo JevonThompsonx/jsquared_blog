@@ -3,9 +3,15 @@ import { z } from "zod";
 
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
-import { countPostRevisions, listPostRevisions, postExistsById } from "@/server/dal/post-revisions";
+import {
+  countPostRevisions,
+  listPostRevisions,
+  postExistsById,
+} from "@/server/dal/post-revisions";
 
-const postIdParamsSchema = z.object({ postId: z.string().trim().min(1).max(128) });
+const postIdParamsSchema = z.object({
+  postId: z.string().trim().min(1).max(128),
+});
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -14,7 +20,7 @@ const paginationSchema = z.object({
 
 // GET /api/admin/posts/[postId]/revisions?page=1&pageSize=20
 // Response: { revisions: PostRevisionRecord[], total: number, page: number, pageSize: number, totalPages: number }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 export async function GET(
   request: Request,
   context: { params: Promise<{ postId: string }> },
@@ -24,7 +30,11 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-post-revisions:${session.user.id}:${getClientIp(request)}`, 120, 60_000);
+  const rl = await checkRateLimit(
+    `admin-post-revisions:${session.user.id}:${getClientIp(request)}`,
+    120,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -43,7 +53,10 @@ export async function GET(
   });
 
   if (!paginationParse.success) {
-    return NextResponse.json({ error: "Invalid pagination params" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid pagination params" },
+      { status: 400 },
+    );
   }
 
   const { page, pageSize } = paginationParse.data;
@@ -83,7 +96,15 @@ export async function GET(
       totalPages,
     });
   } catch (error) {
-    console.error("[admin post revisions] failed to load revisions", { postId, page, pageSize, error });
-    return NextResponse.json({ error: "Failed to load revisions" }, { status: 500 });
+    console.error("[admin post revisions] failed to load revisions", {
+      postId,
+      page,
+      pageSize,
+      error,
+    });
+    return NextResponse.json(
+      { error: "Failed to load revisions" },
+      { status: 500 },
+    );
   }
 }

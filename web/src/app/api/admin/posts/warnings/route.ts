@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { adminRouteFailureResponse, logAdminRouteFailure } from "@/lib/admin-route-errors";
+import {
+  adminRouteFailureResponse,
+  logAdminRouteFailure,
+} from "@/lib/admin-route-errors";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { requireAdminSession } from "@/lib/auth/session";
 import { derivePostContent } from "@/server/posts/content";
@@ -14,7 +17,7 @@ const postWarningsSchema = z.object({
 // POST /api/admin/posts/warnings
 // Body: { contentJson: string; excerpt?: string | null }
 // Response: { warnings: TiptapImageAltWarning[]; excerpt: string | null }
-// Auth: Admin (Auth.js GitHub)
+// Auth: Admin (WorkOS AuthKit)
 // UI: validate editor content for non-blocking warnings while typing or before publish
 export async function POST(request: Request): Promise<NextResponse> {
   const session = await requireAdminSession();
@@ -22,7 +25,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rl = await checkRateLimit(`admin-posts-warnings:${session.user.id}:${getClientIp(request)}`, 60, 60_000);
+  const rl = await checkRateLimit(
+    `admin-posts-warnings:${session.user.id}:${getClientIp(request)}`,
+    60,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -32,15 +39,27 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     body = postWarningsSchema.parse(await request.json());
   } catch {
-    return NextResponse.json({ error: "Invalid warnings request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid warnings request" },
+      { status: 400 },
+    );
   }
 
   try {
     const content = derivePostContent(body.contentJson, body.excerpt ?? null);
-    return NextResponse.json({ warnings: content.imageAltWarnings, excerpt: content.excerpt });
+    return NextResponse.json({
+      warnings: content.imageAltWarnings,
+      excerpt: content.excerpt,
+    });
   } catch (error) {
-    if (error instanceof Error && error.message === "Content must be valid Tiptap JSON") {
-      return NextResponse.json({ error: "Invalid warnings request" }, { status: 400 });
+    if (
+      error instanceof Error &&
+      error.message === "Content must be valid Tiptap JSON"
+    ) {
+      return NextResponse.json(
+        { error: "Invalid warnings request" },
+        { status: 400 },
+      );
     }
 
     logAdminRouteFailure("[admin post warnings] failed to derive warnings", {

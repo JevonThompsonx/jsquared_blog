@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { destroyAssetMock, logCleanupErrorMock, captureExceptionMock } = vi.hoisted(() => ({
-  destroyAssetMock: vi.fn(),
-  logCleanupErrorMock: vi.fn(),
-  captureExceptionMock: vi.fn(),
-}));
+const { destroyAssetMock, logCleanupErrorMock, captureExceptionMock } =
+  vi.hoisted(() => ({
+    destroyAssetMock: vi.fn(),
+    logCleanupErrorMock: vi.fn(),
+    captureExceptionMock: vi.fn(),
+  }));
 
 const mockSelect = vi.fn();
 const mockDelete = vi.fn();
@@ -105,15 +106,17 @@ describe("deletePosts cloudinary cleanup", () => {
     mockSelect
       .mockReturnValueOnce(selectChain([existingPost])) // existing posts
       .mockReturnValueOnce(selectChain([{ mediaAssetId: "asset-1" }])) // previewGallery (postImages)
-      .mockReturnValueOnce(selectChain([])) // comments for these posts (inside tx)
-      .mockReturnValueOnce(selectChain([galleryAsset])); // asset metadata for cloudinary cleanup
+      .mockReturnValueOnce(selectChain([galleryAsset])) // asset metadata resolved before the transaction
+      .mockReturnValueOnce(selectChain([])); // comments for these posts (inside tx)
 
     mockDelete.mockReturnValue(deleteChain());
     mockUpdate.mockReturnValue(updateChain());
 
-    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
-      await callback(mockTx);
-    });
+    mockTransaction.mockImplementation(
+      async (callback: (tx: typeof mockTx) => Promise<void>) => {
+        await callback(mockTx);
+      },
+    );
 
     const result = await deletePosts(["post-1"]);
 
@@ -134,20 +137,26 @@ describe("deletePosts cloudinary cleanup", () => {
     mockSelect
       .mockReturnValueOnce(selectChain([existingPost]))
       .mockReturnValueOnce(selectChain([])) // previewGallery (postImages)
-      .mockReturnValueOnce(selectChain([])) // comments (inside tx)
-      .mockReturnValueOnce(selectChain([{
-        id: "featured-1",
-        provider: "cloudinary",
-        publicId: "j2adventures/editorial/featured",
-        resourceType: "image",
-      }]));
+      .mockReturnValueOnce(
+        selectChain([
+          {
+            id: "featured-1",
+            provider: "cloudinary",
+            publicId: "j2adventures/editorial/featured",
+            resourceType: "image",
+          },
+        ]),
+      ) // asset metadata before the transaction
+      .mockReturnValueOnce(selectChain([])); // comments (inside tx)
 
     mockDelete.mockReturnValue(deleteChain());
     mockUpdate.mockReturnValue(updateChain());
 
-    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
-      await callback(mockTx);
-    });
+    mockTransaction.mockImplementation(
+      async (callback: (tx: typeof mockTx) => Promise<void>) => {
+        await callback(mockTx);
+      },
+    );
 
     await deletePosts(["post-1"]);
 
@@ -167,19 +176,25 @@ describe("deletePosts cloudinary cleanup", () => {
     mockSelect
       .mockReturnValueOnce(selectChain([existingPost]))
       .mockReturnValueOnce(selectChain([{ mediaAssetId: "asset-1" }])) // previewGallery
-      .mockReturnValueOnce(selectChain([])) // comments
-      .mockReturnValueOnce(selectChain([{
-        id: "asset-1",
-        provider: "supabase",
-        publicId: "ignored",
-        resourceType: "image",
-      }]));
+      .mockReturnValueOnce(
+        selectChain([
+          {
+            id: "asset-1",
+            provider: "supabase",
+            publicId: "ignored",
+            resourceType: "image",
+          },
+        ]),
+      ) // asset metadata before the transaction
+      .mockReturnValueOnce(selectChain([])); // comments
 
     mockDelete.mockReturnValue(deleteChain());
     mockUpdate.mockReturnValue(updateChain());
-    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
-      await callback(mockTx);
-    });
+    mockTransaction.mockImplementation(
+      async (callback: (tx: typeof mockTx) => Promise<void>) => {
+        await callback(mockTx);
+      },
+    );
 
     await deletePosts(["post-1"]);
 
@@ -195,18 +210,34 @@ describe("deletePosts cloudinary cleanup", () => {
 
     mockSelect
       .mockReturnValueOnce(selectChain([existingPost]))
-      .mockReturnValueOnce(selectChain([{ mediaAssetId: "asset-1" }, { mediaAssetId: "asset-2" }]))
-      .mockReturnValueOnce(selectChain([]))
-      .mockReturnValueOnce(selectChain([
-        { id: "asset-1", provider: "cloudinary", publicId: "first", resourceType: "image" },
-        { id: "asset-2", provider: "cloudinary", publicId: "second", resourceType: "image" },
-      ]));
+      .mockReturnValueOnce(
+        selectChain([{ mediaAssetId: "asset-1" }, { mediaAssetId: "asset-2" }]),
+      )
+      .mockReturnValueOnce(
+        selectChain([
+          {
+            id: "asset-1",
+            provider: "cloudinary",
+            publicId: "first",
+            resourceType: "image",
+          },
+          {
+            id: "asset-2",
+            provider: "cloudinary",
+            publicId: "second",
+            resourceType: "image",
+          },
+        ]),
+      ) // asset metadata before the transaction
+      .mockReturnValueOnce(selectChain([]));
 
     mockDelete.mockReturnValue(deleteChain());
     mockUpdate.mockReturnValue(updateChain());
-    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
-      await callback(mockTx);
-    });
+    mockTransaction.mockImplementation(
+      async (callback: (tx: typeof mockTx) => Promise<void>) => {
+        await callback(mockTx);
+      },
+    );
 
     destroyAssetMock
       .mockRejectedValueOnce(new Error("cloudinary 500"))
@@ -233,16 +264,20 @@ describe("deletePosts cloudinary cleanup", () => {
 
     mockDelete.mockReturnValue(deleteChain());
     mockUpdate.mockReturnValue(updateChain());
-    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
-      await callback(mockTx);
-    });
+    mockTransaction.mockImplementation(
+      async (callback: (tx: typeof mockTx) => Promise<void>) => {
+        await callback(mockTx);
+      },
+    );
 
     await deletePosts(["post-1"]);
 
     // The postLinks table must be one of the tables deleted within the
     // transaction. post_links.post_id is a NOT NULL FK to posts.id; if
     // we don't clean it up here, we leave orphaned rows.
-    const postLinksDeleteCalls = mockDelete.mock.calls.filter((call) => call[0] === postLinks);
+    const postLinksDeleteCalls = mockDelete.mock.calls.filter(
+      (call) => call[0] === postLinks,
+    );
     expect(postLinksDeleteCalls).toHaveLength(1);
   });
 
@@ -259,14 +294,18 @@ describe("deletePosts cloudinary cleanup", () => {
 
     mockDelete.mockReturnValue(deleteChain());
     mockUpdate.mockReturnValue(updateChain());
-    mockTransaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<void>) => {
-      await callback(mockTx);
-    });
+    mockTransaction.mockImplementation(
+      async (callback: (tx: typeof mockTx) => Promise<void>) => {
+        await callback(mockTx);
+      },
+    );
 
     const result = await deletePosts(["post-1", "post-2"]);
 
     expect(result.deletedPostIds).toEqual(["post-1", "post-2"]);
-    const postLinksDeleteCalls = mockDelete.mock.calls.filter((call) => call[0] === postLinks);
+    const postLinksDeleteCalls = mockDelete.mock.calls.filter(
+      (call) => call[0] === postLinks,
+    );
     expect(postLinksDeleteCalls).toHaveLength(1);
   });
 });

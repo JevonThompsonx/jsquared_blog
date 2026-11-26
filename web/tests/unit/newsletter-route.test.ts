@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
   getClientIp: vi.fn(() => "127.0.0.1"),
-  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+  tooManyRequests: vi.fn(() =>
+    NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+  ),
 }));
 
 vi.mock("@/server/services/newsletter", () => ({
@@ -24,18 +26,50 @@ describe("POST /api/newsletter", () => {
     vi.clearAllMocks();
   });
 
+  it("rejects a cross-site newsletter mutation before rate limiting", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+        body: "{}",
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(vi.mocked(checkRateLimit)).not.toHaveBeenCalled();
+    expect(vi.mocked(subscribeToNewsletter)).not.toHaveBeenCalled();
+  });
+
   it("returns 429 when throttled", async () => {
-    const throttledResponse = NextResponse.json({ error: "Too many requests" }, { status: 429 });
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, limit: 5, remaining: 0, resetAt: Date.now() + 60_000 });
+    const throttledResponse = NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 },
+    );
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: false,
+      limit: 5,
+      remaining: 0,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(tooManyRequests).mockReturnValue(throttledResponse);
 
-    const response = await POST(new Request("http://localhost/api/newsletter", { method: "POST", body: "{}" }));
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        body: "{}",
+      }),
+    );
 
     expect(response).toBe(throttledResponse);
   });
 
   it("validates the request body", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 5,
+      remaining: 4,
+      resetAt: Date.now() + 60_000,
+    });
 
     const response = await POST(
       new Request("http://localhost/api/newsletter", {
@@ -46,12 +80,19 @@ describe("POST /api/newsletter", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid newsletter signup request" });
+    expect(await response.json()).toEqual({
+      error: "Invalid newsletter signup request",
+    });
     expect(vi.mocked(subscribeToNewsletter)).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed JSON payloads", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 5,
+      remaining: 4,
+      resetAt: Date.now() + 60_000,
+    });
 
     const response = await POST(
       new Request("http://localhost/api/newsletter", {
@@ -67,7 +108,12 @@ describe("POST /api/newsletter", () => {
   });
 
   it("does not disclose setup instructions when config is missing", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 5,
+      remaining: 4,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(isNewsletterConfigured).mockReturnValue(false);
 
     const response = await POST(
@@ -85,27 +131,18 @@ describe("POST /api/newsletter", () => {
     });
   });
 
-  it("returns 200 when the contact is already subscribed", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
-    vi.mocked(isNewsletterConfigured).mockReturnValue(true);
-    vi.mocked(subscribeToNewsletter).mockResolvedValue({ status: "already-subscribed" });
-
-    const response = await POST(
-      new Request("http://localhost/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "reader@example.com" }),
-      }),
-    );
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "already-subscribed" });
-  });
-
   it("returns 202 when the newsletter service skips the request", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 5,
+      remaining: 4,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(isNewsletterConfigured).mockReturnValue(true);
-    vi.mocked(subscribeToNewsletter).mockResolvedValue({ status: "skipped", reason: "missing-config" });
+    vi.mocked(subscribeToNewsletter).mockResolvedValue({
+      status: "skipped",
+      reason: "missing-config",
+    });
 
     const response = await POST(
       new Request("http://localhost/api/newsletter", {
@@ -116,19 +153,32 @@ describe("POST /api/newsletter", () => {
     );
 
     expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({ status: "skipped", reason: "missing-config" });
+    expect(await response.json()).toEqual({
+      status: "skipped",
+      reason: "missing-config",
+    });
   });
 
   it("creates a subscription when configured", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 5,
+      remaining: 4,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(isNewsletterConfigured).mockReturnValue(true);
-    vi.mocked(subscribeToNewsletter).mockResolvedValue({ status: "subscribed", source: "created" });
+    vi.mocked(subscribeToNewsletter).mockResolvedValue({
+      status: "subscribed",
+    });
 
     const response = await POST(
       new Request("http://localhost/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "Reader@Example.com", source: "footer-form" }),
+        body: JSON.stringify({
+          email: "Reader@Example.com",
+          source: "footer-form",
+        }),
       }),
     );
 
@@ -139,13 +189,20 @@ describe("POST /api/newsletter", () => {
       lastName: undefined,
       source: "footer-form",
     });
-    expect(await response.json()).toEqual({ status: "subscribed", source: "created" });
+    expect(await response.json()).toEqual({ status: "subscribed" });
   });
 
   it("returns a safe 500 when the newsletter provider fails unexpectedly", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 5,
+      remaining: 4,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(isNewsletterConfigured).mockReturnValue(true);
-    vi.mocked(subscribeToNewsletter).mockRejectedValue(new Error("provider offline"));
+    vi.mocked(subscribeToNewsletter).mockRejectedValue(
+      new Error("provider offline"),
+    );
 
     const response = await POST(
       new Request("http://localhost/api/newsletter", {
@@ -160,9 +217,16 @@ describe("POST /api/newsletter", () => {
   });
 
   it("returns a safe 500 when the newsletter service returns an unexpected status", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, limit: 5, remaining: 4, resetAt: Date.now() + 60_000 });
+    vi.mocked(checkRateLimit).mockResolvedValue({
+      allowed: true,
+      limit: 5,
+      remaining: 4,
+      resetAt: Date.now() + 60_000,
+    });
     vi.mocked(isNewsletterConfigured).mockReturnValue(true);
-    vi.mocked(subscribeToNewsletter).mockResolvedValue({ status: "unexpected" } as never);
+    vi.mocked(subscribeToNewsletter).mockResolvedValue({
+      status: "unexpected",
+    } as never);
 
     const response = await POST(
       new Request("http://localhost/api/newsletter", {

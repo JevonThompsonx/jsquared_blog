@@ -2,9 +2,23 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const explicitAdminStatePath = path.resolve(process.cwd(), "tmp", "admin-state.json");
-const managedAdminStatePath = path.resolve(process.cwd(), "playwright", ".auth", "admin.json");
-const managedAdminMetadataPath = path.resolve(process.cwd(), "playwright", ".auth", "admin.meta.json");
+const explicitAdminStatePath = path.resolve(
+  process.cwd(),
+  "tmp",
+  "admin-state.json",
+);
+const managedAdminStatePath = path.resolve(
+  process.cwd(),
+  "playwright",
+  ".auth",
+  "admin.json",
+);
+const managedAdminMetadataPath = path.resolve(
+  process.cwd(),
+  "playwright",
+  ".auth",
+  "admin.meta.json",
+);
 
 const existingStorageState = new Set<string>();
 const fileContents = new Map<string, string>();
@@ -78,7 +92,9 @@ describe("admin E2E helper env contract", () => {
     expect(helper.hasAdminStorageState).toBe(false);
     expect(helper.adminStorageStatePath).toBeNull();
     expect(mockUse).not.toHaveBeenCalled();
-    expect(helper.getAdminStorageStateHint()).toContain("e2e:capture-admin-state");
+    expect(helper.getAdminStorageStateHint()).toContain(
+      "e2e:capture-workos-state",
+    );
   });
 
   it("allows remote admin mutations only when explicitly enabled", async () => {

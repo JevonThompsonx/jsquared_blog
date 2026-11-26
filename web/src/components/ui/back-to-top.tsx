@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const SCROLL_THRESHOLD_PX = 500;
 
@@ -10,6 +11,7 @@ function prefersReducedMotion(): boolean {
 }
 
 export function BackToTop() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -30,15 +32,22 @@ export function BackToTop() {
     window.scrollTo({ top: 0, behavior });
   }
 
+  // The admin bulk-action bar occupies the bottom-right corner; the floating
+  // button would sit on top of it. Admin pages have their own navigation.
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <button
       aria-hidden={!visible}
       aria-label="Back to top"
-      className={`fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-primary)] shadow-lg transition-all duration-200 hover:border-[var(--primary)] hover:text-[var(--primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] ${
+      className={`back-to-top fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-primary)] shadow-lg transition-all duration-200 hover:border-[var(--primary)] hover:text-[var(--primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] ${
         visible
           ? "translate-y-0 opacity-100"
           : "pointer-events-none translate-y-2 opacity-0"
       }`}
+      data-print-hide
       onClick={handleClick}
       tabIndex={visible ? 0 : -1}
       type="button"

@@ -1,49 +1,49 @@
-import type { User } from "@supabase/supabase-js";
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
-
-vi.mock("@/lib/supabase/server", () => ({
-  getRequestSupabaseUser: vi.fn(),
-}));
 
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
   getClientIp: vi.fn(() => "127.0.0.1"),
-  tooManyRequests: vi.fn(() => NextResponse.json({ error: "Too many requests" }, { status: 429 })),
+  tooManyRequests: vi.fn(() =>
+    NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+  ),
 }));
 
-vi.mock("@/lib/cloudinary/uploads", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/cloudinary/uploads")>();
+vi.mock("@/lib/media/local-storage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/media/local-storage")>();
 
   return {
     ...actual,
-    uploadAvatarImage: vi.fn(),
+    saveLocalImage: vi.fn(),
   };
 });
 
 vi.mock("@/server/auth/public-users", () => ({
-  ensurePublicAppUser: vi.fn(),
+  getRequestPublicUser: vi.fn(),
 }));
 
 vi.mock("@/server/dal/profiles", () => ({
+  getProfileByUserId: vi.fn().mockResolvedValue(null),
   updateProfileFields: vi.fn(),
 }));
 
+vi.mock("@/server/media/cleanup", () => ({
+  deleteLocalMediaIfUnreferenced: vi.fn(),
+}));
+
 import { POST } from "@/app/api/account/avatar/route";
+import { getRequestPublicUser } from "@/server/auth/public-users";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getRequestSupabaseUser } from "@/lib/supabase/server";
-import { uploadAvatarImage } from "@/lib/cloudinary/uploads";
-import { ensurePublicAppUser } from "@/server/auth/public-users";
+import { saveLocalImage } from "@/lib/media/local-storage";
 import { updateProfileFields } from "@/server/dal/profiles";
 
-function makeSupabaseUser(id = "supabase-user-1"): User {
+function makePublicUser(id = "reader-1") {
   return {
     id,
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: "2026-01-01T00:00:00.000Z",
+    email: "reader@example.com",
+    displayName: "Reader",
+    avatarUrl: null,
   };
 }
 
@@ -80,7 +80,7 @@ describe("POST /api/account/avatar", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(null);
+    vi.mocked(getRequestPublicUser).mockResolvedValue(null);
 
     const response = await POST(makeMissingFileRequest());
 
@@ -90,7 +90,7 @@ describe("POST /api/account/avatar", () => {
   });
 
   it("returns the throttled response when rate limited", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: false,
       limit: 10,
@@ -102,11 +102,11 @@ describe("POST /api/account/avatar", () => {
 
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ error: "Too many requests" });
-    expect(vi.mocked(uploadAvatarImage)).not.toHaveBeenCalled();
+    expect(vi.mocked(saveLocalImage)).not.toHaveBeenCalled();
   });
 
   it("rejects invalid form data", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: true,
       limit: 10,
@@ -121,7 +121,7 @@ describe("POST /api/account/avatar", () => {
   });
 
   it("requires an uploaded image file", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: true,
       limit: 10,
@@ -133,11 +133,11 @@ describe("POST /api/account/avatar", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Image file is required" });
-    expect(vi.mocked(uploadAvatarImage)).not.toHaveBeenCalled();
+    expect(vi.mocked(saveLocalImage)).not.toHaveBeenCalled();
   });
 
   it("rejects spoofed image files before upload", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: true,
       limit: 10,
@@ -145,21 +145,26 @@ describe("POST /api/account/avatar", () => {
       resetAt: Date.now() + 60_000,
     });
 
-    const spoofedFile = new File([new Uint8Array([0x3c, 0x68, 0x74, 0x6d, 0x6c])], "avatar.png", {
-      type: "image/png",
-    });
+    const spoofedFile = new File(
+      [new Uint8Array([0x3c, 0x68, 0x74, 0x6d, 0x6c])],
+      "avatar.png",
+      {
+        type: "image/png",
+      },
+    );
 
     const response = await POST(makeUploadRequest(spoofedFile));
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Uploaded file content does not match a supported image format" });
-    expect(vi.mocked(uploadAvatarImage)).not.toHaveBeenCalled();
-    expect(vi.mocked(ensurePublicAppUser)).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({
+      error: "Uploaded file content does not match a supported image format",
+    });
+    expect(vi.mocked(saveLocalImage)).not.toHaveBeenCalled();
     expect(vi.mocked(updateProfileFields)).not.toHaveBeenCalled();
   });
 
   it("returns 503 when the upload service is unavailable", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: true,
       limit: 10,
@@ -167,24 +172,29 @@ describe("POST /api/account/avatar", () => {
       resetAt: Date.now() + 60_000,
     });
 
-    const validPng = new File([
-      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    ], "avatar.png", {
-      type: "image/png",
-    });
+    const validPng = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "avatar.png",
+      {
+        type: "image/png",
+      },
+    );
 
-    vi.mocked(uploadAvatarImage).mockRejectedValue(new Error("Cloudinary is not configured"));
+    vi.mocked(saveLocalImage).mockRejectedValue(
+      Object.assign(new Error("write failed"), { code: "ENOSPC" }),
+    );
 
     const response = await POST(makeUploadRequest(validPng));
 
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "Upload service unavailable" });
-    expect(vi.mocked(ensurePublicAppUser)).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({
+      error: "Upload service unavailable",
+    });
     expect(vi.mocked(updateProfileFields)).not.toHaveBeenCalled();
   });
 
   it("returns a safe generic error when upload fails unexpectedly", async () => {
-    vi.mocked(getRequestSupabaseUser).mockResolvedValue(makeSupabaseUser());
+    vi.mocked(getRequestPublicUser).mockResolvedValue(makePublicUser());
     vi.mocked(checkRateLimit).mockResolvedValue({
       allowed: true,
       limit: 10,
@@ -192,19 +202,20 @@ describe("POST /api/account/avatar", () => {
       resetAt: Date.now() + 60_000,
     });
 
-    const validPng = new File([
-      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    ], "avatar.png", {
-      type: "image/png",
-    });
+    const validPng = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "avatar.png",
+      {
+        type: "image/png",
+      },
+    );
 
-    vi.mocked(uploadAvatarImage).mockRejectedValue(new Error("provider timeout"));
+    vi.mocked(saveLocalImage).mockRejectedValue(new Error("provider timeout"));
 
     const response = await POST(makeUploadRequest(validPng));
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Upload failed" });
-    expect(vi.mocked(ensurePublicAppUser)).not.toHaveBeenCalled();
     expect(vi.mocked(updateProfileFields)).not.toHaveBeenCalled();
   });
 });

@@ -41,19 +41,50 @@ describe("RSS helpers", () => {
       posts: [makePost()],
     });
 
-    expect(xml).toContain("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-    expect(xml).toContain("<rss version=\"2.0\"");
+    expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+    expect(xml).toContain('<rss version="2.0"');
     expect(xml).toContain("<title>J2 &amp; Adventures</title>");
     expect(xml).toContain("<description>Latest &lt;stories&gt;</description>");
-    expect(xml).toContain("<link>https://jsquaredadventures.com/posts/coastal-trails</link>");
+    expect(xml).toContain(
+      "<link>https://jsquaredadventures.com/posts/coastal-trails</link>",
+    );
     expect(xml).toContain("<title>Fish &amp; Chips &lt;Trail&gt;</title>");
     expect(xml).toContain("Fresh catch &amp; campfire stories.");
+  });
+
+  it("adds author, enclosure, and category fields with absolute URLs", () => {
+    const xml = buildRssXml({
+      title: "J²Adventures",
+      description: "Latest stories",
+      siteUrl: "https://jsquaredadventures.com",
+      selfUrl: "https://jsquaredadventures.com/feed.xml",
+      posts: [
+        makePost({
+          imageUrl: "/images/trail.webp",
+          tags: [
+            { id: "tag-1", name: "Hiking", slug: "hiking" },
+            { id: "tag-2", name: "Camp & Fire", slug: "camp-fire" },
+          ],
+        }),
+      ],
+    });
+
+    expect(xml).toContain(
+      "<author>blog@jsquaredadventures.com (J²Adventures)</author>",
+    );
+    expect(xml).toContain(
+      '<enclosure url="https://jsquaredadventures.com/images/trail.webp" type="image/webp" length="0" />',
+    );
+    expect(xml).toContain("<category>Hiking</category>");
+    expect(xml).toContain("<category>Camp &amp; Fire</category>");
   });
 
   it("creates an RSS response with XML headers", async () => {
     const response = createRssResponse("<rss />");
 
-    expect(response.headers.get("Content-Type")).toBe("application/rss+xml; charset=utf-8");
+    expect(response.headers.get("Content-Type")).toBe(
+      "application/rss+xml; charset=utf-8",
+    );
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=1800");
     expect(await response.text()).toBe("<rss />");
   });

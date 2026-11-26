@@ -92,7 +92,10 @@ type RawCommentRow = {
   moderatedByUserId: string | null;
 };
 
-function sortComments<T extends { createdAt: Date; likeCount: number }>(records: T[], sortBy: CommentSortOption): T[] {
+function sortComments<T extends { createdAt: Date; likeCount: number }>(
+  records: T[],
+  sortBy: CommentSortOption,
+): T[] {
   const sorted = [...records];
   if (sortBy === "likes") {
     sorted.sort((left, right) => {
@@ -106,15 +109,22 @@ function sortComments<T extends { createdAt: Date; likeCount: number }>(records:
   }
 
   if (sortBy === "oldest") {
-    sorted.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+    sorted.sort(
+      (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
+    );
     return sorted;
   }
 
-  sorted.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+  sorted.sort(
+    (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+  );
   return sorted;
 }
 
-export function getPublicCommentContent(content: string, visibility: CommentVisibility): string {
+export function getPublicCommentContent(
+  content: string,
+  visibility: CommentVisibility,
+): string {
   if (visibility === COMMENT_VISIBILITY_HIDDEN) {
     return "This comment is hidden by an admin.";
   }
@@ -126,10 +136,17 @@ export function getPublicCommentContent(content: string, visibility: CommentVisi
   return content;
 }
 
-function toCommentModerationItemResult(comment: Pick<
-  RawCommentRow,
-  "id" | "postId" | "visibility" | "isFlagged" | "moderatedAt" | "moderatedByUserId"
-> & { changed: boolean }): CommentModerationItemResult {
+function toCommentModerationItemResult(
+  comment: Pick<
+    RawCommentRow,
+    | "id"
+    | "postId"
+    | "visibility"
+    | "isFlagged"
+    | "moderatedAt"
+    | "moderatedByUserId"
+  > & { changed: boolean },
+): CommentModerationItemResult {
   return {
     commentId: comment.id,
     postId: comment.postId,
@@ -141,7 +158,9 @@ function toCommentModerationItemResult(comment: Pick<
   };
 }
 
-async function listCommentRowsForPost(postId: string): Promise<RawCommentRow[]> {
+async function listCommentRowsForPost(
+  postId: string,
+): Promise<RawCommentRow[]> {
   const db = getDb();
   return db
     .select({
@@ -202,13 +221,19 @@ async function buildCommentRecords(
       authorId: row.authorId,
       authorDisplayName: row.authorDisplayName ?? "Traveler",
       authorAvatarUrl: row.authorAvatarUrl ?? null,
-      content: includeModeratedContent ? row.content : getPublicCommentContent(row.content, row.visibility),
+      content: includeModeratedContent
+        ? row.content
+        : getPublicCommentContent(row.content, row.visibility),
       parentId: row.parentId ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       likeCount: likeCountMap.get(row.id) ?? 0,
-      userHasLiked: row.visibility === COMMENT_VISIBILITY_VISIBLE && likedByCurrentUser.has(row.id),
-      canDelete: currentUserId === row.authorId && row.visibility === COMMENT_VISIBILITY_VISIBLE,
+      userHasLiked:
+        row.visibility === COMMENT_VISIBILITY_VISIBLE &&
+        likedByCurrentUser.has(row.id),
+      canDelete:
+        currentUserId === row.authorId &&
+        row.visibility === COMMENT_VISIBILITY_VISIBLE,
       visibility: row.visibility,
       isFlagged: row.isFlagged,
       moderatedAt: row.moderatedAt,
@@ -224,16 +249,40 @@ export async function listCommentsForPost(
   currentUserId: string | null,
   sortBy: CommentSortOption,
 ): Promise<CommentRecord[]> {
-  const rows = await listCommentRowsForPost(postId);
-  return buildCommentRecords(rows, currentUserId, sortBy, false);
+  const allRows = await listCommentRowsForPost(postId);
+  const visibleRows = allRows.filter(
+    (row) => row.visibility === COMMENT_VISIBILITY_VISIBLE,
+  );
+  const visibleIds = new Set(visibleRows.map((row) => row.id));
+
+  // SEC-10: hidden/deleted rows (and replies whose parent is no longer visible)
+  // never reach the public payload, and moderation metadata is stripped.
+  const rows = visibleRows.filter(
+    (row) => row.parentId === null || visibleIds.has(row.parentId),
+  );
+
+  const records = await buildCommentRecords(rows, currentUserId, sortBy, false);
+  return records.map((record) => ({
+    ...record,
+    visibility: COMMENT_VISIBILITY_VISIBLE,
+    isFlagged: false,
+    moderatedAt: null,
+    moderatedByUserId: null,
+  }));
 }
 
-export async function listCommentsForAdmin(postId: string, sortBy: CommentSortOption): Promise<AdminCommentRecord[]> {
+export async function listCommentsForAdmin(
+  postId: string,
+  sortBy: CommentSortOption,
+): Promise<AdminCommentRecord[]> {
   const rows = await listCommentRowsForPost(postId);
   return buildCommentRecords(rows, null, sortBy, true);
 }
 
-export async function listCommentsByUserId(userId: string, limit = 20): Promise<UserCommentSummary[]> {
+export async function listCommentsByUserId(
+  userId: string,
+  limit = 20,
+): Promise<UserCommentSummary[]> {
   const db = getDb();
   const rows = await db
     .select({
@@ -287,7 +336,12 @@ export async function countCommentsByUserId(userId: string): Promise<number> {
   const rows = await db
     .select({ total: count() })
     .from(comments)
-    .where(and(eq(comments.authorId, userId), eq(comments.visibility, COMMENT_VISIBILITY_VISIBLE)));
+    .where(
+      and(
+        eq(comments.authorId, userId),
+        eq(comments.visibility, COMMENT_VISIBILITY_VISIBLE),
+      ),
+    );
   return rows[0]?.total ?? 0;
 }
 
@@ -302,7 +356,10 @@ export async function canCommentOnPost(postId: string): Promise<boolean> {
   return Boolean(rows[0]);
 }
 
-export async function canReplyToComment(postId: string, parentId: string): Promise<boolean> {
+export async function canReplyToComment(
+  postId: string,
+  parentId: string,
+): Promise<boolean> {
   const db = getDb();
   const rows = await db
     .select({ id: comments.id, parentId: comments.parentId })
@@ -379,7 +436,10 @@ export async function createCommentRecord(
   };
 }
 
-export async function deleteCommentRecord(commentId: string, authorId: string): Promise<boolean> {
+export async function deleteCommentRecord(
+  commentId: string,
+  authorId: string,
+): Promise<boolean> {
   const db = getDb();
   const existing = await db
     .select({ id: comments.id, visibility: comments.visibility })
@@ -399,16 +459,31 @@ export async function deleteCommentRecord(commentId: string, authorId: string): 
   return true;
 }
 
-export async function toggleCommentLikeRecord(commentId: string, userId: string): Promise<{ liked: boolean }> {
+export async function toggleCommentLikeRecord(
+  commentId: string,
+  userId: string,
+): Promise<{ liked: boolean }> {
   const db = getDb();
   const existing = await db
     .select({ commentId: commentLikes.commentId })
     .from(commentLikes)
-    .where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)))
+    .where(
+      and(
+        eq(commentLikes.commentId, commentId),
+        eq(commentLikes.userId, userId),
+      ),
+    )
     .limit(1);
 
   if (existing[0]) {
-    await db.delete(commentLikes).where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)));
+    await db
+      .delete(commentLikes)
+      .where(
+        and(
+          eq(commentLikes.commentId, commentId),
+          eq(commentLikes.userId, userId),
+        ),
+      );
     return { liked: false };
   }
 
@@ -425,7 +500,12 @@ export async function commentExists(commentId: string): Promise<boolean> {
   const rows = await db
     .select({ id: comments.id })
     .from(comments)
-    .where(and(eq(comments.id, commentId), eq(comments.visibility, COMMENT_VISIBILITY_VISIBLE)))
+    .where(
+      and(
+        eq(comments.id, commentId),
+        eq(comments.visibility, COMMENT_VISIBILITY_VISIBLE),
+      ),
+    )
     .limit(1);
   return Boolean(rows[0]);
 }
@@ -556,7 +636,9 @@ export async function moderateCommentsByIds(
         .where(eq(comments.id, commentId));
 
       if (action === "delete") {
-        await tx.delete(commentLikes).where(eq(commentLikes.commentId, commentId));
+        await tx
+          .delete(commentLikes)
+          .where(eq(commentLikes.commentId, commentId));
       }
 
       updatedCount += 1;

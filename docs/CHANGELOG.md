@@ -6,21 +6,188 @@
 
 ---
 
+## [Unreleased] — 2026-11-26
+
+### Production hardening and local-origin deploy
+
+- **Added** the versioned host contract under `deploy/blog/`: systemd units, backup helper, `deploy.sh`, and `verify-host.sh`.
+- **Added** runtime env fail-fast for `CRON_SECRET`, admin allowlist, site URL, WorkOS runtime values, rate-limit driver, media root, hostname, and port.
+- **Added** migration runner, schema verifier, and ledger reconciler; committed snapshots `0025` and `0026`.
+- **Added** case-insensitive primary-email uniqueness index with a duplicate-email preflight.
+- **Added** impersonation denial, safe auth-failure logging, public CSRF guards, and health/readiness probes.
+- **Added** production dependency audit gate and migration drift check in CI.
+- **Fixed** deploy release ownership so code is root:blog read-only and only `.next/cache` is writable by `blog`.
+- **Fixed** pre-deploy backup to cover the migrated database, verify its path, size, and SQLite integrity.
+- **Fixed** rollback to re-verify the previous release's health and report when it cannot.
+- **Fixed** production schema drift by applying missing `0010`, `0023`, and `0026` DDL and reconciling the ledger to 27/27.
+- **Deployed** release `20261126T044107` from commit `bd52818`; health reports `ok` and `verify-host.sh` passes.
+- **Verified** 1,596 unit tests, typecheck, lint, production audit, build/package, migration verification, production smoke, and read-only cache writes.
+
+### WorkOS Magic Auth and admin access repair
+
+- **Fixed** the signup redirect loop caused by the WorkOS dashboard Sign-up URL override pointing at `/api/auth/signup`; the override is now empty and `/signup` reaches the hosted AuthKit sign-up screen.
+- **Enabled** Magic Auth email one-time codes and passkeys for all readers/admins; retained configured OAuth providers. No application passwords are generated or required.
+- **Changed** admin access to WorkOS-only after Cloudflare Blog Admin Access removal; `next.` remains Access-gated.
+- **Fixed** the GitHub-created reader account by adding it to the allowlist and promoting the same local row in place; local ID, profile, and content FKs are unchanged.
+- **Provisioned** verified WorkOS identities for the three owner inboxes and service admin, each mapping to its existing local admin row.
+- **Added** signed-in non-admin switch-account recovery, fixed callback error codes, accurate email-code recovery copy, and Magic Auth Playwright fixture capture without passwords.
+- **Hardened** admin provisioning to promote existing rows only and refuse missing/duplicate/conflicting identities; expanded the identity audit with provider-email and admin-link parity checks.
+- **Fixed** Playwright's local default port to `127.0.0.1:3100` so it cannot silently reuse Open WebUI on port 3000.
+- **Verified** 1,541 unit tests, typecheck, lint, build/package, hosted signup, five-admin route/nav parity, reader denial, Magic Auth `auth_time` refresh behavior, production auth redirects, and authenticated admin Playwright; live release `20261125T2019`.
+
+---
+
+## [Unreleased] — 2026-11-24
+
+### WorkOS AuthKit repair cycle 1
+
+- **Fixed** anonymous pages no longer receive pending PKCE verifier cookies or AuthKit-induced `no-store`; real login initiation still sets its verifier and redirects.
+- **Added** forced reauthentication for live stale admin sessions with a clamped `maxAge` (maximum 24 hours).
+- **Changed** callback identity mapping never promotes admins. Added dry-run-by-default `workos:provision-admins` for explicit, idempotent local admin provisioning without WorkOS secrets.
+- **Changed** AuthKit callbacks and logout roots are selected per validated apex/`www`/`next`/localhost request host; hostile hosts are rejected.
+- **Added** duplicate provider/subject auditing and `IF NOT EXISTS` on migration 0025's unique index.
+- **Changed** E2E fixture capture to write `playwright/.auth/admin.json` plus origin metadata; removed dead public password-fixture helpers and commands.
+- **Added** rate limits to login/signup/callback, lazy WorkOS env caching, cross-site logout rejection, and deployed public-site URL validation.
+- **Docs:** recorded that staging `example.com` is reserved for Test Organization SSO; real email/password smoke must use an owner-controlled non-example inbox.
+- **Fixed (repair cycle 2):** Playwright now loads deterministic dummy WorkOS values from `.env.test.example` into the managed dev-server environment while preserving explicit overrides, so the documented clean-checkout E2E command starts without manual exports.
+
+### WorkOS AuthKit reader/admin migration (implementation complete; cutover pending)
+
+- **Changed** reader and admin authentication to WorkOS AuthKit 4.6.3 in keyless PKCE mode. `wos-session` is the only application session; Better Auth, Auth.js, GitHub OAuth, and Access-JWT admin modules/routes are removed.
+- **Added** transactional identity mapping through `auth_accounts.provider='workos'`, preserving existing `users.id`, profiles, and content FKs. Verified normalized email links existing users or creates a reader/profile; conflicting, unverified, and synthetic legacy identities fail closed.
+- **Changed** admin authorization to require a live WorkOS session, verified email, current `ADMIN_ALLOWED_EMAILS`, local admin role, and `auth_time` <= 24 hours. Cloudflare Access remains the outer edge gate during soak.
+- **Added** migration `0025_workos_identity.sql` with a unique provider/subject index. Better Auth tables and legacy env vars remain for one code-rollback cycle.
+- **Changed** proxy composition to use AuthKit header partitioning while retaining CSP nonces, CSRF checks, rate limits, and prefetch session headers; internal `x-workos-*` headers never reach browsers.
+- **Added** safe hosted sign-in/sign-up/logout routes, callback mapping with a validated public base URL, operator scripts, SDK-`sealedSession` fixture capture, WorkOS runbook, and standalone dependency smoke checks.
+- **Removed** local password/reset/verification forms and the Better Auth/Auth.js runtime dependencies. Password and email management now live in AuthKit.
+- **Verified locally** 180 unit-test files / 1,434 tests, typecheck, lint (0 errors), standalone Node build, 4 unauthenticated Playwright auth-flow tests, packaged WorkOS module resolution, and a packaged-server smoke. Production cutover/live authenticated smoke remain orchestrator-owned.
+
+### Origin moved from gaia CT153 to templetonbak
+
+- **Changed** the production origin host from gaia CT153 to **templetonbak** (`100.96.0.7`), served by `jsquared-blog.service` on `127.0.0.1:3010` under the `blog` user.
+- **Changed** Cloudflare ingress/DNS for `jsquaredadventures.com`, `www.`, and `next.` to the `templetonbak` tunnel (`ede2f4c2-…`); the gaia tunnel no longer carries the blog.
+- **Moved** `/srv/blog` (release, SQLite DB, media, env) to templetonbak. The gaia service and its cron timers are disabled and retained as rollback material.
+- **Added** templetonbak systemd timers for scheduled publishing and daily SQLite backups.
+- **Tradeoff:** templetonbak reboots daily at ~04:00 local and has a WiFi-only uplink; expect a short 5xx window during the reboot.
+- **Docs:** local-origin runbook, Cloudflare page, architecture, setup, README, AGENTS, and the templetonbak device repo updated.
+
+### Local reader auth — Better Auth (templetonbak; superseded by WorkOS)
+
+> Historical entry retained for rollback context. Better Auth is no longer a live
+> authentication path; WorkOS AuthKit replaced it on 2026-11-24.
+
+- **Changed** public reader authentication from Supabase Auth to local Better Auth 1.7.27. Signup, email verification, login, logout, password reset, and change password all run against SQLite on templetonbak (self-service email change is deferred); no Supabase runtime dependency remains.
+- **Changed** the user model mapping: Better Auth writes to the existing `users` table (`modelName: "users"`, `email → primaryEmail`) and owns new `session`, `account`, and `verification` tables, so every comment/bookmark/profile FK still uses `users.id`.
+- **Added** `drizzle/0024_easy_rachel_grey.sql`: `users.name`, `users.email_verified`, `users.image`, a unique email index, and the three auth tables.
+- **Added** `/api/public-auth/*`, `/forgot-password`, `/reset-password`, `/verify-email`, and a POST-confirm verification page. Password reset revokes all sessions; sessions are HttpOnly/Secure/SameSite=Lax with a 14-day absolute lifetime.
+- **Added** transactional auth email through Resend, with a guarded `AUTH_EMAIL_TRANSPORT=console` mode for local/smoke testing, plus origin checks on all cookie-authenticated mutations.
+- **Removed** `@supabase/supabase-js`, `lib/supabase/*`, the Supabase keepalive route, legacy Supabase reader rows, and Supabase origins from CSP/image patterns. Privacy page and docs updated.
+- **Fixed** the pre-existing upstream Supabase outage: reader login/comments/bookmarks now work locally without the dead project.
+
+### Local origin migration — Node/Next on gaia CT153, SQLite, self-hosted media
+
+- **Changed** production origin from the Cloudflare Worker to a Next 16 standalone Node process on gaia LXC `153`, behind the existing `gaia` Cloudflare Tunnel. Cloudflare still provides DNS/TLS/WAF/Access; the Worker is retained as a rollback artifact with no custom domains and no cron schedules.
+- **Changed** the database from Turso to local SQLite (`file:` URL) with WAL, `busy_timeout`, and `foreign_keys` per connection; `file:` URLs no longer require an auth token.
+- **Changed** images from Cloudinary/Cloudflare Images to content-addressed local WebP. Uploads are re-encoded with `sharp` (EXIF/GPS stripped), served at `/media/*`, optimized through `/_next/image`, and social cards are rendered by `/api/og-image/*` at 1200×630 JPEG. Orphan files are deleted only when unreferenced.
+- **Changed** rate limiting to an explicit in-process driver (`RATE_LIMIT_DRIVER=memory`) for the single Node process; Cloudinary is optional at boot.
+- **Added** `/api/health`, `scripts/package-standalone.mjs`, `scripts/migrate-local-media.mjs`, systemd cron/backup timers, and `docs/runbooks/local-origin.md`.
+- **Fixed** soft-404s: loading boundaries above routes that call `notFound()` were removed, so missing posts/tags/categories/series/authors return a real 404 instead of `200 OK`.
+- **Fixed** admin CSRF behind the tunnel by accepting forwarded host/proto; Access now accepts multiple AUDs for apex + staging.
+- **Docs:** `CLOUDFLARE.md`, `docs/ARCHITECTURE.md`, `docs/INDEX.md`, privacy page, and `AGENTS.md` updated for the local origin. Full record: `docs/reviews/2026-11-24-local-origin-migration.md`.
+
+### Local-first newsletter — Listmonk on gaia CT152
+
+- **Added** self-hosted Listmonk 6.2.0 + Postgres 17 on gaia LXC `152`, behind the gaia Cloudflare Tunnel at `listmonk.jsquaredadventures.com`.
+- **Added** Listmonk Access apps for `/admin*`, `/api*`, and `/subscription/form` (four owner emails + `blog-newsletter-v3` service token); public confirmation/unsubscribe pages stay open.
+- **Changed** the blog newsletter path from Resend contacts/segments to a server-side proxy to Listmonk's public subscription API. Double opt-in, unsubscribe, and the subscriber list now live on the local server; the browser never talks to Listmonk directly. Repeat/already-confirmed addresses get the same uniform 201 response, avoiding enumeration.
+- **Added** local continuity backups: Turso schema/data dump + content-addressed image mirror (`web/scripts/backup-blog-data.mjs`), daily `pg_dump` timer on CT152, and CT152 added to `pbs-gaia-guests`. The mirror fails only on missing critical (published/media) images and prunes backups after 90 days.
+- **Hardened** Listmonk: `/subscription/form` is Access-gated (the blog uses the API), public archive disabled, URL/UUID env validation, and repeat/already-confirmed signups return the same 201 as new ones.
+- **Added** reproducible deployment files under `deploy/listmonk/` (compose, env template, backup units) and the Listmonk runbook.
+- **Cancelled** Cloudflare Images Basic ($5/mo, effective end of period) after exporting all 17 assets; no published content referenced `imagedelivery.net`.
+- **Docs:** `docs/runbooks/listmonk.md`, `CLOUDFLARE.md`, `docs/INDEX.md`, README/SETUP/ARCHITECTURE updated.
+
+---
+
+## [Unreleased] — 2026-11-23
+
+### Branch: `t3/blog-audit-hardening-optimization` (audit + hardening pass)
+
+Six parallel audits (security, access, privacy, SEO, performance/Lighthouse, UX/a11y) plus live Lighthouse and Cloudflare API inspection. Full evidence in `docs/reviews/2026-11-23-blog-audit-findings.md`; plan/acceptance in `docs/reviews/2026-11-23-blog-improvement-plan.md`.
+
+#### Security
+
+- **Fixed** CSP `style-src` nonce was a plain string, so production sent the literal `${nonce}` and logged CSP violations. Now a real template literal, with a regression test.
+- **Fixed** rate limiting trusted the first `X-Forwarded-For` hop; Cloudflare appends the real IP, so attackers could rotate XFF and bypass every bucket. Now prefers `cf-connecting-ip`, uses the last XFF hop as fallback, and hashes the identifier before using it as a Redis key.
+- **Fixed** `avatarUrl` accepted any host; a non-allowlisted URL made `next/image` throw and 500 author/post pages. Now allowlists presets and the same Cloudinary/Supabase/approved-image hosts as `next.config.ts`.
+- **Fixed** public comment payloads returned moderation fields and hidden-row existence. Public list now filters hidden/deleted rows (and orphaned replies) and strips moderation metadata; post-card/comment counters count only visible rows.
+- **Fixed** user emails were logged in Access-denial and newsletter-failure paths; logs now keep only the domain/boolean.
+- **Added** `prosemirror-view >= 1.42.3` and `sanitize-html >= 2.18.0` overrides for the admin paste-XSS and sanitizer advisories.
+- **Updated** `next`/`eslint-config-next` 16.4.6, `@sentry/nextjs` 10.75.2, `zod` 4.6.6, `maplibre-gl` 6.19.0, and `vite` 8.3.3; added `nanoid`, `source-map-js`, and `postcss` overrides. `pnpm audit --prod` now reports **0 critical/high** (13 moderate/low, all build-only).
+
+#### Access / Cloudflare
+
+- **Disabled** `*.workers.dev` on both `jsquared-blog` and `jsquared-blog-preview`; production is only reachable through the apex/www custom domains (verified 404 on the default hostnames).
+- **Added** `jnshaver@gmail.com` to the **Blog Admin** Access policy and to the Worker `ADMIN_ALLOWED_EMAILS` secret.
+- **Enabled** Always Use HTTPS, minimum TLS 1.2, Early Hints, and edge HSTS; added a 1-hour edge cache rule for `sitemap.xml`, `robots.txt`, and `feed.xml` (sitemap/robots confirmed `cf-cache-status: HIT`; feed still returns `BYPASS`).
+
+#### Privacy
+
+- **Removed** exact EXIF GPS coordinates from the public post payload and gallery UI; camera/lens/date metadata stays. Delivery URLs now request `fl_force_strip` so Cloudinary clears EXIF/IPTC/XMP from delivered images.
+- **Added** `/privacy` covering analytics, cookies, accounts, newsletter, media, service providers, retention, and data requests; linked from the footer.
+- **Changed** Sentry server no longer attaches local variables; client/edge request bodies, headers, cookies, and query strings are scrubbed; replay masking is pinned (`maskAllText`, `blockAllMedia`, `maskAllInputs`).
+- **Changed** `/account`, `/bookmarks`, `/preview`, auth, and settings responses are explicitly `no-store`; CSP report logs strip URL query strings.
+
+#### SEO
+
+- **Fixed** missing dynamic entities (posts, tags, categories, series, wishlist, author) now call `notFound()` during metadata generation; categories validate existence. Because vinext still streams a 200 shell, `worker-entry.ts` now converts a crawler's rendered not-found body to a real HTTP 404 (human traffic keeps streaming).
+- **Fixed** sitemap `lastmod` used request time for every non-post URL and capped posts at 100; now uses real post/series dates and paginates all published posts.
+- **Added** canonicals across public routes, default 1200×630 OG image + dimensions, richer BlogPosting JSON-LD (logo, language, section, keywords, author URL, breadcrumbs), category-feed 404s, RSS author/enclosure/category fields, and `/series` index.
+- **Changed** `/search`, `/bookmarks`, and auth/account shells are `noindex`; PWA manifest screenshots/icons resolve.
+- **Fixed** route titles no longer hardcode `– J²Adventures` on top of the root template, which produced `… | J²Adventures | J²Adventures` on static and taxonomy pages.
+- **Fixed** category links now slugify display names (`Van Life` → `/category/van-life`), matching the slug lookup instead of 404ing on multi-word categories; RSS `<author>` uses the valid email format.
+
+#### Performance
+
+- **Changed** Cloudinary URLs are width-aware (`w_*`, `c_limit`) with `srcSet`; prose images are resized at render time and get dimensions/keyboard semantics; MapLibre on post pages is dynamically imported; the service worker no longer caches authenticated pages or `no-store` HTML.
+- **Fixed** server pages no longer pass a `loader` function directly into `next/image` (React throws at the Server Component boundary). A `CdnImage` client wrapper owns the loader and uses it only for Cloudinary sources; local images keep Next's optimizer.
+- **Fixed** Tiptap/ProseMirror was pulled into every public page because `lib/utils.ts` imported `lib/content.ts`, which imported the Thoughts Tiptap extension. The pure Thoughts helpers now live in `lib/tiptap/thoughts-block-shared.ts`, and the pure text helper lives in `lib/html-text.ts`, removing the editor and `sanitize-html` from public card/date/nav chunks (admin editor keeps them).
+- **Changed** `public/maplibre-worker.js` is now the v6.19.0 module worker matching `maplibre-gl`; the old vendored file was v5.20.1. The preview page also uses the dynamic map wrapper.
+- **Fixed** map popup/thumbnail images (and series/bookmarks/wishlist cards) route through the Cloudinary-aware image component, eliminating the `/map` `400 fl_force` request and serving width-correct variants.
+- **Added** `/.well-known/security.txt` with the security contact and canonical URL.
+- **Added** Cloudinary preconnect and a default OG image; LCP hero keeps priority.
+- **Hardened** Cloudinary transform parsing against folder-style public IDs and removed the double-transform case from OG image generation; added a server/client image-boundary regression test that scans every server module.
+
+#### Accessibility / UX
+
+- **Fixed** light-theme accent contrast (sage/lichen) to ≥4.5:1, 404/error pages now expose `<main id="main-content">` + one `<h1>`, global focus-visible styling, form error semantics, print-hidden chrome, focus restore/return, and reduced-motion-aware TOC scrolling.
+- **Fixed** dead `/series` footer link (new index), mobile menu text breakpoint, bookmark error feedback, and `/account` unauthenticated fallback.
+
+#### Tests
+
+- **Fixed** the stale `isAdminAuthViaAccess` mock that left 9 admin-page tests red on the production branch.
+- **Added** regression tests for CSP nonce interpolation, client-IP trust order/hashing, avatar URL allowlisting, theme contrast, UX semantics, sitemap, RSS, category feed, and JSON-LD.
+
+---
+
 ## [Unreleased] — 2026-08-24
 
 ### Branch: `feat/phase1-modernization` (P0 security wave — SEC-1/SEC-3 + test baseline)
 
 #### Security
+
 - **Changed** `sendDefaultPii: true` → `false` in all three live Sentry entry points (`web/sentry.server.config.ts`, `web/sentry.edge.config.ts`, `web/src/instrumentation-client.ts`). Previously shipped client IP + request headers (incl. cookies/authorization) to Sentry. Stack traces and route names still ship; identity is attached explicitly/minimally via `Sentry.setUser` where a session exists.
 - **Added** `/api/csp-report` endpoint (log-only CSP violation collector, rate-limited, non-fatal) and wired it via the `Reporting-Endpoints` header + `report-to` CSP directive. CSP violations are now observable; no enforcement change yet (review real reports before tightening).
 
 #### Added
+
 - **Added** `web/tests/unit/sentry-pii-regression.test.ts` — static guard asserting every live Sentry entry point keeps `sendDefaultPii: false`, so SEC-1 cannot silently regress.
 
 #### Removed
+
 - **Removed** 3 orphaned `/about` social-link tests (`web/tests/unit/about-page.test.tsx`). The social section was intentionally removed in `87723ba` to comply with AGENTS.md Scope Constraints (no social-media features); the tests were never updated. Unit suite is now intentionally green (1121/1121).
 
 #### Review: Auth compatibility (`SEC-5` scope, no code change)
+
 - Auth surface is **compatible** with the SEC-1/CSP changes: Sentry init and CSP `proxy.ts` do not touch the NextAuth v4 admin flow (`/api/auth/[...nextauth]`) or the Supabase public bearer flow. CSRF protection in `proxy.ts` still gates admin state-changing routes via same-origin + `sec-fetch-site` checks; adding the `Reporting-Endpoints`/`report-to` headers does not weaken it.
 - **Findings (epic, not in this change):** next-auth is pinned at `4.24.14` on App Router; `next-auth` v5 migration remains the tracked SEC-5 epic. `getServerSession(buildAdminAuthOptions())` re-builds options per call (acceptable, memoized handler in route.ts). Admin JWT enrichment (`userId/role/githubLogin/avatarUrl`) is intact; no PII is now sent to Sentry so enriched JWT fields stay local. GitHub admin allowlist (`AUTH_ADMIN_GITHUB_IDS`) + `account?.provider === "github"` check remain the only admin admission gates.
 - No breaking changes required for SEC-1/SEC-3; documented here so a future v5 migration does not re-introduce `sendDefaultPii` or drop the CSP report endpoint.
@@ -28,18 +195,22 @@
 ### Branch: `feat/phase1-modernization` (perf pilot — SPD-6, SPD-5/EFF-1)
 
 #### CI
+
 - **Changed** (SPD-6) `e2e` job in `.github/workflows/ci.yml` to cache the Playwright browser binaries (`~/.cache/ms-playwright`) keyed on the resolved Playwright version. The heavy `playwright install --with-deps` path now only runs on a cache miss; on a hit we just run `install-deps` (fast, no re-download). Cuts several minutes per PR.
 - **Fixed** the E2E `webServer` command in `web/playwright.config.ts`. It used `pnpm run dev -- --port <port>`, which expands to `next dev -- --port <port>`. The `--` separator ends Next's own argument parsing, so `--port <port>` was treated as a project-directory positional and Next failed with `Invalid project directory provided, no such directory: .../web/--port` — the E2E job's dev server never started, so the whole E2E job failed (0 tests). Changed to `pnpm run dev --port <port>` so `--port` is passed as a real flag to `next dev` (`-p, --port <port>`). Verified via a live CI re-run: the dev server now starts (`next dev --port 3000`) and the E2E suite executes (27 passed). Updated `web/tests/unit/playwright-config.test.ts` to assert the corrected command.
 
 #### Known environmental limitation (not a code defect — do NOT "fix" with mocks)
+
 - The `e2e` CI job still reports 21 failing content-dependent tests. Root cause is **environmental, not a code bug**: CI only sets placeholder Turso/Supabase creds (`TURSO_DATABASE_URL=https://test-db.turso.io`, etc.) and never provisions a real database. Every DB query returns `SERVER_ERROR: HTTP 404`, so pages render empty/error and content-dependent E2E tests cannot pass. `pnpm run seed:e2e` (required by the suite) also cannot run in CI because it needs `SUPABASE_SERVICE_ROLE_KEY`, which CI does not provide. To make the E2E job fully green in CI, provision a real test Turso database + run migrations + supply `SUPABASE_SERVICE_ROLE_KEY` and run `seed:e2e` in the `e2e` job — a secrets/infra decision for the repo owner, out of scope for this command-bug fix.
 
 #### Changed
+
 - **Changed** (SPD-5 / EFF-1) `web/src/server/queries/posts.ts`: `listPublishedPosts` and `getPublishedPostBySlug` now both use `unstable_cache` tagged `["posts"]`. `getPublishedPostBySlug` was previously **uncached** (hit 3×/request via page/`head`/`generateMetadata`); it is now a distinct cache entry per slug. The time-based TTL is a 1h backstop — `revalidateTag("posts", "max")` (already fired by publish/unpublish/delete/admin actions) is the primary, on-demand invalidation path, retiring reliance on a short time window.
 - **Updated** `web/tests/unit/posts-queries-cache.test.ts` to assert the new 1h TTL backstop + `posts` tag (the old test pinned the 30–60s window).
 
 #### Investigated (not adopted — documented to prevent re-litigation)
-- **Evaluated** the React 19 `'use cache'` + `cacheTag`/`cacheLife` API for the SPD-5 pilot. In Next.js 16.2.9 these primitives are gated behind `experimental.cacheComponents` (top-level `cacheComponents: true`): `cacheTag()` throws `E886` at runtime without it. Enabling the flag compiles, but it is the **Cache Components** rendering model and forces an app-wide constraint — the production build failed on **34 routes** with *"Uncached data was accessed outside of `<Suspense>`"* (every dynamic page must be either statically cacheable or wrap its data in `<Suspense>`). That is a sweeping rendering-model migration, not a small pilot, and it would regress the currently-green build. The same tag-based dedup + on-demand `revalidateTag` semantics are achievable with the stable `unstable_cache` API (already in use in this file), so we implemented the pilot there instead. If true `'use cache'` is wanted later, it must be its own branch with a full Suspense migration + build-gate.
+
+- **Evaluated** the React 19 `'use cache'` + `cacheTag`/`cacheLife` API for the SPD-5 pilot. In Next.js 16.2.9 these primitives are gated behind `experimental.cacheComponents` (top-level `cacheComponents: true`): `cacheTag()` throws `E886` at runtime without it. Enabling the flag compiles, but it is the **Cache Components** rendering model and forces an app-wide constraint — the production build failed on **34 routes** with _"Uncached data was accessed outside of `<Suspense>`"_ (every dynamic page must be either statically cacheable or wrap its data in `<Suspense>`). That is a sweeping rendering-model migration, not a small pilot, and it would regress the currently-green build. The same tag-based dedup + on-demand `revalidateTag` semantics are achievable with the stable `unstable_cache` API (already in use in this file), so we implemented the pilot there instead. If true `'use cache'` is wanted later, it must be its own branch with a full Suspense migration + build-gate.
 
 ## [0.5.0] — 2026-06-18
 
@@ -355,15 +526,18 @@ All row counts preserved before/after migration: 18 categories, 13 tags, 5 serie
 ### Branch: `feat/layout-footer-and-nav` (PR #43)
 
 #### Added
+
 - **Site footer** — New `<SiteFooter />` component renders on every page with brand, navigation (Home, Map, About, Wishlist), discovery (Tags, Categories, Series, RSS), newsletter re-CTA, back-to-top anchor, copyright, and social media links (Instagram, YouTube)
 - **Back-to-top button** — New `<BackToTop />` floating button appears after scrolling 500px, smooth scroll to top, respects `prefers-reduced-motion`
 - **Footer unit tests** — 7 new tests covering brand, navigation links, discovery links, newsletter form, back-to-top anchor, copyright year, and accessible landmark
 - **Back-to-top unit tests** — 6 new tests covering accessibility label, initial hidden state, visibility after scroll, scroll-to-top behavior, and `prefers-reduced-motion` handling
 
 #### Changed
+
 - **Global error page** — Now uses `@media (prefers-color-scheme: dark)` to show appropriate colors, eliminating the jarring light-mode flash dark-mode users experienced
 
 #### Fixed
+
 - **Dark mode global error** — Page no longer renders with hardcoded light colors when user prefers dark mode
 
 ---
@@ -373,12 +547,14 @@ All row counts preserved before/after migration: 18 categories, 13 tags, 5 serie
 ### Branch: `feat/seo-and-discovery` (PR #42)
 
 #### Added
+
 - **`robots.txt`** with crawl directives — allows public pages (posts, tags, categories, series, authors, wishlist, map, about), disallows admin/api/account/preview/auth routes, references sitemap.xml, declares canonical host
 - **Twitter card meta tags** on post pages — adds `twitter.images` so shared links on Twitter/X show the post's featured image
 - **Expanded sitemap** — now includes static pages (`/map`, `/about`, `/wishlist`), all category pages, all tag pages, and all series pages (not just homepage and posts)
 - **Sitemap unit tests** — 4 new tests covering base entry, static pages, taxonomy entries, and database failure fallback
 
 #### Changed
+
 - **`SITE_URL` is now env-driven** — reads from `NEXT_PUBLIC_SITE_URL` env var with fallback to production URL, allowing the same code to work across dev/staging/prod
 - **Seasonal hero** — populated with kicker ("Travel stories from the road") and subtitle ("Field notes, maps, and photo-led stories from the places we wander.") instead of empty strings
 - **Vitest config** — stubs `NEXT_PUBLIC_SITE_URL=https://jsquaredadventures.com` for consistent test runs across environments
@@ -388,15 +564,18 @@ All row counts preserved before/after migration: 18 categories, 13 tags, 5 serie
 ## [0.4.0] — 2026-06-15
 
 ### Changed
+
 - **CI/CD infrastructure** — Added `.github/workflows/ci.yml` with 3 parallel jobs (lint, typecheck, test) on Node 24 with pnpm caching
 - **Dependabot configuration** — Lowered open PR limits (npm: 5, github-actions: 3) to reduce noise
 - **TypeScript** — Upgraded to 6.0.2 with config fixes (removed deprecated `baseUrl`, dropped `dom.iterable`, bumped target to ES2020)
 - **Documentation** — Fixed sanitize-html version drift (2.17.2 → 2.17.5), corrected package manager line in AGENTS.md, deduplicated wishlist section in SETUP.md, documented pnpm-workspace.yaml security overrides
 
 ### Security
+
 - **CI hardening** — Added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` to opt in to Node 24 before GitHub's forced upgrade
 
 ### Added
+
 - **Improvement tracking** — Created `docs/IMPROVEMENTS.md` (M/S/P/F/R/D/O sections) and `docs/ROADMAP.md` (10-branch plan) for systematic feature work
 
 ---
@@ -404,10 +583,12 @@ All row counts preserved before/after migration: 18 categories, 13 tags, 5 serie
 ## [0.3.1] — 2026-06-15
 
 ### Changed
+
 - **Dependencies** — Merged 29 minor/patch updates via dependabot group PR #35
 - **Node.js** — Bumped to 24.0.0 in `.tool-versions` and `package.json` engines (stays `>=22.13` for backward compat)
 
 ### Fixed
+
 - **Test isolation** — Stubbed `CI=""` in `playwright-config.test.ts` for two webServer tests that depend on local behavior
 
 ---
@@ -420,18 +601,23 @@ All row counts preserved before/after migration: 18 categories, 13 tags, 5 serie
 ### Branch: `feat/branch-name` (PR #N)
 
 #### Added
+
 - New feature or capability
 
 #### Changed
+
 - Changes to existing functionality
 
 #### Fixed
+
 - Bug fixes
 
 #### Removed
+
 - Removed features or code
 
 #### Security
+
 - Security improvements
 ```
 

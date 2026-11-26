@@ -48,7 +48,6 @@ describe("runtime env validation", () => {
   it("treats blank optional env vars as unset during local runtime validation", async () => {
     applyBaseEnv();
     vi.stubEnv("COMMENT_NOTIFICATION_TO_EMAIL", "");
-    vi.stubEnv("RESEND_NEWSLETTER_SEGMENT_ID", "");
     vi.stubEnv("CRON_SECRET", "");
 
     await expect(importEnvModule()).resolves.toMatchObject({
@@ -96,6 +95,37 @@ describe("runtime env validation", () => {
 
     expect(envModule.getPublicEnv()).toMatchObject({
       NEXT_PUBLIC_SENTRY_DSN: undefined,
+    });
+  });
+
+  it.each([
+    "http://localhost:3000",
+    "http://127.0.0.1:3010",
+    "https://localhost:3000",
+  ])(
+    "rejects a loopback public site URL in deployed environments: %s",
+    async (siteUrl) => {
+      applyBaseEnv();
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("RATE_LIMIT_DRIVER", "memory");
+      vi.stubEnv("CRON_SECRET", "test-cron-secret-min-16");
+      vi.stubEnv("ADMIN_ALLOWED_EMAILS", "admin@example.com");
+      vi.stubEnv("NEXT_PUBLIC_SITE_URL", siteUrl);
+
+      await expect(importEnvModule()).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
+    },
+  );
+
+  it("accepts an HTTPS public site URL in deployed environments", async () => {
+    applyBaseEnv();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_DRIVER", "memory");
+    vi.stubEnv("CRON_SECRET", "test-cron-secret-min-16");
+    vi.stubEnv("ADMIN_ALLOWED_EMAILS", "admin@example.com");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://jsquaredadventures.com");
+
+    await expect(importEnvModule()).resolves.toMatchObject({
+      getServerEnv: expect.any(Function),
     });
   });
 

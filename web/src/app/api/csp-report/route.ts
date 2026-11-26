@@ -22,13 +22,28 @@ function truncate(value: unknown): string {
   return value.slice(0, MAX_FIELD_LEN);
 }
 
+/**
+ * PRIV-11: URLs can carry preview tokens or emails in the query string. Log
+ * only origin + path for URL-shaped fields.
+ */
+function sanitizeUrl(value: unknown): string {
+  const raw = truncate(value);
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    return truncate(`${url.origin}${url.pathname}`);
+  } catch {
+    return truncate(raw.split(/[?#]/, 1)[0] ?? "");
+  }
+}
+
 type CspReportBody = {
   "csp-report"?: {
     "blocked-uri"?: string;
     "document-uri"?: string;
     "effective-directive"?: string;
     "original-policy"?: string;
-    "referrer"?: string;
+    referrer?: string;
     "status-code"?: number | string;
     "violated-directive"?: string;
     "source-file"?: string;
@@ -57,11 +72,11 @@ type ReportingApiBody = Array<{
 
 function logSanitizedReport(report: Record<string, unknown>): void {
   console.warn("[csp-report] violation", {
-    blockedUri: truncate(report.blockedUri),
-    documentUri: truncate(report.documentUri),
+    blockedUri: sanitizeUrl(report.blockedUri),
+    documentUri: sanitizeUrl(report.documentUri),
     effectiveDirective: truncate(report.effectiveDirective),
     violatedDirective: truncate(report.violatedDirective),
-    referrer: truncate(report.referrer),
+    referrer: sanitizeUrl(report.referrer),
     disposition: truncate(report.disposition),
   });
 }
@@ -71,7 +86,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   // throws in deployed envs — we swallow it so the report endpoint stays up.
   try {
     const { checkRateLimit, getClientIp } = await import("@/lib/rate-limit");
-    const rl = await checkRateLimit(`csp-report:${getClientIp(request)}`, 30, 60_000);
+    const rl = await checkRateLimit(
+      `csp-report:${getClientIp(request)}`,
+      30,
+      60_000,
+    );
     if (!rl.allowed) {
       return new NextResponse(null, { status: 204 });
     }
@@ -103,7 +122,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         logSanitizedReport({
           blockedUri: r["blocked-uri"],
           documentUri: r["document-uri"],
-          effectiveDirective: r["effective-directive"] ?? r["violated-directive"],
+          effectiveDirective:
+            r["effective-directive"] ?? r["violated-directive"],
           violatedDirective: r["violated-directive"],
           referrer: r["referrer"],
         });

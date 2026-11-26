@@ -1,4 +1,13 @@
-import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const series = sqliteTable("series", {
   id: text("id").primaryKey(),
@@ -9,16 +18,39 @@ export const series = sqliteTable("series", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey(),
-  primaryEmail: text("primary_email").notNull(),
-  role: text("role", { enum: ["reader", "author", "admin"] }).notNull().default("reader"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
-});
+export const users = sqliteTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    primaryEmail: text("primary_email").notNull(),
+    /** Identity-provider display name; profiles.displayName remains the public name. */
+    name: text("name").notNull().default(""),
+    emailVerified: integer("email_verified", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    image: text("image"),
+    role: text("role", { enum: ["reader", "author", "admin"] })
+      .notNull()
+      .default("reader"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    primaryEmailUnique: uniqueIndex("users_primary_email_unique").on(
+      table.primaryEmail,
+    ),
+    // WorkOS resolves identities case-insensitively (`lower(primary_email)`),
+    // so the database must enforce the same invariant.
+    primaryEmailLowerUnique: uniqueIndex("users_primary_email_lower_unique").on(
+      sql`lower(${table.primaryEmail})`,
+    ),
+  }),
+);
 
 export const profiles = sqliteTable("profiles", {
-  userId: text("user_id").primaryKey().references(() => users.id),
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id),
   displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
@@ -31,14 +63,21 @@ export const authAccounts = sqliteTable(
   "auth_accounts",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => users.id),
-    provider: text("provider", { enum: ["supabase", "github"] }).notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    provider: text("provider", {
+      enum: ["supabase", "github", "workos"],
+    }).notNull(),
     providerUserId: text("provider_user_id").notNull(),
     providerEmail: text("provider_email"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
     userIdIdx: index("auth_accounts_user_id_idx").on(table.userId),
+    providerSubjectUnique: uniqueIndex(
+      "auth_accounts_provider_subject_unique",
+    ).on(table.provider, table.providerUserId),
   }),
 );
 
@@ -55,11 +94,17 @@ export const mediaAssets = sqliteTable(
   "media_assets",
   {
     id: text("id").primaryKey(),
-    ownerUserId: text("owner_user_id").notNull().references(() => users.id),
-    provider: text("provider", { enum: ["cloudinary", "supabase"] }).notNull(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id),
+    provider: text("provider", {
+      enum: ["cloudinary", "supabase", "local"],
+    }).notNull(),
     publicId: text("public_id").notNull(),
     secureUrl: text("secure_url").notNull(),
-    resourceType: text("resource_type", { enum: ["image", "video"] }).notNull().default("image"),
+    resourceType: text("resource_type", { enum: ["image", "video"] })
+      .notNull()
+      .default("image"),
     format: text("format"),
     width: integer("width"),
     height: integer("height"),
@@ -78,7 +123,9 @@ export const mediaAssets = sqliteTable(
     exifIso: integer("exif_iso"),
   },
   (table) => ({
-    ownerUserIdIdx: index("media_assets_owner_user_id_idx").on(table.ownerUserId),
+    ownerUserIdIdx: index("media_assets_owner_user_id_idx").on(
+      table.ownerUserId,
+    ),
   }),
 );
 
@@ -89,15 +136,27 @@ export const posts = sqliteTable(
     title: text("title").notNull(),
     slug: text("slug").notNull().unique(),
     contentJson: text("content_json").notNull(),
-    contentFormat: text("content_format", { enum: ["tiptap-json", "legacy-html"] }).notNull().default("tiptap-json"),
+    contentFormat: text("content_format", {
+      enum: ["tiptap-json", "legacy-html"],
+    })
+      .notNull()
+      .default("tiptap-json"),
     contentHtml: text("content_html"),
     contentPlainText: text("content_plain_text"),
     excerpt: text("excerpt"),
-    status: text("status", { enum: ["draft", "published", "scheduled"] }).notNull().default("draft"),
-    layoutType: text("layout_type", { enum: ["standard", "split-horizontal", "split-vertical", "hover"] }).default("standard"),
+    status: text("status", { enum: ["draft", "published", "scheduled"] })
+      .notNull()
+      .default("draft"),
+    layoutType: text("layout_type", {
+      enum: ["standard", "split-horizontal", "split-vertical", "hover"],
+    }).default("standard"),
     publishedAt: integer("published_at", { mode: "timestamp_ms" }),
-    scheduledPublishTime: integer("scheduled_publish_time", { mode: "timestamp_ms" }),
-    authorId: text("author_id").notNull().references(() => users.id),
+    scheduledPublishTime: integer("scheduled_publish_time", {
+      mode: "timestamp_ms",
+    }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => users.id),
     categoryId: text("category_id").references(() => categories.id),
     seriesId: text("series_id").references(() => series.id),
     seriesOrder: integer("series_order"),
@@ -122,13 +181,20 @@ export const posts = sqliteTable(
     publishedAtIndex: index("posts_published_at_idx").on(table.publishedAt),
     authorIndex: index("posts_author_id_idx").on(table.authorId),
     seriesIndex: index("posts_series_id_idx").on(table.seriesId),
-    contentFormatIndex: index("posts_content_format_idx").on(table.contentFormat),
+    contentFormatIndex: index("posts_content_format_idx").on(
+      table.contentFormat,
+    ),
     // 6.D.1: FK columns missing indexes
     categoryIdIdx: index("posts_category_id_idx").on(table.categoryId),
     // 6.D.2: composite index speeds up published feed query (status='published' ORDER BY published_at DESC)
-    statusPublishedAtIdx: index("posts_status_published_at_idx").on(table.status, table.publishedAt),
+    statusPublishedAtIdx: index("posts_status_published_at_idx").on(
+      table.status,
+      table.publishedAt,
+    ),
     // 6.D.3: index for scheduled-publish cron (scheduled_publish_time <= now AND status='scheduled')
-    scheduledPublishTimeIdx: index("posts_scheduled_publish_time_idx").on(table.scheduledPublishTime),
+    scheduledPublishTimeIdx: index("posts_scheduled_publish_time_idx").on(
+      table.scheduledPublishTime,
+    ),
   }),
 );
 
@@ -137,18 +203,28 @@ export const postPreviewTokens = sqliteTable(
   {
     id: text("id").primaryKey(),
     tokenHash: text("token_hash").notNull().unique(),
-    postId: text("post_id").notNull().references(() => posts.id),
-    issuedByUserId: text("issued_by_user_id").notNull().references(() => users.id),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id),
+    issuedByUserId: text("issued_by_user_id")
+      .notNull()
+      .references(() => users.id),
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
     lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
-    tokenHashIndex: index("post_preview_tokens_token_hash_idx").on(table.tokenHash),
+    tokenHashIndex: index("post_preview_tokens_token_hash_idx").on(
+      table.tokenHash,
+    ),
     postIndex: index("post_preview_tokens_post_id_idx").on(table.postId),
-    issuedByIndex: index("post_preview_tokens_issued_by_user_id_idx").on(table.issuedByUserId),
-    expiresAtIndex: index("post_preview_tokens_expires_at_idx").on(table.expiresAt),
+    issuedByIndex: index("post_preview_tokens_issued_by_user_id_idx").on(
+      table.issuedByUserId,
+    ),
+    expiresAtIndex: index("post_preview_tokens_expires_at_idx").on(
+      table.expiresAt,
+    ),
   }),
 );
 
@@ -156,8 +232,12 @@ export const postImages = sqliteTable(
   "post_images",
   {
     id: text("id").primaryKey(),
-    postId: text("post_id").notNull().references(() => posts.id),
-    mediaAssetId: text("media_asset_id").notNull().references(() => mediaAssets.id),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id),
+    mediaAssetId: text("media_asset_id")
+      .notNull()
+      .references(() => mediaAssets.id),
     sortOrder: integer("sort_order").notNull().default(0),
     focalX: integer("focal_x"),
     focalY: integer("focal_y"),
@@ -166,7 +246,9 @@ export const postImages = sqliteTable(
   },
   (table) => ({
     postIdIdx: index("post_images_post_id_idx").on(table.postId),
-    mediaAssetIdIdx: index("post_images_media_asset_id_idx").on(table.mediaAssetId),
+    mediaAssetIdIdx: index("post_images_media_asset_id_idx").on(
+      table.mediaAssetId,
+    ),
   }),
 );
 
@@ -191,35 +273,53 @@ export const wishlistPlaces = sqliteTable(
     locationZoom: integer("location_zoom").notNull().default(8),
     sortOrder: integer("sort_order").notNull().default(0),
     visited: integer("visited", { mode: "boolean" }).notNull().default(false),
-    isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
+    isPublic: integer("is_public", { mode: "boolean" })
+      .notNull()
+      .default(false),
     externalUrl: text("external_url"),
     visitedYear: integer("visited_year"),
     imageUrl: text("image_url"),
     detailSlug: text("detail_slug").unique(),
     linkedPostId: text("linked_post_id").references(() => posts.id),
-    itemType: text("item_type", { enum: ["single", "multi"] }).notNull().default("single"),
-    detailLevel: text("detail_level", { enum: ["full_page", "name_location"] }).notNull().default("full_page"),
-    isPinned: integer("is_pinned", { mode: "boolean" }).notNull().default(false),
+    itemType: text("item_type", { enum: ["single", "multi"] })
+      .notNull()
+      .default("single"),
+    detailLevel: text("detail_level", { enum: ["full_page", "name_location"] })
+      .notNull()
+      .default("full_page"),
+    isPinned: integer("is_pinned", { mode: "boolean" })
+      .notNull()
+      .default(false),
     parentId: text("parent_id").references((): any => wishlistPlaces.id),
-    createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
-    createdByUserIdIdx: index("wishlist_places_created_by_user_id_idx").on(table.createdByUserId),
+    createdByUserIdIdx: index("wishlist_places_created_by_user_id_idx").on(
+      table.createdByUserId,
+    ),
     sortOrderIdx: index("wishlist_places_sort_order_idx").on(table.sortOrder),
     isPublicIdx: index("wishlist_places_is_public_idx").on(table.isPublic),
     parentIdIdx: index("wishlist_places_parent_id_idx").on(table.parentId),
     itemTypeIdx: index("wishlist_places_item_type_idx").on(table.itemType),
-    linkedPostIdIdx: index("wishlist_places_linked_post_id_idx").on(table.linkedPostId),
+    linkedPostIdIdx: index("wishlist_places_linked_post_id_idx").on(
+      table.linkedPostId,
+    ),
   }),
 );
 
 export const postTags = sqliteTable(
   "post_tags",
   {
-    postId: text("post_id").notNull().references(() => posts.id),
-    tagId: text("tag_id").notNull().references(() => tags.id),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id),
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => tags.id),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.tagId] }),
@@ -231,12 +331,20 @@ export const comments = sqliteTable(
   "comments",
   {
     id: text("id").primaryKey(),
-    postId: text("post_id").notNull().references(() => posts.id),
-    authorId: text("author_id").notNull().references(() => users.id),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => users.id),
     content: text("content").notNull(),
     parentId: text("parent_id"),
-    visibility: text("visibility", { enum: ["visible", "hidden", "deleted"] }).notNull().default("visible"),
-    isFlagged: integer("is_flagged", { mode: "boolean" }).notNull().default(false),
+    visibility: text("visibility", { enum: ["visible", "hidden", "deleted"] })
+      .notNull()
+      .default("visible"),
+    isFlagged: integer("is_flagged", { mode: "boolean" })
+      .notNull()
+      .default(false),
     moderatedAt: integer("moderated_at", { mode: "timestamp_ms" }),
     moderatedByUserId: text("moderated_by_user_id").references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
@@ -251,8 +359,12 @@ export const comments = sqliteTable(
 export const commentLikes = sqliteTable(
   "comment_likes",
   {
-    commentId: text("comment_id").notNull().references(() => comments.id),
-    userId: text("user_id").notNull().references(() => users.id),
+    commentId: text("comment_id")
+      .notNull()
+      .references(() => comments.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.commentId, table.userId] }),
@@ -262,8 +374,12 @@ export const commentLikes = sqliteTable(
 export const postBookmarks = sqliteTable(
   "post_bookmarks",
   {
-    postId: text("post_id").notNull().references(() => posts.id),
-    userId: text("user_id").notNull().references(() => users.id),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
@@ -278,12 +394,16 @@ export const seasons = sqliteTable(
     id: text("id").primaryKey(),
     seasonKey: text("season_key").notNull().unique(),
     displayName: text("display_name").notNull(),
-    createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
-    createdByUserIdIdx: index("seasons_created_by_user_id_idx").on(table.createdByUserId),
+    createdByUserIdIdx: index("seasons_created_by_user_id_idx").on(
+      table.createdByUserId,
+    ),
   }),
 );
 
@@ -291,7 +411,9 @@ export const postLinks = sqliteTable(
   "post_links",
   {
     id: text("id").primaryKey(),
-    postId: text("post_id").notNull().references(() => posts.id),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id),
     label: text("label").notNull(),
     url: text("url").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -306,12 +428,16 @@ export const postRevisions = sqliteTable(
   "post_revisions",
   {
     id: text("id").primaryKey(),
-    postId: text("post_id").notNull().references(() => posts.id),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id),
     revisionNum: integer("revision_num").notNull(),
     title: text("title").notNull(),
     contentJson: text("content_json").notNull(),
     excerpt: text("excerpt"),
-    layoutType: text("layout_type", { enum: ["standard", "split-horizontal", "split-vertical", "hover"] }),
+    layoutType: text("layout_type", {
+      enum: ["standard", "split-horizontal", "split-vertical", "hover"],
+    }),
     categoryId: text("category_id").references(() => categories.id),
     featuredImageId: text("featured_image_id").references(() => mediaAssets.id),
     locationName: text("location_name"),
@@ -321,12 +447,87 @@ export const postRevisions = sqliteTable(
     songTitle: text("song_title"),
     songArtist: text("song_artist"),
     songUrl: text("song_url"),
-    savedByUserId: text("saved_by_user_id").notNull().references(() => users.id),
+    savedByUserId: text("saved_by_user_id")
+      .notNull()
+      .references(() => users.id),
     savedAt: integer("saved_at", { mode: "timestamp_ms" }).notNull(),
     label: text("label"),
   },
   (table) => ({
-    postRevNumIdx: index("post_revisions_post_id_revision_num_idx").on(table.postId, table.revisionNum),
-    postSavedAtIdx: index("post_revisions_post_id_saved_at_idx").on(table.postId, table.savedAt),
+    postRevNumIdx: index("post_revisions_post_id_revision_num_idx").on(
+      table.postId,
+      table.revisionNum,
+    ),
+    postSavedAtIdx: index("post_revisions_post_id_saved_at_idx").on(
+      table.postId,
+      table.savedAt,
+    ),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Legacy Better Auth tables, retained for one code-rollback cycle. WorkOS uses
+// auth_accounts and the host-scoped wos-session cookie instead.
+// ---------------------------------------------------------------------------
+
+export const betterAuthSessions = sqliteTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    userIdIdx: index("session_user_id_idx").on(table.userId),
+  }),
+);
+
+export const betterAuthAccounts = sqliteTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: integer("access_token_expires_at", {
+      mode: "timestamp_ms",
+    }),
+    refreshTokenExpiresAt: integer("refresh_token_expires_at", {
+      mode: "timestamp_ms",
+    }),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("account_user_id_idx").on(table.userId),
+  }),
+);
+
+export const betterAuthVerifications = sqliteTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    identifierIdx: index("verification_identifier_idx").on(table.identifier),
   }),
 );

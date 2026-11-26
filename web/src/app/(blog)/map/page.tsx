@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/site-header";
 import { WorldMapClient } from "@/components/blog/world-map-client";
 import { getPublicEnv } from "@/lib/env";
+import { absoluteUrl } from "@/lib/seo";
 import { listAllPublishedPosts } from "@/server/queries/posts";
 import { listPublicWishlistPlaces } from "@/server/queries/wishlist";
 import type { BlogPost } from "@/types/blog";
@@ -12,6 +13,7 @@ import type { BlogPost } from "@/types/blog";
 export const metadata: Metadata = {
   title: "Adventure Map",
   description: "Every J²Adventures story, pinned to the place it happened.",
+  alternates: { canonical: absoluteUrl("/map") },
 };
 
 // MapLibre (~700KB) is code-split via the client wrapper below

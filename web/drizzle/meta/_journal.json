@@ -169,6 +169,27 @@
       "when": 1779024000000,
       "tag": "0023_post_revisions_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1795531222965,
+      "tag": "0024_easy_rachel_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795531223965,
+      "tag": "0025_workos_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1795657050235,
+      "tag": "0026_case_insensitive_email",
+      "breakpoints": true
     }
   ]
 }

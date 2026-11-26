@@ -1,6 +1,11 @@
 # J2 Adventures Setup Guide
 
-**Last Updated:** 2026-05-25
+> **Production note (2026-11-24):** the live origin uses SQLite (`file:` URL)
+> and local media on **templetonbak**. The Turso, Cloudinary, Upstash, and Vercel
+> sections below are **legacy/rollback** instructions. Current setup, deploy,
+> and rollback: [`runbooks/local-origin.md`](./runbooks/local-origin.md).
+
+**Last Updated:** 2026-11-24
 
 ## Prerequisites
 
@@ -31,62 +36,70 @@ App runs at `http://localhost:3000`.
 
 ### Required Variables
 
-Copy `web/.env.example` to `web/.env.local` and configure these:
+Copy `web/.env.example` to `web/.env.local` and configure:
 
-| Variable | Description | Source |
-|----------|-------------|--------|
-| `TURSO_DATABASE_URL` | Turso database URL (libsql:// or https://) | Turso dashboard |
-| `TURSO_AUTH_TOKEN` | Turso database auth token | Turso dashboard |
-| `SUPABASE_URL` | Supabase project URL | Supabase dashboard > Settings > API |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key | Supabase dashboard > Settings > API |
-| `NEXT_PUBLIC_SUPABASE_URL` | Same as SUPABASE_URL (public) | Same |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as SUPABASE_ANON_KEY (public) | Same |
-| `NEXT_PUBLIC_SITE_URL` | Canonical site URL | `http://localhost:3000` for local dev |
-| `AUTH_SECRET` | Auth.js secret (min 32 chars) | `openssl rand -base64 32` |
-| `AUTH_GITHUB_ID` | GitHub OAuth App client ID | GitHub > Settings > Developer settings > OAuth Apps |
-| `AUTH_GITHUB_SECRET` | GitHub OAuth App client secret | Same |
-| `AUTH_ADMIN_GITHUB_IDS` | Comma-separated GitHub user IDs allowed as admins | GitHub profile page numeric ID |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | Cloudinary dashboard |
-| `CLOUDINARY_API_KEY` | Cloudinary API key | Cloudinary dashboard |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret | Cloudinary dashboard |
+| Variable                          | Description                                                 | Source                    |
+| --------------------------------- | ----------------------------------------------------------- | ------------------------- |
+| `TURSO_DATABASE_URL`              | `file:/absolute/path/blog.db`, or a remote libsql/https URL | local file / Turso        |
+| `TURSO_AUTH_TOKEN`                | Only for remote libsql/https URLs                           | Turso                     |
+| `WORKOS_CLIENT_ID`                | AuthKit public client ID                                    | WorkOS staging dashboard  |
+| `WORKOS_ISSUER`                   | Exact access-token issuer from OIDC discovery               | WorkOS discovery document |
+| `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | Approved `/callback` URI                                    | WorkOS Redirects tab      |
+| `WORKOS_COOKIE_PASSWORD`          | 32+ character session sealing secret                        | `openssl rand -base64 24` |
+| `WORKOS_COOKIE_MAX_AGE`           | Session cookie lifetime; use `1209600` (14 days)            | repo default              |
+| `ADMIN_ALLOWED_EMAILS`            | Comma/space-separated admin emails                          | owner-approved list       |
+| `RATE_LIMIT_DRIVER`               | `memory` for the single templetonbak Node process           | repo default              |
+
+Do not set `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
+`NEXT_PUBLIC_SITE_URL` is required in production and must be HTTPS and
+non-loopback. `ADMIN_ALLOWED_EMAILS` must contain at least one valid address in
+production.
+The runtime is keyless and sessions are host-scoped.
+
+Legacy `BETTER_AUTH_*`, `AUTH_SECRET`, `AUTH_GITHUB_*`, `AUTH_ADMIN_GITHUB_IDS`,
+and `CF_ACCESS_*` variables are optional and retained only for one code-rollback
+cycle. Cloudflare Access no longer gates `/admin`; `next.` remains Access-gated.
 
 ### Test Environment
 
-For unit tests, create `web/.env.test.local`:
+For unit tests, copy `web/.env.test.example` to `web/.env.test.local`. It contains
+only dummy values; no real WorkOS, database, or email credentials are required.
 
 ```bash
 TURSO_DATABASE_URL=https://test-db.turso.io
 TURSO_AUTH_TOKEN=test-token
-AUTH_SECRET=test-secret-minimum-32-characters!!
-AUTH_GITHUB_ID=test-id
-AUTH_GITHUB_SECRET=test-secret
-CLOUDINARY_CLOUD_NAME=test
-CLOUDINARY_API_KEY=test-key
-CLOUDINARY_API_SECRET=test-secret
-SUPABASE_URL=https://test.supabase.co
-SUPABASE_ANON_KEY=test-key
+WORKOS_CLIENT_ID=client_test_dummy
+WORKOS_ISSUER=https://auth.example.test/user_management/client_test_dummy
+NEXT_PUBLIC_WORKOS_REDIRECT_URI=https://jsquaredadventures.com/callback
+WORKOS_COOKIE_PASSWORD=test-cookie-password-at-least-32-characters
+WORKOS_COOKIE_MAX_AGE=1209600
+ADMIN_ALLOWED_EMAILS=admin@example.com
 CRON_SECRET=test-cron-secret-min-16
 ```
 
-Vitest auto-loads `web/.env.test.local` via the env-loader. No real credentials are needed for unit tests.
+Vitest uses these dummy values plus a dedicated AuthKit components stub so unit
+tests never call WorkOS or depend on `next/cache` ESM resolution.
 
 ### Optional Integrations
 
-| Variable | Required For | Default Behavior If Missing |
-|----------|-------------|----------------------------|
-| `NEXT_PUBLIC_STADIA_MAPS_API_KEY` | Stadia Maps tile rendering | Maps degrade gracefully |
-| `ROUTING_PROVIDER` (geoapify) | Route planner | Route planner returns 503 |
-| `GEOCODING_PROVIDER` (geoapify) | Route geocoding | Falls back (limited) |
-| `GEOAPIFY_API_KEY` | Geoapify API access | Route planner returns 503 |
-| `RESEND_API_KEY` | Email (newsletter, comment notifications) | Email features skip gracefully |
-| `RESEND_FROM_EMAIL` | Sending emails | Email features skip gracefully |
-| `COMMENT_NOTIFICATION_TO_EMAIL` | Admin comment notifications | Notifications skip |
-| `RESEND_NEWSLETTER_SEGMENT_ID` | Newsletter segmentation | Newsletter signup skips segment add |
-| `UPSTASH_REDIS_REST_URL` | Production rate limiting | In-memory fallback in dev/test; **required in prod** |
-| `UPSTASH_REDIS_REST_TOKEN` | Production rate limiting | Same as above |
-| `CRON_SECRET` | Cron job endpoints (deployed) | Cron returns 500 in prod; local dev bypasses |
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry error tracking | Sentry disabled |
-| `SENTRY_AUTH_TOKEN` | Source map uploads during build | Source maps not uploaded |
+| Variable                                | Required For                                               | Default Behavior If Missing                          |
+| --------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------- |
+| `NEXT_PUBLIC_STADIA_MAPS_API_KEY`       | Stadia Maps tile rendering                                 | Maps degrade gracefully                              |
+| `ROUTING_PROVIDER` (geoapify)           | Route planner                                              | Route planner returns 503                            |
+| `GEOCODING_PROVIDER` (geoapify)         | Route geocoding                                            | Falls back (limited)                                 |
+| `GEOAPIFY_API_KEY`                      | Geoapify API access                                        | Route planner returns 503                            |
+| `RESEND_API_KEY`                        | Comment notifications + Listmonk SMTP relay                | Email features skip gracefully                       |
+| `RESEND_FROM_EMAIL`                     | Sending emails                                             | Email features skip gracefully                       |
+| `COMMENT_NOTIFICATION_TO_EMAIL`         | Admin comment notifications                                | Notifications skip                                   |
+| `LISTMONK_URL` / `LISTMONK_LIST_UUID`   | Self-hosted newsletter                                     | Newsletter signup returns skipped                    |
+| `LISTMONK_ACCESS_CLIENT_ID` / `_SECRET` | Worker → Listmonk Access service token                     | API request denied                                   |
+| `UPSTASH_REDIS_REST_URL`                | Production rate limiting                                   | In-memory fallback in dev/test; **required in prod** |
+| `UPSTASH_REDIS_REST_TOKEN`              | Production rate limiting                                   | Same as above                                        |
+| `CRON_SECRET`                           | Cron job endpoints                                         | Required in production; boot fails if missing        |
+| `LOCAL_MEDIA_ROOT`                      | Directory served at `/media`; required on the local origin | e.g. `/srv/blog/shared/media`                        |
+| `RATE_LIMIT_DRIVER`                     | `memory` for the single templetonbak process               | required locally; Upstash only for rollback          |
+| `NEXT_PUBLIC_SENTRY_DSN`                | Sentry error tracking                                      | Sentry disabled                                      |
+| `SENTRY_AUTH_TOKEN`                     | Source map uploads during build                            | Source maps not uploaded                             |
 
 ---
 
@@ -95,6 +108,7 @@ Vitest auto-loads `web/.env.test.local` via the env-loader. No real credentials 
 ### Turso
 
 1. Create a Turso database (if not existing):
+
    ```bash
    turso db create jsquared-blog
    turso db show jsquared-blog --url
@@ -104,6 +118,7 @@ Vitest auto-loads `web/.env.test.local` via the env-loader. No real credentials 
 2. Set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in `web/.env.local`.
 
 3. Run migrations:
+
    ```bash
    cd web
    pnpm run db:migrate
@@ -114,21 +129,24 @@ Vitest auto-loads `web/.env.test.local` via the env-loader. No real credentials 
    pnpm run db:generate
    ```
 
-5. (Optional) Import data from Supabase:
-   ```bash
-   pnpm run db:import:supabase
-   ```
+### WorkOS AuthKit identity mapping
 
-### Supabase
+Readers and admins use WorkOS AuthKit. Apply all migrations with
+`pnpm run db:migrate`; migration `0025_workos_identity.sql` adds the unique
+`(provider, provider_user_id)` index for `auth_accounts.provider='workos'`.
 
-1. Create a Supabase project.
-2. Enable email/password auth (and any additional providers as needed).
-3. Copy `SUPABASE_URL` and `SUPABASE_ANON_KEY` (project settings > API).
-4. Set both `SUPABASE_URL`/`SUPABASE_ANON_KEY` (server) and `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (client) in env.
+The existing `users.id` remains the FK target for profiles, posts, comments,
+bookmarks, and media. First login links a verified normalized email to an
+existing row or creates a `workos-user-<subject>` reader plus profile. The
+legacy Better Auth `session`, `account`, and `verification` tables remain for
+rollback.
+
+Full environment, dashboard, cutover, smoke, and rollback instructions:
+[`runbooks/workos-auth.md`](./runbooks/workos-auth.md).
 
 ### Drizzle Schema
 
-The full schema is defined in `web/src/drizzle/schema.ts` with 18 tables. Auth.js manages a `sessions` table via its Turso adapter. Key types:
+The full schema is defined in `web/src/drizzle/schema.ts`. WorkOS links identities through `auth_accounts`; the existing `users.id` remains every content FK target. The Better Auth tables are rollback-only. Key types:
 
 ```typescript
 // Tables: users, profiles, posts, post_revisions, post_preview_tokens,
@@ -154,10 +172,13 @@ Opens at `http://localhost:3000` with hot module replacement.
 
 ```bash
 cd web
-pnpm run build
+pnpm run build:node
+node scripts/package-standalone.mjs /path/to/release
 ```
 
-Uses `scripts/build.ts` which wraps `next build` with Sentry source map upload.
+`build:node` emits Next standalone output. `package-standalone.mjs` assembles a
+self-contained release and recreates top-level runtime links for `sharp`,
+`@libsql/client`, `@workos-inc/authkit-nextjs`, and `@workos-inc/node`.
 
 ### Linting
 
@@ -198,37 +219,37 @@ pnpm run test:e2e
 Configuration: `web/playwright.config.ts`
 
 - Runs in Chromium only
-- Auto-starts dev server on `localhost:3000`
+- Auto-starts dev server on `127.0.0.1:3100` (port 3000 is reserved by Open WebUI on this host)
 - Retries once on CI
 - Screenshots on failure, traces retained on first retry
 - E2E specs in `web/tests/e2e/`
 
 ### E2E Auth State Capture
 
-Before running E2E tests against a deployed instance, capture auth states:
+Authenticated live smoke is orchestrator-owned. The optional fixture script uses
+WorkOS Magic Auth and the SDK `sealedSession`; it does not use or require a password:
 
 ```bash
-# Admin (requires GitHub OAuth login)
 cd web
-pnpm run e2e:capture-admin-state
-
-# Public user (requires Supabase test account)
-pnpm run seed:e2e
-pnpm run e2e:capture-public-state
+WORKOS_API_KEY=... E2E_WORKOS_EMAIL=owner@example.com \
+WORKOS_CLIENT_ID=client_... WORKOS_COOKIE_PASSWORD=... \
+E2E_BASE_URL=https://jsquaredadventures.com E2E_WORKOS_MAX_AGE=3600 \
+pnpm run e2e:capture-workos-state
 ```
 
----
+The API key belongs only in the operator shell. The script uses the one-time code
+returned by `createMagicAuth` in memory, stores only the sealed session, writes the
+fixture as `0600` under a `0700` `playwright/.auth` directory, and never logs the
+code or raw tokens. Revoke the session and delete the fixture after smoke.
 
 ## Seeding Data
 
 ### E2E Fixtures
 
-```bash
-cd web
-pnpm run seed:e2e
-```
-
-Creates a publishable test post, category, tags, and a Supabase user for E2E testing. Writes fixture metadata to `web/.env.test.local`.
+Set `E2E_POST_SLUG` to a published post slug for content-gate tests. Capture an
+optional WorkOS admin fixture with `pnpm run e2e:capture-workos-state`; it writes
+`playwright/.auth/admin.json` plus origin metadata. No public password fixture or
+`seed:e2e` command remains.
 
 ### Wishlist Places
 
@@ -274,10 +295,10 @@ Seeds location metadata for geotagged content.
 
 1. Create a Resend account and verify a domain.
 2. Generate an API key.
-3. Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL`.
-4. For newsletter: set `RESEND_NEWSLETTER_SEGMENT_ID` (ID of the Resend audience segment).
+3. Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `COMMENT_NOTIFICATION_TO_EMAIL`. Listmonk uses the same Resend SMTP relay; configure it in the Listmonk admin UI.
+4. Newsletter is self-hosted in Listmonk; set `LISTMONK_URL`, `LISTMONK_LIST_UUID`, and the Access service-token pair. Resend remains the SMTP relay and comment-notification sender.
 
-Newsletter signup safely returns a non-fatal "skipped" result when Resend is not configured.
+Newsletter signup safely returns a non-fatal "skipped" result when Listmonk is not configured.
 
 ### Upstash Redis (Rate Limiting)
 
@@ -307,17 +328,23 @@ Newsletter signup safely returns a non-fatal "skipped" result when Resend is not
 
 ---
 
-## GitHub OAuth Setup for Admin Auth
+## WorkOS AuthKit Setup
 
-1. Go to GitHub > Settings > Developer settings > OAuth Apps > New OAuth App.
-2. Set:
-   - **Application name**: J2 Adventures (local dev) or similar
-   - **Homepage URL**: `http://localhost:3000` (dev) or `https://jsquaredadventures.com` (prod)
-   - **Authorization callback URL**: `http://localhost:3000/api/auth/callback` (dev) or `https://jsquaredadventures.com/api/auth/callback` (prod)
-3. Copy `Client ID` to `AUTH_GITHUB_ID`.
-4. Generate a `Client Secret` and copy to `AUTH_GITHUB_SECRET`.
-5. Find your GitHub numeric user ID (GitHub API: `GET /users/{username}`) and add it to `AUTH_ADMIN_GITHUB_IDS`.
-6. For multiple admins: comma-separate IDs in `AUTH_ADMIN_GITHUB_IDS`.
+Use the staging values recorded in [`runbooks/workos-auth.md`](./runbooks/workos-auth.md).
+The verified dashboard has all four callbacks (apex default), the apex initiate
+login URI, four sign-out roots, Magic Auth, passkeys, Email + Password, signups,
+and Google/Microsoft/GitHub/Apple OAuth. The dashboard **Sign-up URL override must
+remain empty**; setting it to `/api/auth/signup` creates a redirect loop. Session
+maximum is 14 days, access-token lifetime 5 minutes, and inactivity limit 7 days.
+
+Implementation and routine deployment must not modify the dashboard. The
+optional `workos:configure-redirects` script is for an intentional, separately
+approved callback change and needs an API key only in the operator shell.
+
+The WorkOS staging environment is the accepted production identity environment
+for now (owner decision, 2026-11-25; low expected volume). Transactional emails are
+`[STAGING]`-prefixed, and no environment migration is planned unless volume, SLA,
+compliance, or support requirements change.
 
 ---
 
@@ -330,6 +357,7 @@ Set all required variables in Vercel project settings (Environment Variables). D
 ### Cron Jobs
 
 Defined in `web/vercel.json`:
+
 - `GET /api/cron/publish-scheduled` - daily at midnight
 - `GET /api/cron/keep-supabase-awake` - daily at 6 AM
 
@@ -366,12 +394,12 @@ This means `web/.env.local` overrides `.env`, and test env files take highest pr
 
 `pnpm-workspace.yaml` contains a small set of security-driven overrides applied across the dependency tree:
 
-| Package | Override | Reason |
-|---------|----------|--------|
+| Package   | Override   | Reason                                                          |
+| --------- | ---------- | --------------------------------------------------------------- |
 | `postcss` | `>=8.5.10` | Addresses a known postcss vulnerability in older 8.4.x versions |
-| `ws` | `>=8.20.1` | Addresses a `ws` vulnerability (CVE) in older 8.x versions |
-| `uuid` | `>=11.1.1` | Addresses a `uuid` vulnerability in older 10.x/8.x versions |
-| `tar` | `>=7.5.19` | GHSA-23hp-3jrh-7fpw / GHSA-83g3-92jg-28cx |
+| `ws`      | `>=8.20.1` | Addresses a `ws` vulnerability (CVE) in older 8.x versions      |
+| `uuid`    | `>=11.1.1` | Addresses a `uuid` vulnerability in older 10.x/8.x versions     |
+| `tar`     | `>=7.5.19` | GHSA-23hp-3jrh-7fpw / GHSA-83g3-92jg-28cx                       |
 
 These overrides are intentionally minimal and security-focused. They apply transitively to any package in the dependency tree that depends on these. Review and update them when bumping major dependencies.
 
@@ -390,7 +418,6 @@ pnpm run dev                          # Start dev server (from web/)
 # Database
 pnpm run db:generate                  # Generate Drizzle migration
 pnpm run db:migrate                   # Apply pending migrations
-pnpm run db:import:supabase           # Import data from Supabase
 
 # Testing
 pnpm run test                         # Run unit tests (Vitest)
@@ -400,10 +427,9 @@ pnpm run test:e2e                     # Run E2E tests (Playwright)
 pnpm run lint                         # Run ESLint
 pnpm exec tsc --noEmit                    # TypeScript type check
 
-# E2E Auth Setup
-pnpm run seed:e2e                     # Seed E2E test fixtures
-pnpm run e2e:capture-admin-state      # Capture admin auth state for E2E
-pnpm run e2e:capture-public-state     # Capture public auth state for E2E
+# WorkOS operator helpers
+pnpm run workos:audit-identities       # Read-only identity integrity audit
+pnpm run e2e:capture-workos-state      # SDK sealedSession fixture (operator-only)
 
 # Seeding
 pnpm run seed:wishlist                                    # Seed wishlist places
@@ -412,5 +438,5 @@ pnpm exec tsx ./scripts/seed-rich-content.ts              # Seed sample rich con
 pnpm exec tsx ./scripts/seed-locations.ts                 # Seed location metadata
 
 # Building
-pnpm run build                        # Production build with Sentry
+pnpm run build:node                   # Standalone Node production build
 ```

@@ -1,0 +1,67 @@
+# Blog-specific release gates that are not part of the shared Forgejo CI
+# template. Kept as a separate workflow so `sync_ci.py` can regenerate
+# `.forgejo/workflows/ci.yml` and `security.yml` without dropping them.
+name: blog-gates
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: blog-gates-${{ forgejo.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-audit:
+    name: production audit
+    if: forgejo.event_name != 'pull_request' || startsWith(forgejo.event.pull_request.head.ref, 'renovate/')
+    runs-on: forgejo-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      # Blocking: production dependencies must have no high/critical advisory.
+      - run: pnpm audit --prod --audit-level=high
+      # Informative-only: devDependency advisories are tracked but do not gate
+      # the release (pre-existing transitive vulns in test/build tooling).
+      - run: pnpm audit --dev --audit-level=high
+        continue-on-error: true
+
+  migrations:
+    name: migrations
+    if: forgejo.event_name != 'pull_request' || startsWith(forgejo.event.pull_request.head.ref, 'renovate/')
+    runs-on: forgejo-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Generate migrations from schema
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: file:${{ runner.temp }}/generate.db
+        run: pnpm run db:generate
+      - name: Fail if generated output is not committed
+        run: |
+          git diff --exit-code web/drizzle
+          test -z "$(git status --porcelain web/drizzle)"
+      - name: Apply migrations to a temporary database
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: file:${{ runner.temp }}/migrate.db
+        run: pnpm run db:migrate:node
+      - name: Verify schema and migration ledger
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: file:${{ runner.temp }}/migrate.db
+        run: pnpm run db:verify

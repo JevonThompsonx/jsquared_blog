@@ -3,17 +3,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useMemo, useRef, useState } from "react";
-import Map, { Layer, NavigationControl, Popup, Source } from "react-map-gl/maplibre";
+import Map, {
+  Layer,
+  NavigationControl,
+  Popup,
+  Source,
+} from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
 import type { GeoJSONSource, MapMouseEvent } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-// Use the pre-built CSP worker served from public/ instead of the webpack-bundled
+// Use the pre-built module worker served from public/ instead of the webpack-bundled
 // blob: worker. This prevents Next.js from transforming the worker code in a way
 // that breaks variable references (ReferenceError: b is not defined) in production.
+// Keep public/maplibre-worker.js in sync with the installed maplibre-gl version
+// (currently v6.19.0; copy dist/maplibre-gl-worker.mjs from the package).
 setWorkerUrl("/maplibre-worker.js");
 
+import { cdnImageLoader, cdnImageUrl } from "@/lib/cloudinary/transform";
 import { PostDate } from "@/components/blog/post-date";
 import { getPostHref } from "@/lib/utils";
 type MapPost = {
@@ -68,7 +76,9 @@ type ActivePin = {
   lng: number;
 };
 
-function getMapHref(post: Pick<MapPost, "id" | "slug" | "href" | "title">): string | null {
+function getMapHref(
+  post: Pick<MapPost, "id" | "slug" | "href" | "title">,
+): string | null {
   if (typeof post.href === "string") {
     return post.href;
   }
@@ -89,10 +99,19 @@ const WISHLIST_PIN_COLOR = "#c27a3a";
 
 // Type guard: confirms a map source is a GeoJSONSource with cluster methods
 function isGeoJSONSource(source: unknown): source is GeoJSONSource {
-  return typeof source === "object" && source !== null && "getClusterExpansionZoom" in source;
+  return (
+    typeof source === "object" &&
+    source !== null &&
+    "getClusterExpansionZoom" in source
+  );
 }
 
-export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = [] }: WorldMapProps) {
+export function WorldMap({
+  posts,
+  apiKey,
+  showPostList = true,
+  wishlistPlaces = [],
+}: WorldMapProps) {
   const mapRef = useRef<MapRef>(null);
   const mapStyle = `https://tiles.stadiamaps.com/styles/outdoors.json?api_key=${apiKey}`;
 
@@ -103,7 +122,11 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
 
   // Posts that have coordinates
   const allMappable = useMemo(
-    () => posts.filter((p): p is MappablePost => p.locationLat !== null && p.locationLng !== null),
+    () =>
+      posts.filter(
+        (p): p is MappablePost =>
+          p.locationLat !== null && p.locationLng !== null,
+      ),
     [posts],
   );
 
@@ -131,7 +154,10 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
 
   // Wishlist places with coordinates
   const mappableWishlist = useMemo(
-    () => wishlistPlaces.filter((p) => p.locationLat !== null && p.locationLng !== null),
+    () =>
+      wishlistPlaces.filter(
+        (p) => p.locationLat !== null && p.locationLng !== null,
+      ),
     [wishlistPlaces],
   );
 
@@ -190,19 +216,26 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
     if (!mapRef.current) return;
 
     // Check for cluster click first
-    const clusterFeatures = mapRef.current.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+    const clusterFeatures = mapRef.current.queryRenderedFeatures(e.point, {
+      layers: ["clusters"],
+    });
     if (clusterFeatures.length > 0) {
       const feature = clusterFeatures[0];
       const clusterId = feature.properties?.["cluster_id"];
       const source = mapRef.current.getSource("posts");
       if (!isGeoJSONSource(source)) return;
-      if (feature.geometry === null || feature.geometry.type !== "Point") return;
+      if (feature.geometry === null || feature.geometry.type !== "Point")
+        return;
       const coords = feature.geometry.coordinates;
       const lng = coords[0];
       const lat = coords[1];
       if (typeof lng !== "number" || typeof lat !== "number") return;
       void source.getClusterExpansionZoom(clusterId).then((zoom) => {
-        mapRef.current?.easeTo({ center: { lng, lat }, zoom: zoom + 0.5, duration: 400 });
+        mapRef.current?.easeTo({
+          center: { lng, lat },
+          zoom: zoom + 0.5,
+          duration: 400,
+        });
       });
       return;
     }
@@ -213,7 +246,8 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
     });
     if (pinFeatures.length > 0) {
       const feature = pinFeatures[0];
-      if (feature.geometry === null || feature.geometry.type !== "Point") return;
+      if (feature.geometry === null || feature.geometry.type !== "Point")
+        return;
       const coords = feature.geometry.coordinates;
       const lng = coords[0];
       const lat = coords[1];
@@ -225,12 +259,22 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
         slug: String(props["slug"] ?? ""),
         href: typeof props["href"] === "string" ? props["href"] : null,
         title: String(props["title"] ?? ""),
-        category: typeof props["category"] === "string" ? props["category"] : null,
-        imageUrl: typeof props["imageUrl"] === "string" ? props["imageUrl"] : null,
-        locationName: typeof props["locationName"] === "string" ? props["locationName"] : null,
-        iovanderUrl: typeof props["iovanderUrl"] === "string" ? props["iovanderUrl"] : null,
-        createdAt: typeof props["createdAt"] === "string" ? props["createdAt"] : null,
-        linkLabel: typeof props["linkLabel"] === "string" ? props["linkLabel"] : null,
+        category:
+          typeof props["category"] === "string" ? props["category"] : null,
+        imageUrl:
+          typeof props["imageUrl"] === "string" ? props["imageUrl"] : null,
+        locationName:
+          typeof props["locationName"] === "string"
+            ? props["locationName"]
+            : null,
+        iovanderUrl:
+          typeof props["iovanderUrl"] === "string"
+            ? props["iovanderUrl"]
+            : null,
+        createdAt:
+          typeof props["createdAt"] === "string" ? props["createdAt"] : null,
+        linkLabel:
+          typeof props["linkLabel"] === "string" ? props["linkLabel"] : null,
         lat,
         lng,
       });
@@ -257,7 +301,9 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
               setActivePin(null);
             }}
           >
-            {showWishlistLayer ? "Posts only" : `Posts + Wishlist (${mappableWishlist.length})`}
+            {showWishlistLayer
+              ? "Posts only"
+              : `Posts + Wishlist (${mappableWishlist.length})`}
           </button>
         </div>
       ) : null}
@@ -301,174 +347,197 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
            targets only the tile canvas, not the category pills above or any
            sibling content outside this component. */}
       <div className="world-map-canvas">
-      <div
-        className="overflow-hidden rounded-2xl border border-[var(--border)] shadow-xl"
-        data-map-ready={isMapReady ? "true" : "false"}
-        data-testid="world-map"
-        style={{ height: 560 }}
-      >
-        <Map
-          ref={mapRef}
-          initialViewState={{ latitude: 39.5, longitude: -98.35, zoom: 3.5 }}
-          interactiveLayerIds={["clusters", "unclustered-point"]}
-          mapStyle={mapStyle}
-          onClick={handleMapClick}
-          onLoad={() => setIsMapReady(true)}
-          style={{ height: "100%", width: "100%" }}
+        <div
+          className="overflow-hidden rounded-2xl border border-[var(--border)] shadow-xl"
+          data-map-ready={isMapReady ? "true" : "false"}
+          data-testid="world-map"
+          style={{ height: 560 }}
         >
-          <NavigationControl position="top-right" />
-
-          <Source
-            id="posts"
-            type="geojson"
-            data={geojson}
-            cluster={true}
-            clusterMaxZoom={14}
-            clusterRadius={50}
+          <Map
+            ref={mapRef}
+            initialViewState={{ latitude: 39.5, longitude: -98.35, zoom: 3.5 }}
+            interactiveLayerIds={["clusters", "unclustered-point"]}
+            mapStyle={mapStyle}
+            onClick={handleMapClick}
+            onLoad={() => setIsMapReady(true)}
+            style={{ height: "100%", width: "100%" }}
           >
-            {/* Cluster circles — color scales with count */}
-            <Layer
-              id="clusters"
-              type="circle"
-              filter={["has", "point_count"]}
-              paint={{
-                "circle-color": [
-                  "step",
-                  ["get", "point_count"],
-                  CLUSTER_SMALL,
-                  10, CLUSTER_MEDIUM,
-                  50, CLUSTER_LARGE,
-                ],
-                "circle-radius": [
-                  "step",
-                  ["get", "point_count"],
-                  20,
-                  10, 28,
-                  50, 36,
-                ],
-                "circle-stroke-color": "#ffffff",
-                "circle-stroke-width": 2,
-                "circle-opacity": 0.9,
-              }}
-            />
+            <NavigationControl position="top-right" />
 
-            {/* Cluster count label */}
-            <Layer
-              id="cluster-count"
-              type="symbol"
-              filter={["has", "point_count"]}
-              layout={{
-                "text-field": "{point_count_abbreviated}",
-                "text-size": 13,
-              }}
-              paint={{ "text-color": "#ffffff" }}
-            />
-
-            {/* Individual pin */}
-            <Layer
-              id="unclustered-point"
-              type="circle"
-              filter={["!", ["has", "point_count"]]}
-              paint={{
-                "circle-color": PIN_COLOR,
-                "circle-radius": 8,
-                "circle-stroke-color": "#ffffff",
-                "circle-stroke-width": 2,
-              }}
-            />
-          </Source>
-
-          {/* Wishlist layer — separate source with different pin color */}
-          {showWishlistLayer && mappableWishlist.length > 0 ? (
             <Source
-              id="wishlist"
+              id="posts"
               type="geojson"
-              data={wishlistGeojson}
+              data={geojson}
+              cluster={true}
+              clusterMaxZoom={14}
+              clusterRadius={50}
             >
+              {/* Cluster circles — color scales with count */}
               <Layer
-                id="wishlist-points"
+                id="clusters"
                 type="circle"
+                filter={["has", "point_count"]}
                 paint={{
-                  "circle-color": WISHLIST_PIN_COLOR,
-                  "circle-radius": 7,
+                  "circle-color": [
+                    "step",
+                    ["get", "point_count"],
+                    CLUSTER_SMALL,
+                    10,
+                    CLUSTER_MEDIUM,
+                    50,
+                    CLUSTER_LARGE,
+                  ],
+                  "circle-radius": [
+                    "step",
+                    ["get", "point_count"],
+                    20,
+                    10,
+                    28,
+                    50,
+                    36,
+                  ],
+                  "circle-stroke-color": "#ffffff",
+                  "circle-stroke-width": 2,
+                  "circle-opacity": 0.9,
+                }}
+              />
+
+              {/* Cluster count label */}
+              <Layer
+                id="cluster-count"
+                type="symbol"
+                filter={["has", "point_count"]}
+                layout={{
+                  "text-field": "{point_count_abbreviated}",
+                  "text-size": 13,
+                }}
+                paint={{ "text-color": "#ffffff" }}
+              />
+
+              {/* Individual pin */}
+              <Layer
+                id="unclustered-point"
+                type="circle"
+                filter={["!", ["has", "point_count"]]}
+                paint={{
+                  "circle-color": PIN_COLOR,
+                  "circle-radius": 8,
                   "circle-stroke-color": "#ffffff",
                   "circle-stroke-width": 2,
                 }}
               />
             </Source>
-          ) : null}
 
-          {activePin ? (
-            <Popup
-              anchor="bottom"
-              closeOnClick={false}
-              latitude={activePin.lat}
-              longitude={activePin.lng}
-              maxWidth="260px"
-              offset={18}
-              onClose={() => setActivePin(null)}
-            >
-              <div className="space-y-1.5 text-sm">
-                {(() => {
-                  const href = getMapHref(activePin);
+            {/* Wishlist layer — separate source with different pin color */}
+            {showWishlistLayer && mappableWishlist.length > 0 ? (
+              <Source id="wishlist" type="geojson" data={wishlistGeojson}>
+                <Layer
+                  id="wishlist-points"
+                  type="circle"
+                  paint={{
+                    "circle-color": WISHLIST_PIN_COLOR,
+                    "circle-radius": 7,
+                    "circle-stroke-color": "#ffffff",
+                    "circle-stroke-width": 2,
+                  }}
+                />
+              </Source>
+            ) : null}
 
-                  return (
-                    <>
-                {activePin.imageUrl ? (
-                  <div className="relative mb-2 h-20 w-full overflow-hidden rounded">
-                    <Image alt={activePin.title} className="object-cover" fill sizes="228px" src={activePin.imageUrl} />
-                  </div>
-                ) : null}
-                {activePin.category ? (
-                  <p className="text-[0.7rem] font-bold uppercase tracking-widest text-[var(--accent)]">
-                    {activePin.category}
-                  </p>
-                ) : null}
-                {href ? (
-                  <Link className="block font-semibold leading-snug text-[var(--text-primary)] hover:text-[var(--accent)] hover:underline" href={href}>
-                    {activePin.title}
-                  </Link>
-                ) : (
-                  <p className="font-semibold leading-snug text-[var(--text-primary)]">{activePin.title}</p>
-                )}
-                {activePin.locationName ? (
-                  <p className="text-xs text-[var(--text-secondary)]">{activePin.locationName}</p>
-                ) : null}
-                {activePin.createdAt ? (
-                  <div className="text-xs text-[var(--text-secondary)]">
-                    <PostDate dateString={activePin.createdAt} />
-                  </div>
-                ) : null}
-                {activePin.iovanderUrl ? (
-                  <a
-                    className="block text-xs text-[var(--accent)] hover:underline"
-                    href={activePin.iovanderUrl}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    View on iOverlander →
-                  </a>
-                ) : null}
-                {href ? (
-                  <Link className="btn-primary mt-1 inline-block rounded-full px-3 py-1 text-[0.7rem] font-bold" href={href}>
-                    {activePin.linkLabel ?? "Read story"} →
-                  </Link>
-                ) : null}
-                    </>
-                  );
-                })()}
-              </div>
-            </Popup>
-          ) : null}
-        </Map>
+            {activePin ? (
+              <Popup
+                anchor="bottom"
+                closeOnClick={false}
+                latitude={activePin.lat}
+                longitude={activePin.lng}
+                maxWidth="260px"
+                offset={18}
+                onClose={() => setActivePin(null)}
+              >
+                <div className="space-y-1.5 text-sm">
+                  {(() => {
+                    const href = getMapHref(activePin);
+
+                    return (
+                      <>
+                        {activePin.imageUrl ? (
+                          <div className="relative mb-2 h-20 w-full overflow-hidden rounded">
+                            <Image
+                              alt={activePin.title}
+                              className="object-cover"
+                              fill
+                              loader={cdnImageLoader}
+                              sizes="228px"
+                              src={
+                                cdnImageUrl(activePin.imageUrl, 228) ??
+                                activePin.imageUrl
+                              }
+                            />
+                          </div>
+                        ) : null}
+                        {activePin.category ? (
+                          <p className="text-[0.7rem] font-bold uppercase tracking-widest text-[var(--accent)]">
+                            {activePin.category}
+                          </p>
+                        ) : null}
+                        {href ? (
+                          <Link
+                            className="block font-semibold leading-snug text-[var(--text-primary)] hover:text-[var(--accent)] hover:underline"
+                            href={href}
+                          >
+                            {activePin.title}
+                          </Link>
+                        ) : (
+                          <p className="font-semibold leading-snug text-[var(--text-primary)]">
+                            {activePin.title}
+                          </p>
+                        )}
+                        {activePin.locationName ? (
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            {activePin.locationName}
+                          </p>
+                        ) : null}
+                        {activePin.createdAt ? (
+                          <div className="text-xs text-[var(--text-secondary)]">
+                            <PostDate dateString={activePin.createdAt} />
+                          </div>
+                        ) : null}
+                        {activePin.iovanderUrl ? (
+                          <a
+                            className="block text-xs text-[var(--accent)] hover:underline"
+                            href={activePin.iovanderUrl}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            View on iOverlander →
+                          </a>
+                        ) : null}
+                        {href ? (
+                          <Link
+                            className="btn-primary mt-1 inline-block rounded-full px-3 py-1 text-[0.7rem] font-bold"
+                            href={href}
+                          >
+                            {activePin.linkLabel ?? "Read story"} →
+                          </Link>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </div>
+              </Popup>
+            ) : null}
+          </Map>
+        </div>
       </div>
-      </div>{/* end .world-map-canvas */}
+      {/* end .world-map-canvas */}
 
       {/* Filtered post list */}
       {showPostList && filteredPosts.length > 0 ? (
         <section className="mt-10">
           <h2 className="mb-4 text-lg font-bold text-[var(--text-primary)]">
-            {activeCategory !== null ? `${activeCategory} stories` : "All pinned stories"}
+            {activeCategory !== null
+              ? `${activeCategory} stories`
+              : "All pinned stories"}
             <span className="ml-2 text-base font-normal text-[var(--text-secondary)]">
               ({filteredPosts.length})
             </span>
@@ -478,46 +547,58 @@ export function WorldMap({ posts, apiKey, showPostList = true, wishlistPlaces = 
               const href = getMapHref(post);
               const content = (
                 <>
-                {post.imageUrl ? (
-                  <Image
-                    alt={post.title}
-                    className="h-14 w-20 shrink-0 rounded-lg object-cover"
-                    height={56}
-                    loading="lazy"
-                    src={post.imageUrl}
-                    width={80}
-                  />
-                ) : (
-                  <div className="h-14 w-20 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />
-                )}
-                <div className="min-w-0">
-                  {post.category ? (
-                    <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[var(--accent)]">
-                      {post.category}
-                    </p>
-                  ) : null}
-                  <p className="mt-0.5 font-semibold leading-snug text-[var(--text-primary)] line-clamp-1">
-                    {post.title}
-                  </p>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                    <svg aria-hidden="true" className="h-3 w-3 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
-                    </svg>
-                    <span>{post.locationName}</span>
-                    {post.createdAt ? (
-                      <>
-                        <span className="text-[var(--border)]">·</span>
-                        <PostDate dateString={post.createdAt} />
-                      </>
+                  {post.imageUrl ? (
+                    <Image
+                      alt={post.title}
+                      className="h-14 w-20 shrink-0 rounded-lg object-cover"
+                      height={56}
+                      loading="lazy"
+                      loader={cdnImageLoader}
+                      src={cdnImageUrl(post.imageUrl, 160) ?? post.imageUrl}
+                      width={80}
+                    />
+                  ) : (
+                    <div className="h-14 w-20 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent-soft)] to-[var(--background)]" />
+                  )}
+                  <div className="min-w-0">
+                    {post.category ? (
+                      <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[var(--accent)]">
+                        {post.category}
+                      </p>
                     ) : null}
+                    <p className="mt-0.5 font-semibold leading-snug text-[var(--text-primary)] line-clamp-1">
+                      {post.title}
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                      <svg
+                        aria-hidden="true"
+                        className="h-3 w-3 shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
+                      </svg>
+                      <span>{post.locationName}</span>
+                      {post.createdAt ? (
+                        <>
+                          <span className="text-[var(--border)]">·</span>
+                          <PostDate
+                            dateString={post.createdAt}
+                            interactive={false}
+                          />
+                        </>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
                 </>
               );
 
               if (!href) {
                 return (
-                  <div key={post.id} className="flex items-start gap-4 px-5 py-4">
+                  <div
+                    key={post.id}
+                    className="flex items-start gap-4 px-5 py-4"
+                  >
                     {content}
                   </div>
                 );

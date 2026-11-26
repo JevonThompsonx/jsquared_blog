@@ -1,13 +1,36 @@
 export const dynamic = "force-dynamic";
 
-import { Suspense } from "react";
+import type { Metadata } from "next";
 
-import { LoginForm } from "./login-form";
+import { AuthKitNotice } from "@/components/auth/authkit-notice";
+import { parseAuthErrorCode } from "@/lib/auth/auth-errors";
 
-export default function LoginPage() {
+export const metadata: Metadata = {
+  title: "Log In",
+  description:
+    "Sign in with a one-time email code from WorkOS AuthKit, a passkey, or a configured social account.",
+  robots: { index: false, follow: true },
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    error?: string | string[];
+    redirectTo?: string | string[];
+    returnTo?: string | string[];
+  }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const candidate = params.returnTo ?? params.redirectTo;
+  const errorCode = parseAuthErrorCode(
+    typeof params.error === "string" ? params.error : null,
+  );
   return (
-    <Suspense fallback={<div className="w-full max-w-sm text-center"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-[var(--primary)]" /></div>}>
-      <LoginForm />
-    </Suspense>
+    <AuthKitNotice
+      error={errorCode}
+      returnTo={typeof candidate === "string" ? candidate : undefined}
+      screen="sign-in"
+    />
   );
 }

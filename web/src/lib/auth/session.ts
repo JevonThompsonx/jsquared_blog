@@ -1,14 +1,20 @@
 import "server-only";
 
-import type { Session } from "next-auth";
-import { getServerSession } from "next-auth";
+import {
+  getWorkosAdminAccessState,
+  getWorkosAdminSession,
+  type AdminAccessState,
+  type AdminSession,
+} from "@/server/auth/workos-admin";
 
-import { buildAdminAuthOptions } from "@/lib/auth/admin";
+export type { AdminAccessState, AdminSession };
 
-export type AdminSession = Session;
+export async function getAdminAccessState(): Promise<AdminAccessState> {
+  return getWorkosAdminAccessState();
+}
 
 export async function getAdminServerSession(): Promise<AdminSession | null> {
-  return getServerSession(buildAdminAuthOptions());
+  return getWorkosAdminSession();
 }
 
 export async function requireAdminSession(): Promise<AdminSession | null> {

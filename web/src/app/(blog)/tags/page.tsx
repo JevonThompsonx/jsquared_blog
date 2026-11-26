@@ -4,12 +4,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
+import { absoluteUrl } from "@/lib/seo";
 import { getTagHref } from "@/lib/utils";
-import { listAllTagsForBrowse, type TagWithCount } from "@/server/dal/taxonomy-browse";
+import {
+  listAllTagsForBrowse,
+  type TagWithCount,
+} from "@/server/dal/taxonomy-browse";
 
 export const metadata: Metadata = {
-  title: "Tags – J²Adventures",
-  description: "Browse all tags used across J²Adventures. Find every story filed under the themes that match your next adventure.",
+  title: "Tags",
+  description:
+    "Browse all tags used across J²Adventures. Find every story filed under the themes that match your next adventure.",
+  alternates: { canonical: absoluteUrl("/tags") },
 };
 
 function getTotalTagCount(tags: TagWithCount[]): number {
@@ -26,18 +32,30 @@ export default async function TagsPage() {
   const hasTags = tags.length > 0;
 
   return (
-    <main id="main-content" className="min-h-screen" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      className="min-h-screen"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
       {/* Tags hero */}
-      <div className="border-b border-[var(--border)]" style={{ background: "var(--card-bg)" }}>
+      <div
+        className="border-b border-[var(--border)]"
+        style={{ background: "var(--card-bg)" }}
+      >
         <div className="container mx-auto max-w-5xl px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent)]">Tags</p>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent)]">
+            Tags
+          </p>
           <h1 className="mt-1 text-balance text-3xl font-bold leading-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
             Explore by tag
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)]">
-            Every adventure on J²Adventures is tagged with the themes and ideas that shape it. Pick a tag to see every story we have filed under that label.
+            Every adventure on J²Adventures is tagged with the themes and ideas
+            that shape it. Pick a tag to see every story we have filed under
+            that label.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
             <span className="font-semibold text-[var(--text-primary)]">
@@ -56,9 +74,15 @@ export default async function TagsPage() {
       </div>
 
       {/* Tag grid */}
-      <section aria-label="All tags" className="container mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+      <section
+        aria-label="All tags"
+        className="container mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8"
+      >
         {hasTags ? (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="tags-grid">
+          <ul
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            data-testid="tags-grid"
+          >
             {tags.map((tag) => (
               <li key={tag.id}>
                 <Link
@@ -68,7 +92,12 @@ export default async function TagsPage() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--accent-soft)]">
-                      <span aria-hidden="true" className="text-lg font-black text-[var(--accent)]">#</span>
+                      <span
+                        aria-hidden="true"
+                        className="text-lg font-black text-[var(--accent)]"
+                      >
+                        #
+                      </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <h2 className="text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--primary)]">
@@ -84,7 +113,9 @@ export default async function TagsPage() {
                       {tag.description}
                     </p>
                   ) : (
-                    <p className="text-sm italic text-[var(--text-secondary)]/70">No description yet.</p>
+                    <p className="text-sm italic text-[var(--text-secondary)]/70">
+                      No description yet.
+                    </p>
                   )}
                 </Link>
               </li>
@@ -92,7 +123,9 @@ export default async function TagsPage() {
           </ul>
         ) : (
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-8 text-center shadow-[var(--shadow)] sm:p-10">
-            <p className="text-base font-semibold text-[var(--text-primary)]">No tags yet</p>
+            <p className="text-base font-semibold text-[var(--text-primary)]">
+              No tags yet
+            </p>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
               Tags will appear here once adventures are published and labeled.
             </p>

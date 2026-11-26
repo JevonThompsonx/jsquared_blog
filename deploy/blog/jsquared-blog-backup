@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+DB=/srv/blog/shared/blog.db
+DIR=/srv/blog/shared/backups
+STAMP=$(date -u +%Y%m%d-%H%M)
+mkdir -p "$DIR"
+sqlite3 "$DB" ".backup '$DIR/blog-$STAMP.db'"
+chmod 600 "$DIR/blog-$STAMP.db"
+find "$DIR" -name 'blog-[0-9]*.db' -mtime +14 -delete

@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server";
 
+import { rejectCrossSiteMutation } from "@/lib/auth/csrf";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { getSafeErrorMetadata } from "@/lib/safe-error";
 import { subscribeToNewsletterSchema } from "@/server/forms/newsletter";
-import { isNewsletterConfigured, subscribeToNewsletter } from "@/server/services/newsletter";
+import {
+  isNewsletterConfigured,
+  subscribeToNewsletter,
+} from "@/server/services/newsletter";
 
 // POST /api/newsletter
 // Body: { email: string, firstName?: string, lastName?: string, source?: string }
-// Response: { status: "subscribed" | "already-subscribed" | "skipped" }
+// Response: { status: "subscribed" | "skipped" }
 // Auth: Public
 export async function POST(request: Request): Promise<NextResponse> {
-  const rl = await checkRateLimit(`newsletter:${getClientIp(request)}`, 5, 60_000);
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+
+  const rl = await checkRateLimit(
+    `newsletter:${getClientIp(request)}`,
+    5,
+    60_000,
+  );
   if (!rl.allowed) {
     return tooManyRequests(rl);
   }
@@ -18,12 +30,18 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid JSON payload" },
+      { status: 400 },
+    );
   }
 
   const parse = subscribeToNewsletterSchema.safeParse(payload);
   if (!parse.success) {
-    return NextResponse.json({ error: "Invalid newsletter signup request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid newsletter signup request" },
+      { status: 400 },
+    );
   }
 
   if (!isNewsletterConfigured()) {
@@ -42,16 +60,20 @@ export async function POST(request: Request): Promise<NextResponse> {
     switch (result.status) {
       case "subscribed":
         return NextResponse.json(result, { status: 201 });
-      case "already-subscribed":
-        return NextResponse.json(result, { status: 200 });
       case "skipped":
         return NextResponse.json(result, { status: 202 });
       default:
         console.error("[newsletter] Unexpected subscribe result", result);
-        return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
+        return NextResponse.json(
+          { error: "Failed to subscribe" },
+          { status: 500 },
+        );
     }
   } catch (error) {
-    console.error("[newsletter] Failed to subscribe contact", error);
+    console.error(
+      "[newsletter] Failed to subscribe contact",
+      getSafeErrorMetadata(error),
+    );
     return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
   }
 }

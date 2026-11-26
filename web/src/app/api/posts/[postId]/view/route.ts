@@ -3,18 +3,30 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { incrementPostViewCount } from "@/server/dal/posts";
+import { rejectCrossSiteMutation } from "@/lib/auth/csrf";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { captureException } from "@/lib/sentry";
 
 const paramsSchema = z.object({
-  postId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
+  postId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(128)
+    .regex(/^[a-zA-Z0-9_-]+$/),
 });
 
 const VIEWER_COOKIE_NAME = "j2-viewer-id";
 const VIEW_COOKIE_PREFIX = "j2-viewed-post-";
 const VIEW_COOKIE_TTL_SECONDS = 60 * 60 * 8;
 
-export async function POST(_request: Request, context: { params: Promise<unknown> }): Promise<NextResponse> {
+export async function POST(
+  request: Request,
+  context: { params: Promise<unknown> },
+): Promise<NextResponse> {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+
   const parsedParams = paramsSchema.safeParse(await context.params);
   if (!parsedParams.success) {
     return NextResponse.json({ error: "Invalid post id" }, { status: 400 });
@@ -39,7 +51,11 @@ export async function POST(_request: Request, context: { params: Promise<unknown
     return NextResponse.json({ counted: false }, { status: 200 });
   }
 
-  const rateLimit = await checkRateLimit(`post-view:${postId}:${getClientIp(_request)}`, 20, 60_000);
+  const rateLimit = await checkRateLimit(
+    `post-view:${postId}:${getClientIp(request)}`,
+    20,
+    60_000,
+  );
   if (!rateLimit.allowed) {
     return tooManyRequests(rateLimit);
   }
@@ -47,12 +63,18 @@ export async function POST(_request: Request, context: { params: Promise<unknown
   try {
     await incrementPostViewCount(postId);
   } catch (error) {
-    console.error("[api/posts/[postId]/view] Failed to increment post view count", {
-      postId,
-      errorName: error instanceof Error ? error.name : "UnknownError",
-    });
+    console.error(
+      "[api/posts/[postId]/view] Failed to increment post view count",
+      {
+        postId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      },
+    );
     captureException(error, { route: "post-view", postId });
-    return NextResponse.json({ error: "Failed to record post view" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to record post view" },
+      { status: 500 },
+    );
   }
 
   if (!existingViewerId) {

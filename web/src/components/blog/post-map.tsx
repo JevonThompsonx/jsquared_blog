@@ -5,12 +5,14 @@ import Map, { Marker, NavigationControl, Popup } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-// Use the pre-built CSP worker served from public/ instead of the webpack-bundled
+// Use the pre-built module worker served from public/ instead of the webpack-bundled
 // blob: worker. This prevents Next.js from transforming the worker code in a way
 // that breaks variable references (ReferenceError: b is not defined) in production.
+// Keep public/maplibre-worker.js in sync with the installed maplibre-gl version
+// (currently v6.19.0; copy dist/maplibre-gl-worker.mjs from the package).
 setWorkerUrl("/maplibre-worker.js");
 
-type PostMapProps = {
+export type PostMapProps = {
   locationName: string;
   lat: number;
   lng: number;
@@ -21,13 +23,25 @@ type PostMapProps = {
 
 function PinIcon() {
   return (
-    <svg aria-hidden="true" className="h-8 w-8 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="h-8 w-8 drop-shadow-md"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
     </svg>
   );
 }
 
-export function PostMap({ locationName, lat, lng, zoom, iovanderUrl, apiKey }: PostMapProps) {
+export function PostMap({
+  locationName,
+  lat,
+  lng,
+  zoom,
+  iovanderUrl,
+  apiKey,
+}: PostMapProps) {
   const [showPopup, setShowPopup] = useState(true);
   // Don't mount MapLibre until the container is near the viewport.
   // This prevents the canvas from grabbing focus on page load and scrolling the page down.
@@ -54,10 +68,19 @@ export function PostMap({ locationName, lat, lng, zoom, iovanderUrl, apiKey }: P
   }, []);
 
   return (
-    <div className="world-map-container overflow-hidden rounded-xl border border-[var(--border)] shadow-md">
+    <div
+      aria-label={locationName ? `Map of ${locationName}` : "Location map"}
+      className="world-map-container overflow-hidden rounded-xl border border-[var(--border)] shadow-md"
+      role="region"
+    >
       <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--card-bg)] px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-          <svg aria-hidden="true" className="h-4 w-4 text-[var(--accent)]" fill="currentColor" viewBox="0 0 24 24">
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4 text-[var(--accent)]"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
           </svg>
           {locationName}
@@ -111,7 +134,9 @@ export function PostMap({ locationName, lat, lng, zoom, iovanderUrl, apiKey }: P
                 onClose={() => setShowPopup(false)}
               >
                 <div className="min-w-32 text-sm">
-                  <p className="font-semibold text-[var(--text-primary)]">{locationName}</p>
+                  <p className="font-semibold text-[var(--text-primary)]">
+                    {locationName}
+                  </p>
                   {iovanderUrl ? (
                     <a
                       className="mt-1 block text-xs text-[var(--accent)] hover:underline"

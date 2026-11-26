@@ -7,8 +7,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const usePathnameMock = vi.fn(() => "/");
 
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a href={typeof href === "string" ? href : "#"} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={typeof href === "string" ? href : "#"} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -23,10 +29,30 @@ vi.mock("@radix-ui/react-dialog", () => {
     Root: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     Trigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     Portal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    Overlay: ({ className }: { className?: string }) => <div className={className} />,
-    Content: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
-    Title: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
-    Description: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
+    Overlay: ({ className }: { className?: string }) => (
+      <div className={className} />
+    ),
+    Content: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+    }) => <div className={className}>{children}</div>,
+    Title: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+    }) => <div className={className}>{children}</div>,
+    Description: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+    }) => <div className={className}>{children}</div>,
   };
 });
 
@@ -52,7 +78,16 @@ describe("MobileNav", () => {
     vi.unstubAllGlobals();
   });
 
-  async function renderNav(adminSession: { user?: { id?: string; role?: string; githubLogin?: string | null; email?: string | null } } | null) {
+  async function renderNav(
+    adminSession: {
+      user?: {
+        id?: string;
+        role?: string;
+        email?: string | null;
+        name?: string | null;
+      };
+    } | null,
+  ) {
     await act(async () => {
       root.render(
         <MobileNav
@@ -60,7 +95,7 @@ describe("MobileNav", () => {
           currentSearch=""
           onSearchChange={() => {}}
           onSearchSubmit={(event) => event.preventDefault()}
-          publicSession={null}
+          publicUser={null}
           ThemeToggle={() => <div>Theme</div>}
         />,
       );
@@ -72,16 +107,21 @@ describe("MobileNav", () => {
       user: {
         id: "admin-1",
         role: "admin",
-        githubLogin: "octoadmin",
       },
     });
 
     expect(container.textContent).toContain("Admin");
     expect(container.textContent).toContain("Dashboard");
     expect(container.querySelector('a[href="/admin"]')).not.toBeNull();
-    expect(container.querySelector('a[href="/admin/posts/new"]')?.textContent).toContain("New post");
-    expect(container.querySelector('a[href="/admin/wishlist"]')?.textContent).toContain("Travel wishlist");
-    expect(container.querySelector('a[href="/admin/tags"]')?.textContent).toContain("Manage tags");
+    expect(
+      container.querySelector('a[href="/admin/posts/new"]')?.textContent,
+    ).toContain("New post");
+    expect(
+      container.querySelector('a[href="/admin/wishlist"]')?.textContent,
+    ).toContain("Travel wishlist");
+    expect(
+      container.querySelector('a[href="/admin/tags"]')?.textContent,
+    ).toContain("Manage tags");
   });
 
   it("keeps admin destinations hidden for non-admin sessions", async () => {
@@ -89,7 +129,6 @@ describe("MobileNav", () => {
       user: {
         id: "reader-1",
         role: "reader",
-        githubLogin: "octoreader",
       },
     });
 
@@ -105,12 +144,12 @@ describe("MobileNav", () => {
       user: {
         id: "admin-1",
         role: "admin",
-        githubLogin: "octoadmin",
       },
     });
 
-    const activeLinks = Array.from(container.querySelectorAll("a")).filter((link) =>
-      link.className.includes("bg-[var(--accent-soft)] text-[var(--accent)]"),
+    const activeLinks = Array.from(container.querySelectorAll("a")).filter(
+      (link) =>
+        link.className.includes("bg-[var(--accent-soft)] text-[var(--accent)]"),
     );
 
     expect(activeLinks).toHaveLength(1);
@@ -122,7 +161,11 @@ describe("MobileNav", () => {
 
     await renderNav(null);
 
-    expect(container.querySelector('a[href="/tags"]')?.textContent).toContain("Tags");
-    expect(container.querySelector('a[href="/categories"]')?.textContent).toContain("Categories");
+    expect(container.querySelector('a[href="/tags"]')?.textContent).toContain(
+      "Tags",
+    );
+    expect(
+      container.querySelector('a[href="/categories"]')?.textContent,
+    ).toContain("Categories");
   });
 });

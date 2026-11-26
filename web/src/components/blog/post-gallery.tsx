@@ -4,15 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
 
 import type { BlogImage } from "@/types/blog";
-import { cdnBlurDataUrl } from "@/lib/cloudinary/transform";
+import {
+  cdnBlurDataUrl,
+  cdnImageLoader,
+  cdnImageUrl,
+} from "@/lib/cloudinary/transform";
 
 type GalleryImage = {
   id: string;
   imageUrl: string;
   altText: string | null;
   exifTakenAt?: Date | null;
-  exifLat?: number | null;
-  exifLng?: number | null;
   exifCameraMake?: string | null;
   exifCameraModel?: string | null;
   exifLensModel?: string | null;
@@ -48,7 +50,14 @@ function readLightboxIndex(event: Event): number | null {
 
 function ChevronLeftIcon() {
   return (
-    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      viewBox="0 0 24 24"
+    >
       <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -56,7 +65,14 @@ function ChevronLeftIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      viewBox="0 0 24 24"
+    >
       <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -64,21 +80,48 @@ function ChevronRightIcon() {
 
 function CloseIcon() {
   return (
-    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-      <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M18 6L6 18M6 6l12 12"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function ExpandIcon() {
   return (
-    <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-      <path d="M15 3h6m0 0v6m0-6L14 10M9 21H3m0 0v-6m0 6l7-7" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      aria-hidden="true"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M15 3h6m0 0v6m0-6L14 10M9 21H3m0 0v-6m0 6l7-7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl }: Props) {
+export function PostGallery({
+  images,
+  inlineImages,
+  postTitle,
+  featuredImageUrl,
+}: Props) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const filmstripRef = useRef<HTMLDivElement>(null);
@@ -88,12 +131,18 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
 
   // Combined images: featured first, then gallery extras, then inline content images
   const allImages: GalleryImage[] = [
-    ...(featuredImageUrl ? [{ id: "featured", imageUrl: featuredImageUrl, altText: postTitle }] : []),
-    ...images.map(img => ({
+    ...(featuredImageUrl
+      ? [{ id: "featured", imageUrl: featuredImageUrl, altText: postTitle }]
+      : []),
+    ...images.map((img) => ({
       ...img,
       exifTakenAt: img.exifTakenAt ? new Date(img.exifTakenAt) : null,
     })),
-    ...(inlineImages ?? []).map((img, i) => ({ id: `inline-${i}`, imageUrl: img.imageUrl, altText: img.altText })),
+    ...(inlineImages ?? []).map((img, i) => ({
+      id: `inline-${i}`,
+      imageUrl: img.imageUrl,
+      altText: img.altText,
+    })),
   ];
 
   // Listen for inline image click events dispatched by ProseContent
@@ -113,8 +162,26 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
 
   const close = useCallback(() => setActiveIndex(null), []);
 
+  // Restore focus to the element that opened the lightbox when it closes.
+  const openerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (isOpen) {
+      openerRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      return;
+    }
+
+    const opener = openerRef.current;
+    openerRef.current = null;
+    opener?.focus();
+  }, [isOpen]);
+
   const prev = useCallback(() => {
-    setActiveIndex((i) => (i === null ? null : (i - 1 + allImages.length) % allImages.length));
+    setActiveIndex((i) =>
+      i === null ? null : (i - 1 + allImages.length) % allImages.length,
+    );
   }, [allImages.length]);
 
   const next = useCallback(() => {
@@ -139,15 +206,19 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
     const container = lightboxRef.current;
 
     // Initial focus on close button
-    const closeBtn = container.querySelector<HTMLButtonElement>('button[aria-label="Close"]');
+    const closeBtn = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Close"]',
+    );
     closeBtn?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "Tab") return;
 
-      const focusables = Array.from(container.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      ));
+      const focusables = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      );
 
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
@@ -172,7 +243,9 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
       e.preventDefault();
     }
     document.body.classList.add("lightbox-open");
-    document.addEventListener("touchmove", preventTouchScroll, { passive: false });
+    document.addEventListener("touchmove", preventTouchScroll, {
+      passive: false,
+    });
     return () => {
       document.body.classList.remove("lightbox-open");
       document.removeEventListener("touchmove", preventTouchScroll);
@@ -185,7 +258,11 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
     const strip = filmstripRef.current;
     const thumb = strip.children.item(activeIndex);
     if (thumb) {
-      thumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      thumb.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
     }
   }, [activeIndex, isOpen]);
 
@@ -208,7 +285,11 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
       {/* Featured hero image — full-width, clickable */}
       {featuredImageUrl ? (
         <button
-          aria-label={allImages.length > 1 ? `View all ${allImages.length} photos` : "View full size"}
+          aria-label={
+            allImages.length > 1
+              ? `View all ${allImages.length} photos`
+              : "View full size"
+          }
           className="group relative block aspect-video w-full cursor-zoom-in overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-inset"
           onClick={() => setActiveIndex(0)}
           type="button"
@@ -217,16 +298,19 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
             alt={postTitle}
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
             fill
+            loader={cdnImageLoader}
             priority
             sizes="100vw"
-            src={featuredImageUrl}
+            src={cdnImageUrl(featuredImageUrl, 1600) ?? featuredImageUrl}
             placeholder={cdnBlurDataUrl(featuredImageUrl) ? "blur" : "empty"}
             blurDataURL={cdnBlurDataUrl(featuredImageUrl)}
           />
           <div className="absolute inset-0 flex items-end justify-end bg-black/0 transition-colors duration-300 group-hover:bg-black/10">
             <div className="m-3 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
               <ExpandIcon />
-              {allImages.length > 1 ? `${allImages.length} photos` : "Full size"}
+              {allImages.length > 1
+                ? `${allImages.length} photos`
+                : "Full size"}
             </div>
           </div>
         </button>
@@ -247,9 +331,10 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
                 alt={image.altText ?? `${postTitle} — photo ${i + 1}`}
                 className="object-cover transition-transform duration-300 group-hover:scale-110"
                 fill
+                loader={cdnImageLoader}
                 loading="lazy"
                 sizes="(max-width: 640px) 25vw, (max-width: 1024px) 20vw, 15vw"
-                src={image.imageUrl}
+                src={cdnImageUrl(image.imageUrl, 240) ?? image.imageUrl}
                 placeholder={cdnBlurDataUrl(image.imageUrl) ? "blur" : "empty"}
                 blurDataURL={cdnBlurDataUrl(image.imageUrl)}
               />
@@ -272,7 +357,10 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
           ref={lightboxRef}
         >
           {/* Top bar: counter + close */}
-          <div className="flex shrink-0 items-center justify-between px-4 py-3" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex shrink-0 items-center justify-between px-4 py-3"
+            onClick={(e) => e.stopPropagation()}
+          >
             {allImages.length > 1 ? (
               <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white/80 backdrop-blur-sm">
                 {(activeIndex ?? 0) + 1} / {allImages.length}
@@ -297,7 +385,10 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
               <button
                 aria-label="Previous photo"
                 className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:left-4"
-                onClick={(e) => { e.stopPropagation(); prev(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prev();
+                }}
                 type="button"
               >
                 <ChevronLeftIcon />
@@ -315,59 +406,97 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
                   alt={active.altText ?? postTitle}
                   className="rounded-xl object-contain shadow-2xl"
                   fill
+                  loader={cdnImageLoader}
                   priority
                   sizes="92vw"
-                  src={active.imageUrl}
+                  src={cdnImageUrl(active.imageUrl, 1600) ?? active.imageUrl}
                 />
               </div>
               {active.altText && active.altText !== postTitle ? (
-                <p className="mt-3 max-w-md text-center text-sm text-white/60">{active.altText}</p>
+                <p className="mt-3 max-w-md text-center text-sm text-white/60">
+                  {active.altText}
+                </p>
               ) : null}
 
               {/* EXIF Metadata */}
-              {active.exifCameraMake || active.exifShutterSpeed || active.exifTakenAt ? (
+              {active.exifCameraMake ||
+              active.exifShutterSpeed ||
+              active.exifTakenAt ? (
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-white/50">
                   {active.exifCameraMake || active.exifCameraModel ? (
                     <span className="flex items-center gap-1.5">
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
                       </svg>
-                      {[active.exifCameraMake, active.exifCameraModel, active.exifLensModel].filter(Boolean).join(" ")}
+                      {[
+                        active.exifCameraMake,
+                        active.exifCameraModel,
+                        active.exifLensModel,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     </span>
                   ) : null}
-                  {active.exifAperture || active.exifShutterSpeed || active.exifIso ? (
+                  {active.exifAperture ||
+                  active.exifShutterSpeed ||
+                  active.exifIso ? (
                     <span className="flex items-center gap-1.5">
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                        />
                       </svg>
                       {active.exifAperture ? `ƒ/${active.exifAperture}` : ""}
-                      {active.exifShutterSpeed ? ` • ${active.exifShutterSpeed}s` : ""}
+                      {active.exifShutterSpeed
+                        ? ` • ${active.exifShutterSpeed}s`
+                        : ""}
                       {active.exifIso ? ` • ISO ${active.exifIso}` : ""}
                     </span>
                   ) : null}
                   {active.exifTakenAt ? (
                     <span className="flex items-center gap-1.5">
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
                       </svg>
-                      {active.exifTakenAt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                      {active.exifTakenAt.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </span>
-                  ) : null}
-                  {active.exifLat && active.exifLng ? (
-                    <a
-                      className="flex items-center gap-1.5 transition-colors hover:text-white/80"
-                      href={`https://www.google.com/maps/search/?api=1&query=${active.exifLat},${active.exifLng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Location
-                    </a>
                   ) : null}
                 </div>
               ) : null}
@@ -378,7 +507,10 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
               <button
                 aria-label="Next photo"
                 className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:right-4"
-                onClick={(e) => { e.stopPropagation(); next(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  next();
+                }}
                 type="button"
               >
                 <ChevronRightIcon />
@@ -413,10 +545,13 @@ export function PostGallery({ images, inlineImages, postTitle, featuredImageUrl 
                       alt={img.altText ?? `Photo ${i + 1}`}
                       className="object-cover"
                       height={56}
+                      loader={cdnImageLoader}
                       loading="lazy"
-                      src={img.imageUrl}
+                      src={cdnImageUrl(img.imageUrl, 160) ?? img.imageUrl}
                       width={80}
-                      placeholder={cdnBlurDataUrl(img.imageUrl) ? "blur" : "empty"}
+                      placeholder={
+                        cdnBlurDataUrl(img.imageUrl) ? "blur" : "empty"
+                      }
                       blurDataURL={cdnBlurDataUrl(img.imageUrl)}
                     />
                   </button>

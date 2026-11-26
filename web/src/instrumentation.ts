@@ -4,6 +4,9 @@ import { closeProductionInspectorIfNeeded } from "@/lib/runtime/close-production
 
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Validate env at process start, not on the first route that imports it.
+    await import("@/lib/env");
+
     if (process.env.NODE_ENV === "production") {
       const inspector = await import("node:inspector");
       closeProductionInspectorIfNeeded({ inspector });

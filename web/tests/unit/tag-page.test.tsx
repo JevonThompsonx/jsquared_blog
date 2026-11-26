@@ -11,12 +11,25 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header shell"),
+  SiteHeader: () =>
+    createElement("div", { "data-testid": "site-header" }, "Header shell"),
 }));
 
 vi.mock("@/components/blog/filtered-feed", () => ({
-  FilteredFeed: ({ apiParams, emptyTitle, initialPosts }: { apiParams: Record<string, string>; emptyTitle: string; initialPosts: Array<{ id: string }> }) =>
-    createElement("div", { "data-testid": "filtered-feed", "data-tag": apiParams.tag }, `${emptyTitle} | Feed posts: ${initialPosts.length}`),
+  FilteredFeed: ({
+    apiParams,
+    emptyTitle,
+    initialPosts,
+  }: {
+    apiParams: Record<string, string>;
+    emptyTitle: string;
+    initialPosts: Array<{ id: string }>;
+  }) =>
+    createElement(
+      "div",
+      { "data-testid": "filtered-feed", "data-tag": apiParams.tag },
+      `${emptyTitle} | Feed posts: ${initialPosts.length}`,
+    ),
 }));
 
 vi.mock("@/server/dal/posts", () => ({
@@ -28,7 +41,10 @@ vi.mock("@/server/queries/posts", () => ({
   listPublishedPostsByTagSlug: vi.fn(),
 }));
 
-import TagPage, { dynamic, generateMetadata } from "@/app/(blog)/tag/[slug]/page";
+import TagPage, {
+  dynamic,
+  generateMetadata,
+} from "@/app/(blog)/tag/[slug]/page";
 import { countPublishedPostsByTagSlug, getTagBySlug } from "@/server/dal/posts";
 import { listPublishedPostsByTagSlug } from "@/server/queries/posts";
 import { notFound } from "next/navigation";
@@ -71,11 +87,15 @@ describe("TagPage", () => {
       description: "Chasing waterfall trails.",
     });
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "waterfalls" }) });
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "waterfalls" }),
+    });
 
     expect(dynamic).toBe("force-dynamic");
-    expect(metadata.title).toBe("Waterfalls – J²Adventures");
-    expect(metadata.alternates?.types?.["application/rss+xml"]).toBe("https://jsquaredadventures.com/tag/waterfalls/feed.xml");
+    expect(metadata.title).toBe("Waterfalls");
+    expect(metadata.alternates?.types?.["application/rss+xml"]).toBe(
+      "https://jsquaredadventures.com/tag/waterfalls/feed.xml",
+    );
   });
 
   it("renders the tag shell with the filtered feed contract", async () => {
@@ -88,10 +108,16 @@ describe("TagPage", () => {
     vi.mocked(listPublishedPostsByTagSlug).mockResolvedValue([taggedPost]);
     vi.mocked(countPublishedPostsByTagSlug).mockResolvedValue(1);
 
-    const markup = renderToStaticMarkup(await TagPage({ params: Promise.resolve({ slug: "waterfalls" }) }));
+    const markup = renderToStaticMarkup(
+      await TagPage({ params: Promise.resolve({ slug: "waterfalls" }) }),
+    );
 
     expect(getTagBySlug).toHaveBeenCalledWith("waterfalls");
-    expect(listPublishedPostsByTagSlug).toHaveBeenCalledWith("waterfalls", 20, 0);
+    expect(listPublishedPostsByTagSlug).toHaveBeenCalledWith(
+      "waterfalls",
+      20,
+      0,
+    );
     expect(countPublishedPostsByTagSlug).toHaveBeenCalledWith("waterfalls");
     expect(markup).toContain('data-testid="site-header"');
     expect(markup).toContain("Waterfalls");
@@ -106,12 +132,16 @@ describe("TagPage", () => {
     vi.mocked(listPublishedPostsByTagSlug).mockResolvedValue([]);
     vi.mocked(countPublishedPostsByTagSlug).mockResolvedValue(0);
 
-    await expect(TagPage({ params: Promise.resolve({ slug: "missing-tag" }) })).rejects.toThrow(notFoundError);
+    await expect(
+      TagPage({ params: Promise.resolve({ slug: "missing-tag" }) }),
+    ).rejects.toThrow(notFoundError);
     expect(notFound).toHaveBeenCalled();
   });
 
   it("fails closed on whitespace-only tag slugs before tag and post lookups", async () => {
-    await expect(TagPage({ params: Promise.resolve({ slug: "   " }) })).rejects.toThrow(notFoundError);
+    await expect(
+      TagPage({ params: Promise.resolve({ slug: "   " }) }),
+    ).rejects.toThrow(notFoundError);
 
     expect(notFound).toHaveBeenCalled();
     expect(getTagBySlug).not.toHaveBeenCalled();
@@ -129,13 +159,21 @@ describe("TagPage", () => {
     vi.mocked(listPublishedPostsByTagSlug).mockResolvedValue([taggedPost]);
     vi.mocked(countPublishedPostsByTagSlug).mockResolvedValue(1);
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "  waterfalls  " }) });
-    const markup = renderToStaticMarkup(await TagPage({ params: Promise.resolve({ slug: "  waterfalls  " }) }));
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "  waterfalls  " }),
+    });
+    const markup = renderToStaticMarkup(
+      await TagPage({ params: Promise.resolve({ slug: "  waterfalls  " }) }),
+    );
 
-    expect(metadata.title).toBe("Waterfalls – J²Adventures");
+    expect(metadata.title).toBe("Waterfalls");
     expect(getTagBySlug).toHaveBeenNthCalledWith(1, "waterfalls");
     expect(getTagBySlug).toHaveBeenNthCalledWith(2, "waterfalls");
-    expect(listPublishedPostsByTagSlug).toHaveBeenCalledWith("waterfalls", 20, 0);
+    expect(listPublishedPostsByTagSlug).toHaveBeenCalledWith(
+      "waterfalls",
+      20,
+      0,
+    );
     expect(countPublishedPostsByTagSlug).toHaveBeenCalledWith("waterfalls");
     expect(markup).toContain('data-tag="waterfalls"');
   });

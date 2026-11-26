@@ -17,38 +17,49 @@ skipIfDummyDbEnv();
 
 type AxePage = ConstructorParameters<typeof AxeBuilder>[0]["page"];
 
-function buildAxe(page: Parameters<typeof test>[0] extends never ? never : import("@playwright/test").Page) {
+function buildAxe(
+  page: Parameters<typeof test>[0] extends never
+    ? never
+    : import("@playwright/test").Page,
+) {
   return new AxeBuilder({ page: page as unknown as AxePage });
 }
 
 // These tests run against a live server (local dev or production).
 // Set E2E_BASE_URL to target a specific environment, otherwise defaults to
-// http://localhost:3000 (local dev server must be running).
+// http://127.0.0.1:3100 (the managed local dev server starts automatically).
 
-const statusOptionLabels: Record<"published" | "draft" | "scheduled", string> = {
-  published: "Published",
-  draft: "Draft",
-  scheduled: "Scheduled",
-};
+const statusOptionLabels: Record<"published" | "draft" | "scheduled", string> =
+  {
+    published: "Published",
+    draft: "Draft",
+    scheduled: "Scheduled",
+  };
 
 function getFirstMatchedPath(html: string, pattern: RegExp): string | null {
   const match = html.match(pattern);
   return match?.[1] ?? null;
 }
 
-async function discoverPublicSeriesPath(request: { get: (url: string) => Promise<{ status(): number; text(): Promise<string> }> }): Promise<string | null> {
+async function discoverPublicSeriesPath(request: {
+  get: (url: string) => Promise<{ status(): number; text(): Promise<string> }>;
+}): Promise<string | null> {
   const homepageResponse = await request.get("/");
   if (homepageResponse.status() !== 200) {
     return null;
   }
 
   const homepageHtml = await homepageResponse.text();
-  const homepageSeriesSlug = homepageHtml.match(/href="\/series\/([^"?#/]+)"/)?.[1] ?? null;
+  const homepageSeriesSlug =
+    homepageHtml.match(/href="\/series\/([^"?#/]+)"/)?.[1] ?? null;
   if (homepageSeriesSlug) {
     return `/series/${homepageSeriesSlug}`;
   }
 
-  const postPath = getFirstMatchedPath(homepageHtml, /href="(\/posts\/[^"?#]+)"/);
+  const postPath = getFirstMatchedPath(
+    homepageHtml,
+    /href="(\/posts\/[^"?#]+)"/,
+  );
   if (!postPath) {
     return null;
   }
@@ -59,18 +70,20 @@ async function discoverPublicSeriesPath(request: { get: (url: string) => Promise
   }
 
   const postHtml = await postResponse.text();
-  const postSeriesSlug = postHtml.match(/href="\/series\/([^"?#/]+)"/)?.[1] ?? null;
+  const postSeriesSlug =
+    postHtml.match(/href="\/series\/([^"?#/]+)"/)?.[1] ?? null;
   return postSeriesSlug ? `/series/${postSeriesSlug}` : null;
 }
 
 test.describe("public pages smoke tests", () => {
-
   test("homepage loads with post feed", async ({ page }) => {
     await page.goto("/");
     // Header is present
     await expect(page.locator("header")).toBeVisible();
     // At least one post card renders
-    await expect(page.locator("article").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("article").first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("sitemap.xml returns valid XML", async ({ request }) => {
@@ -108,14 +121,19 @@ test.describe("public pages smoke tests", () => {
     expect(body).toContain("Travel");
   });
 
-  test("tag RSS feed returns valid XML when a public tag exists", async ({ request }) => {
+  test("tag RSS feed returns valid XML when a public tag exists", async ({
+    request,
+  }) => {
     const homepageResponse = await request.get("/");
     expect(homepageResponse.status()).toBe(200);
 
     const homepageHtml = await homepageResponse.text();
     const tagMatch = homepageHtml.match(/href="\/tag\/([^"?#/]+)"/);
 
-    test.skip(!tagMatch, "No public tag links were available to verify a tag feed.");
+    test.skip(
+      !tagMatch,
+      "No public tag links were available to verify a tag feed.",
+    );
 
     const tagSlug = tagMatch?.[1];
     const response = await request.get(`/tag/${tagSlug}/feed.xml`);
@@ -149,30 +167,48 @@ test.describe("public pages smoke tests", () => {
   test("category page loads", async ({ page }) => {
     await page.goto("/category/Travel");
     await expect(page.locator("header")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Travel", exact: true })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Filtered stories feed" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Travel", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Filtered stories feed" }),
+    ).toBeVisible();
   });
 
   test("about page loads", async ({ page }) => {
     await page.goto("/about");
     await expect(page.locator("header")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "The story behind J²" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Browse stories →" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "The story behind J²" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Browse stories →" }),
+    ).toBeVisible();
   });
 
   test("map page loads its shell", async ({ page }) => {
     await page.goto("/map");
     await expect(page.getByRole("main").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Adventure Map" })).toBeVisible();
-    await expect(page.getByText(/story|stories pinned to the map|Stories will appear here as locations are added\./i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Adventure Map" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        /story|stories pinned to the map|Stories will appear here as locations are added\./i,
+      ),
+    ).toBeVisible();
 
     const mapRegion = page.getByTestId("world-map").first();
     const mapUnavailable = page.getByText(/Map unavailable/i).first();
 
     await expect
-      .poll(async () => (await mapRegion.count()) + (await mapUnavailable.count()), {
-        message: "expected either the interactive map or the map unavailable fallback",
-      })
+      .poll(
+        async () => (await mapRegion.count()) + (await mapUnavailable.count()),
+        {
+          message:
+            "expected either the interactive map or the map unavailable fallback",
+        },
+      )
       .toBeGreaterThan(0);
 
     if (await mapRegion.count()) {
@@ -189,20 +225,31 @@ test.describe("public pages smoke tests", () => {
   test("wishlist page loads its shell", async ({ page }) => {
     await page.goto("/wishlist");
     await expect(page.getByRole("main").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Travel Wishlist" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Travel Wishlist" }),
+    ).toBeVisible();
     await expect(
       page
-        .getByText(/destination is on the public wishlist|destinations are on the public wishlist|No destinations are on the public wishlist yet\.|Wishlist temporarily unavailable\./i)
+        .getByText(
+          /destination is on the public wishlist|destinations are on the public wishlist|No destinations are on the public wishlist yet\.|Wishlist temporarily unavailable\./i,
+        )
         .first(),
     ).toBeVisible();
   });
 
-  test("signup page renders", async ({ page }) => {
+  test("signup page renders the hosted email-code notice", async ({ page }) => {
     await page.goto("/signup");
-    await expect(page.locator("main")).toBeVisible();
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Confirm password", { exact: true })).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(main).toBeVisible();
+    await expect(
+      main.getByRole("heading", { name: "Create an account" }),
+    ).toBeVisible();
+    await expect(main.getByText(/one-time email code/i)).toBeVisible();
+    await expect(main.getByText(/expire after 10 minutes/i)).toBeVisible();
+    await expect(
+      main.getByRole("link", { name: "Continue to sign up" }),
+    ).toHaveAttribute("href", "/api/auth/signup");
+    await expect(main.locator('input[type="password"]')).toHaveCount(0);
   });
 
   test("tag page loads when a public tag exists", async ({ page, request }) => {
@@ -213,37 +260,59 @@ test.describe("public pages smoke tests", () => {
     const tagSlug = homepageHtml.match(/href="\/tag\/([^"?#/]+)"/)?.[1] ?? null;
     const tagPath = tagSlug ? `/tag/${tagSlug}` : null;
 
-    test.skip(!tagPath, "No public tag links were available to verify a tag page.");
+    test.skip(
+      !tagPath,
+      "No public tag links were available to verify a tag page.",
+    );
 
     await page.goto(tagPath!);
     await expect(page.locator("main").first()).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator('a[href="/"]').first()).toBeVisible();
-    await expect(page.getByRole("region", { name: "Filtered stories feed" })).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Filtered stories feed" }),
+    ).toBeVisible();
   });
 
-  test("series page loads when a public series exists", async ({ page, request }) => {
+  test("series page loads when a public series exists", async ({
+    page,
+    request,
+  }) => {
     const seriesPath = await discoverPublicSeriesPath(request);
 
-    test.skip(!seriesPath, "No public series links were available to verify a series page.");
+    test.skip(
+      !seriesPath,
+      "No public series links were available to verify a series page.",
+    );
 
     await page.goto(seriesPath!);
     await expect(page.locator("main").first()).toBeVisible();
     await expect(page.getByText(/^Series$/)).toBeVisible();
     await expect(page.locator('a[href="/"]').first()).toBeVisible();
     await expect(
-      page.getByText(/^\d+\s+(part|parts)$/i).or(page.getByText(/^No published posts yet$/i)),
+      page
+        .getByText(/^\d+\s+(part|parts)$/i)
+        .or(page.getByText(/^No published posts yet$/i)),
     ).toBeVisible();
   });
 
-  test("published post detail page loads when a public story exists", async ({ page, request }) => {
+  test("published post detail page loads when a public story exists", async ({
+    page,
+    request,
+  }) => {
     const homepageResponse = await request.get("/");
     expect(homepageResponse.status()).toBe(200);
 
     const homepageHtml = await homepageResponse.text();
-    const postPath = getFirstMatchedPath(homepageHtml, /href="(\/posts\/[^"?#]+)"/);
+    const postPath = getFirstMatchedPath(
+      homepageHtml,
+      /href="(\/posts\/[^"?#]+)"/,
+    );
 
-    test.skip(!postPath, "No public post links were available to verify a published story page.");
+    test.skip(
+      !postPath,
+      "No public post links were available to verify a published story page.",
+    );
 
     await page.goto(postPath!);
     await expect(page.locator("article")).toBeVisible();
@@ -254,36 +323,61 @@ test.describe("public pages smoke tests", () => {
   test("search page is accessible", async ({ page }) => {
     await page.goto("/?search=adventure");
     await expect(page.getByRole("main").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Results for/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Results for/i }),
+    ).toBeVisible();
   });
 
-  test("login page renders", async ({ page }) => {
+  test("login page renders the hosted email-code notice", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.locator("main")).toBeVisible();
-    // Should have an email input
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(main).toBeVisible();
+    await expect(
+      main.getByRole("heading", { name: "Sign in", exact: true }),
+    ).toBeVisible();
+    await expect(main.getByText(/one-time email code/i)).toBeVisible();
+    await expect(main.getByText(/expire after 10 minutes/i)).toBeVisible();
+    await expect(
+      main.getByRole("link", { name: "Continue to sign in" }),
+    ).toHaveAttribute("href", "/api/auth/login");
+    await expect(main.locator('input[type="password"]')).toHaveCount(0);
   });
 
-  test("bookmarks prompts unauthenticated users to sign in", async ({ page }) => {
+  test("bookmarks prompts unauthenticated users to sign in", async ({
+    page,
+  }) => {
     await page.goto("/bookmarks");
-    await expect(page.getByRole("heading", { name: "Saved posts" })).toBeVisible();
-    await expect(page.getByText("Sign in to see your saved posts")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login?redirectTo=/bookmarks");
+    await expect(
+      page.getByRole("heading", { name: "Saved posts" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Sign in to see your saved posts"),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+      "href",
+      "/login?redirectTo=/bookmarks",
+    );
   });
 
   // 6.A.1: axe-core accessibility checks on key public pages
   test("homepage has no critical axe-core violations", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("article").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("article").first()).toBeVisible({
+      timeout: 15_000,
+    });
     const results = await buildAxe(page)
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
     expect(results.violations).toEqual([]);
   });
 
-  test("category page has no critical axe-core violations", async ({ page }) => {
+  test("category page has no critical axe-core violations", async ({
+    page,
+  }) => {
     await page.goto("/category/Travel");
-    await expect(page.getByRole("heading", { name: "Travel", exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Travel", exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
     const results = await buildAxe(page)
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
@@ -292,35 +386,52 @@ test.describe("public pages smoke tests", () => {
 
   test("login page has no critical axe-core violations", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
     const results = await buildAxe(page)
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
     expect(results.violations).toEqual([]);
   });
 
-  test("admin redirects to GitHub sign-in when unauthenticated", async ({ browser }) => {
+  test("admin redirects to WorkOS sign-in when unauthenticated", async ({
+    browser,
+  }) => {
     // Use a fresh context with no storage state so we are definitely unauthenticated,
     // regardless of any saved admin session on the test runner machine.
     const context = await browser.newContext({ storageState: undefined });
     const page = await context.newPage();
     await page.goto("/admin");
     await expect(page).toHaveURL(/\/admin(?:\?.*)?$/, { timeout: 10_000 });
-    await expect(page.getByRole("heading", { name: "Editorial control center" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Editorial control center" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Sign in with WorkOS" }),
+    ).toHaveAttribute("href", "/api/auth/login?returnTo=%2Fadmin");
+    await expect(
+      page.getByRole("main").getByText(/one-time code.*10 minutes/i),
+    ).toBeVisible();
     await context.close();
   });
 
-  test("admin new-post route redirects to sign-in when unauthenticated", async ({ browser }) => {
+  test("admin new-post route redirects to sign-in when unauthenticated", async ({
+    browser,
+  }) => {
     const context = await browser.newContext({ storageState: undefined });
     const page = await context.newPage();
     await page.goto("/admin/posts/new");
     await expect(page).toHaveURL(/\/admin(?:\?.*)?$/, { timeout: 10_000 });
-    await expect(page.getByRole("heading", { name: "Editorial control center" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Editorial control center" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Sign in with WorkOS" }),
+    ).toHaveAttribute("href", "/api/auth/login?returnTo=%2Fadmin");
+    await expect(
+      page.getByRole("main").getByText(/one-time code.*10 minutes/i),
+    ).toBeVisible();
     await context.close();
   });
-
 });
 
 adminTest.describe("authenticated admin smoke tests", () => {
@@ -335,25 +446,61 @@ adminTest.describe("authenticated admin smoke tests", () => {
     await expect(postRows.first()).toBeVisible({ timeout: 15_000 });
 
     const firstPostRow = postRows.first();
-    const firstPostTitle = (await firstPostRow.getByTestId("admin-post-title").textContent())?.trim() ?? "";
+    const firstPostTitle =
+      (
+        await firstPostRow.getByTestId("admin-post-title").textContent()
+      )?.trim() ?? "";
     expect(firstPostTitle.length).toBeGreaterThan(0);
 
-    const searchQuery = firstPostTitle.slice(0, Math.min(12, firstPostTitle.length)).trim();
+    const searchQuery = firstPostTitle
+      .slice(0, Math.min(12, firstPostTitle.length))
+      .trim();
     await page.getByLabel("Search posts").fill(searchQuery);
-    await page.waitForURL((url) => url.searchParams.get("search") === searchQuery, { timeout: 10_000 });
-    await expect(page.getByTestId("admin-post-row").first().getByTestId("admin-post-title")).toContainText(searchQuery);
+    await page.waitForURL(
+      (url) => url.searchParams.get("search") === searchQuery,
+      { timeout: 10_000 },
+    );
+    await expect(
+      page
+        .getByTestId("admin-post-row")
+        .first()
+        .getByTestId("admin-post-title"),
+    ).toContainText(searchQuery);
 
     const filteredFirstRow = page.getByTestId("admin-post-row").first();
-    const filteredStatus = await filteredFirstRow.getAttribute("data-post-status");
-    if (filteredStatus === "published" || filteredStatus === "draft" || filteredStatus === "scheduled") {
-      await selectThemeOption(page, "Filter posts by status", statusOptionLabels[filteredStatus]);
-      await page.waitForURL((url) => url.searchParams.get("status") === filteredStatus, { timeout: 10_000 });
-      await expect(page.getByTestId("admin-post-row").first()).toHaveAttribute("data-post-status", filteredStatus);
+    const filteredStatus =
+      await filteredFirstRow.getAttribute("data-post-status");
+    if (
+      filteredStatus === "published" ||
+      filteredStatus === "draft" ||
+      filteredStatus === "scheduled"
+    ) {
+      await selectThemeOption(
+        page,
+        "Filter posts by status",
+        statusOptionLabels[filteredStatus],
+      );
+      await page.waitForURL(
+        (url) => url.searchParams.get("status") === filteredStatus,
+        { timeout: 10_000 },
+      );
+      await expect(page.getByTestId("admin-post-row").first()).toHaveAttribute(
+        "data-post-status",
+        filteredStatus,
+      );
     }
 
     await filteredFirstRow.getByTestId("admin-post-clone").click();
-    await page.waitForURL((url) => url.pathname === "/admin" && url.searchParams.get("cloned") === "1" && Boolean(url.searchParams.get("postId")), { timeout: 15_000 });
-    await expect(page.getByText("Draft clone created successfully.")).toBeVisible();
+    await page.waitForURL(
+      (url) =>
+        url.pathname === "/admin" &&
+        url.searchParams.get("cloned") === "1" &&
+        Boolean(url.searchParams.get("postId")),
+      { timeout: 15_000 },
+    );
+    await expect(
+      page.getByText("Draft clone created successfully."),
+    ).toBeVisible();
 
     const previewButton = page.getByRole("button", { name: "Preview" });
     await expect(previewButton).toBeVisible();
@@ -366,111 +513,213 @@ adminTest.describe("authenticated admin smoke tests", () => {
     await expect(previewPage.getByText("Preview Mode")).toBeVisible();
   });
 
-  adminTest("admin dashboard filters and navigation stay usable", async ({ page }) => {
-    // Navigate directly with status=published so the URL is already set before we
-    // open any Radix select — avoids stale-searchParams closure on rapid sequential changes.
-    await page.goto("/admin?status=published");
+  adminTest(
+    "admin dashboard filters and navigation stay usable",
+    async ({ page }) => {
+      // Navigate directly with status=published so the URL is already set before we
+      // open any Radix select — avoids stale-searchParams closure on rapid sequential changes.
+      await page.goto("/admin?status=published");
 
-    await expect(page.getByText("Editorial workspace")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Manage tags" })).toBeVisible();
-    await expect(page.getByLabel("Search posts")).toBeVisible();
+      await expect(page.getByText("Editorial workspace")).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Manage tags", exact: true }),
+      ).toBeVisible();
+      await expect(page.getByLabel("Search posts")).toBeVisible();
 
-    // Wait for the page to stabilise with the status filter applied.
-    await page.waitForURL((url) => url.searchParams.get("status") === "published", { timeout: 10_000 });
+      // Wait for the page to stabilise with the status filter applied.
+      await page.waitForURL(
+        (url) => url.searchParams.get("status") === "published",
+        { timeout: 10_000 },
+      );
 
-    await selectThemeOption(page, "Sort posts", "Recently updated");
-    // Verify the sort select reflects the new value. The URL update is a best-effort
-    // router.push that may race server-component re-renders on dev; asserting on the
-    // rendered UI state is the reliable signal here.
-    await expect(page.getByLabel("Sort posts")).toContainText("Recently updated");
+      await selectThemeOption(page, "Sort posts", "Recently updated");
+      // Verify the sort select reflects the new value. The URL update is a best-effort
+      // router.push that may race server-component re-renders on dev; asserting on the
+      // rendered UI state is the reliable signal here.
+      await expect(page.getByLabel("Sort posts")).toContainText(
+        "Recently updated",
+      );
 
-    const rows = page.getByTestId("admin-post-row");
-    await expect(rows.first()).toBeVisible({ timeout: 15_000 });
-    await expect(rows.first().getByRole("link", { name: "Moderate comments" })).toBeVisible();
-  });
+      const rows = page.getByTestId("admin-post-row");
+      await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+      await expect(
+        rows.first().getByRole("link", { name: "Moderate comments" }),
+      ).toBeVisible();
+    },
+  );
 
-  adminTest("admin create-post page renders for authenticated admins", async ({ page }) => {
-    await page.goto("/admin/posts/new");
+  adminTest(
+    "admin create-post page renders for authenticated admins",
+    async ({ page }) => {
+      await page.goto("/admin/posts/new");
 
-    await expect(page.getByRole("heading", { name: "Create post" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Back to dashboard" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create post" })).toBeVisible();
-  });
+      await expect(
+        page.getByRole("heading", { name: "Create post" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Back to dashboard" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Create post" }),
+      ).toBeVisible();
+    },
+  );
 
-  adminTest("admin wishlist page renders for authenticated admins", async ({ page }) => {
-    await page.goto("/admin/wishlist");
+  adminTest(
+    "admin wishlist page renders for authenticated admins",
+    async ({ page }) => {
+      await page.goto("/admin/wishlist");
 
-    await expect(page.getByRole("heading", { name: "Travel wishlist" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Add destination" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Save destination" })).toBeVisible();
-  });
+      await expect(
+        page.getByRole("heading", { name: "Travel wishlist" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Add destination" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Save destination" }),
+      ).toBeVisible();
+    },
+  );
 
-  adminTest("admin can create, update, and delete a wishlist destination", async ({ page }) => {
-    adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
+  adminTest(
+    "admin can create, update, and delete a wishlist destination",
+    async ({ page }) => {
+      adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
 
-    const destinationName = `E2E wishlist ${Date.now()}`;
-    const updatedDestinationName = `${destinationName} updated`;
-    const updatedLocationName = "Moab, Utah";
-    const updatedExternalUrl = "https://example.com/moab-guide";
+      const destinationName = `E2E wishlist ${Date.now()}`;
+      const updatedDestinationName = `${destinationName} updated`;
+      const updatedLocationName = "Moab, Utah";
+      const updatedExternalUrl = "https://example.com/moab-guide";
 
-    await page.goto("/admin/wishlist");
+      await page.goto("/admin/wishlist");
 
-    await expect(page.getByTestId("admin-wishlist-create-form")).toBeVisible();
+      await expect(
+        page.getByTestId("admin-wishlist-create-form"),
+      ).toBeVisible();
 
-    try {
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Name").fill(destinationName);
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Location label").fill("Arches National Park");
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Sort order").fill("42");
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Visited already").check();
-      await page.getByTestId("admin-wishlist-create-form").getByLabel("Show publicly").check();
-      await page.getByTestId("admin-wishlist-create-form").getByRole("button", { name: "Save destination" }).click();
+      try {
+        await page
+          .getByTestId("admin-wishlist-create-form")
+          .getByLabel("Name")
+          .fill(destinationName);
+        await page
+          .getByTestId("admin-wishlist-create-form")
+          .getByLabel("Location label")
+          .fill("Arches National Park");
+        await page
+          .getByTestId("admin-wishlist-create-form")
+          .getByLabel("Sort order")
+          .fill("42");
+        await page
+          .getByTestId("admin-wishlist-create-form")
+          .getByLabel("Visited already")
+          .check();
+        await page
+          .getByTestId("admin-wishlist-create-form")
+          .getByLabel("Show publicly")
+          .check();
+        await page
+          .getByTestId("admin-wishlist-create-form")
+          .getByRole("button", { name: "Save destination" })
+          .click();
 
-      const createdRow = page.getByTestId("admin-wishlist-row").filter({ hasText: destinationName }).first();
-      await expect(createdRow).toBeVisible({ timeout: 15_000 });
-      await expect(createdRow).toContainText("Arches National Park");
-      await expect(createdRow.getByTestId("admin-wishlist-public-badge")).toHaveText("Public");
-      await expect(createdRow.getByTestId("admin-wishlist-visited-badge")).toHaveText("Visited");
+        const createdRow = page
+          .getByTestId("admin-wishlist-row")
+          .filter({ hasText: destinationName })
+          .first();
+        await expect(createdRow).toBeVisible({ timeout: 15_000 });
+        await expect(createdRow).toContainText("Arches National Park");
+        await expect(
+          createdRow.getByTestId("admin-wishlist-public-badge"),
+        ).toHaveText("Public");
+        await expect(
+          createdRow.getByTestId("admin-wishlist-visited-badge"),
+        ).toHaveText("Visited");
 
-      const updateForm = createdRow.getByTestId("admin-wishlist-update-form");
-      await updateForm.getByLabel("Name").fill(updatedDestinationName);
-      await updateForm.getByLabel("Location label").fill(updatedLocationName);
-      await updateForm.getByLabel("Optional link").fill(updatedExternalUrl);
-      await updateForm.getByLabel("Visited already").uncheck();
-      await updateForm.getByLabel("Show publicly").uncheck();
-      await updateForm.getByRole("button", { name: "Update destination" }).click();
+        const updateForm = createdRow.getByTestId("admin-wishlist-update-form");
+        await updateForm.getByLabel("Name").fill(updatedDestinationName);
+        await updateForm.getByLabel("Location label").fill(updatedLocationName);
+        await updateForm.getByLabel("Optional link").fill(updatedExternalUrl);
+        await updateForm.getByLabel("Visited already").uncheck();
+        await updateForm.getByLabel("Show publicly").uncheck();
+        await updateForm
+          .getByRole("button", { name: "Update destination" })
+          .click();
 
-      const updatedRow = page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName }).first();
-      await expect(updatedRow).toBeVisible({ timeout: 15_000 });
-      await expect(updatedRow).toContainText(updatedLocationName);
-      await expect(updatedRow.getByRole("link", { name: "Open link" })).toHaveAttribute("href", updatedExternalUrl);
-      await expect(updatedRow.getByTestId("admin-wishlist-public-badge")).toHaveCount(0);
-      await expect(updatedRow.getByTestId("admin-wishlist-visited-badge")).toHaveCount(0);
+        const updatedRow = page
+          .getByTestId("admin-wishlist-row")
+          .filter({ hasText: updatedDestinationName })
+          .first();
+        await expect(updatedRow).toBeVisible({ timeout: 15_000 });
+        await expect(updatedRow).toContainText(updatedLocationName);
+        await expect(
+          updatedRow.getByRole("link", { name: "Open link" }),
+        ).toHaveAttribute("href", updatedExternalUrl);
+        await expect(
+          updatedRow.getByTestId("admin-wishlist-public-badge"),
+        ).toHaveCount(0);
+        await expect(
+          updatedRow.getByTestId("admin-wishlist-visited-badge"),
+        ).toHaveCount(0);
 
-      await updatedRow.getByTestId("admin-wishlist-delete-form").getByRole("button", { name: "Delete destination" }).click();
-      await expect(page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName })).toHaveCount(0, { timeout: 15_000 });
-    } finally {
-      const lingeringRow = page.getByTestId("admin-wishlist-row").filter({ hasText: destinationName }).first();
-      const lingeringUpdatedRow = page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName }).first();
+        await updatedRow
+          .getByTestId("admin-wishlist-delete-form")
+          .getByRole("button", { name: "Delete destination" })
+          .click();
+        await expect(
+          page
+            .getByTestId("admin-wishlist-row")
+            .filter({ hasText: updatedDestinationName }),
+        ).toHaveCount(0, { timeout: 15_000 });
+      } finally {
+        const lingeringRow = page
+          .getByTestId("admin-wishlist-row")
+          .filter({ hasText: destinationName })
+          .first();
+        const lingeringUpdatedRow = page
+          .getByTestId("admin-wishlist-row")
+          .filter({ hasText: updatedDestinationName })
+          .first();
 
-      if (await lingeringUpdatedRow.count()) {
-        await lingeringUpdatedRow.getByTestId("admin-wishlist-delete-form").getByRole("button", { name: "Delete destination" }).click();
-        await expect(page.getByTestId("admin-wishlist-row").filter({ hasText: updatedDestinationName })).toHaveCount(0, { timeout: 15_000 });
-      } else if (await lingeringRow.count()) {
-        await lingeringRow.getByTestId("admin-wishlist-delete-form").getByRole("button", { name: "Delete destination" }).click();
-        await expect(page.getByTestId("admin-wishlist-row").filter({ hasText: destinationName })).toHaveCount(0, { timeout: 15_000 });
+        if (await lingeringUpdatedRow.count()) {
+          await lingeringUpdatedRow
+            .getByTestId("admin-wishlist-delete-form")
+            .getByRole("button", { name: "Delete destination" })
+            .click();
+          await expect(
+            page
+              .getByTestId("admin-wishlist-row")
+              .filter({ hasText: updatedDestinationName }),
+          ).toHaveCount(0, { timeout: 15_000 });
+        } else if (await lingeringRow.count()) {
+          await lingeringRow
+            .getByTestId("admin-wishlist-delete-form")
+            .getByRole("button", { name: "Delete destination" })
+            .click();
+          await expect(
+            page
+              .getByTestId("admin-wishlist-row")
+              .filter({ hasText: destinationName }),
+          ).toHaveCount(0, { timeout: 15_000 });
+        }
       }
-    }
-  });
+    },
+  );
 
   adminTest("admin tags page renders editing controls", async ({ page }) => {
     await page.goto("/admin/tags");
 
-    await expect(page.getByRole("heading", { name: "Manage Tags" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Manage Tags" }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: /Dashboard/ })).toBeVisible();
 
     const textareas = page.locator('textarea[name="description"]');
     await expect(textareas.first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: "Save" }).first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Save" }).first(),
+    ).toBeVisible();
   });
 
   adminTest("admin can edit a tag description inline", async ({ page }) => {
@@ -478,8 +727,13 @@ adminTest.describe("authenticated admin smoke tests", () => {
 
     await page.goto("/admin/tags");
 
-    const firstTagRow = page.locator("li").filter({ has: page.locator('textarea[name="description"]') }).first();
-    const descriptionField = firstTagRow.locator('textarea[name="description"]');
+    const firstTagRow = page
+      .locator("li")
+      .filter({ has: page.locator('textarea[name="description"]') })
+      .first();
+    const descriptionField = firstTagRow.locator(
+      'textarea[name="description"]',
+    );
     const saveButton = firstTagRow.getByRole("button", { name: "Save" });
     const nextDescription = `E2E tag description ${Date.now()}`;
 
@@ -491,65 +745,105 @@ adminTest.describe("authenticated admin smoke tests", () => {
     await expect(descriptionField).toHaveValue(nextDescription);
   });
 
-  adminTest("admin moderation page shows summary cards and moderation states", async ({ page }) => {
-    const resolvedPostId = await openAdminCommentsPage(page);
+  adminTest(
+    "admin moderation page shows summary cards and moderation states",
+    async ({ page }) => {
+      const resolvedPostId = await openAdminCommentsPage(page);
 
-    await expect(page.getByText("Moderation tools")).toBeVisible();
-    await expect(page.getByText("Thread review")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Newest" })).toBeVisible();
-    await expect(page.getByText("Threads", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Flagged", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Hidden", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Deleted", { exact: true }).first()).toBeVisible();
+      await expect(page.getByText("Moderation tools")).toBeVisible();
+      await expect(page.getByText("Thread review")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Newest" })).toBeVisible();
+      await expect(
+        page.getByText("Threads", { exact: true }).first(),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Flagged", { exact: true }).first(),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Hidden", { exact: true }).first(),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Deleted", { exact: true }).first(),
+      ).toBeVisible();
 
-    if (configuredAdminPostId) {
-      expect(resolvedPostId).toBe(configuredAdminPostId);
-    }
+      if (configuredAdminPostId) {
+        expect(resolvedPostId).toBe(configuredAdminPostId);
+      }
 
-    await expect(
-      page.getByText("No comments have been posted on this story.").or(page.getByRole("button", { name: /^Delete$/ }).first()),
-    ).toBeVisible({ timeout: 15_000 });
-  });
+      await expect(
+        page
+          .getByText("No comments have been posted on this story.")
+          .or(page.getByRole("button", { name: /^Delete$/ }).first()),
+      ).toBeVisible({ timeout: 15_000 });
+    },
+  );
 
-  adminTest("admin moderation page shows inline delete confirmation when comments exist", async ({ page }) => {
-    adminTest.skip(!configuredAdminPostId, "Run pnpm run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
+  adminTest(
+    "admin moderation page shows inline delete confirmation when comments exist",
+    async ({ page }) => {
+      adminTest.skip(
+        !configuredAdminPostId,
+        "Set E2E_ADMIN_POST_ID to a post with comments for this smoke test.",
+      );
 
-    await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
+      await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
 
-    await expect(page.getByText("Moderation tools")).toBeVisible();
+      await expect(page.getByText("Moderation tools")).toBeVisible();
 
-    const deleteButton = page.getByRole("button", { name: /^Delete$/ }).first();
-    await expect(deleteButton).toBeVisible({ timeout: 15_000 });
-    await deleteButton.click();
+      const deleteButton = page
+        .getByRole("button", { name: /^Delete$/ })
+        .first();
+      await expect(deleteButton).toBeVisible({ timeout: 15_000 });
+      await deleteButton.click();
 
-    await expect(page.getByText("Permanently delete?")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Delete" }).last()).toBeVisible();
-  });
+      await expect(page.getByText("Permanently delete?")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Delete" }).last(),
+      ).toBeVisible();
+    },
+  );
 
-  adminTest("admin can moderate the seeded comment fixture", async ({ page }) => {
-    adminTest.skip(!configuredAdminPostId, "Run pnpm run seed:e2e to provision E2E_ADMIN_POST_ID automatically.");
-    adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
+  adminTest(
+    "admin can moderate the seeded comment fixture",
+    async ({ page }) => {
+      adminTest.skip(
+        !configuredAdminPostId,
+        "Set E2E_ADMIN_POST_ID to a post with comments for this smoke test.",
+      );
+      adminTest.skip(!canRunAdminMutationFlows, getAdminMutationHint());
 
-    await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
+      await page.goto(`/admin/posts/${configuredAdminPostId}/comments`);
 
-    await expect(page.getByText("Moderation tools")).toBeVisible();
+      await expect(page.getByText("Moderation tools")).toBeVisible();
 
-    const firstComment = page.locator("article").filter({ has: page.getByRole("button", { name: /^Delete$/ }) }).first();
-    await expect(firstComment).toBeVisible({ timeout: 15_000 });
+      const firstComment = page
+        .locator("article")
+        .filter({ has: page.getByRole("button", { name: /^Delete$/ }) })
+        .first();
+      await expect(firstComment).toBeVisible({ timeout: 15_000 });
 
-    const hideButton = firstComment.getByRole("button", { name: "Hide" });
-    if (await hideButton.isVisible()) {
-      await hideButton.click();
-      await expect(firstComment.getByText("Hidden", { exact: true }).first()).toBeVisible();
-      await firstComment.getByRole("button", { name: "Unhide" }).click();
-      await expect(firstComment.getByText("Visible", { exact: true }).first()).toBeVisible();
-    }
+      const hideButton = firstComment.getByRole("button", { name: "Hide" });
+      if (await hideButton.isVisible()) {
+        await hideButton.click();
+        await expect(
+          firstComment.getByText("Hidden", { exact: true }).first(),
+        ).toBeVisible();
+        await firstComment.getByRole("button", { name: "Unhide" }).click();
+        await expect(
+          firstComment.getByText("Visible", { exact: true }).first(),
+        ).toBeVisible();
+      }
 
-    const deleteButton = firstComment.getByRole("button", { name: /^Delete$/ }).first();
-    await deleteButton.click();
-    await expect(firstComment.getByText("Permanently delete?")).toBeVisible();
-    await firstComment.getByRole("button", { name: "Cancel" }).click();
-    await expect(firstComment.getByText("Permanently delete?")).not.toBeVisible();
-  });
+      const deleteButton = firstComment
+        .getByRole("button", { name: /^Delete$/ })
+        .first();
+      await deleteButton.click();
+      await expect(firstComment.getByText("Permanently delete?")).toBeVisible();
+      await firstComment.getByRole("button", { name: "Cancel" }).click();
+      await expect(
+        firstComment.getByText("Permanently delete?"),
+      ).not.toBeVisible();
+    },
+  );
 });

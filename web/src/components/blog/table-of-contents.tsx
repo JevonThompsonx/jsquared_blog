@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 
 import type { TocHeading } from "@/lib/content";
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export function TableOfContents({ headings }: { headings: TocHeading[] }) {
-  const [activeId, setActiveId] = useState<string | null>(headings[0]?.id ?? null);
+  const [activeId, setActiveId] = useState<string | null>(
+    headings[0]?.id ?? null,
+  );
   const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
@@ -69,8 +76,13 @@ export function TableOfContents({ headings }: { headings: TocHeading[] }) {
                   href={`#${h.id}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    setTimeout(() => setActiveId(h.id), 50);
+                    const behavior: ScrollBehavior = prefersReducedMotion()
+                      ? "auto"
+                      : "smooth";
+                    document
+                      .getElementById(h.id)
+                      ?.scrollIntoView({ behavior, block: "start" });
+                    setActiveId(h.id);
                   }}
                 >
                   <span

@@ -3,19 +3,27 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src, sizes }: { alt: string; src: string; sizes?: string }) =>
-    createElement("img", { alt, src, sizes }),
+  default: ({
+    alt,
+    src,
+    sizes,
+  }: {
+    alt: string;
+    src: string;
+    sizes?: string;
+  }) => createElement("img", { alt, src, sizes }),
 }));
 
 vi.mock("@/components/layout/site-header", () => ({
-  SiteHeader: () => createElement("div", { "data-testid": "site-header" }, "Header shell"),
+  SiteHeader: () =>
+    createElement("div", { "data-testid": "site-header" }, "Header shell"),
 }));
 
 import AboutPage, { metadata } from "@/app/(blog)/about/page";
 
 describe("AboutPage", () => {
   it("exposes stable about metadata", () => {
-    expect(metadata.title).toBe("About — J²Adventures");
+    expect(metadata.title).toBe("About");
     expect(metadata.description).toContain("J’s behind J²Adventures");
   });
 
@@ -38,7 +46,7 @@ describe("AboutPage", () => {
     expect(markup).toContain('alt="Hiking"');
     expect(markup).toContain('alt="Van / camping"');
     expect(markup).toContain('alt="Travel"');
-    expect(markup).toContain('sizes=');
+    expect(markup).toContain("sizes=");
   });
 
   // NOTE: A "social links" section (Instagram/YouTube/TikTok) previously existed

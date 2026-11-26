@@ -1,14 +1,23 @@
 export const dynamic = "force-dynamic";
 
-import Image from "next/image";
+import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CdnImage } from "@/components/blog/cdn-image";
 import { HomeFeed } from "@/components/blog/home-feed";
 import { SearchInput } from "@/components/blog/search-input";
 import { ScrollToStories } from "@/components/blog/scroll-to-stories";
 import { SiteHeader } from "@/components/layout/site-header";
+import { buildAlternates } from "@/lib/seo";
 import { listPublishedPosts } from "@/server/queries/posts";
 import { listAllSeasons } from "@/server/dal/seasons";
+
+export const metadata: Metadata = {
+  title: { absolute: "J²Adventures — travel stories from the road" },
+  description:
+    "Field notes, maps, and photo-led stories from the places we wander.",
+  alternates: buildAlternates("/"),
+};
 
 const SEARCH_SUGGESTIONS = ["Sierra", "Winter", "Oregon", "Road trip"];
 
@@ -25,12 +34,17 @@ function getSeasonalHero(): SeasonalHero {
     backgroundImage: "url('/images/welcome.webp')",
     kicker: "Travel stories from the road",
     title: "J²Adventures",
-    subtitle: "Field notes, maps, and photo-led stories from the places we wander.",
+    subtitle:
+      "Field notes, maps, and photo-led stories from the places we wander.",
     note: "",
   };
 }
 
-export default async function HomePage({ searchParams }: { searchParams?: Promise<{ search?: string }> }) {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ search?: string }>;
+}) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const search = resolvedSearchParams?.search?.trim() ?? "";
   const posts = await listPublishedPosts(20, 0, search);
@@ -39,7 +53,9 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   let seasonOverrides: Record<string, string> = {};
   try {
     const seasons = await listAllSeasons();
-    seasonOverrides = Object.fromEntries(seasons.map((s) => [s.seasonKey, s.displayName]));
+    seasonOverrides = Object.fromEntries(
+      seasons.map((s) => [s.seasonKey, s.displayName]),
+    );
   } catch {
     // Degrade silently; auto-generated season names will be used
   }
@@ -48,13 +64,21 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
     const hasMatches = posts.length > 0;
 
     return (
-      <main id="main-content" style={{ background: "var(--background)" }} tabIndex={-1}>
+      <main
+        id="main-content"
+        style={{ background: "var(--background)" }}
+        tabIndex={-1}
+      >
         <SiteHeader />
         <section className="container mx-auto px-4 pb-2 pt-28 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-6 shadow-[var(--shadow)] backdrop-blur-sm sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Search results</p>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+              Search results
+            </p>
             <h1 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
-              {hasMatches ? `Results for “${search}”` : `No results for “${search}”`}
+              {hasMatches
+                ? `Results for “${search}”`
+                : `No results for “${search}”`}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
               {hasMatches
@@ -73,7 +97,12 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
             </div>
           </div>
         </section>
-        <HomeFeed key={`feed:${search.trim().toLowerCase()}`} initialPosts={posts} initialSearch={search} seasonOverrides={seasonOverrides} />
+        <HomeFeed
+          key={`feed:${search.trim().toLowerCase()}`}
+          initialPosts={posts}
+          initialSearch={search}
+          seasonOverrides={seasonOverrides}
+        />
       </main>
     );
   }
@@ -81,66 +110,103 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   const seasonalHero = getSeasonalHero();
 
   return (
-    <main id="main-content" style={{ background: "var(--background)" }} tabIndex={-1}>
+    <main
+      id="main-content"
+      style={{ background: "var(--background)" }}
+      tabIndex={-1}
+    >
       <SiteHeader />
 
-        <div className="landing-page relative overflow-hidden">
-          <Image
-            alt="Hero background"
-            className="object-cover"
-            fill
-            priority
-            src={seasonalHero.backgroundImage.replace(/^url\('(.+)'\)$/, "$1")}
-            sizes="100vw"
-          />
-          <div className="hero-shell relative z-10">
-            <div className="welcome-text backdrop-blur-sm">
-              {seasonalHero.kicker && <span className="hero-kicker">{seasonalHero.kicker}</span>}
-              <h1 className="landing-title drop-shadow-lg">{seasonalHero.title}</h1>
-              {seasonalHero.subtitle && <p className="landing-subtitle drop-shadow-md">{seasonalHero.subtitle}</p>}
-              {seasonalHero.note && <p className="hero-note">{seasonalHero.note}</p>}
-              <div className="hero-actions">
-                <ScrollToStories />
-                <Link className="hero-secondary-link" href="/map">
-                  Explore the map
-                </Link>
-                <a
-                  className="hero-secondary-link"
-                  href="/feed.xml"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  title="Subscribe to RSS Feed"
-                >
-                  RSS Feed
-                </a>
-              </div>
+      <div className="landing-page relative overflow-hidden">
+        <CdnImage
+          alt="Hero background"
+          className="object-cover"
+          fill
+          priority
+          src={seasonalHero.backgroundImage.replace(/^url\('(.+)'\)$/, "$1")}
+          sizes="100vw"
+        />
+        <div className="hero-shell relative z-10">
+          <div className="welcome-text">
+            {seasonalHero.kicker && (
+              <span className="hero-kicker">{seasonalHero.kicker}</span>
+            )}
+            <h1 className="landing-title drop-shadow-lg">
+              {seasonalHero.title}
+            </h1>
+            {seasonalHero.subtitle && (
+              <p className="landing-subtitle drop-shadow-md">
+                {seasonalHero.subtitle}
+              </p>
+            )}
+            {seasonalHero.note && (
+              <p className="hero-note">{seasonalHero.note}</p>
+            )}
+            <div className="hero-actions">
+              <ScrollToStories />
+              <Link className="hero-secondary-link" href="/map">
+                Explore the map
+              </Link>
+              <a
+                className="hero-secondary-link"
+                href="/feed.xml"
+                rel="noopener noreferrer"
+                target="_blank"
+                title="Subscribe to RSS Feed"
+              >
+                RSS Feed
+              </a>
             </div>
           </div>
-          <div className="scroll-indicator">
-            <div className="arrow-down"></div>
-          </div>
         </div>
+        <div className="scroll-indicator">
+          <div className="arrow-down"></div>
+        </div>
+      </div>
 
       <div className="main-content main-content-visible" id="stories">
         <div className="container mx-auto px-4 pt-8 pb-2 sm:px-6 lg:px-8">
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
-            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M3 17l4-8 4 4 4-6 4 5" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              aria-hidden="true"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M3 17l4-8 4 4 4-6 4 5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             Latest adventures
           </p>
-          <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">Stories from the trail</h2>
+          <h2 className="mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+            Stories from the trail
+          </h2>
         </div>
-        <HomeFeed key="feed:home" initialPosts={posts} initialSearch="" seasonOverrides={seasonOverrides} />
+        <HomeFeed
+          key="feed:home"
+          initialPosts={posts}
+          initialSearch=""
+          seasonOverrides={seasonOverrides}
+        />
 
         <section className="container mx-auto px-4 pt-8 pb-8 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl rounded-[2rem] border border-[var(--border)] bg-[var(--card-bg)]/80 p-8 shadow-[var(--shadow)] backdrop-blur-sm sm:p-10">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Next up</p>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+              Next up
+            </p>
             <div className="mt-4 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <h2 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">A few pins are still daydreams</h2>
+                <h2 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+                  A few pins are still daydreams
+                </h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  Peek at the places we keep plotting between published trips, from national park returns to roads we still want to chase.
+                  Peek at the places we keep plotting between published trips,
+                  from national park returns to roads we still want to chase.
                 </p>
               </div>
               <Link
