@@ -83,6 +83,11 @@ are refused unless the operator runs the reconciler directly with
 sudo deploy/blog/deploy.sh <commit-or-tag> --reconcile
 ```
 
+If reconciliation reports missing effects, the database is genuinely behind:
+apply the DDL from those named migrations first (or restore the pre-migration
+backup), then re-run reconciliation and `verify-schema.mjs`. Do not insert ledger
+rows for effects that do not exist.
+
 ## Rollback
 
 ```bash

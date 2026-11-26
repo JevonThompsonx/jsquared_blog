@@ -47,6 +47,29 @@ targeted test after implementation. No tests may be deleted to make a change pas
 - All unit/type/lint/build/package/E2E gates pass.
 - No secret, code, token, or PII is printed or committed.
 
+## Production schema repair (2026-11-25 20:34 UTC)
+
+The live database was ledgered at 20/27 with seven missing migrations and four
+legacy hashes. Two migrations had never applied (`0010_phase6_indexes`,
+`0023_post_revisions_metadata`); four were applied without ledger rows
+(`0011`, `0013`, `0014`, `0020`); `0026` was pending. Drizzle only applies
+migrations newer than the last ledger timestamp, so `0010`/`0023` could not be
+applied by the normal runner.
+
+Repair sequence (taken after a WAL-safe backup
+`/srv/blog/shared/backups/blog-20261126-0434.db`):
+
+1. Applied the six missing indexes from `0010` and all seven columns from `0023`
+   in one `BEGIN IMMEDIATE` transaction as `blog`.
+2. Ran the migration runner; it applied `0026` and its normalized-email preflight.
+3. Ran the ledger reconciler dry-run, then `--apply`: four legacy hashes updated,
+   six ledger rows inserted.
+4. `verify-schema.mjs`: **27/27 rows, 0 hash mismatches, 0 missing; 21 tables,
+   45 indexes; no missing tables/columns/indexes; no extra tables.**
+
+Live health stayed `ok` throughout. The pre-repair backup remains the rollback
+point for this schema change.
+
 ## Rollback
 
 - Code: restore previous release `20261125T2019`.

@@ -103,7 +103,7 @@ if [[ $SHA != "$HEAD_SHA" ]]; then
   exit 1
 fi
 
-for binary in node curl systemctl; do
+for binary in node curl systemctl runuser; do
   command -v "$binary" >/dev/null || {
     echo "Missing required command: $binary" >&2
     exit 1
@@ -216,8 +216,7 @@ if [[ $valid_admin -ne 1 ]]; then
 fi
 
 if systemctl cat "$SERVICE_NAME" >/dev/null 2>&1 && ! systemctl is-active --quiet "$SERVICE_NAME"; then
-  echo "Refusing to deploy: $SERVICE_NAME is not active. Restore it before switching releases." >&2
-  exit 1
+  echo "Warning: $SERVICE_NAME is not active; migrations still run as $SERVICE_USER and the deploy will restart it." >&2
 fi
 
 echo "Building release from $REF ($SHA)..."
