@@ -57,6 +57,31 @@ describe("rejectCrossSiteMutation", () => {
     ).toBe(403);
   });
 
+  it("allows localhost and 127.0.0.1 on any dev port", () => {
+    for (const origin of [
+      "http://localhost:3100",
+      "http://127.0.0.1:3100",
+      "http://[::1]:3100",
+    ]) {
+      expect(
+        rejectCrossSiteMutation(request("POST", { origin }))?.status,
+      ).toBeUndefined();
+    }
+  });
+
+  it("rejects localhost in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      expect(
+        rejectCrossSiteMutation(
+          request("POST", { origin: "http://localhost:3100" }),
+        )?.status,
+      ).toBe(403);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("rejects a missing Origin in production", () => {
     vi.stubEnv("NODE_ENV", "production");
     try {

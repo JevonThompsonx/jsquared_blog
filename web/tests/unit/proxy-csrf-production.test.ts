@@ -19,6 +19,8 @@ beforeAll(async () => {
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("RATE_LIMIT_DRIVER", "memory");
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://jsquaredadventures.com");
+  vi.stubEnv("CRON_SECRET", "test-cron-secret-min-16");
+  vi.stubEnv("ADMIN_ALLOWED_EMAILS", "admin@example.com");
   vi.resetModules();
   ({ proxy } = await import("@/proxy"));
 });

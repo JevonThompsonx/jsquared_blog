@@ -3,6 +3,12 @@ import { vi, describe, expect, it } from "vitest";
 vi.hoisted(() => {
   (process.env as Record<string, string>).NODE_ENV = "production";
   (process.env as Record<string, string>).RATE_LIMIT_DRIVER = "memory";
+  (process.env as Record<string, string>).CRON_SECRET =
+    "test-cron-secret-min-16";
+  (process.env as Record<string, string>).ADMIN_ALLOWED_EMAILS =
+    "admin@example.com";
+  (process.env as Record<string, string>).NEXT_PUBLIC_SITE_URL =
+    "https://jsquaredadventures.com";
 });
 
 import { NextRequest } from "next/server";

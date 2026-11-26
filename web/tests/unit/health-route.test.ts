@@ -21,19 +21,51 @@ function applyBaseEnv(): void {
   vi.stubEnv("CRON_SECRET", "1234567890abcdef");
 }
 
-async function importHealthRoute(options: {
+type HealthOptions = {
   databaseOk: boolean;
   mediaOk: boolean;
-}) {
+  writeOk?: boolean;
+  schemaOk?: boolean;
+};
+
+function createClientMock(options: HealthOptions) {
+  return {
+    execute: async (sql: unknown) => {
+      const text =
+        typeof sql === "string"
+          ? sql
+          : String((sql as { sql?: string }).sql ?? "");
+      if (/from\s+posts/i.test(text)) {
+        if (!options.databaseOk) throw new Error("db down");
+        return { rows: [{ n: 4 }] };
+      }
+      if (/sqlite_master/i.test(text)) {
+        // One query counts the critical indexes.
+        return { rows: [{ n: options.schemaOk === false ? 2 : 5 }] };
+      }
+      return { rows: [] };
+    },
+    transaction: async () => ({
+      execute: async () => {
+        if (options.writeOk === false) {
+          throw new Error("attempt to write a readonly database");
+        }
+        return { rows: [] };
+      },
+      commit: async () => {},
+      rollback: async () => {},
+    }),
+  };
+}
+
+async function importHealthRoute(options: HealthOptions) {
   vi.resetModules();
   vi.doMock("@/lib/env-loader", () => ({ loadEnvironmentFiles: () => {} }));
   vi.doMock("@/lib/db-core", () => ({
-    getDbClient: () => ({
-      execute: async () => {
-        if (!options.databaseOk) throw new Error("db down");
-        return { rows: [{ n: 4 }] };
-      },
-    }),
+    getDbClient: () => createClientMock(options),
+  }));
+  vi.doMock("@/lib/db", () => ({
+    getDbClient: () => createClientMock(options),
   }));
   vi.doMock("@/lib/media/local-storage", () => ({
     getLocalMediaRoot: () => "/tmp/health-media",
@@ -53,6 +85,16 @@ async function importHealthRoute(options: {
   return import("@/app/api/health/route");
 }
 
+async function getHealth(options: HealthOptions) {
+  const { GET } = await importHealthRoute(options);
+  const response = await GET();
+  const body = (await response.json()) as {
+    status: string;
+    checks: Record<string, unknown>;
+  };
+  return { response, body };
+}
+
 describe("GET /api/health", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -60,41 +102,30 @@ describe("GET /api/health", () => {
     vi.doUnmock("node:fs/promises");
   });
 
-  it("returns 200 when the database and media storage are healthy", async () => {
+  it("returns 200 when read, write, schema, and media probes pass", async () => {
     applyBaseEnv();
-    const { GET } = await importHealthRoute({
+    const { response, body } = await getHealth({
       databaseOk: true,
       mediaOk: true,
     });
-
-    const response = await GET();
-    const body = (await response.json()) as {
-      status: string;
-      checks: Record<string, unknown>;
-    };
 
     expect(response.status).toBe(200);
     expect(body.status).toBe("ok");
     expect(body.checks).toEqual({
       database: true,
+      databaseWrite: true,
+      schema: true,
       media: true,
-      rateLimitDriver: "upstash",
     });
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   it("returns 503 without leaking error details when the database is down", async () => {
     applyBaseEnv();
-    const { GET } = await importHealthRoute({
+    const { response, body } = await getHealth({
       databaseOk: false,
       mediaOk: true,
     });
-
-    const response = await GET();
-    const body = (await response.json()) as {
-      status: string;
-      checks: Record<string, unknown>;
-    };
 
     expect(response.status).toBe(503);
     expect(body.status).toBe("degraded");
@@ -102,14 +133,39 @@ describe("GET /api/health", () => {
     expect(JSON.stringify(body)).not.toContain("db down");
   });
 
+  it("returns 503 when the write probe cannot open a write transaction", async () => {
+    applyBaseEnv();
+    const { response, body } = await getHealth({
+      databaseOk: true,
+      mediaOk: true,
+      writeOk: false,
+    });
+
+    expect(response.status).toBe(503);
+    expect(body.checks.databaseWrite).toBe(false);
+    expect(JSON.stringify(body)).not.toContain("readonly");
+  });
+
+  it("returns 503 when a critical index is missing", async () => {
+    applyBaseEnv();
+    const { response, body } = await getHealth({
+      databaseOk: true,
+      mediaOk: true,
+      schemaOk: false,
+    });
+
+    expect(response.status).toBe(503);
+    expect(body.checks.schema).toBe(false);
+  });
+
   it("returns 503 when media storage is not writable", async () => {
     applyBaseEnv();
-    const { GET } = await importHealthRoute({
+    const { response, body } = await getHealth({
       databaseOk: true,
       mediaOk: false,
     });
 
-    const response = await GET();
     expect(response.status).toBe(503);
+    expect(body.checks.media).toBe(false);
   });
 });

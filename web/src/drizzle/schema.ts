@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -37,6 +38,11 @@ export const users = sqliteTable(
   (table) => ({
     primaryEmailUnique: uniqueIndex("users_primary_email_unique").on(
       table.primaryEmail,
+    ),
+    // WorkOS resolves identities case-insensitively (`lower(primary_email)`),
+    // so the database must enforce the same invariant.
+    primaryEmailLowerUnique: uniqueIndex("users_primary_email_lower_unique").on(
+      sql`lower(${table.primaryEmail})`,
     ),
   }),
 );

@@ -253,8 +253,8 @@ The 2026-11-25 cutover used:
 
 ## Rollback
 
-1. Code: point `/srv/blog/current` to `20261125T0001` and restart
-   `jsquared-blog.service`.
+1. Code: point `/srv/blog/current` to `20261125T2019` (tag
+   `prod-live-20261125T2019`) and restart `jsquared-blog.service`.
 2. Role-only: set the GitHub-created row back to `reader` rather than restoring the
    whole DB. Use the full WAL-safe backup only for corruption/emergency; it loses
    later writes.

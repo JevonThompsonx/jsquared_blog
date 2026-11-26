@@ -13,6 +13,7 @@ const {
   callbackHandlerMock,
   checkRateLimitMock,
   tooManyRequestsMock,
+  captureExceptionMock,
 } = vi.hoisted(() => ({
   handleAuthMock: vi.fn((_options: HandleAuthOptions) => callbackHandlerMock),
   getSignInUrlMock: vi.fn(),
@@ -24,6 +25,7 @@ const {
   callbackHandlerMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   tooManyRequestsMock: vi.fn(),
+  captureExceptionMock: vi.fn(),
 }));
 
 vi.mock("@workos-inc/authkit-nextjs", () => ({
@@ -52,6 +54,10 @@ vi.mock("@/lib/auth/session", () => ({
   requireAdminSession: requireAdminSessionMock,
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: captureExceptionMock,
+}));
+
 import { GET as callbackGET } from "@/app/callback/route";
 import { GET as loginGET } from "@/app/api/auth/login/route";
 import { GET as signupGET } from "@/app/api/auth/signup/route";
@@ -59,6 +65,7 @@ import { GET as logoutGET } from "@/app/api/auth/logout/route";
 import { GET as adminSessionGET } from "@/app/api/admin/session/route";
 import { GET as publicSessionGET } from "@/app/api/auth/session/route";
 import { parseAuthMaxAge } from "@/lib/auth/workos";
+import { captureException } from "@/lib/sentry";
 
 type CallbackOptions = HandleAuthOptions & {
   onSuccess: NonNullable<HandleAuthOptions["onSuccess"]>;
@@ -154,6 +161,50 @@ describe("WorkOS callback", () => {
     expect(resolveWorkosIdentityMock.mock.calls[0]?.[1]).toMatchObject({
       promoteAllowedUser: false,
     });
+  });
+
+  it("skips local identity mapping for an impersonation session", async () => {
+    await callbackGET(
+      new NextRequest("https://jsquaredadventures.com/callback"),
+    );
+    const options = getCallbackOptions();
+
+    await options.onSuccess({
+      user: verifiedUser,
+      impersonator: { email: "operator@example.com", reason: "support" },
+    } as never);
+
+    expect(resolveWorkosIdentityMock).not.toHaveBeenCalled();
+  });
+
+  it("logs only safe metadata when identity mapping fails unexpectedly", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await callbackGET(
+      new NextRequest("https://jsquaredadventures.com/callback"),
+    );
+    const options = getCallbackOptions();
+    const failure = Object.assign(
+      new Error("token for reader@example.com leaked"),
+      { code: "ERR_CALLBACK_LEAK" },
+    );
+    resolveWorkosIdentityMock.mockRejectedValue(failure);
+
+    await expect(
+      options.onSuccess({ user: verifiedUser } as never),
+    ).rejects.toBe(failure);
+
+    expect(vi.mocked(captureException)).toHaveBeenCalledWith(
+      failure,
+      expect.objectContaining({
+        area: "auth-callback",
+        errorName: "Error",
+        errorCode: "ERR_CALLBACK_LEAK",
+      }),
+    );
+    const serialized = JSON.stringify(errorSpy.mock.calls);
+    expect(serialized).not.toContain("reader@example.com");
+    expect(serialized).not.toContain("leaked");
+    errorSpy.mockRestore();
   });
 
   it.each([

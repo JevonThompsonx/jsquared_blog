@@ -11,17 +11,17 @@ web/
 ├── src/
 │   ├── app/          # Next.js App Router — pages + API routes
 │   ├── components/   # React components (admin, auth, blog, layout, providers, theme, ui)
-│   ├── drizzle/      # Schema (21 tables), Drizzle ORM with Turso/libSQL
+│   ├── drizzle/      # Schema (21 tables), Drizzle ORM with libSQL/SQLite
 │   ├── lib/          # Client libs: auth, cloudinary, supabase, rate-limit, env, geocode, email
 │   ├── server/       # Server-only: DAL, forms, services, queries, auth, feeds, cloudinary
 │   ├── types/        # TypeScript type definitions
 │   ├── proxy.ts      # CSP + CSRF middleware
 │   └── instrumentation.ts  # Sentry init
 ├── tests/
-│   ├── unit/         # Vitest (178 test files)
-│   └── e2e/          # Playwright (21 spec files)
+│   ├── unit/         # Vitest (189 test files)
+│   └── e2e/          # Playwright (18 spec files)
 │       └── helpers/  # E2E auth helpers
-├── drizzle/          # Migration files (24 SQL + meta/)
+├── drizzle/          # Migration files (27 SQL + meta/)
 ├── scripts/          # Build, seed, migration, E2E capture scripts
 └── playwright.config.ts  # E2E config
 ```
@@ -61,30 +61,30 @@ src/app/
 
 ## Component Categories
 
-| Dir | Files | Pattern |
-|-----|-------|---------|
-| `components/admin/` | 12 | Admin editor, dashboard, widgets |
-| `components/auth/` | 2 | AdminAuthButton, AuthKitNotice |
-| `components/blog/` | 25 | Post rendering, feed, comments, map, search |
-| `components/layout/` | 3 | SiteHeader, MobileNav, SiteFooter, BackToTop |
-| `components/providers/` | 3 | AppProviders, Theme, Navigation |
-| `components/theme/` | 1 | ThemeProvider |
-| `components/ui/` | 3 | ThemeSelect, FeedbackPanel, SearchInput |
-| `components/pwa-registry.tsx` | 1 | PWA manifest registration |
+| Dir                           | Files | Pattern                                      |
+| ----------------------------- | ----- | -------------------------------------------- |
+| `components/admin/`           | 12    | Admin editor, dashboard, widgets             |
+| `components/auth/`            | 2     | AdminAuthButton, AuthKitNotice               |
+| `components/blog/`            | 25    | Post rendering, feed, comments, map, search  |
+| `components/layout/`          | 3     | SiteHeader, MobileNav, SiteFooter, BackToTop |
+| `components/providers/`       | 3     | AppProviders, Theme, Navigation              |
+| `components/theme/`           | 1     | ThemeProvider                                |
+| `components/ui/`              | 3     | ThemeSelect, FeedbackPanel, SearchInput      |
+| `components/pwa-registry.tsx` | 1     | PWA manifest registration                    |
 
 ---
 
 ## Server Layer
 
-| Dir | Purpose |
-|-----|---------|
-| `server/dal/` | Data access layer — DB queries via Drizzle |
-| `server/forms/` | Zod schemas for request body validation |
-| `server/services/` | External integrations (email, newsletter) |
-| `server/queries/` | Read-only aggregated queries (dashboard, posts, wishlist) |
-| `server/posts/` | Post write operations (clone, delete, publish, preview) |
-| `server/auth/` | WorkOS identity mapping, reader resolution, admin authorization |
-| `server/feeds/` | RSS feed generation |
+| Dir                | Purpose                                                         |
+| ------------------ | --------------------------------------------------------------- |
+| `server/dal/`      | Data access layer — DB queries via Drizzle                      |
+| `server/forms/`    | Zod schemas for request body validation                         |
+| `server/services/` | External integrations (email, newsletter)                       |
+| `server/queries/`  | Read-only aggregated queries (dashboard, posts, wishlist)       |
+| `server/posts/`    | Post write operations (clone, delete, publish, preview)         |
+| `server/auth/`     | WorkOS identity mapping, reader resolution, admin authorization |
+| `server/feeds/`    | RSS feed generation                                             |
 
 ---
 
@@ -109,6 +109,7 @@ src/app/
 ## API Route Map
 
 ### Public (no auth required unless noted)
+
 - `GET /api/posts` — paginated published posts
 - `GET /api/posts/[postId]/comments`
 - `POST /api/posts/[postId]/comments` — WorkOS session
@@ -123,6 +124,7 @@ src/app/
 - `POST /api/route-plans`
 
 ### Admin (WorkOS + local admin role + recent auth)
+
 - `GET /api/admin/posts` — list all posts
 - `POST /api/admin/posts/clone` — clone a post
 - `POST /api/admin/posts/preview` — generate preview token
@@ -139,6 +141,7 @@ src/app/
 - `GET /api/admin/posts/warnings`
 
 ### Cron (Bearer CRON_SECRET)
+
 - `GET /api/cron/publish-scheduled` — daily midnight
 
 ---

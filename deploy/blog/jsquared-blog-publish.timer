@@ -1,0 +1,10 @@
+[Unit]
+Description=Publish due scheduled blog posts every 5 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/5:00 UTC
+Persistent=true
+RandomizedDelaySec=20
+
+[Install]
+WantedBy=timers.target

@@ -21,7 +21,7 @@
 **Package manager**: pnpm (primary), bun (dev-only for `bunx` one-off commands)
 **Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run build:node`, `pnpm run lint`, `pnpm run test`, `pnpm run typecheck`, `pnpm run db:migrate`, `pnpm run test:e2e` — **all run from `web/`**. The root `package.json` only defines `dev`, `build`, `lint`, `test` (+ `dev:web`/`build:web`/`lint:web`/`test:web`), which delegate via `pnpm --filter web run …`. There is no root-level `test:e2e`, `db:*`, or `seed:*` script. Equivalents: `pnpm dlx tsc --noEmit` or `pnpm --filter web exec tsc --noEmit`.
 **Env**: Zod-validated via `web/src/lib/env.ts`; loads `.env.test.local` → `.env.local` → `.env` → `.dev.vars`. WorkOS runtime is keyless: `WORKOS_CLIENT_ID`, exact `WORKOS_ISSUER`, approved `NEXT_PUBLIC_WORKOS_REDIRECT_URI`, `WORKOS_COOKIE_PASSWORD` (32+ chars), `WORKOS_COOKIE_MAX_AGE=1209600`, and `ADMIN_ALLOWED_EMAILS`. Never put `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
-**Tests**: `web/tests/unit/` (Vitest, 184 files / 1,541 tests), `web/tests/e2e/` (Playwright, 18 spec files; default local origin `http://127.0.0.1:3100`)
+**Tests**: `web/tests/unit/` (Vitest, 189 files / 1,595 tests), `web/tests/e2e/` (Playwright, 18 spec files; default local origin `http://127.0.0.1:3100`)
 **Security**: CSP with per-request nonces (`web/src/proxy.ts`), CSRF on admin routes, Zod at API boundaries, `sanitize-html` allowlist
 **Docs index**: [`docs/INDEX.md`](docs/INDEX.md) — one line per document in `docs/`
 
@@ -29,7 +29,7 @@
 
 - **pnpm workspace**: `pnpm-workspace.yaml` globs `web` only. One app package (`web`) plus the root manifest.
 - **Vercel deploy root is `web/`**: `web/vercel.json` sets `framework: nextjs`, `buildCommand: pnpm run build`, `outputDirectory: .next`, `installCommand: pnpm install`, and both cron routes. Root `vercel.json` carries the cron schedules only.
-- **Migrations**: `drizzle-kit generate` writes to `web/drizzle/` (24 SQL files), schema at `web/src/drizzle/schema.ts`. Drizzle Kit needs `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` in the environment before any `db:*` command runs.
+- **Migrations**: `drizzle-kit generate` writes to `web/drizzle/` (27 SQL files), schema at `web/src/drizzle/schema.ts`. Drizzle Kit needs `TURSO_DATABASE_URL`; a `file:` URL does not need `TURSO_AUTH_TOKEN`. Run `pnpm run db:migrate:node` and `pnpm run db:verify` during deploy.
 - **Gitignored internal docs**: `docs/DISASTER-RECOVERY.md`, `docs/AGENTS.md`, and the whole `.opencode/` directory are in `.gitignore`. They are machine-local, never committed, and links to them will dangle on a fresh clone.
 - **Root `package.json` legacy block**: the `"pnpm": { "overrides": { … } }` field is ignored by pnpm 11 (`pnpm` warns "The 'pnpm' field in package.json is no longer read"). Real overrides live in `pnpm-workspace.yaml` (`postcss`, `ws`, `uuid`, `tar`).
 - **Internal docs are not in this checkout**: `.opencode/review-prompt.md`, `.opencode/implementation-prompt.md` — `.opencode/` does not exist on this machine. Do not block on them; use the repo's own verification gates below.

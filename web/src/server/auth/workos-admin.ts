@@ -7,6 +7,8 @@ import { z } from "zod";
 import { users } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
 import { getServerEnv } from "@/lib/env";
+import { getSafeErrorMetadata } from "@/lib/safe-error";
+import { captureException } from "@/lib/sentry";
 import { parseAllowedEmails } from "@/lib/auth/workos";
 import { resolveWorkosIdentity } from "@/server/auth/workos-identity";
 
@@ -93,8 +95,13 @@ export async function getWorkosAdminAccessState(): Promise<AdminAccessState> {
       stale: false,
       viewer,
     };
-  } catch {
-    // Identity, database, and session-verification failures all deny admin access.
+  } catch (error) {
+    // Identity, database, and session-verification failures all deny admin
+    // access. Only the error class/code is logged: provider messages can embed
+    // identities, emails, or tokens.
+    const metadata = getSafeErrorMetadata(error);
+    console.error("[auth] admin access check failed", metadata);
+    captureException(error, { area: "workos-admin", ...metadata });
     return { session: null, stale: false, viewer };
   }
 }

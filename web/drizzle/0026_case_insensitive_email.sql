@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `users_primary_email_lower_unique` ON `users` (lower("primary_email"));

@@ -26,6 +26,20 @@ describe("POST /api/newsletter", () => {
     vi.clearAllMocks();
   });
 
+  it("rejects a cross-site newsletter mutation before rate limiting", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/newsletter", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+        body: "{}",
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(vi.mocked(checkRateLimit)).not.toHaveBeenCalled();
+    expect(vi.mocked(subscribeToNewsletter)).not.toHaveBeenCalled();
+  });
+
   it("returns 429 when throttled", async () => {
     const throttledResponse = NextResponse.json(
       { error: "Too many requests" },

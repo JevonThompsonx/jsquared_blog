@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { rejectCrossSiteMutation } from "@/lib/auth/csrf";
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { getSafeErrorMetadata } from "@/lib/safe-error";
 import { subscribeToNewsletterSchema } from "@/server/forms/newsletter";
 import {
   isNewsletterConfigured,
@@ -12,6 +14,9 @@ import {
 // Response: { status: "subscribed" | "skipped" }
 // Auth: Public
 export async function POST(request: Request): Promise<NextResponse> {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+
   const rl = await checkRateLimit(
     `newsletter:${getClientIp(request)}`,
     5,
@@ -65,7 +70,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         );
     }
   } catch (error) {
-    console.error("[newsletter] Failed to subscribe contact", error);
+    console.error(
+      "[newsletter] Failed to subscribe contact",
+      getSafeErrorMetadata(error),
+    );
     return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
   }
 }

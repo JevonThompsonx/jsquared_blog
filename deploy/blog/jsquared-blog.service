@@ -1,0 +1,31 @@
+[Unit]
+Description=J2 Adventures blog (Next.js standalone on Node)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=blog
+Group=blog
+WorkingDirectory=/srv/blog/current/web
+EnvironmentFile=/srv/blog/shared/.env
+ExecStart=/usr/local/bin/node /srv/blog/current/web/server.js
+Restart=always
+SuccessExitStatus=143
+RestartSec=3
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/srv/blog
+LimitNOFILE=65535
+MemoryHigh=1500M
+MemoryMax=2G
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jsquared-blog
+
+[Install]
+WantedBy=multi-user.target

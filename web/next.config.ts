@@ -72,9 +72,12 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // AuthKit is imported by the proxy and callback/server-auth modules. Trace
     // both SDKs explicitly so the standalone packager can link them at runtime.
+    // drizzle-orm is bundled for the app but must remain a real package for the
+    // migration/verify scripts shipped in the release.
     "/*": [
       "node_modules/@workos-inc/authkit-nextjs/**/*",
       "node_modules/@workos-inc/node/**/*",
+      "node_modules/drizzle-orm/**/*",
     ],
   },
   async headers() {

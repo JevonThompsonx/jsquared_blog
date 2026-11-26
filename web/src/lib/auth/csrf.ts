@@ -40,8 +40,19 @@ export function rejectCrossSiteMutation(request: Request): NextResponse | null {
   const configuredSite = process.env.NEXT_PUBLIC_SITE_URL;
   const allowed = new Set(PUBLIC_ORIGINS);
   if (process.env.NODE_ENV !== "production") {
-    allowed.add("http://localhost:3000");
-    allowed.add("http://127.0.0.1:3000");
+    // Local development and E2E run on arbitrary loopback ports.
+    try {
+      const parsedOrigin = new URL(origin);
+      if (
+        ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
+          parsedOrigin.hostname,
+        )
+      ) {
+        allowed.add(parsedOrigin.origin);
+      }
+    } catch {
+      // The malformed-origin branch above already returned 403.
+    }
   }
   if (configuredSite) {
     try {

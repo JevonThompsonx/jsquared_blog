@@ -7,64 +7,58 @@ as a rollback copy but are stopped.
 
 ## Topology
 
-| Piece      | Where                                                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Edge       | Cloudflare DNS, TLS, WAF, Access, cache                                                                                   |
-| Tunnel     | `templetonbak` (`ede2f4c2-4793-4d94-b4c5-8237fba8b10f`) via the host Docker `cloudflared`                                 |
-| Ingress    | `jsquaredadventures.com`, `www.jsquaredadventures.com`, `next.` → `http://127.0.0.1:3010`                                 |
-| App        | templetonbak host, Debian 13, Node 26, systemd `jsquared-blog.service` as user `blog`                                     |
-| Release    | `/srv/blog/releases/<UTC timestamp>/web` + `/srv/blog/current` symlink                                                    |
-| Database   | `/srv/blog/shared/blog.db` (SQLite, WAL)                                                                                  |
-| Media      | `/srv/blog/shared/media/` served at `/media/*`                                                                            |
-| Uploads    | admin/avatar routes write content-addressed WebP via `sharp`                                                              |
-| Rate limit | in-process (`RATE_LIMIT_DRIVER=memory`); single Node process                                                              |
-| Cron       | systemd timers on templetonbak (`jsquared-blog-publish`, `-backup`)                                                       |
-| Backups    | `sqlite3 .backup` daily 03:30 UTC, 14-day retention; templetonbak restic includes `/srv/blog/shared` (DB + media) offsite |
-| Staging    | `next.jsquaredadventures.com` (whole site behind Access)                                                                  |
+| Piece      | Where                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| Edge       | Cloudflare DNS, TLS, WAF, Access, cache                                                                            |
+| Tunnel     | `templetonbak` (`ede2f4c2-4793-4d94-b4c5-8237fba8b10f`) via the host Docker `cloudflared`                          |
+| Ingress    | `jsquaredadventures.com`, `www.jsquaredadventures.com`, `next.` → `http://127.0.0.1:3010`                          |
+| App        | templetonbak host, Debian 13, Node 26, systemd `jsquared-blog.service` as user `blog`                              |
+| Release    | `/srv/blog/releases/<UTC timestamp>/web` + `/srv/blog/current` symlink                                             |
+| Database   | `/srv/blog/shared/blog.db` (SQLite, WAL)                                                                           |
+| Media      | `/srv/blog/shared/media/` served at `/media/*`                                                                     |
+| Uploads    | admin/avatar routes write content-addressed WebP via `sharp`                                                       |
+| Rate limit | in-process (`RATE_LIMIT_DRIVER=memory`); single Node process                                                       |
+| Cron       | systemd timers on templetonbak (`jsquared-blog-publish`, `-backup`)                                                |
+| Backups    | `sqlite3 .backup` daily 03:30 UTC, 14-day retention; restic snapshots a consistent `blog-restic.db` plus media/env |
+| Staging    | `next.jsquaredadventures.com` (whole site behind Access)                                                           |
 
 The Cloudflare Worker `jsquared-blog` is **retained as a rollback artifact only**.
 Its custom domains, cron schedules, and DNS records were removed at cutover.
 
 ## Deploy
 
-Build on templetonbak (the production host) from the repo root:
+Deploy only from a committed/tagged ref. The versioned host contract and deploy
+script live in [`../../deploy/blog/`](../../deploy/blog/).
 
 ```bash
-cd web
-set -a; . ../../.env; set +a
-export TURSO_DATABASE_URL="file:$PWD/../local/blog.db"
-export LOCAL_MEDIA_ROOT="$PWD/../local/media"
-export RATE_LIMIT_DRIVER=memory NEXT_OUTPUT=standalone NODE_ENV=production
-pnpm run build:node
-node scripts/package-standalone.mjs /tmp/j2-release
+cd /path/to/jsquared_blog
+sudo deploy/blog/verify-host.sh
+sudo deploy/blog/deploy.sh <release-tag>
 ```
 
-`package-standalone.mjs` copies `.next/standalone`, `.next/static`, and
-`public/`, then recreates the runtime symlinks that Next does not trace
-(`sharp`, `@libsql/client`, `@libsql/core`) and strips local `*.env*` files.
-Without those links the release only works on a machine that already has the
-pnpm workspace.
+The deploy script refuses a dirty worktree, a ref that is not `HEAD`, a missing
+runtime variable, or a missing backup helper. It builds and packages the standalone
+release, makes the release and `.next/cache` writable by `blog`, records a WAL-safe
+SQLite backup, applies migrations as `blog`, verifies the schema, switches
+`/srv/blog/current`, restarts the service, and checks `/api/health`. It aborts
+before the switch if any gate fails, and a failed post-switch check rolls back and
+re-verifies the previous release's health.
 
-Ship and switch on templetonbak:
+`package-standalone.mjs` copies `.next/standalone`, `.next/static`, and `public/`,
+then recreates runtime symlinks for `sharp`, `@libsql/client`, `@libsql/core`,
+`drizzle-orm`, and both WorkOS packages. It strips local `*.env*` files.
 
-```bash
-TS=$(date -u +%Y%m%dT%H%M)
-sudo mkdir -p "/srv/blog/releases/$TS"
-tar -C /tmp/j2-release -cf - . | sudo tar -C "/srv/blog/releases/$TS" -xf -
-sudo chown -R blog:blog "/srv/blog/releases/$TS"
-sudo ln -sfn "/srv/blog/releases/$TS" /srv/blog/current
-sudo systemctl restart jsquared-blog
-sleep 4
-curl -fsS http://127.0.0.1:3010/api/health
-```
+`/srv/blog` and `/srv/blog/releases` are mode `750 root:blog`; the service account
+can read releases but cannot replace the release symlink or add new code. Each
+release directory and its `.next/cache` are `blog:blog` so image optimisation and
+ISR writes work. `/srv/blog/shared` is `770 blog:blog` for DB/media writes;
+`/srv/blog/shared/backups` is `700 blog:blog`. The service binds only
+`127.0.0.1:3010`; Cloudflare Tunnel reaches it locally.
 
-`/srv/blog` is mode 750 `blog:blog`; use `sudo` for release and symlink changes.
-The service runs as `blog` and binds only `127.0.0.1:3010`; Cloudflare Tunnel
-reaches it locally.
-
-Keep three releases. If the health endpoint returns 503, inspect
-`journalctl -u jsquared-blog -n 100 --no-pager`; switch `current` back to the
-previous release and restart.
+Keep three releases. If health returns 503, inspect
+`journalctl -u jsquared-blog -n 100 --no-pager`, switch `current` back to the
+previous release, and restart. Migration 0026 is additive and safe for the previous
+app release.
 
 ## Environment
 
@@ -72,9 +66,12 @@ previous release and restart.
 
 - Required: `TURSO_DATABASE_URL=file:/srv/blog/shared/blog.db`,
   `LOCAL_MEDIA_ROOT=/srv/blog/shared/media`, `RATE_LIMIT_DRIVER=memory`,
-  `WORKOS_CLIENT_ID`, exact `WORKOS_ISSUER`, approved
-  `NEXT_PUBLIC_WORKOS_REDIRECT_URI`, `WORKOS_COOKIE_PASSWORD` (32+ chars),
-  `WORKOS_COOKIE_MAX_AGE=1209600`, `ADMIN_ALLOWED_EMAILS`, and `CRON_SECRET`.
+  `NEXT_PUBLIC_SITE_URL=https://jsquaredadventures.com`, `WORKOS_CLIENT_ID`,
+  exact `WORKOS_ISSUER`, approved `NEXT_PUBLIC_WORKOS_REDIRECT_URI`,
+  `WORKOS_COOKIE_PASSWORD` (32+ chars), `WORKOS_COOKIE_MAX_AGE=1209600`,
+  non-empty valid `ADMIN_ALLOWED_EMAILS`, and `CRON_SECRET` (16+ chars).
+- Production boot fails fast if `CRON_SECRET`, `ADMIN_ALLOWED_EMAILS`, or
+  `NEXT_PUBLIC_SITE_URL` is missing/invalid; errors never echo values.
 - `WORKOS_API_KEY` and `WORKOS_COOKIE_DOMAIN` must not be set in the app service.
 - `CF_ACCESS_TEAM_DOMAIN` / `CF_ACCESS_AUD` are legacy rollback vars. Cloudflare
   Access no longer gates `/admin`; only `next.` remains Access-gated.
@@ -143,9 +140,10 @@ tunnel, and purge Cloudflare's cache. The CT153 release and DB are the
 pre-move copy; writes made on templetonbak after the move are not in it.
 
 Database rollback: `sudo systemctl stop jsquared-blog`, restore the desired
-`/srv/blog/shared/backups/blog-*.db` over `blog.db`, `sudo chown blog:blog`,
-`sudo systemctl start jsquared-blog`. Any rows written after that backup are
-lost; export them first if the rollback is not an emergency.
+`/srv/blog/shared/backups/blog-*.db` over `blog.db`, then delete
+`/srv/blog/shared/blog.db-wal` and `/srv/blog/shared/blog.db-shm`, `sudo chown
+blog:blog`, `sudo systemctl start jsquared-blog`. Any rows written after that
+backup are lost; export them first if the rollback is not an emergency.
 
 Worker rollback (only meaningful if you also accept the pre-cutover Turso
 state): re-attach the custom domains and cron schedules from
@@ -173,7 +171,8 @@ commit).
 - **CT153 is standby, not live.** Its `jsquared-blog.service` is disabled and
   its timers are off; its `/srv/blog` copy is the rollback material.
 - **Plausible and Sentry stay external** (free tiers). They are removable, but
-  they are not part of the origin migration.
+  they are not part of the origin migration. Sentry is currently unset; journal
+  logs are the application signal.
 - **Maps stay external** (Stadia + OpenStreetMap). Self-hosting tiles/geocoding
   is 100 GB+ and high maintenance.
 - **Never add `loading.tsx` above a route that calls `notFound()`.** A streaming
@@ -185,3 +184,10 @@ commit).
   Node process. Scaling to multiple instances requires a shared store.
 - **Cloudflare API token expires 2026-12-01.** Renew it before changing DNS,
   Access, or tunnel configuration.
+- **Backups use a consistent SQLite snapshot.** `jsquared-blog-backup` uses
+  `umask 077`, mode-600 files, and `blog-[0-9]*.db` pruning; restic snapshots
+  `/srv/blog/shared/blog-restic.db` instead of live WAL files. Restore with the
+  DB/WAL/SHM removal step above.
+- **Monitoring.** Kuma monitors the blog root every minute. A second monitor for
+  `https://jsquaredadventures.com/api/health` should be added with a 10-second
+  timeout and keyword `"status":"ok"`; Sentry remains optional.

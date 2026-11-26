@@ -582,9 +582,9 @@ web/                          # Next.js application
       cloudinary/             # Cloudinary asset destruction (post delete cleanup)
     proxy.ts                  # CSRF + CSP + Next.js middleware config (matcher + export)
     instrumentation.ts        # Sentry initialization
-  drizzle/                    # Drizzle Kit migration files (25 SQL + meta/)
+  drizzle/                    # Drizzle Kit migration files (27 SQL + meta/)
   scripts/                    # Build, migration, seed, E2E helper scripts
-  tests/                      # Unit (Vitest, 178 test files) + E2E (Playwright, 17 spec files)
+  tests/                      # Unit (Vitest, 189 test files) + E2E (Playwright, 18 spec files)
     unit/                     # Vitest unit tests
     e2e/                      # Playwright E2E tests
       helpers/                # E2E auth state helpers

@@ -1,0 +1,9 @@
+[Unit]
+Description=Hot-backup the blog SQLite database
+
+[Service]
+Type=oneshot
+User=blog
+Group=blog
+UMask=0077
+ExecStart=/usr/local/bin/jsquared-blog-backup

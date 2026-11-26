@@ -89,16 +89,50 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Informative-only: 28 high + 1 critical pre-existing transitive vulns
-      # (maplibre-gl GHSA-jrc7, undici, vite, brace-expansion, js-yaml, nanoid,
-      # postcss, smol-toml). Follow-up: update maplibre-gl/undici/vite to clear.
-      - run: pnpm audit --audit-level=high
+      # Blocking: production dependencies must have no high/critical advisory.
+      - run: pnpm audit --prod --audit-level=high
+      # Informative-only: devDependency tree advisories are tracked but do not
+      # gate the release (pre-existing transitive vulns in test/build tooling).
+      - run: pnpm audit --dev --audit-level=high
         continue-on-error: true
       # Equivalent to `gitleaks detect --no-git` via the official action.
       - name: Gitleaks scan
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  migrations:
+    name: Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate migrations from schema
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: file:${{ runner.temp }}/generate.db
+        run: pnpm run db:generate
+      - name: Fail if generated output is not committed
+        run: |
+          git diff --exit-code web/drizzle
+          test -z "$(git status --porcelain web/drizzle)"
+      - name: Apply migrations to a temporary database
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: file:${{ runner.temp }}/migrate.db
+        run: pnpm run db:migrate:node
+      - name: Verify schema and migration ledger
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: file:${{ runner.temp }}/migrate.db
+        run: pnpm run db:verify
 
   build:
     name: Build

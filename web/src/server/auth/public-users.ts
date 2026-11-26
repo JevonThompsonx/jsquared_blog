@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { profiles, users } from "@/drizzle/schema";
 import { getDb } from "@/lib/db";
 import { getServerEnv } from "@/lib/env";
+import { getSafeErrorMetadata } from "@/lib/safe-error";
+import { captureException } from "@/lib/sentry";
 import { parseAllowedEmails } from "@/lib/auth/workos";
 import {
   resolveWorkosIdentity,
@@ -53,8 +55,18 @@ export async function getPublicAppUserById(
 export async function getRequestPublicUser(
   _request: Request,
 ): Promise<PublicAppUser | null> {
-  const { user } = await withAuth();
-  if (!user || user.emailVerified !== true) {
+  let auth: Awaited<ReturnType<typeof withAuth>>;
+  try {
+    auth = await withAuth();
+  } catch (error) {
+    const metadata = getSafeErrorMetadata(error);
+    console.error("[auth] public user session check failed", metadata);
+    captureException(error, { area: "public-users-session", ...metadata });
+    return null;
+  }
+
+  const { user, impersonator } = auth;
+  if (!user || user.emailVerified !== true || impersonator) {
     return null;
   }
 
@@ -67,6 +79,9 @@ export async function getRequestPublicUser(
     if (error instanceof WorkosIdentityError) {
       return null;
     }
-    throw error;
+    const metadata = getSafeErrorMetadata(error);
+    console.error("[auth] public user resolution failed", metadata);
+    captureException(error, { area: "public-users", ...metadata });
+    return null;
   }
 }

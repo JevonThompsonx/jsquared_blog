@@ -269,9 +269,7 @@ pnpm exec tsx ./scripts/seed-locations.ts             # Seed location metadata
 
 ### Disaster Recovery
 
-`docs/DISASTER-RECOVERY.md` is listed in `.gitignore` as an internal document, so it is not committed and will be missing from a fresh clone. It describes recovering accidentally deleted posts via Turso point-in-time branching.
-
-Until that file exists locally, the only repo-local recovery surface is the migration set in `web/drizzle/` (25 SQL files) plus `pnpm run db:migrate`. Row-level restore depends on a Turso backup/branch procedure that is not documented in this repo.
+`docs/DISASTER-RECOVERY.md` is listed in `.gitignore` as an internal document, so it is not committed and will be missing from a fresh clone. The committed recovery surface is the migration set in `web/drizzle/` (27 SQL files), `pnpm run db:migrate`, `pnpm run db:verify`, and the local SQLite/restic restore procedure in `docs/runbooks/local-origin.md`.
 
 ### New Project Setup
 
@@ -279,7 +277,8 @@ Apply Drizzle migrations against the configured SQLite/libSQL database from `web
 
 ```bash
 cd web
-pnpm run db:migrate
+pnpm run db:migrate:node
+pnpm run db:verify
 ```
 
 Optional local content helpers:
@@ -453,7 +452,7 @@ Start at [`docs/INDEX.md`](./docs/INDEX.md) — it has one line for every docume
 | [docs/CHANGELOG.md](./docs/CHANGELOG.md)                       | Version history and completed work log                                                                                                        |
 | [docs/branches/](./docs/branches/)                             | Per-branch implementation checklists (all merged)                                                                                             |
 | [docs/runbooks/](./docs/runbooks/)                             | Manual operational smoke tests                                                                                                                |
-| `docs/DISASTER-RECOVERY.md`                                    | Post deletion recovery via Turso PITR — **internal, gitignored, not in a fresh clone**                                                        |
+| `docs/DISASTER-RECOVERY.md`                                    | Additional disaster-recovery notes — **internal, gitignored, not in a fresh clone**                                                           |
 | [AGENTS.md](./AGENTS.md)                                       | Agent operating instructions (workflow, patterns, constraints)                                                                                |
 
 ---

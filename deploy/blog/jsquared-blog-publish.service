@@ -1,0 +1,13 @@
+[Unit]
+Description=Publish due scheduled blog posts
+After=jsquared-blog.service
+Wants=jsquared-blog.service
+
+[Service]
+Type=oneshot
+User=blog
+Group=blog
+NoNewPrivileges=true
+PrivateTmp=true
+EnvironmentFile=/srv/blog/shared/.env
+ExecStart=/usr/bin/curl -fsS --max-time 120 -H "Authorization: Bearer ${CRON_SECRET}" http://127.0.0.1:3010/api/cron/publish-scheduled

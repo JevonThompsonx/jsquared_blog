@@ -119,6 +119,11 @@ describe("error and 404 pages", () => {
 
     expect(markup).toContain('id="main-content"');
     expect(markup.match(/<h1\b/g)?.length).toBe(1);
+    // Dark-mode support must come from matchMedia state, never an inline
+    // style tag (which the CSP would block or allowlist inconsistently).
+    expect(markup).not.toContain("<style");
+    expect(markup).not.toContain("prefers-color-scheme");
+    expect(markup).toContain("#f4efe5");
   });
 
   it("account shell fallback exposes an h1 and a sign-in path", () => {

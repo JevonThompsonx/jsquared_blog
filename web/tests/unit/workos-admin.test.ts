@@ -16,14 +16,21 @@ import {
   vi,
 } from "vitest";
 
-const { withAuthMock, checkRecentAuthMock } = vi.hoisted(() => ({
-  withAuthMock: vi.fn(),
-  checkRecentAuthMock: vi.fn(),
-}));
+const { withAuthMock, checkRecentAuthMock, captureExceptionMock } = vi.hoisted(
+  () => ({
+    withAuthMock: vi.fn(),
+    checkRecentAuthMock: vi.fn(),
+    captureExceptionMock: vi.fn(),
+  }),
+);
 
 vi.mock("@workos-inc/authkit-nextjs", () => ({
   withAuth: withAuthMock,
   checkRecentAuth: checkRecentAuthMock,
+}));
+
+vi.mock("@/lib/sentry", () => ({
+  captureException: captureExceptionMock,
 }));
 
 type AdminModule = typeof import("@/server/auth/workos-admin");
@@ -313,5 +320,34 @@ describe("WorkOS admin authorization", () => {
       stale: false,
       viewer: null,
     });
+  });
+
+  it("logs only safe metadata when the admin identity check fails unexpectedly", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    withAuthMock.mockRejectedValue(
+      Object.assign(new Error("token for admin@example.com is invalid"), {
+        name: "HttpError",
+        code: "ERR_ADMIN_LEAK",
+      }),
+    );
+
+    expect(await getWorkosAdminSession()).toBeNull();
+
+    expect(captureExceptionMock).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        area: "workos-admin",
+        errorName: "HttpError",
+        errorCode: "ERR_ADMIN_LEAK",
+      }),
+    );
+    expect(errorSpy).toHaveBeenCalledWith("[auth] admin access check failed", {
+      errorName: "HttpError",
+      errorCode: "ERR_ADMIN_LEAK",
+    });
+    const serialized = JSON.stringify(errorSpy.mock.calls);
+    expect(serialized).not.toContain("admin@example.com");
+    expect(serialized).not.toContain("invalid");
+    errorSpy.mockRestore();
   });
 });

@@ -108,6 +108,8 @@ describe("runtime env validation", () => {
       applyBaseEnv();
       vi.stubEnv("NODE_ENV", "production");
       vi.stubEnv("RATE_LIMIT_DRIVER", "memory");
+      vi.stubEnv("CRON_SECRET", "test-cron-secret-min-16");
+      vi.stubEnv("ADMIN_ALLOWED_EMAILS", "admin@example.com");
       vi.stubEnv("NEXT_PUBLIC_SITE_URL", siteUrl);
 
       await expect(importEnvModule()).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/);
@@ -118,6 +120,8 @@ describe("runtime env validation", () => {
     applyBaseEnv();
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("RATE_LIMIT_DRIVER", "memory");
+    vi.stubEnv("CRON_SECRET", "test-cron-secret-min-16");
+    vi.stubEnv("ADMIN_ALLOWED_EMAILS", "admin@example.com");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://jsquaredadventures.com");
 
     await expect(importEnvModule()).resolves.toMatchObject({

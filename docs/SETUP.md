@@ -51,7 +51,9 @@ Copy `web/.env.example` to `web/.env.local` and configure:
 | `RATE_LIMIT_DRIVER`               | `memory` for the single templetonbak Node process           | repo default              |
 
 Do not set `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
-`NEXT_PUBLIC_SITE_URL` must be HTTPS and non-loopback in deployed environments.
+`NEXT_PUBLIC_SITE_URL` is required in production and must be HTTPS and
+non-loopback. `ADMIN_ALLOWED_EMAILS` must contain at least one valid address in
+production.
 The runtime is keyless and sessions are host-scoped.
 
 Legacy `BETTER_AUTH_*`, `AUTH_SECRET`, `AUTH_GITHUB_*`, `AUTH_ADMIN_GITHUB_IDS`,
@@ -93,7 +95,7 @@ tests never call WorkOS or depend on `next/cache` ESM resolution.
 | `LISTMONK_ACCESS_CLIENT_ID` / `_SECRET` | Worker → Listmonk Access service token                     | API request denied                                   |
 | `UPSTASH_REDIS_REST_URL`                | Production rate limiting                                   | In-memory fallback in dev/test; **required in prod** |
 | `UPSTASH_REDIS_REST_TOKEN`              | Production rate limiting                                   | Same as above                                        |
-| `CRON_SECRET`                           | Cron job endpoints (deployed)                              | Cron returns 500 in prod; local dev bypasses         |
+| `CRON_SECRET`                           | Cron job endpoints                                         | Required in production; boot fails if missing        |
 | `LOCAL_MEDIA_ROOT`                      | Directory served at `/media`; required on the local origin | e.g. `/srv/blog/shared/media`                        |
 | `RATE_LIMIT_DRIVER`                     | `memory` for the single templetonbak process               | required locally; Upstash only for rollback          |
 | `NEXT_PUBLIC_SENTRY_DSN`                | Sentry error tracking                                      | Sentry disabled                                      |

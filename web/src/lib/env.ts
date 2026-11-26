@@ -3,10 +3,14 @@ import { z } from "zod";
 import { loadEnvironmentFiles } from "@/lib/env-loader";
 import {
   isDeployedEnvironment,
+  isProductionDeployment,
   shouldWarnAboutMissingCronSecret,
 } from "@/lib/runtime-env";
 
-export { isDeployedEnvironment } from "@/lib/runtime-env";
+export {
+  isDeployedEnvironment,
+  isProductionDeployment,
+} from "@/lib/runtime-env";
 
 loadEnvironmentFiles();
 
@@ -335,11 +339,17 @@ function assertRateLimitConfiguration(
 function assertPublicSiteConfiguration(
   env: NodeJS.ProcessEnv = getEnvSource(),
 ): void {
-  if (!isDeployedEnvironment(env) || !env.NEXT_PUBLIC_SITE_URL?.trim()) return;
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL?.trim();
+
+  if (isProductionDeployment(env) && !siteUrl) {
+    throw new Error("NEXT_PUBLIC_SITE_URL is required in production.");
+  }
+
+  if (!isDeployedEnvironment(env) || !siteUrl) return;
 
   let parsed: URL;
   try {
-    parsed = new URL(env.NEXT_PUBLIC_SITE_URL);
+    parsed = new URL(siteUrl);
   } catch {
     throw new Error("NEXT_PUBLIC_SITE_URL must be a valid public HTTPS URL");
   }
@@ -349,6 +359,42 @@ function assertPublicSiteConfiguration(
   if (parsed.protocol !== "https:" || loopback) {
     throw new Error(
       "NEXT_PUBLIC_SITE_URL must use HTTPS and a non-loopback host in deployed environments",
+    );
+  }
+}
+
+const ADMIN_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Production boot fails closed on the settings an unattended origin cannot
+ * invent. Messages name the variable only: values (emails, secrets, URLs) are
+ * never echoed into logs.
+ */
+function assertProductionConfiguration(
+  env: NodeJS.ProcessEnv = getEnvSource(),
+): void {
+  if (!isProductionDeployment(env)) return;
+
+  const cronSecret = env.CRON_SECRET?.trim();
+  if (!cronSecret) {
+    throw new Error("CRON_SECRET is required in production.");
+  }
+  if (cronSecret.length < 16) {
+    throw new Error(
+      "CRON_SECRET must be at least 16 characters in production.",
+    );
+  }
+
+  const entries = (env.ADMIN_ALLOWED_EMAILS ?? "")
+    .split(/[,\s]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const validEntries = entries.filter((entry) =>
+    ADMIN_EMAIL_PATTERN.test(entry),
+  );
+  if (validEntries.length === 0) {
+    throw new Error(
+      "ADMIN_ALLOWED_EMAILS must contain at least one valid email address in production.",
     );
   }
 }
@@ -379,6 +425,7 @@ if (!isNextBuild) {
   cachedWorkosEnv = workosEnvSchema.parse(getEnvSource());
   assertRateLimitConfiguration(getEnvSource());
   assertPublicSiteConfiguration(getEnvSource());
+  assertProductionConfiguration(getEnvSource());
 
   if (shouldWarnAboutMissingCronSecret(getEnvSource())) {
     console.warn(

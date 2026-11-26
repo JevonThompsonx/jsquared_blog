@@ -13,7 +13,7 @@
  * does not. This script recreates the links with paths relative to the release,
  * then copies static assets and `public/`.
  */
-import { cp, mkdir, readdir, rm, symlink } from "node:fs/promises";
+import { cp, mkdir, readdir, rm, stat, symlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -104,6 +104,25 @@ await cp(path.join(webRoot, "public"), path.join(releaseAppDir, "public"), {
   recursive: true,
 });
 
+// Migrations and their runner must travel with the release: the deploy script
+// applies and verifies them before switching the `current` symlink.
+await cp(path.join(webRoot, "drizzle"), path.join(releaseAppDir, "drizzle"), {
+  recursive: true,
+});
+const releaseScriptsDir = path.join(releaseAppDir, "scripts");
+const migrationScripts = [
+  "migrate-database.mjs",
+  "verify-schema.mjs",
+  "reconcile-migration-ledger.mjs",
+];
+await mkdir(releaseScriptsDir, { recursive: true });
+for (const name of migrationScripts) {
+  await cp(
+    path.join(webRoot, "scripts", name),
+    path.join(releaseScriptsDir, name),
+  );
+}
+
 // Never ship local/test environment files. Runtime values come from the
 // systemd EnvironmentFile; stale test values only cause surprises.
 for (const name of [
@@ -119,6 +138,7 @@ for (const name of [
 const sharpDir = await findPnpmPackage("sharp@");
 const libsqlClientDir = await findPnpmPackage("@libsql+client@");
 const libsqlCoreDir = await findPnpmPackage("@libsql+core@");
+const drizzleOrmDir = await findPnpmPackage("drizzle-orm@");
 const authkitNextjsDir = await findPnpmPackage("@workos-inc+authkit-nextjs@");
 const workosNodeDir = await findPnpmPackage("@workos-inc+node@");
 
@@ -132,6 +152,10 @@ await linkRuntimePackage(
   path.relative(standalone, libsqlCoreDir),
 );
 await linkRuntimePackage(
+  "drizzle-orm",
+  path.relative(standalone, drizzleOrmDir),
+);
+await linkRuntimePackage(
   "@workos-inc/authkit-nextjs",
   path.relative(standalone, authkitNextjsDir),
 );
@@ -140,9 +164,36 @@ await linkRuntimePackage(
   path.relative(standalone, workosNodeDir),
 );
 
+async function assertDirectory(target) {
+  const entry = await stat(target).catch(() => null);
+  if (!entry?.isDirectory()) {
+    throw new Error(`Release is missing required directory: ${target}`);
+  }
+}
+
+async function verifyRelease() {
+  await assertDirectory(
+    path.join(releaseAppDir, "node_modules", "drizzle-orm"),
+  );
+  await assertDirectory(path.join(releaseAppDir, "drizzle"));
+  await stat(
+    path.join(releaseAppDir, "drizzle", "meta", "_journal.json"),
+  ).catch(() => {
+    throw new Error("Release is missing drizzle/meta/_journal.json");
+  });
+  for (const name of migrationScripts) {
+    await stat(path.join(releaseScriptsDir, name)).catch(() => {
+      throw new Error(`Release is missing scripts/${name}`);
+    });
+  }
+}
+
+await verifyRelease();
+
 console.log(`Release assembled at ${outputDir}`);
 console.log(`  app:    ${releaseAppDir}`);
 console.log(`  sharp:  ${sharpDir}`);
 console.log(`  libsql: ${libsqlClientDir}`);
+console.log(`  drizzle-orm: ${drizzleOrmDir}`);
 console.log(`  authkit: ${authkitNextjsDir}`);
 console.log(`  workos: ${workosNodeDir}`);

@@ -183,6 +183,13 @@
       "when": 1795531223965,
       "tag": "0025_workos_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1795657050235,
+      "tag": "0026_case_insensitive_email",
+      "breakpoints": true
     }
   ]
 }

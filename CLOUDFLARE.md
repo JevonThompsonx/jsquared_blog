@@ -117,7 +117,12 @@ Any new module reading configuration server-side must use `getEnvSource()`.
 1. Nothing blocking. Sign in at `/admin` with an allowlisted address and an email
    one-time code, passkey, or configured OAuth provider; the dashboard loads
    directly with no Cloudflare Access or GitHub-only step.
-2. Optional: enable Cloudflare Images for `next/image` optimisation; Sentry source
+2. **Renew the Cloudflare API token before 2026-12-01.** The current account token
+   expires then; DNS, tunnel, WAF, and Access changes will fail after expiry.
+3. Add a Kuma monitor for `https://jsquaredadventures.com/api/health` (60-second
+   interval, 10-second timeout, keyword `"status":"ok"`). Sentry remains optional
+   and is currently unset.
+4. Optional: enable Cloudflare Images for `next/image` optimisation; Sentry source
    maps are partial under vinext.
 
 Full detail: `docs/CLOUDFLARE-HOSTING.md` (operations) and
