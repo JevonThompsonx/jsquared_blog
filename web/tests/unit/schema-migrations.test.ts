@@ -10,7 +10,10 @@ import {
   preflightNormalizedEmailUniqueness,
   runMigrations,
 } from "../../scripts/migrate-database.mjs";
-import { reconcileMigrationLedger } from "../../scripts/reconcile-migration-ledger.mjs";
+import {
+  extractMigrationEffects,
+  reconcileMigrationLedger,
+} from "../../scripts/reconcile-migration-ledger.mjs";
 import { verifySchema } from "../../scripts/verify-schema.mjs";
 
 const migrationsFolder = path.resolve(process.cwd(), "drizzle");
@@ -189,6 +192,17 @@ describe("verifySchema", () => {
     expect(report.ok).toBe(false);
     expect(report.ledgerHashMismatches).toBeGreaterThan(0);
     expect(JSON.stringify(report)).not.toContain("0".repeat(64));
+  });
+});
+
+describe("extractMigrationEffects", () => {
+  it("treats unrecognized DDL as unverifiable instead of verified", () => {
+    const effects = extractMigrationEffects([
+      "DROP INDEX `some_index`;",
+      "ALTER TABLE `posts` RENAME COLUMN `old` TO `new`;",
+    ]);
+
+    expect(effects.unverifiableStatements).toBe(2);
   });
 });
 

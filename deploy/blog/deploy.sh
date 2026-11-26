@@ -53,11 +53,14 @@ fi
 GIT=(git -c safe.directory="$REPO_ROOT" -C "$REPO_ROOT")
 RELEASES_DIR=/srv/blog/releases
 ENV_FILE=/srv/blog/shared/.env
-HEALTH_URL=http://127.0.0.1:3010/api/health
+HEALTH_PORT=3010
+HEALTH_URL="http://127.0.0.1:${HEALTH_PORT}/api/health"
 SERVICE_NAME=jsquared-blog.service
 SERVICE_USER=blog
 SERVICE_GROUP=blog
 BACKUP_HELPER=/usr/local/bin/jsquared-blog-backup
+BACKUP_DB_PATH=/srv/blog/shared/blog.db
+BACKUP_DIR=/srv/blog/shared/backups
 SWITCHED=0
 RELEASE_DIR=""
 
@@ -103,7 +106,7 @@ if [[ $SHA != "$HEAD_SHA" ]]; then
   exit 1
 fi
 
-for binary in node curl systemctl runuser; do
+for binary in node curl systemctl runuser sqlite3; do
   command -v "$binary" >/dev/null || {
     echo "Missing required command: $binary" >&2
     exit 1
@@ -145,6 +148,17 @@ if [[ $DB_URL != file:* ]]; then
   exit 1
 fi
 
+DB_PATH=${DB_URL#file:}
+DB_PATH=${DB_PATH%%\?*}
+if [[ $DB_PATH != "$BACKUP_DB_PATH" ]]; then
+  echo "Refusing to deploy: TURSO_DATABASE_URL must be file:$BACKUP_DB_PATH so the backup covers the migrated database." >&2
+  exit 1
+fi
+if [[ ! -s $DB_PATH ]]; then
+  echo "Refusing to deploy: database file $DB_PATH is missing or empty." >&2
+  exit 1
+fi
+
 env_value() {
   awk -v key="$1" -F= '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$ENV_FILE"
 }
@@ -167,6 +181,12 @@ redirect_uri=$(strip_quotes "$(env_value NEXT_PUBLIC_WORKOS_REDIRECT_URI)")
 workos_client_id=$(strip_quotes "$(env_value WORKOS_CLIENT_ID)")
 workos_issuer=$(strip_quotes "$(env_value WORKOS_ISSUER)")
 workos_cookie_password=$(strip_quotes "$(env_value WORKOS_COOKIE_PASSWORD)")
+rate_limit_driver=$(strip_quotes "$(env_value RATE_LIMIT_DRIVER)")
+local_media_root=$(strip_quotes "$(env_value LOCAL_MEDIA_ROOT)")
+runtime_port=$(strip_quotes "$(env_value PORT)")
+runtime_hostname=$(strip_quotes "$(env_value HOSTNAME)")
+upstash_url=$(strip_quotes "$(env_value UPSTASH_REDIS_REST_URL)")
+upstash_token=$(strip_quotes "$(env_value UPSTASH_REDIS_REST_TOKEN)")
 
 if [[ ${#cron_secret} -lt 16 ]]; then
   echo "Refusing to deploy: CRON_SECRET must be at least 16 characters in $ENV_FILE." >&2
@@ -196,6 +216,31 @@ fi
 
 if [[ ${#workos_cookie_password} -lt 32 ]]; then
   echo "Refusing to deploy: WORKOS_COOKIE_PASSWORD must be at least 32 characters in $ENV_FILE." >&2
+  exit 1
+fi
+
+if [[ $rate_limit_driver != memory && $rate_limit_driver != upstash ]]; then
+  echo "Refusing to deploy: RATE_LIMIT_DRIVER must be 'memory' or 'upstash' in $ENV_FILE." >&2
+  exit 1
+fi
+if [[ $rate_limit_driver != memory ]]; then
+  if [[ -z $upstash_url || -z $upstash_token ]]; then
+    echo "Refusing to deploy: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required unless RATE_LIMIT_DRIVER=memory." >&2
+    exit 1
+  fi
+fi
+
+if [[ -z $local_media_root ]]; then
+  echo "Refusing to deploy: LOCAL_MEDIA_ROOT is required in $ENV_FILE." >&2
+  exit 1
+fi
+if [[ -z $runtime_hostname ]]; then
+  echo "Refusing to deploy: HOSTNAME is required in $ENV_FILE so the service can bind the health port." >&2
+  exit 1
+fi
+
+if [[ $runtime_port != "$HEALTH_PORT" ]]; then
+  echo "Refusing to deploy: PORT must match the health-check port ($HEALTH_PORT) in $ENV_FILE." >&2
   exit 1
 fi
 
@@ -244,21 +289,38 @@ install -d -o root -g "$SERVICE_GROUP" -m 0750 "$RELEASES_DIR"
   node scripts/package-standalone.mjs "$RELEASE_DIR"
 )
 
-# The service runs as an unprivileged user: the release and its image cache
-# must be writable by it, not only readable. Root-owned releases silently break
-# `next/image` optimisation and ISR writes after the switch.
+# The service runs as an unprivileged user: the release stays root-owned and
+# readable through the blog group, while only the image/ISR cache is writable.
+# A service-account compromise must not be able to edit its own entrypoint.
 install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" -m 0775 "$RELEASE_DIR/web/.next/cache"
-chown -R "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_DIR"
+chown -R root:"$SERVICE_GROUP" "$RELEASE_DIR"
+chown -R "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_DIR/web/.next/cache"
 
-# The pre-migration snapshot is the database rollback path, so a missing helper
-# is a hard stop rather than a silent skip.
+# The pre-migration snapshot is the database rollback path, so a missing helper,
+# a mismatched database path, or an empty snapshot is a hard stop.
 if [[ ! -x $BACKUP_HELPER ]]; then
   echo "Refusing to deploy: missing executable backup helper $BACKUP_HELPER." >&2
   exit 1
 fi
-install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" -m 0700 /srv/blog/shared/backups
+install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" -m 0700 "$BACKUP_DIR"
 echo "Recording pre-migration database backup..."
 run_as_service_user "$BACKUP_HELPER"
+mapfile -t recent_backups < <(
+  find "$BACKUP_DIR" -maxdepth 1 -type f -name 'blog-*.db' -mmin -5 -printf '%T@ %p\n' | sort -nr
+)
+latest_backup=""
+if ((${#recent_backups[@]} > 0)); then
+  latest_backup=${recent_backups[0]#* }
+fi
+if [[ -z $latest_backup || ! -s $latest_backup ]]; then
+  echo "Refusing to deploy: no non-empty backup was written in the last 5 minutes." >&2
+  exit 1
+fi
+if ! sqlite3 "$latest_backup" 'pragma quick_check;' | grep -qx ok; then
+  echo "Refusing to deploy: backup $latest_backup failed SQLite quick_check." >&2
+  exit 1
+fi
+echo "Pre-migration backup: $latest_backup"
 
 PREVIOUS_RELEASE=$(readlink -f /srv/blog/current 2>/dev/null || true)
 
@@ -294,7 +356,7 @@ process.stdout.write(
   )}\n`,
 );
 ' "$RELEASE_ID" "$SHA" "$REF" "${PREVIOUS_RELEASE:-}" >"$RELEASE_DIR/RELEASE.json"
-chown "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_DIR/RELEASE.json"
+chown root:"$SERVICE_GROUP" "$RELEASE_DIR/RELEASE.json"
 chmod 0644 "$RELEASE_DIR/RELEASE.json"
 
 wait_for_health() {
@@ -312,6 +374,7 @@ wait_for_health() {
 echo "Switching /srv/blog/current to $RELEASE_ID..."
 ln -sfn "$RELEASE_DIR" /srv/blog/current.new
 mv -Tf /srv/blog/current.new /srv/blog/current
+chown -h root:"$SERVICE_GROUP" /srv/blog/current
 SWITCHED=1
 
 if ! systemctl restart "$SERVICE_NAME" || ! wait_for_health 30; then

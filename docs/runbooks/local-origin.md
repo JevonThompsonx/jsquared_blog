@@ -49,10 +49,10 @@ then recreates runtime symlinks for `sharp`, `@libsql/client`, `@libsql/core`,
 `drizzle-orm`, and both WorkOS packages. It strips local `*.env*` files.
 
 `/srv/blog` and `/srv/blog/releases` are mode `750 root:blog`; the service account
-can read releases but cannot replace the release symlink or add new code. Each
-release directory and its `.next/cache` are `blog:blog` so image optimisation and
-ISR writes work. `/srv/blog/shared` is `770 blog:blog` for DB/media writes;
-`/srv/blog/shared/backups` is `700 blog:blog`. The service binds only
+can read releases but cannot replace the release symlink or modify code. Each
+release is `root:blog`; only its `.next/cache` is `blog:blog` for image
+optimisation and ISR writes. `/srv/blog/shared` is `770 blog:blog` for DB/media
+writes; `/srv/blog/shared/backups` is `700 blog:blog`. The service binds only
 `127.0.0.1:3010`; Cloudflare Tunnel reaches it locally.
 
 Keep three releases. If health returns 503, inspect

@@ -60,18 +60,21 @@ sudo deploy/blog/deploy.sh <commit-or-tag>
 ```
 
 The script refuses a dirty worktree, a ref that is not `HEAD`, a missing
-runtime variable, or a missing backup helper. It builds the standalone release,
-packages it, makes the release and image cache writable by `blog`, records a
-WAL-safe SQLite backup, applies migrations as `blog`, verifies the schema and
-ledger, writes `RELEASE.json`, switches `/srv/blog/current`, restarts the
-service, and polls `http://127.0.0.1:3010/api/health`. A failed health check
+runtime variable, a database path that does not match the backup helper, or a
+missing backup helper. It builds the standalone release, packages it, keeps the
+release root-owned/read-only and makes `.next/cache` writable by `blog`, records
+and verifies a WAL-safe SQLite backup, applies migrations as `blog`, verifies the
+schema and ledger, writes `RELEASE.json`, switches `/srv/blog/current`, restarts
+the service, and polls `http://127.0.0.1:3010/api/health`. A failed health check
 switches back to the previous release and re-checks its health. The three newest
 releases are kept.
 
 The preflight reads `/srv/blog/shared/.env` but prints only variable names. It
 requires a 16+ character `CRON_SECRET`, a valid admin email, an HTTPS
 `NEXT_PUBLIC_SITE_URL`, an HTTPS `/callback` redirect, `WORKOS_CLIENT_ID`,
-`WORKOS_ISSUER`, and a 32+ character `WORKOS_COOKIE_PASSWORD`.
+`WORKOS_ISSUER`, a 32+ character `WORKOS_COOKIE_PASSWORD`, `LOCAL_MEDIA_ROOT`,
+`HOSTNAME`, `PORT=3010`, and either `RATE_LIMIT_DRIVER=memory` or Upstash
+credentials.
 
 If a legacy ledger hash or missing ledger row is known, add `--reconcile`. That
 runs the one-time reconciliation (DDL effects verified, no writes on missing

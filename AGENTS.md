@@ -21,7 +21,7 @@
 **Package manager**: pnpm (primary), bun (dev-only for `bunx` one-off commands)
 **Commands**: `pnpm run dev`, `pnpm run build`, `pnpm run build:node`, `pnpm run lint`, `pnpm run test`, `pnpm run typecheck`, `pnpm run db:migrate`, `pnpm run test:e2e` — **all run from `web/`**. The root `package.json` only defines `dev`, `build`, `lint`, `test` (+ `dev:web`/`build:web`/`lint:web`/`test:web`), which delegate via `pnpm --filter web run …`. There is no root-level `test:e2e`, `db:*`, or `seed:*` script. Equivalents: `pnpm dlx tsc --noEmit` or `pnpm --filter web exec tsc --noEmit`.
 **Env**: Zod-validated via `web/src/lib/env.ts`; loads `.env.test.local` → `.env.local` → `.env` → `.dev.vars`. WorkOS runtime is keyless: `WORKOS_CLIENT_ID`, exact `WORKOS_ISSUER`, approved `NEXT_PUBLIC_WORKOS_REDIRECT_URI`, `WORKOS_COOKIE_PASSWORD` (32+ chars), `WORKOS_COOKIE_MAX_AGE=1209600`, and `ADMIN_ALLOWED_EMAILS`. Never put `WORKOS_API_KEY` or `WORKOS_COOKIE_DOMAIN` in the app environment.
-**Tests**: `web/tests/unit/` (Vitest, 189 files / 1,595 tests), `web/tests/e2e/` (Playwright, 18 spec files; default local origin `http://127.0.0.1:3100`)
+**Tests**: `web/tests/unit/` (Vitest, 189 files / 1,596 tests), `web/tests/e2e/` (Playwright, 18 spec files; default local origin `http://127.0.0.1:3100`)
 **Security**: CSP with per-request nonces (`web/src/proxy.ts`), CSRF on admin routes, Zod at API boundaries, `sanitize-html` allowlist
 **Docs index**: [`docs/INDEX.md`](docs/INDEX.md) — one line per document in `docs/`
 

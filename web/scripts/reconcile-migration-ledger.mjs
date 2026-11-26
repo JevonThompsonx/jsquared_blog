@@ -157,11 +157,9 @@ export function extractMigrationEffects(statements) {
       continue;
     }
 
-    if (
-      /^(?:INSERT|UPDATE|DELETE|PRAGMA|SELECT|CREATE\s+TRIGGER)\b/i.test(sql)
-    ) {
-      unverifiableStatements += 1;
-    }
+    // Anything not modeled above (DML, PRAGMA, triggers, views, DROP INDEX,
+    // RENAME/DROP COLUMN, ...) cannot be proven from the structural snapshot.
+    unverifiableStatements += 1;
   }
 
   return { tables, indexes, unverifiableStatements };

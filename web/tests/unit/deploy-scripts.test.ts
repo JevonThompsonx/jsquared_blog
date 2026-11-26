@@ -119,9 +119,14 @@ describe("versioned host contract", () => {
     expect(script).toContain("ADMIN_ALLOWED_EMAILS must contain at least one");
     expect(script).toContain("missing executable backup helper");
     expect(script).toContain("run_as_service_user");
+    expect(script).toContain('chown -R root:"$SERVICE_GROUP" "$RELEASE_DIR"');
     expect(script).toContain(
-      'chown -R "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_DIR"',
+      'chown -R "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_DIR/web/.next/cache"',
     );
+    expect(script).toContain("pragma quick_check");
+    expect(script).toContain("RATE_LIMIT_DRIVER must be");
+    expect(script).toContain("LOCAL_MEDIA_ROOT is required");
+    expect(script).toContain("PORT must match the health-check port");
     expect(script).toContain("Rollback could not be verified");
     expect(script).toContain("ln -sfn");
     // Migration must precede the symlink switch.
@@ -136,6 +141,7 @@ describe("versioned host contract", () => {
     expect(script).toContain("cmp -s");
     expect(script).toContain("stat -c '%a'");
     expect(script).toContain("stat -c '%U:%G'");
+    expect(script).toContain("root:blog");
     expect(script).toContain("systemctl is-enabled");
     expect(script).toContain("systemctl show -p User");
     expect(script).toContain("/srv/blog/shared/.env");

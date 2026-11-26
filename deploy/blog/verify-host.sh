@@ -90,8 +90,11 @@ if [[ -L /srv/blog/current ]]; then
   esac
 
   release_owner=$(stat -c '%U:%G' "$target")
-  [[ $release_owner == blog:blog ]] ||
-    fail "$target owner is $release_owner, expected blog:blog"
+  [[ $release_owner == root:blog ]] ||
+    fail "$target owner is $release_owner, expected root:blog"
+  release_mode=$(stat -c '%A' "$target")
+  [[ ${release_mode:5:1} != w && ${release_mode:8:1} != w ]] ||
+    fail "$target is group/other writable ($release_mode)"
 
   cache_dir=$target/web/.next/cache
   if [[ -d $cache_dir ]]; then
