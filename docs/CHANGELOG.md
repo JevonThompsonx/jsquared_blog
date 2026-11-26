@@ -20,7 +20,8 @@
 - **Fixed** pre-deploy backup to cover the migrated database, verify its path, size, and SQLite integrity.
 - **Fixed** rollback to re-verify the previous release's health and report when it cannot.
 - **Fixed** production schema drift by applying missing `0010`, `0023`, and `0026` DDL and reconciling the ledger to 27/27.
-- **Deployed** release `20261126T044107` from commit `bd52818`; health reports `ok` and `verify-host.sh` passes.
+- **Deployed** release `20261126T045528` from squash commit `9d72dbd` on `main`; health reports `ok` and `verify-host.sh` passes.
+- **Merged** the branch to `main` as squash `9d72dbd`, keeping current main dependency updates and moving the audit/migration gates to `.forgejo/workflows/blog-gates.yml`.
 - **Verified** 1,596 unit tests, typecheck, lint, production audit, build/package, migration verification, production smoke, and read-only cache writes.
 
 ### WorkOS Magic Auth and admin access repair

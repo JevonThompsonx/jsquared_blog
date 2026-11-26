@@ -77,13 +77,14 @@ point for this schema change.
 - Migration 0026: drop the index and remove its ledger row.
 - Env: restore the backup env file.
 
-## Final deployment and verification (2026-11-26 04:41 UTC)
+## Final deployment and verification (2026-11-26 04:55 UTC)
 
-- Release `/srv/blog/releases/20261126T044107` from commit `bd52818` is current;
-  previous `20261125T2019` remains available for rollback.
+- Release `/srv/blog/releases/20261126T045528` from squash commit `9d72dbd` is
+  current; previous `20261126T044107` remains available for rollback.
 - Deploy applied 0 migrations (ledger already 27/27), verified the schema, and
-  recorded backup `blog-20261126-0441.db` passing `pragma quick_check`.
-- Release is `root:blog` read-only; `.next/cache` is `blog:blog`.
+  recorded backup `blog-20261126-0455.db` passing `pragma quick_check`.
+- Release is `root:blog` read-only; `.next/cache` is `blog:blog`. Deploy scripts
+  are committed executable (`100755`).
 - `/api/health` local and public: `ok` with database, databaseWrite, schema, and
   media true.
 - Smoke: `/`, `/about`, and a published post 200; cross-site newsletter POST 403;
@@ -92,7 +93,7 @@ point for this schema change.
   pass; production audit gate green; `db:generate` no diff.
 - E2E: 6 passed, 63 fixture-gated skips, 0 failed (authenticated fixtures not
   supplied this cycle).
-- Independent final security recheck: **PASS**.
+- Independent final security recheck: **PASS** on the pre-squash tree.
 
 ## Remaining owner actions
 

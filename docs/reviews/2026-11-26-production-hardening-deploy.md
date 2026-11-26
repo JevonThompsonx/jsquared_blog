@@ -65,6 +65,20 @@ After a WAL-safe backup (`/srv/blog/shared/backups/blog-20261126-0434.db`):
 - Independent final security recheck: **PASS** on `bd52818` after ownership,
   preflight, backup, PATH/runuser, and reconcile fixes.
 
+## Post-merge deploy (2026-11-26 04:55 UTC)
+
+The squash-merged `main` commit `9d72dbd` was deployed after merging current main
+dependencies and replacing the deleted GitHub workflow with
+`.forgejo/workflows/blog-gates.yml`.
+
+- Live release: `/srv/blog/releases/20261126T045528`
+- Previous: `/srv/blog/releases/20261126T044107`
+- Squash-tree gates: 1,596 unit tests, typecheck, lint, build/package, 27/27
+  migration verification, production audit exit 0, E2E 6 passed / 63 skipped.
+- Live: `/api/health` ok, `verify-host.sh` passes, smoke pages 200, cross-site
+  newsletter 403, `/_next/image` 200 with cache write, journal clean.
+- Deploy scripts are now mode `100755` so a fresh checkout can run them directly.
+
 ## Remaining owner actions
 
 - Add a Kuma monitor for `https://jsquaredadventures.com/api/health`
