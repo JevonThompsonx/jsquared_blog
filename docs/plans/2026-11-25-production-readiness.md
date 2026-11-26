@@ -77,9 +77,26 @@ point for this schema change.
 - Migration 0026: drop the index and remove its ledger row.
 - Env: restore the backup env file.
 
-## NOT VERIFIED until execution
+## Final deployment and verification (2026-11-26 04:41 UTC)
+
+- Release `/srv/blog/releases/20261126T044107` from commit `bd52818` is current;
+  previous `20261125T2019` remains available for rollback.
+- Deploy applied 0 migrations (ledger already 27/27), verified the schema, and
+  recorded backup `blog-20261126-0441.db` passing `pragma quick_check`.
+- Release is `root:blog` read-only; `.next/cache` is `blog:blog`.
+- `/api/health` local and public: `ok` with database, databaseWrite, schema, and
+  media true.
+- Smoke: `/`, `/about`, and a published post 200; cross-site newsletter POST 403;
+  `/_next/image` 200 with an image-cache write; journal clean.
+- `verify-host.sh` passed; unit tests 1,596 pass; typecheck/lint/build/package
+  pass; production audit gate green; `db:generate` no diff.
+- E2E: 6 passed, 63 fixture-gated skips, 0 failed (authenticated fixtures not
+  supplied this cycle).
+- Independent final security recheck: **PASS**.
+
+## Remaining owner actions
 
 - Kuma `/api/health` monitor creation is owner-gated by API/UI access.
 - Sentry DSN remains unset unless supplied later.
-- Cloudflare token renewal remains an owner action.
+- Cloudflare token renewal remains an owner action before 2026-12-01.
 - The next post-reboot soak is not observed yet.

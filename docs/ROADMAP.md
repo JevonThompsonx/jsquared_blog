@@ -2,8 +2,8 @@
 
 > **For any agent opening this repo:** This is the master tracking document for the feature improvement plan. Start here. The current state, what's done, what's next, and how to pick up work are all in this file.
 
-**Last updated:** 2026-06-15
-**Project state:** Stable baseline established; all 10 original roadmap branches + 2 patches + 1 docs branch merged. WorkOS AuthKit migration is implemented on `t3/blog-audit-hardening-optimization` and awaits orchestrator-owned production cutover. CI (`.github/workflows/ci.yml`) currently runs 6 jobs — Lint, Typecheck, Unit tests, Security audit, Build/package smoke, E2E.
+**Last updated:** 2026-11-26
+**Project state:** Stable baseline established; WorkOS AuthKit migration and production-readiness hardening implemented on `t3/blog-audit-hardening-optimization` and deployed to the local templetonbak origin as release `20261126T044107`. CI (`.github/workflows/ci.yml`) currently runs 6 jobs — Lint, Typecheck, Unit tests, Security audit, Build/package smoke, E2E.
 
 ---
 
@@ -18,29 +18,30 @@
 
 ## Branch Status
 
-| # | Branch | Status | PR | Merged | Effort | Ships |
-|---|--------|--------|----|--------|--------|-------|
-| 1 | `feat/seo-and-discovery` | ✅ Merged | [#42](https://github.com/JevonThompsonx/jsquared_blog/pull/42) | 2026-06-15 | 2-3h | robots.txt, sitemap, social cards, hero |
-| 2 | `feat/layout-footer-and-nav` | ✅ Merged | [#43](https://github.com/JevonThompsonx/jsquared_blog/pull/43) | 2026-06-15 | 3-4h | Footer, back-to-top, dark error page |
-| 3 | `chore/schema-hardening` | ✅ Merged | [#44](https://github.com/JevonThompsonx/jsquared_blog/pull/44) | 2026-06-15 | 2-3h | FK constraints, indexes, audit timestamps |
-| 4 | `feat/taxonomy-browse` | ✅ Merged | [#48](https://github.com/JevonThompsonx/jsquared_blog/pull/48) | 2026-06-15 | 3-4h | /tags and /categories browse pages |
-| 5 | `feat/admin-taxonomy-crud` | ✅ Merged | [#49](https://github.com/JevonThompsonx/jsquared_blog/pull/49) | 2026-06-15 | 4-5h | Category CRUD, tag create/delete |
-| 6 | `feat/revision-completeness` | ✅ Merged | [#47](https://github.com/JevonThompsonx/jsquared_blog/pull/47) | 2026-06-15 | 4-5h | Full revision restore |
-| 7 | `feat/performance-and-reliability` | ✅ Merged | [#50](https://github.com/JevonThompsonx/jsquared_blog/pull/50) | 2026-06-15 | 5-6h | Caching, image opt, Sentry, rate limits |
-| 8 | `feat/site-search` | ✅ Merged | [#51](https://github.com/JevonThompsonx/jsquared_blog/pull/51) | 2026-06-15 | 4-6h | /search page, Cmd+K shortcut |
-| 9 | `chore/cleanup-and-hardening` | ✅ Merged | [#52](https://github.com/JevonThompsonx/jsquared_blog/pull/52) | 2026-06-15 | 3-4h | Zod validation, Cloudinary cleanup, logging |
-| 10 | `feat/polish` | ✅ Merged | [#53](https://github.com/JevonThompsonx/jsquared_blog/pull/53) | 2026-06-15 | 4-5h | Print styles, a11y, PWA, social links |
-| patch | `fix/footer-polish` | ✅ Merged | [#46](https://github.com/JevonThompsonx/jsquared_blog/pull/46) | 2026-06-15 | 30min | Removed "All rights reserved", gradient transition above footer |
-| docs | `docs/knowledge-base` | ✅ Merged | [#45](https://github.com/JevonThompsonx/jsquared_blog/pull/45) | 2026-06-15 | 1h | KNOWLEDGE_BASE.md created, LESSONS.md merged in |
-| auth | `t3/blog-audit-hardening-optimization` | 🟡 Cutover pending | — | — | — | WorkOS AuthKit reader/admin migration; approved plan `docs/plans/2026-11-24-workos-authkit-migration.md` |
+| #     | Branch                                 | Status      | PR                                                             | Merged     | Effort | Ships                                                                                                                         |
+| ----- | -------------------------------------- | ----------- | -------------------------------------------------------------- | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `feat/seo-and-discovery`               | ✅ Merged   | [#42](https://github.com/JevonThompsonx/jsquared_blog/pull/42) | 2026-06-15 | 2-3h   | robots.txt, sitemap, social cards, hero                                                                                       |
+| 2     | `feat/layout-footer-and-nav`           | ✅ Merged   | [#43](https://github.com/JevonThompsonx/jsquared_blog/pull/43) | 2026-06-15 | 3-4h   | Footer, back-to-top, dark error page                                                                                          |
+| 3     | `chore/schema-hardening`               | ✅ Merged   | [#44](https://github.com/JevonThompsonx/jsquared_blog/pull/44) | 2026-06-15 | 2-3h   | FK constraints, indexes, audit timestamps                                                                                     |
+| 4     | `feat/taxonomy-browse`                 | ✅ Merged   | [#48](https://github.com/JevonThompsonx/jsquared_blog/pull/48) | 2026-06-15 | 3-4h   | /tags and /categories browse pages                                                                                            |
+| 5     | `feat/admin-taxonomy-crud`             | ✅ Merged   | [#49](https://github.com/JevonThompsonx/jsquared_blog/pull/49) | 2026-06-15 | 4-5h   | Category CRUD, tag create/delete                                                                                              |
+| 6     | `feat/revision-completeness`           | ✅ Merged   | [#47](https://github.com/JevonThompsonx/jsquared_blog/pull/47) | 2026-06-15 | 4-5h   | Full revision restore                                                                                                         |
+| 7     | `feat/performance-and-reliability`     | ✅ Merged   | [#50](https://github.com/JevonThompsonx/jsquared_blog/pull/50) | 2026-06-15 | 5-6h   | Caching, image opt, Sentry, rate limits                                                                                       |
+| 8     | `feat/site-search`                     | ✅ Merged   | [#51](https://github.com/JevonThompsonx/jsquared_blog/pull/51) | 2026-06-15 | 4-6h   | /search page, Cmd+K shortcut                                                                                                  |
+| 9     | `chore/cleanup-and-hardening`          | ✅ Merged   | [#52](https://github.com/JevonThompsonx/jsquared_blog/pull/52) | 2026-06-15 | 3-4h   | Zod validation, Cloudinary cleanup, logging                                                                                   |
+| 10    | `feat/polish`                          | ✅ Merged   | [#53](https://github.com/JevonThompsonx/jsquared_blog/pull/53) | 2026-06-15 | 4-5h   | Print styles, a11y, PWA, social links                                                                                         |
+| patch | `fix/footer-polish`                    | ✅ Merged   | [#46](https://github.com/JevonThompsonx/jsquared_blog/pull/46) | 2026-06-15 | 30min  | Removed "All rights reserved", gradient transition above footer                                                               |
+| docs  | `docs/knowledge-base`                  | ✅ Merged   | [#45](https://github.com/JevonThompsonx/jsquared_blog/pull/45) | 2026-06-15 | 1h     | KNOWLEDGE_BASE.md created, LESSONS.md merged in                                                                               |
+| auth  | `t3/blog-audit-hardening-optimization` | ✅ Deployed | —                                                              | 2026-11-26 | —      | WorkOS AuthKit reader/admin migration, production hardening, deploy contract, and live local-origin release `20261126T044107` |
 
 **Legend:**
+
 - 🔵 **Ready** — Can be picked up immediately
 - 🟡 **Blocked** — Waiting on another branch to merge first
 - 🟢 **In Progress** — Currently being worked on (see "Active Branch" below)
 - ✅ **Merged** — Done and shipped to main
 
-**Active Branch:** `t3/blog-audit-hardening-optimization` — WorkOS AuthKit implementation complete; production cutover and live smoke are orchestrator-owned.
+**Active Branch:** `t3/blog-audit-hardening-optimization` — WorkOS AuthKit and production hardening deployed as release `20261126T044107`; no further cutover work remains.
 
 ## Updated: 2026-06-15 — All phases complete
 
@@ -78,18 +79,18 @@ Phase 2 (after Branch 3 merges):
 
 Each branch has a detailed file with checklists, files to change, and acceptance criteria:
 
-| # | Branch | Detail File |
-|---|--------|-------------|
-| 1 | `feat/seo-and-discovery` | [`docs/branches/01-seo-and-discovery.md`](branches/01-seo-and-discovery.md) |
-| 2 | `feat/layout-footer-and-nav` | [`docs/branches/02-layout-footer-and-nav.md`](branches/02-layout-footer-and-nav.md) |
-| 3 | `chore/schema-hardening` | [`docs/branches/03-schema-hardening.md`](branches/03-schema-hardening.md) |
-| 4 | `feat/taxonomy-browse` | [`docs/branches/04-taxonomy-browse.md`](branches/04-taxonomy-browse.md) |
-| 5 | `feat/admin-taxonomy-crud` | [`docs/branches/05-admin-taxonomy-crud.md`](branches/05-admin-taxonomy-crud.md) |
-| 6 | `feat/revision-completeness` | [`docs/branches/06-revision-completeness.md`](branches/06-revision-completeness.md) |
-| 7 | `feat/performance-and-reliability` | [`docs/branches/07-performance-and-reliability.md`](branches/07-performance-and-reliability.md) |
-| 8 | `feat/site-search` | [`docs/branches/08-site-search.md`](branches/08-site-search.md) |
-| 9 | `chore/cleanup-and-hardening` | [`docs/branches/09-cleanup-and-hardening.md`](branches/09-cleanup-and-hardening.md) |
-| 10 | `feat/polish` | [`docs/branches/10-polish.md`](branches/10-polish.md) |
+| #   | Branch                             | Detail File                                                                                     |
+| --- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1   | `feat/seo-and-discovery`           | [`docs/branches/01-seo-and-discovery.md`](branches/01-seo-and-discovery.md)                     |
+| 2   | `feat/layout-footer-and-nav`       | [`docs/branches/02-layout-footer-and-nav.md`](branches/02-layout-footer-and-nav.md)             |
+| 3   | `chore/schema-hardening`           | [`docs/branches/03-schema-hardening.md`](branches/03-schema-hardening.md)                       |
+| 4   | `feat/taxonomy-browse`             | [`docs/branches/04-taxonomy-browse.md`](branches/04-taxonomy-browse.md)                         |
+| 5   | `feat/admin-taxonomy-crud`         | [`docs/branches/05-admin-taxonomy-crud.md`](branches/05-admin-taxonomy-crud.md)                 |
+| 6   | `feat/revision-completeness`       | [`docs/branches/06-revision-completeness.md`](branches/06-revision-completeness.md)             |
+| 7   | `feat/performance-and-reliability` | [`docs/branches/07-performance-and-reliability.md`](branches/07-performance-and-reliability.md) |
+| 8   | `feat/site-search`                 | [`docs/branches/08-site-search.md`](branches/08-site-search.md)                                 |
+| 9   | `chore/cleanup-and-hardening`      | [`docs/branches/09-cleanup-and-hardening.md`](branches/09-cleanup-and-hardening.md)             |
+| 10  | `feat/polish`                      | [`docs/branches/10-polish.md`](branches/10-polish.md)                                           |
 
 ---
 

@@ -6,7 +6,22 @@
 
 ---
 
-## [Unreleased] — 2026-11-25
+## [Unreleased] — 2026-11-26
+
+### Production hardening and local-origin deploy
+
+- **Added** the versioned host contract under `deploy/blog/`: systemd units, backup helper, `deploy.sh`, and `verify-host.sh`.
+- **Added** runtime env fail-fast for `CRON_SECRET`, admin allowlist, site URL, WorkOS runtime values, rate-limit driver, media root, hostname, and port.
+- **Added** migration runner, schema verifier, and ledger reconciler; committed snapshots `0025` and `0026`.
+- **Added** case-insensitive primary-email uniqueness index with a duplicate-email preflight.
+- **Added** impersonation denial, safe auth-failure logging, public CSRF guards, and health/readiness probes.
+- **Added** production dependency audit gate and migration drift check in CI.
+- **Fixed** deploy release ownership so code is root:blog read-only and only `.next/cache` is writable by `blog`.
+- **Fixed** pre-deploy backup to cover the migrated database, verify its path, size, and SQLite integrity.
+- **Fixed** rollback to re-verify the previous release's health and report when it cannot.
+- **Fixed** production schema drift by applying missing `0010`, `0023`, and `0026` DDL and reconciling the ledger to 27/27.
+- **Deployed** release `20261126T044107` from commit `bd52818`; health reports `ok` and `verify-host.sh` passes.
+- **Verified** 1,596 unit tests, typecheck, lint, production audit, build/package, migration verification, production smoke, and read-only cache writes.
 
 ### WorkOS Magic Auth and admin access repair
 
